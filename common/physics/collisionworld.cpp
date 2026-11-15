@@ -98,6 +98,16 @@ CollisionWorld::CollisionWorld()
   :CollisionWorld(ContructInfo()) {
   }
 
+CollisionWorld::~CollisionWorld() {
+  // The objects that are still in the world leave it here, while the broadphase and the dispatcher (members of this class)
+  // live: ~btCollisionWorld runs after the members are gone and would remove them through a freed broadphase (a crash on
+  // a load of a save, SIGABRT in btDbvt::remove). An object stays when its owner outlives the world, for example the
+  // parts of the world that the scripts of New Balance insert (RX_InsertVobTree, they are not deleted with the world).
+  for(int i=getNumCollisionObjects()-1; i>=0; --i)
+    removeCollisionObject(getCollisionObjectArray()[i]);
+  rigid.clear();
+  }
+
 float CollisionWorld::toMeters(const float v) {
   return v * 0.01f;
   }

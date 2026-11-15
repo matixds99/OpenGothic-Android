@@ -20,6 +20,7 @@ class Interactive;
 class CollisionWorld : public btDiscreteDynamicsWorld {
   public:
     CollisionWorld();
+    ~CollisionWorld() override;
 
     static float               toMeters     (const float v);
     static btVector3           toMeters     (const Tempest::Vec3& v);
