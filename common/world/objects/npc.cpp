@@ -3869,6 +3869,10 @@ void Npc::nextAiAction(AiQueue& queue, uint64_t dt) {
       break;
       }
     case AI_GotoItem:{
+      // the item may be gone from the world while the action waited (AiQueue::onWldItemRemoved: nullptr) - NB fix 63:
+      // a crash when the wisp of NB had brought the item before it started its AI_GotoItem
+      if(act.item==nullptr)
+        break;
       go2.set(act.item);
       break;
       }

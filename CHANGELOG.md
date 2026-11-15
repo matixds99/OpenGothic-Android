@@ -491,6 +491,12 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
   - `RX_PrintCutscene` wyłączone: pisało „Pomiń, wciśnij G lub R” na scenach, a pominięcie idzie przez `RX_KeyPressed`, którego tu nie ma.
 - **Bez tego (na razie):** liczniki wampira, Full SnC+, umiejętności karmy i spowolnienia czasu (plugin trzyma je u siebie) oraz „Dzień: …” w lewym górnym rogu.
 
+### 63. Wyrzucało z gry przy zbieraniu przez ognika – 🧪 (15.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`, `common/game/gamescript.cpp`
+- **Z crash.log:** `SIGSEGV` (adres 0xe0) w `Item::position` ← `Npc::nextAiAction` – zaraz po `[ctx] the wisp brings: Grawerowany miecz jednoręczny`.
+- **Przyczyna:** ognik miał w kolejce jeszcze nierozpoczęte „leć do przedmiotu” (przed nim „biegnij do bohatera” z poprawki 61). Doleciał wcześniej i przedmiot trafił do ekwipunku. Silnik w takiej sytuacji czyści w kolejce wskaźnik na przedmiot, ale `AI_GotoItem` potem i tak z niego korzystał – odwołanie do pustego przedmiotu.
+- **Poprawka:** `AI_GotoItem` z przedmiotem, którego już nie ma, nic nie robi (to samo mogło się zdarzyć każdej postaci, gdy ktoś zabrał przedmiot, do którego szła). Dodatkowo ognik czyści swoją kolejkę, zanim odda przedmiot.
+
 ## Do zrobienia
 
 - [x] Czarny goblin nie atakuje, stoi w miejscu – naprawione (poprawka 54). Z logu: wrogi (attitude=0), czuje bohatera (sense=5 przy ~1100), ale zostaje w `ZS_MM_RTN_ROAM` bez celu – reakcja na wroga (`B_MM_AssessEnemy`) nie przełącza go na atak; raz pojawia się `ZS_MM_ThreatenEnemy`. `RX_GobboClan` (niezaimplementowane) jest tylko w `AI_OnDead_Gobbo_Black_Clan` – przy śmierci, nie przy ataku. Do zbadania z włączonymi śladami `B_MM_AssessEnemy` (więcej niż 3 na komunikat).

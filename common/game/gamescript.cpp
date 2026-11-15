@@ -4058,6 +4058,7 @@ void GameScript::tick(uint64_t dt) {
             nbCtx("the wisp takes an item of an owner (",itm->handle().owner,"/",itm->handle().owner_guild,"), no one of them near");
           const std::string name(itm->displayName());
           const size_t      cnt = itm->count();
+          wisp->clearAiQueue();   // its AI_GotoItem of this item, if it did not start it yet (fix 63: a crash)
           if(auto ptr = world().takeItem(*itm)) {
             hero->addItem(std::move(ptr));
             nbCtx("the wisp brings: ",name);
