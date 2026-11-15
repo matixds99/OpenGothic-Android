@@ -451,7 +451,8 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Przyczyna:** NB zmienia świat własną funkcją pluginu `Wld_ChangeLevel_AB(plik ZEN, punkt)` – 17 wywołań: kamienie i runy teleportacji NB (`RX_OnTeleportLocation`), przedmioty przeniesienia (`ItMi_DarkTransfer`, `ItMi_TransferStreamersLoc`), runa powrotu Galoma z klasztoru, świątynia Azgalora, dolina Adanosa, finał zadania z jointami. Nie była zaimplementowana, więc teleport zabierał manę/przedmiot i nic się nie działo. Nie było jej też w liście braków w logu, bo ta pokazywała tylko funkcje `RX_…`.
 - **Poprawka:** jak w pluginie (UNION_ABI.DLL 0x10159E20 → `oCGame::TriggerChangeLevel`): zmiana świata tak samo jak przez przejście między światami (np. przełęcz), bohater pojawia się w podanym punkcie. W logu: `[ctx] change of the world: … -> …`.
 
-### 60. Bohater traci zbroję po teleporcie – 🧪 (15.11.2026)
+### 60. Bohater traci zbroję po teleporcie – ✅ (15.11.2026)
+- **Sprawdzone (15.11.2026):** zbroja zostaje po teleporcie. Naprawiło to też początek nowej gry: po rozmowie z Xardasem w prologu bezimienny biegał bez zbroi, teraz ma łachmany, tak jak powinien.
 - **Plik:** `common/game/gamescript.cpp` (+ diagnostyka w `common/game/inventory.cpp`)
 - **Z logu (15.11, 19:15):** po każdej zmianie świata (świątynia Ashtara, Górnicza Dolina, obóz piratów) `[ctx] item of the hero: UNEQUIP_ITAR_KDF_L … last script: RX_APPLYHEROHEAD`.
 - **Przyczyna:** `RX_ApplyHeroHead` (z `PerFrame`, po każdym wczytaniu i zmianie świata) ustawia głowę i ciało bohatera przez `Mdl_SetVisualBody(…, NO_ARMOR)`. W Gothicu `NO_ARMOR` (-1) znaczy „nie zakładaj nowej zbroi” i założona zostaje. W tej wersji OpenGothic (dla Archolos) `NO_ARMOR` zdejmuje założoną zbroję – więc NB zdejmowało ją po każdym teleporcie.
