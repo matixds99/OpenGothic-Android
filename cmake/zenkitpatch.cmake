@@ -4,6 +4,11 @@ find_package(Git QUIET)
 set(ZENKIT_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/lib/ZenKit")
 set(ZENKIT_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/patches/zenkit-opengothic.patch")
 
+# CMake runs again when the patch changes (a git pull with a new version of it), so the new one is put in
+if(EXISTS "${ZENKIT_PATCH}")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${ZENKIT_PATCH}")
+endif()
+
 if(GIT_FOUND AND EXISTS "${ZENKIT_PATCH}" AND EXISTS "${ZENKIT_DIR}/CMakeLists.txt")
   # The submodule is a repository of its own (.git is a file or a folder): the paths of the patch start there.
   # Without it (a copy of the sources) git would take the repository around it, then the directory is given.
@@ -26,6 +31,25 @@ if(GIT_FOUND AND EXISTS "${ZENKIT_PATCH}" AND EXISTS "${ZENKIT_DIR}/CMakeLists.t
       WORKING_DIRECTORY "${ZENKIT_APPLY_DIR}"
       RESULT_VARIABLE ZENKIT_APPLIED
       ERROR_VARIABLE  ZENKIT_APPLY_ERROR)
+    # an older version of the patch is in the submodule (the patch has changed since): the submodule goes back to its
+    # commit and the new patch is put in. Only for a submodule that is a repository of its own, the files of it are not edited by hand.
+    if(NOT ZENKIT_APPLIED EQUAL 0 AND EXISTS "${ZENKIT_DIR}/.git")
+      execute_process(
+        COMMAND ${GIT_EXECUTABLE} checkout -- .
+        WORKING_DIRECTORY "${ZENKIT_DIR}"
+        RESULT_VARIABLE ZENKIT_RESET
+        OUTPUT_QUIET ERROR_QUIET)
+      if(ZENKIT_RESET EQUAL 0)
+        execute_process(
+          COMMAND ${GIT_EXECUTABLE} ${ZENKIT_APPLY_ARGS} "${ZENKIT_PATCH}"
+          WORKING_DIRECTORY "${ZENKIT_APPLY_DIR}"
+          RESULT_VARIABLE ZENKIT_APPLIED
+          ERROR_VARIABLE  ZENKIT_APPLY_ERROR)
+        if(ZENKIT_APPLIED EQUAL 0)
+          message(STATUS "ZenKit: lib/ZenKit was reset, the new patches/zenkit-opengothic.patch applied")
+        endif()
+      endif()
+    endif()
     if(ZENKIT_APPLIED EQUAL 0)
       message(STATUS "ZenKit: patches/zenkit-opengothic.patch applied")
     else()
