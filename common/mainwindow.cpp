@@ -243,6 +243,7 @@ void MainWindow::setupUi() {
   Gothic::inst().onDialogCameraReset.bind(this,&MainWindow::requestDialogCamera);
   Gothic::inst().onStopAllSounds.bind(&dialogs,&DialogMenu::stopSounds);
   Gothic::inst().onOpenTrade   .bind(&inventory,&InventoryMenu::trade);
+  Gothic::inst().onOpenPlayerSales.bind(&inventory,&InventoryMenu::playerSales);
   Gothic::inst().isNpcInDialogFn = std::bind(&DialogMenu::isNpcInDialog, &dialogs, std::placeholders::_1);
 
   Gothic::inst().onPrintScreen .bind(&dialogs,&DialogMenu::printScreen);

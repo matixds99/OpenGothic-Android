@@ -1,5 +1,8 @@
 #pragma once
 
+#include <unordered_map>
+#include <vector>
+
 #include <Tempest/Widget>
 #include <Tempest/Texture2d>
 #include <Tempest/Timer>
@@ -83,6 +86,9 @@ class InventoryMenu : public Tempest::Widget {
     void  close();
     void  open(Npc& pl);
     void  trade(Npc& pl,Npc& tr);
+    /// NB fix 68: the window of the plugin of New Balance to sell (RX_OpenCraft_PlayerSales): the trade window, the
+    /// player sees only the listed items and gets the listed price; nothing is bought
+    void  playerSales(Npc& pl,Npc& tr,const std::vector<std::pair<size_t,int32_t>>& products);
     bool  ransack(Npc& pl,Npc& tr);
     void  open(Npc& pl,Interactive& chest);
     State isOpen() const;
@@ -132,6 +138,10 @@ class InventoryMenu : public Tempest::Widget {
     Interactive*              chest      =nullptr;
 
     std::unique_ptr<Page>     pageOth, pagePl;
+    bool                      sales      =false;                    // NB fix 68
+    std::unordered_map<size_t,int32_t> salesPrices;                 // the item -> the price of one
+    std::unordered_map<size_t,int32_t> salesNone;                   // the empty list of the trader
+    int32_t                   sellCostOf(const Item& it) const;
     std::weak_ptr<zenkit::IItem> infoItem;
     PageLocal                 pageLocal[2];
 

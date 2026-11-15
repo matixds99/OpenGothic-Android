@@ -169,6 +169,11 @@ struct NbState {
   // right, and the list "Ognik: name xN" of the brought items on the left (the last 7, 10 s each)
   uint64_t                                    wispSeen       = 0;  // the wisp was near the hero (for the texts)
   bool                                        wispReturn     = false; // NB fix 64: flying back to the hero
+  // NB fix 68: the window of the plugin to sell given items (RX_Craft_PlayerSales_*): the list and the trader. The
+  // window opens after the dialog is closed (the scripts call AI_StopProcessInfos before it)
+  std::vector<std::pair<size_t,int32_t>>      salesList;
+  std::weak_ptr<zenkit::INpc>                 salesNpc;
+  bool                                        salesPending = false;
   // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
   std::weak_ptr<zenkit::INpc>                 wispBody;
   std::unordered_map<const zenkit::INpc*,uint64_t> wispBodySkip;
@@ -2280,6 +2285,29 @@ void GameScript::initCommon() {
       world().triggerChangeWorld(zen,wp);
       });
     bindNb("RX_ISREMOTESUMMON",    [](std::shared_ptr<zenkit::INpc>) -> int32_t { return 0; });
+    // NB fix 68: the window to sell items for given prices (Hanna - jewels and caskets, Kardif - raw meat, Halvor -
+    // pearls, shells and valuables, Kreol, Xardas as a necromancer...): UNION_ABI.DLL 0x1017EC40 - the craft window
+    // of the plugin in the mode 13. Here: the trade window with only these items of the player and these prices
+    bindNb("RX_CRAFT_PLAYERSALES_CLEARPRODUCTLIST", [this]() {
+      nbStates[this].salesList.clear();
+      });
+    bindNb("RX_CRAFT_PLAYERSALES_ADDTOPRODUCTLIST", [this](std::string_view name, int32_t price) {
+      std::string up(name);
+      for(auto& c:up)
+        c = char(std::toupper(uint8_t(c)));
+      auto* sym = vm.find_symbol_by_name(up);
+      if(sym==nullptr || !sym->is_instance_of<zenkit::IItem>()) {
+        Log::e("NB: RX_Craft_PlayerSales_AddToProductList: no item \"",name,"\"");
+        return;
+        }
+      nbStates[this].salesList.emplace_back(sym->index(),price);
+      });
+    bindNb("RX_OPENCRAFT_PLAYERSALES", [this](std::shared_ptr<zenkit::INpc> npc) {
+      auto& st = nbStates[this];
+      st.salesNpc     = npc;
+      st.salesPending = (npc!=nullptr);
+      nbCtx("sales window: ",st.salesList.size()," items");
+      });
     // the items of the scripts by name, equipping, the kind of a weapon
     bindNb("CREATEINVITEMSBYSTRING", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view inst, int32_t count) {
       if(auto* sym = vm.find_symbol_by_name(inst); sym!=nullptr && count>0)
@@ -3891,6 +3919,15 @@ void GameScript::tick(uint64_t dt) {
     }
 
   auto& st = nb->second;
+  // NB fix 68: the window to sell, when the dialog is closed
+  if(st.salesPending && !Gothic::inst().isInDialog()) {
+    st.salesPending = false;
+    auto  ref  = st.salesNpc.lock();
+    auto* npc  = ref!=nullptr ? findNpc(ref.get()) : nullptr;
+    auto* hero = world().player();
+    if(npc!=nullptr && hero!=nullptr && !st.salesList.empty())
+      Gothic::inst().onOpenPlayerSales(*hero,*npc,st.salesList);
+    }
   const auto callNb = [this](zenkit::DaedalusSymbol* fn) {
     if(fn==nullptr)
       return;

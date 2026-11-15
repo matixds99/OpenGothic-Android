@@ -31,8 +31,11 @@ struct InventoryMenu::Page {
 
   Category category = CatAll;
   uint32_t scriptMask = 0;
+  const std::unordered_map<size_t,int32_t>* only = nullptr;   // NB fix 68: only these items (the sales of NB)
 
   bool matches(const Item& item) const {
+    if(only!=nullptr && only->find(item.clsId())==only->end())
+      return false;
     if(category==CatAll)
       return true;
 
@@ -161,6 +164,7 @@ void InventoryMenu::close() {
   renderer.reset(true);
   takeTimer.stop();
   state  = State::Closed;
+  sales  = false;
   }
 
 void InventoryMenu::open(Npc &pl) {
@@ -189,8 +193,33 @@ void InventoryMenu::open(Npc &pl) {
   pl.world().script().dmaInventoryOpen(pl);
   }
 
+void InventoryMenu::playerSales(Npc& pl, Npc& tr, const std::vector<std::pair<size_t,int32_t>>& products) {
+  trade(pl,tr);
+  if(state!=State::Trade)
+    return;
+  sales = true;
+  salesPrices.clear();
+  for(auto& [cls,price]:products)
+    salesPrices[cls] = price;
+  pagePl ->only = &salesPrices;
+  pageOth->only = &salesNone;
+  page = 1;   // the list of the player
+  adjustScroll();
+  update();
+  }
+
+int32_t InventoryMenu::sellCostOf(const Item& it) const {
+  if(sales) {
+    auto i = salesPrices.find(it.clsId());
+    if(i!=salesPrices.end())
+      return i->second;
+    }
+  return it.sellCost();
+  }
+
 void InventoryMenu::trade(Npc &pl, Npc &tr) {
   infoItem.reset();
+  sales = false;
   if(pl.isDown())
     return;
   state  = State::Trade;
@@ -641,6 +670,16 @@ void InventoryMenu::onTakeStuff() {
       player->addItem (it->clsId(),*chest,itemCount);
       }
     }
+  else if(state==State::Trade && sales) {
+    // NB fix 68: the item goes away, the player gets the price of the list
+    if(page.is(&player->inventory())) {
+      const size_t  cls   = it->clsId();
+      const int32_t price = sellCostOf(*it);
+      player->delItem(cls,uint32_t(itemCount));
+      if(price>0)
+        player->addItem(player->world().script().goldId()->index(),size_t(price)*itemCount);
+      }
+    }
   else if(state==State::Trade) {
     if(page.is(&player->inventory())) {
       player->sellItem(it->clsId(),*trader,itemCount);
@@ -932,7 +971,7 @@ void InventoryMenu::drawInfo(Painter &p) {
       continue;
 
     if(i+1==Item::MAX_UI_ROWS && state==State::Trade && player!=nullptr && pg.is(&player->inventory())){
-      val = r.sellCost();
+      val = sellCostOf(r);
       }
 
     string_frm vint(val);
@@ -1163,7 +1202,7 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
           continue;
         int32_t val = item.uiValue(i);
         if(i+1==Item::MAX_UI_ROWS && state==State::Trade && player!=nullptr && pg.is(&player->inventory()))
-          val = item.sellCost();
+          val = sellCostOf(item);
         int need = f.textSize(txt).w;
         if(val!=0) {
           string_frm vint(val);
@@ -1219,7 +1258,7 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
     if(txt.empty())
       continue;
     if(i+1==Item::MAX_UI_ROWS && state==State::Trade && player!=nullptr && pg.is(&player->inventory()))
-      val = item.sellCost();
+      val = sellCostOf(item);
 
     string_frm vint(val);
     const GthFont* f    = rowSc<baseSc ? &fontFor(rowSc) : &fnt;
