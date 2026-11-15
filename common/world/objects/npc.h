@@ -15,6 +15,7 @@
 #include "world/waypath.h"
 
 #include <cstdint>
+#include <map>
 #include <string>
 
 #include <zenkit/addon/daedalus.hh>
@@ -280,6 +281,10 @@ class Npc final {
     void       setTalentValue(Talent t,int32_t lvl);
     int32_t    talentValue(Talent t) const;
     int32_t    hitChance(Talent t) const;
+
+    // New Balance: zmienne NPC skryptów (RX_GETNPCVAR / RX_SETNPCVAR), zapisywane w save
+    int32_t    newBalanceGetNpcVar(int32_t index) const;
+    void       newBalanceSetNpcVar(int32_t index, int32_t value);
 
     void       setRefuseTalk(uint64_t milis);
     bool       isRefuseTalk() const;
@@ -680,6 +685,7 @@ class Npc final {
     int32_t                        talentsSk[TALENT_MAX_G2]={};
     int32_t                        talentsVl[TALENT_MAX_G2]={};
     uint64_t                       refuseTalkMilis         =0;
+    std::map<int32_t,int32_t>      newBalanceNpcVars;
 
     // attitude
     Attitude                       permAttitude=ATT_NULL;

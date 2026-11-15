@@ -1,0 +1,80 @@
+name: Debug
+
+env:
+  VK_SDK:     '1.4.357.0'
+  BUILD_TYPE: Debug
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-arm64-debug:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '8.9'
+
+      - uses: ./.github/actions/setup-vulkan
+        with:
+          os: Linux
+          vk-sdk: ${{ env.VK_SDK }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y glslang-tools ninja-build
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
+
+      - name: Generate build version
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo '#pragma once' > game/build.h
+          echo "static const char* appBuild = \"OpenGothic debug ${GITHUB_REF_NAME} ${SHORT_SHA}\";" >> game/build.h
+
+      - name: Configure
+        run: |
+          # The runner has its own Gradle 9 in GRADLE_HOME; AGP 8.7.3 needs the Gradle 8.9 of setup-gradle (first on PATH).
+          gradle --version
+          "$ANDROID_HOME/cmake/3.22.1/bin/cmake" -S . -B build/android -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.0.12077973/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 \
+            -DTEMPEST_ANDROID_GRADLE_EXECUTABLE="$(command -v gradle)" \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+
+      - name: Build debug APK
+        run: |
+          # Maven Central sometimes answers 429 (Too Many Requests) to the runners: what was downloaded stays in the
+          # Gradle cache, so the next attempt goes on from there.
+          for attempt in 1 2 3; do
+            if "$ANDROID_HOME/cmake/3.22.1/bin/cmake" --build build/android --target OpenGothic-apk; then
+              exit 0
+            fi
+            echo "::warning::APK build attempt $attempt failed, retrying in $((attempt * 60)) s"
+            sleep $((attempt * 60))
+          done
+          exit 1
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: opengothic_debug_${{ github.head_ref || github.ref_name }}_${{ env.SHORT_SHA }}_android_arm64
+          path: build/android/OpenGothic-apk/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
