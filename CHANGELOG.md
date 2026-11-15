@@ -438,6 +438,14 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Poprawka:** zegar jak w pluginie (500 ms, 16 ms przy `PrologCount==0`).
 - **Uwaga:** wszystko, co skrypty NB robią w tych dwóch funkcjach (zdarzenia świata, liczniki, część regeneracji/efektów), działa teraz w tempie oryginału, czyli dwa razy szybciej niż dotąd. Jeśli coś zacznie się dziać „za szybko”, to znak, że wcześniej było za wolno.
 
+### 58. Import zapisów z PC z New Balance (Union) – ✅ (15.11.2026)
+- **Pliki:** `patches/zenkit-opengothic.patch`, `common/game/originalsave.cpp`, `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/world/objects/npc.cpp`, `docs/ORYGINALNE_ZAPISY.md`, `patches/README.md`
+- **Zapisy z Unionem:** Union zapisuje postacie i przedmioty jako `oCNpcEx` / `oCItemEx`. ZenKit ich nie znał i pomijał wszystkie postacie, więc import kończył się błędem „the original save has no player in its current world”. Łatka ZenKit czyta je jak `oCNpc` / `oCItem` (dodatkowe pola Uniona są pomijane).
+- **Ludzkie gildie NB:** New Balance ma `GIL_SEPERATOR_HUM = 21`, więc gildie 16..20 (np. 19 – bohater po dołączeniu) były brane za potwory i miały ich wartości ruchu. Bohater z zapisu nie miał ludzkich animacji, zbroi ani ekwipunku i ślizgał się na każdym zboczu. Teraz granice gildii i `Gil_Values` są brane ze skryptów.
+- **Ekwipunek:** zakładane są tylko przedmioty faktycznie założone w zapisie (`ITEM_ACTIVE`). Wcześniej sześć niezałożonych amuletów zastępowało się nawzajem, a skrypty NB zdejmowały przy tym szatę i łuk. Zbroja, hełm, tarcza i broń są zakładane po biżuterii.
+- **Postacie ze spawnu:** te, które gra chwilowo wyjęła ze świata, mają w zapisie pozycję 0,0,0, czyli port Khorinis (w zapisie NB było ich 230: krwiopijce, kretoszczury, żółwie…). Teraz wracają na miejsce swojego spawnu – nie ma tłumu w porcie ani lagów.
+- **Sprawdzone (15.11.2026):** zapisy z New Balance z PC wczytują się prawidłowo.
+
 ## Do zrobienia
 
 - [x] Czarny goblin nie atakuje, stoi w miejscu – naprawione (poprawka 54). Z logu: wrogi (attitude=0), czuje bohatera (sense=5 przy ~1100), ale zostaje w `ZS_MM_RTN_ROAM` bez celu – reakcja na wroga (`B_MM_AssessEnemy`) nie przełącza go na atak; raz pojawia się `ZS_MM_ThreatenEnemy`. `RX_GobboClan` (niezaimplementowane) jest tylko w `AI_OnDead_Gobbo_Black_Clan` – przy śmierci, nie przy ataku. Do zbadania z włączonymi śladami `B_MM_AssessEnemy` (więcej niż 3 na komunikat).
