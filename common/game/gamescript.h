@@ -54,6 +54,11 @@ class GameScript final {
     GameScript(GameSession &owner);
     ~GameScript();
 
+    /// GIL_SEPERATOR_HUM / GIL_SEPERATOR_ORC of the scripts: the humans are below the first, the monsters between them.
+    /// A mod can move them (New Balance: 21, it has guilds of its own); the values of the original game without the symbols
+    int32_t guildSeparatorHum() const;
+    int32_t guildSeparatorOrc() const;
+
     struct DlgChoice final {
       std::string      title;
       int32_t          sort     = 0;
@@ -574,6 +579,8 @@ class GameScript final {
 
     GameSession&                                                owner;
     zenkit::DaedalusVm                                          vm;
+    mutable int32_t                                             sepHum = -1;
+    mutable int32_t                                             sepOrc = -1;
     int32_t                                                     vmLang = -1;
     std::mt19937                                                randGen;
     NpcProcessPolicy                                            aiProcessPolicy = NpcProcessPolicy::AiNormal;

@@ -1752,16 +1752,14 @@ uint32_t Npc::guild() const {
   }
 
 bool Npc::isMonster() const {
-  const bool g2 = owner.version().game==2;
-  const auto SEPERATOR_ORC = g2 ? GIL_SEPERATOR_ORC : GIL_G1_SEPERATOR_ORC;
-  const auto SEPERATOR_HUM = g2 ? GIL_SEPERATOR_HUM : GIL_G1_SEPERATOR_HUM;
-  return SEPERATOR_HUM<guild() && guild()<SEPERATOR_ORC;
+  // the borders are the ones of the scripts: New Balance moves GIL_SEPERATOR_HUM to 21 (its guilds 17..20 are humans)
+  auto&         sc  = owner.script();
+  const int32_t gil = int32_t(guild());
+  return sc.guildSeparatorHum()<gil && gil<sc.guildSeparatorOrc();
   }
 
 bool Npc::isHuman() const {
-  const bool g2 = owner.version().game==2;
-  const auto SEPERATOR_HUM = g2 ? GIL_SEPERATOR_HUM : GIL_G1_SEPERATOR_HUM;
-  return guild() < SEPERATOR_HUM;
+  return int32_t(guild()) < owner.script().guildSeparatorHum();
   }
 
 void Npc::setTrueGuild(int32_t g) {

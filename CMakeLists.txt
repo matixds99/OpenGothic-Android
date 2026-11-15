@@ -127,6 +127,9 @@ endif()
 set(BUILD_SQUISH_WITH_SSE2     OFF CACHE INTERNAL "")
 set(ZK_ENABLE_ASAN             OFF CACHE INTERNAL "")
 set(ZK_ENABLE_DEPRECATION      OFF CACHE INTERNAL "")
+# compressed VDF of Union (Union.vdf of New Balance and other mods): ZenKit reads them with miniz, the copy in lib/miniz
+set(ZK_ENABLE_ZIPPED_VDF       ON  CACHE INTERNAL "")
+set(FETCHCONTENT_SOURCE_DIR_MINIZ "${CMAKE_CURRENT_SOURCE_DIR}/cmake/miniz" CACHE INTERNAL "")
 
 include(cmake/zenkitpatch.cmake)
 add_subdirectory(lib/ZenKit)
@@ -165,7 +168,10 @@ endif()
 # zip
 include_directories(lib/miniz)
 add_definitions(-DMINIZ_NO_STDIO)
-add_library(miniz STATIC EXCLUDE_FROM_ALL "lib/miniz/miniz.h" "lib/miniz/miniz.c")
+# ZenKit has made the target already (cmake/miniz, for the zipped VDF): the same library for both
+if(NOT TARGET miniz)
+  add_library(miniz STATIC EXCLUDE_FROM_ALL "lib/miniz/miniz.h" "lib/miniz/miniz.c")
+endif()
 target_link_libraries(${PROJECT_NAME} miniz)
 
 # JavaScript for the mods

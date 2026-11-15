@@ -1008,6 +1008,26 @@ void GameScript::dmaFallDamage(Npc& npc) {
     dma->eventFallDamage(npc);
   }
 
+int32_t GameScript::guildSeparatorHum() const {
+  if(sepHum<0) {
+    const bool g2  = owner.version().game==2;
+    auto*      sym = const_cast<zenkit::DaedalusVm&>(vm).find_symbol_by_name("GIL_SEPERATOR_HUM");
+    sepHum = sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INT && sym->get_int()>0 ? sym->get_int()
+                                                                                          : int32_t(g2 ? GIL_SEPERATOR_HUM : GIL_G1_SEPERATOR_HUM);
+    }
+  return sepHum;
+  }
+
+int32_t GameScript::guildSeparatorOrc() const {
+  if(sepOrc<0) {
+    const bool g2  = owner.version().game==2;
+    auto*      sym = const_cast<zenkit::DaedalusVm&>(vm).find_symbol_by_name("GIL_SEPERATOR_ORC");
+    sepOrc = sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INT && sym->get_int()>0 ? sym->get_int()
+                                                                                          : int32_t(g2 ? GIL_SEPERATOR_ORC : GIL_G1_SEPERATOR_ORC);
+    }
+  return sepOrc;
+  }
+
 GameScript::~GameScript() {
   nbStates.erase(this);
   Gothic::inst().onSettingsChanged.ubind(this,&GameScript::initSettings);

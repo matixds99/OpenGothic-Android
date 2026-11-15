@@ -148,6 +148,9 @@ void applyNpc(World& world, Npc& npc, const zenkit::VNpc& s) {
           }
     };
   slot("ZS_TORSO","");
+  // New Balance (Union): the helmet is an item of its own in the slot of the head, the shield in the left arm
+  slot("ZS_HELMET","");
+  slot("ZS_SHIELD","ZS_LEFTARM");
   slot("ZS_LONGSWORD","ZS_SWORD");
   slot("ZS_CROSSBOW","ZS_BOW");
   for(auto& i:s.items) {
