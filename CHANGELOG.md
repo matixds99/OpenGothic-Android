@@ -498,8 +498,18 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
   - opcja z rozmowy z ognikiem „Wyłącz zbieranie wartościowych przedmiotów” (`RX_Wisp_DontTakeImportantItems`) – pomija zbroje i mikstury;
   - ognik leci do przedmiotu („Coś znaleziono!”), po dolocie przedmiot idzie do ekwipunku („Zdobyto: …”, kod z poprawek 61/63);
   - nie doleci w 15 s → odpuszcza ten przedmiot na minutę i bierze następny.
-- **Log (co 10 s):** `[ctx] wisp search: the wisp at … cm, items in 10 m: N (owned …, skipped …, important …, keys …, height …) -> nazwa` albo `WISP_DETECTOR is in the world, but not in 20 m of the hero`. Pierwszy test (21:18): nadal nie zbiera – czekam na log z tymi wpisami.
+- **Log (co 10 s):** `[ctx] wisp search: the wisp at … cm, items in 10 m: N (owned …, skipped …, important …, keys …, height …) -> nazwa` albo `WISP_DETECTOR is in the world, but not in 20 m of the hero`. Pierwszy test (21:18): nadal nie zbiera. Log z 21:26: szukanie działa (`the wisp found: Eliksir many` → `the wisp brings: Eliksir many`), ale ognik prawie zawsze był 12–25 m od bohatera, bo za nim nie leciał – poprawka 65.
 - **Czego jeszcze nie ma:** umiejętności ognika z pluginu (1–10: rodzaje przedmiotów, większy obszar, szybkość, łup z przeciwników) – plugin trzyma je u siebie; tu ognik zbiera wszystkie rodzaje. Ani opcji „zbieranie w pomieszczeniach”.
+
+### 65. Ognik nie leci za bohaterem – 🧪 (15.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- **Zgłoszenie + log (21:26):** ognik zostaje w miejscu. W logu co 10 s: „ognik 12–16 m od bohatera” albo „dalej niż 20 m”, więc szukanie z poprawki 64 prawie nigdy nie ruszało (raz ruszyło i przyniosło eliksir many).
+- **Przyczyna:** `ZS_MM_Rtn_Summoned` prowadzi do bohatera wszystkie przywołane stwory oprócz `WISP_DETECTOR` – ognika prowadził plugin.
+- **Poprawka:**
+  - gdy ognik nie leci po przedmiot i jest dalej niż 3 m, biegnie do bohatera;
+  - dalej niż 25 m (teleport, zmiana poziomu) – staje od razu obok bohatera (`[ctx] the wisp was … cm away`);
+  - szuka przedmiotów, gdy jest do 20 m od bohatera (bohater widziany do 60 m).
+- **Z logu przy okazji:** jedyny przedmiot obok w czasie rozmowy z ognikiem miał właściciela („owned 1”), więc ognik go nie brał – tak ma być.
 
 ## Do zrobienia
 

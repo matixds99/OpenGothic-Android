@@ -3898,7 +3898,7 @@ void GameScript::tick(uint64_t dt) {
     Npc* hero = world().player();
     Npc* wisp = nullptr;
     if(hero!=nullptr && !hero->isDead()) {
-      world().detectNpc(hero->position(),2000.f,[&](Npc& n) {
+      world().detectNpc(hero->position(),6000.f,[&](Npc& n) {
         if(wisp!=nullptr || n.isDead())
           return;
         auto* sym = vm.find_symbol_by_index(n.handle().symbol_index());
@@ -3909,9 +3909,29 @@ void GameScript::tick(uint64_t dt) {
     if(wisp==nullptr && hero!=nullptr && tickCount()>=st.nextWispLog) {
       st.nextWispLog = tickCount()+10000;
       if(auto* ws = vm.find_symbol_by_name("WISP_DETECTOR"); ws!=nullptr && findNpc(ws)!=nullptr)
-        nbCtx("wisp search: WISP_DETECTOR is in the world, but not in 20 m of the hero");
+        nbCtx("wisp search: WISP_DETECTOR is in the world, but not in 60 m of the hero");
       }
+    // NB fix 65: the wisp follows the hero (the plugin moves it: ZS_MM_Rtn_Summoned leaves WISP_DETECTOR out of its
+    // AI_GotoNpc). Farther than 3 m and nothing to do: to the hero, running; farther than 25 m: next to the hero
+    bool wispNear = false;
     if(wisp!=nullptr && !Gothic::inst().isInDialog()) {
+      const auto  d    = wisp->position()-hero->position();
+      const float dist = d.length();
+      if(dist>2500.f) {
+        const float a = hero->rotation()*3.14159265f/180.f;
+        wisp->clearAiQueue();
+        wisp->setPosition(hero->position()+Tempest::Vec3(std::sin(a)*120.f,60.f,std::cos(a)*120.f));
+        nbCtx("the wisp was ",int(dist)," cm away: next to the hero again");
+        }
+      else if(dist>300.f) {
+        if(wisp->isAiQueueEmpty()) {
+          wisp->aiPush(AiQueue::aiSetWalkMode(WalkBit::WM_Run));
+          wisp->aiPush(AiQueue::aiGoToNpc(hero));
+          }
+        }
+      wispNear = dist<=2000.f;
+      }
+    if(wisp!=nullptr && wispNear && !Gothic::inst().isInDialog()) {
       const auto katOf = [this](std::string_view name, int32_t def) {
         auto* k = vm.find_symbol_by_name(name);
         return k!=nullptr && k->type()==zenkit::DaedalusDataType::INT ? k->get_int() : def;
