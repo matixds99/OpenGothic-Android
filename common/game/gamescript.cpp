@@ -162,6 +162,8 @@ struct NbState {
   std::weak_ptr<zenkit::IItem>                wispItem;
   uint64_t                                    wispSince = 0;
   const zenkit::IItem*                        wispFound = nullptr; // "Coś znaleziono!" once for an item (fix 62)
+  float                                       wispBest  = 1e9f;    // the closest the wisp came to it (log, fix 63)
+  float                                       wispBestH = 0;
   const World*                                vobWorld = nullptr;
   };
 
@@ -3891,11 +3893,21 @@ void GameScript::tick(uint64_t dt) {
     auto* wisp = wNpc!=nullptr ? findNpc(wNpc.get()) : nullptr;
     auto* hero = world().player();
     if(wisp==nullptr || wisp->isDead() || hero==nullptr || tickCount()>st.wispSince+20000) {
-      st.wispItem.reset();   // lost, or 20 s without reaching it
+      // lost, or 20 s without reaching it
+      if(st.wispBest<1e9f)
+        nbCtx("the wisp did not reach the item: closest ",int(st.wispBest)," cm (height ",int(st.wispBestH)," cm)");
+      st.wispItem.reset();
       }
     else if(auto* itm = findItem(wItm.get())) {
-      const auto d = itm->position()-wisp->position();
-      if(d.quadLength()<160.f*160.f) {
+      // NB fix 63: the distance on the ground and the height apart - the wisp flies above the item (the 3D distance
+      // of 160 cm of fix 61 was never reached: it stopped above the item and the item stayed)
+      const auto  d  = itm->position()-wisp->position();
+      const float dh = std::sqrt(d.x*d.x+d.z*d.z);
+      if(dh<st.wispBest) {
+        st.wispBest  = dh;
+        st.wispBestH = std::abs(d.y);
+        }
+      if(dh<250.f && std::abs(d.y)<400.f) {
         // is it still lying in the world (not taken by someone already)?
         bool inWorld = false;
         for(uint32_t i=0; auto* w = world().itmById(i); ++i)
@@ -3904,7 +3916,12 @@ void GameScript::tick(uint64_t dt) {
             break;
             }
         st.wispItem.reset();
+        st.wispBest = 1e9f;
         const bool owned = itm->handle().owner!=0 || itm->handle().owner_guild!=0;
+        if(!inWorld)
+          nbCtx("the wisp is at the item, but it is not in the world any more");
+        else if(owned)
+          nbCtx("the wisp is at the item, but it has an owner (",itm->handle().owner,"/",itm->handle().owner_guild,"): not taken");
         if(inWorld && !owned) {
           const std::string name(itm->displayName());
           const size_t      cnt = itm->count();
@@ -5873,6 +5890,8 @@ void GameScript::ai_gotoitem(std::shared_ptr<zenkit::INpc> npcRef, std::shared_p
       // NB fix 62: "Coś znaleziono!" of the plugin (sWispSearch), once for an item
       if(st.wispFound!=itmRef.get()) {
         st.wispFound = itmRef.get();
+        st.wispBest  = 1e9f;
+        nbCtx("the wisp found: ",itm->displayName()," at ",int((itm->position()-npc->position()).length())," cm");
         Gothic::inst().onPrint(std::string(NbTexts::get("sWispSearch")).c_str());
         }
       }

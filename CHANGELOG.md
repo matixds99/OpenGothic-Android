@@ -467,6 +467,7 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Poprawka:** gdy ognik (`WISP_DETECTOR`) doleci do przedmiotu, do którego go wysłano (do 1,6 m), przedmiot trafia do ekwipunku bohatera i jest komunikat „Ognik przyniósł: …”. Przedmiotów z właścicielem nie bierze (to byłaby kradzież) – po te bohater musi sięgnąć sam. Jeśli ognik nie doleci w 20 s, odpuszcza i skrypt znajdzie mu następny. W logu: `[ctx] the wisp brings: …`.
 
 ### 62. Napisy NB na ekranie: liczniki efektów, karma bogów, ognik – 🧪 (15.11.2026)
+- **Sprawdzone (15.11.2026, zrzut):** liczniki działają („(02:10) Napój wytrzymałości”, „Ochrona na następny atak”), są też ikonki karmy (3 i czerwone 1 8) i „Strzały: 1113”.
 - **Pliki:** `common/game/gamescript.cpp`, 🆕 `common/game/nbtexts.h`, `common/game/nboptions.h`
 - **Zgłoszenie:** brakowało napisów z wersji PC: w prawym górnym rogu liczników mikstur i błogosławieństw (np. „(13:03) Błogosławieństwo - regeneracja many”), ikonek karmy Innosa i Beliara oraz komunikatu ognika „Coś znaleziono!”.
 - **Przyczyna:** to rysowały dwie rzeczy, których tu nie było:
@@ -479,6 +480,13 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
   - Ognik: „Coś znaleziono!” raz na każdy znaleziony przedmiot, a po przyniesieniu „Zdobyto: …” (teksty pluginu zamiast mojego „Ognik przyniósł”).
   - `RX_PrintCutscene` wyłączone: pisało „Pomiń, wciśnij G lub R” na scenach, a pominięcie idzie przez `RX_KeyPressed`, którego tu nie ma.
 - **Bez tego (na razie):** liczniki wampira, Full SnC+, umiejętności karmy i spowolnienia czasu (plugin trzyma je u siebie) oraz „Dzień: …” w lewym górnym rogu.
+
+### 63. Ognik nadal nie zbiera przedmiotów (poprawka 61) – 🧪 (15.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- **Zgłoszenie:** po poprawce 62 liczniki działają, ale ognik dalej nie zbiera (przedmiot „Pierścień gwiezdnej mocy” został na ziemi).
+- **Przyczyna (najpewniej):** poprawka 61 brała przedmiot, gdy ognik był bliżej niż 1,6 m w linii prostej. Ognik lata nad ziemią i zatrzymuje się nad przedmiotem, więc ten warunek mógł nigdy nie zajść.
+- **Poprawka:** odległość liczona po ziemi (do 2,5 m), a wysokość osobno (do 4 m).
+- **Log do sprawdzenia, jeśli dalej nie działa:** `[ctx] the wisp found: … at … cm` (ognik ruszył do przedmiotu), `the wisp did not reach the item: closest … cm (height … cm)` (nie doleciał przez 20 s), `the wisp is at the item, but it has an owner` (przedmiot z właścicielem – nie bierze, to byłaby kradzież), `the wisp brings: …` (zebrał).
 
 ## Do zrobienia
 
