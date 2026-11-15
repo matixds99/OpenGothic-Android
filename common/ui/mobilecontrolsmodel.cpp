@@ -547,8 +547,11 @@ void Controls::buildHudEditor() {
   }
 
 void Controls::buildMenu(const Anchor&) {
-  if(bareOpen)
+  if(bareOpen) {
+    // the way out of the window: Escape, as the BACK of the other menus (top right, nothing of the window there)
+    round(fromRight(62), fromTop(36), 50,"BACK",Key::Escape);
     return;
+    }
   if(modsOpen) {
     // the window of the mods has its own close button at the top right: the settings do not cover it
     round(fromRight(70), fromBottom(70),  66,"BACK",    Key::Escape);

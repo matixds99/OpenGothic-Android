@@ -638,6 +638,7 @@ void MainWindow::keyDownEvent(KeyEvent &event) {
   if(nbSales.isActive()) {   // NB fix 68
     event.accept();
     nbSales.keyDownEvent(event);
+    uiKeyUp = &nbSales;   // its key up must not reach the game (Escape would open the menu)
     return;
     }
 
@@ -741,6 +742,11 @@ void MainWindow::keyUpEvent(KeyEvent &event) {
   if(uiKeyUp==&modMenu) {
     uiKeyUp = nullptr;
     modMenu.keyUpEvent(event);
+    return;
+    }
+  if(uiKeyUp==&nbSales) {   // NB fix 68
+    uiKeyUp = nullptr;
+    event.accept();
     return;
     }
   if(uiKeyUp==&video){

@@ -3959,7 +3959,7 @@ void GameScript::tick(uint64_t dt) {
   // NB fix 62: the HUD of NB - GamePaused of the scripts (the karma of the gods, the arrows, the hunger, the icons of
   // the state; PrintScreen for 1 s, so the plugin calls it every frame - here every 250 ms) and the list of the
   // effects with their time of the plugin
-  if(tickCount()>=st.nextHud || st.nextHud>tickCount()+1000) {
+  if((tickCount()>=st.nextHud || st.nextHud>tickCount()+1000) && !Gothic::inst().nbSalesOpen) {
     st.nextHud = tickCount()+250;
     callNb(st.gamePaused);
     nbBuffPanel(vm);

@@ -1,6 +1,7 @@
 #include "nbsalesmenu.h"
 
 #include <Tempest/Painter>
+#include <Tempest/Log>
 
 #include <algorithm>
 
@@ -34,6 +35,7 @@ void NbSalesMenu::open(Npc& pl, Npc& tr, const std::vector<Gothic::NbSaleItem>& 
       }
   if(active)
     Gothic::inst().emitGlobalSound("TRADE_OPEN");
+  Gothic::inst().nbSalesOpen = active;
   update();
   }
 
@@ -41,6 +43,7 @@ void NbSalesMenu::close() {
   if(active)
     Gothic::inst().emitGlobalSound("TRADE_CLOSE");
   active = false;
+  Gothic::inst().nbSalesOpen = false;
   player = nullptr;
   trader = nullptr;
   items.clear();
@@ -132,7 +135,10 @@ void NbSalesMenu::mobileTap(float x, float y) {
     return;
   const auto  l = layout();
   const Point p{int(x),int(y)};
-  if(l.close.contains(p)) {
+  Log::i("NB sales window: tap ",int(x),",",int(y)," (window ",w(),"x",h(),", close ",l.close.x,",",l.close.y,")");
+  // the X, with a margin for the finger
+  const Rect closeHit(l.close.x-l.close.w/2,l.close.y-l.close.h/2,l.close.w*2,l.close.h*2);
+  if(closeHit.contains(p)) {
     close();
     return;
     }

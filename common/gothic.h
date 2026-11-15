@@ -187,6 +187,7 @@ class Gothic final {
       std::string name;
       };
     Tempest::Signal<void(Npc&,Npc&,const std::vector<NbSaleItem>&)> onOpenPlayerSales;
+    bool                                                                nbSalesOpen = false; // the window is shown (no HUD of NB under it)
     std::function<bool(const Npc*)>                                     isNpcInDialogFn;
 
     Tempest::Signal<void(std::string_view,int,int,int,const GthFont&)>  onPrintScreen;
