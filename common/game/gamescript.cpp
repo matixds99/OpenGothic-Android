@@ -3894,7 +3894,7 @@ void GameScript::tick(uint64_t dt) {
   // hero and has no item, the nearest item lying around the hero (10 m, without an owner, not higher than 5 m) - the
   // wisp flies to it, "Coś znaleziono!", and the code of fix 61 below gives it to the hero
   if(st.wispItem.expired() && tickCount()>=st.nextWispSearch) {
-    st.nextWispSearch = tickCount()+500;
+    st.nextWispSearch = tickCount()+100;   // NB fix 61: was 500 ms (slow next to the speed of the plugin)
     Npc* hero = world().player();
     Npc* wisp = nullptr;
     if(hero!=nullptr && !hero->isDead()) {
@@ -3946,6 +3946,8 @@ void GameScript::tick(uint64_t dt) {
       Item* best  = nullptr;
       float bestD = std::numeric_limits<float>::max();
       const auto hp = hero->position();
+      const auto wp = wisp->position();
+      std::vector<Item*> nearWisp;   // NB fix 61: the items right at the wisp - taken at once, without flying
       int nAll = 0, nOwned = 0, nSkip = 0, nImportant = 0, nKey = 0, nHigh = 0;
       world().detectItem(hp,1000.f,[&](Item& it) {
         auto& h = it.handle();
@@ -3987,12 +3989,42 @@ void GameScript::tick(uint64_t dt) {
           ++nHigh;
           return;
           }
-        const float q = d.quadLength();
+        // NB fix 61: the nearest to the wisp (not to the hero) - the shortest flights one after another
+        const auto  dw = it.position()-wp;
+        const float hw = dw.x*dw.x+dw.z*dw.z;
+        if(hw<350.f*350.f && std::abs(dw.y)<400.f) {
+          nearWisp.push_back(&it);
+          return;
+          }
+        const float q = dw.quadLength();
         if(q<bestD) {
           bestD = q;
           best  = &it;
           }
         });
+      // NB fix 61: what lies at the wisp goes to the hero at once (up to 5 at a time, as the plugin that takes
+      // a heap of mushrooms in a moment)
+      if(!nearWisp.empty()) {
+        std::vector<std::string> names;
+        for(size_t i=0; i<nearWisp.size() && i<5; ++i) {
+          Item* itm = nearWisp[i];
+          const std::string name(itm->displayName());
+          const size_t      cnt = itm->count();
+          if(auto ptr = world().takeItem(*itm)) {
+            hero->addItem(std::move(ptr));
+            nbCtx("the wisp brings: ",name," (at the wisp)");
+            names.push_back(cnt>1 ? name+" x"+std::to_string(cnt) : name);
+            }
+          }
+        if(!names.empty()) {
+          std::string msg(NbTexts::get("sAcquired"));
+          for(size_t i=0; i<names.size(); ++i)
+            msg += (i==0 ? "" : ", ")+names[i];
+          Gothic::inst().onPrint(msg.c_str());
+          }
+        st.nextWispSearch = 0;   // the next ones at once
+        best = nullptr;          // a flight next time: the list of the world changed
+        }
       if(tickCount()>=st.nextWispLog) {
         st.nextWispLog = tickCount()+10000;
         nbCtx("wisp search: the wisp at ",int((wisp->position()-hp).length())," cm, items in 10 m: ",nAll,
@@ -4009,7 +4041,7 @@ void GameScript::tick(uint64_t dt) {
           st.wispBest  = 1e9f;
           if(st.wispFound!=ref.get()) {
             st.wispFound = ref.get();
-            nbCtx("the wisp found: ",best->displayName()," at ",int(std::sqrt(bestD))," cm from the hero");
+            nbCtx("the wisp found: ",best->displayName()," at ",int(std::sqrt(bestD))," cm from the wisp");
             Gothic::inst().onPrint(std::string(NbTexts::get("sWispSearch")).c_str());
             }
           }
@@ -4040,7 +4072,7 @@ void GameScript::tick(uint64_t dt) {
         st.wispBest  = dh;
         st.wispBestH = std::abs(d.y);
         }
-      if(dh<250.f && std::abs(d.y)<400.f) {
+      if(dh<350.f && std::abs(d.y)<400.f) {
         // is it still lying in the world (not taken by someone already)?
         bool inWorld = false;
         for(uint32_t i=0; auto* w = world().itmById(i); ++i)
@@ -4067,6 +4099,7 @@ void GameScript::tick(uint64_t dt) {
             const std::string msg  = cnt>1 ? head+name+" x"+std::to_string(cnt) : head+name;
             Gothic::inst().onPrint(msg.c_str());
             }
+          st.nextWispSearch = 0;   // NB fix 61: the next item at once
           }
         }
       }

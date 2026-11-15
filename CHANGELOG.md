@@ -473,6 +473,10 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
   - **Szukanie (co 0,5 s):** gdy ognik jest do 20 m od bohatera – najbliższy przedmiot leżący do 10 m od bohatera, nie wyżej/niżej niż 5 m. Pomija klucze (`ITKE_*`, poza wytrychami – jak plugin) i, gdy w rozmowie z ognikiem wyłączono zbieranie wartościowych przedmiotów (`RX_Wisp_DontTakeImportantItems`), zbroje i mikstury.
   - **Przedmioty z właścicielem:** bierze je, gdy w promieniu 20 m od przedmiotu nie ma żywego właściciela ani nikogo z jego gildii (kradzieży nikt nie widzi) – w NB sporo przedmiotów na odludziu ma właściciela. Przy właścicielu nie bierze.
   - **Zbieranie:** ognik leci do przedmiotu („Coś znaleziono!”); gdy jest nad nim (do 2,5 m po ziemi i do 4 m w pionie – ognik lata nad ziemią), przedmiot idzie do ekwipunku („Zdobyto: …”). Nie doleci w 15 s – odpuszcza ten przedmiot na minutę i bierze następny.
+- **Szybsze zbieranie – 🧪 (15.11, 22:00):** zgłoszenie: zbiera, ale wolno – kilka wyrzuconych broni 10–15 s, a na PC natychmiast (20 grzybów w 2–3 s). Teraz:
+  - wszystko, co leży do 3,5 m od ognika, trafia do ekwipunku od razu, bez lotu (do 5 przedmiotów naraz, jeden komunikat „Zdobyto: a, b, c”) – ognik trzyma się przy bohaterze, więc rzeczy wokół bohatera znikają w chwilę;
+  - szukanie co 0,1 s zamiast 0,5 s, po każdym zebraniu następne od razu;
+  - leci do przedmiotu najbliższego ognikowi (nie bohaterowi) – krótsze przeloty; za przedmiot uznaje 3,5 m od niego zamiast 2,5 m.
 - **Log:** co 10 s `[ctx] wisp search: the wisp at … cm, items in 10 m: N (owner near …, skipped …, important …, keys …, height …) -> nazwa`, oraz `the wisp found: …`, `the wisp brings: …`, `the wisp takes an item of an owner (…)`, `the wisp did not reach the item: closest …`, `the wisp was … cm away: next to the hero again`.
 - **Czego jeszcze nie ma:** umiejętności ognika z pluginu (1–10: rodzaje przedmiotów, większy obszar, szybkość, łup z przeciwników – plugin trzyma je u siebie, tu ognik zbiera wszystkie rodzaje), opcja „zbieranie w pomieszczeniach”, pokazywanie rzadkich roślin i tabliczek (`RX_ShowWispRare`, `RX_ShowWispStone`, `FindPlates`…).
 
