@@ -1,516 +1,330 @@
 # Log poprawek – OpenGothic + Gothic II: New Balance
 
-Bazą są pliki z repo `borsuczyna/opengothic-android` (wersja z 31.10.2026, commit `31b8115`).
-Każda poprawka ma swój numer. Nowe dopisuję na końcu listy.
+Repo: fork `matixds99/OpenGothic-Android`, gałąź `touch-ui` (na bazie `borsuczyna/opengothic-android`).
+Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_BALANCE.md).
 
-Status:
-- ✅ sprawdzone w grze
-- 🧪 czeka na test
+**Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać. Pozostałe pliki się podmienia. Pełna lista jest w [README.md](README.md).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **64**).
+
+**🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
 ---
 
-### ✅ Sprawdzone też w grze (12.11.2026): pulpity z księgami dają inteligencję (5 → 6), stół demonologiczny otwiera menu.
+## Spis
+
+1. [Podstawy: skrypty NB, opcje, pętle pluginu, log](#1-podstawy-skrypty-nb-opcje-pętle-pluginu-log)
+2. [Brakujące funkcje pluginu (paczki)](#2-brakujące-funkcje-pluginu-paczki)
+3. [Prolog, kamery, wczytywanie, zapisy](#3-prolog-kamery-wczytywanie-zapisy)
+4. [Interfejs: menu, statystyki, dziennik, opisy, napisy](#4-interfejs-menu-statystyki-dziennik-opisy-napisy)
+5. [Bohater: sprint, wytrzymałość, paski, animacje broni](#5-bohater-sprint-wytrzymałość-paski-animacje-broni)
+6. [Walka i AI postaci](#6-walka-i-ai-postaci)
+7. [Świat: rzemiosło, zbroje, teleport, ognik](#7-świat-rzemiosło-zbroje-teleport-ognik)
+8. [Dźwięk](#8-dźwięk)
+9. [Do zrobienia](#9-do-zrobienia)
+
+---
+
+## 1. Podstawy: skrypty NB, opcje, pętle pluginu, log
 
 ### 0. Obsługa skryptów New Balance (Copilot, przed tym logiem) – ✅
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`
-- **Co:** zastępniki funkcji `RX_*` z pluginu Union (zmienne NB postaci, maski, teksty, losowanie, wywołania zwrotne, cykl `RX_Main_CycleTrigger` co sekundę). Dzięki nim działają teksty i ticki.
-- **Zmienne NB postaci (`npc.cpp`):** `RX_GETNPCVAR`/`RX_SETNPCVAR`, zapisywane też w save'ach.
+- Zastępniki funkcji `RX_*` z pluginu Union (zmienne NB postaci, maski, teksty, losowanie, wywołania zwrotne). Dzięki nim działają teksty i cykle skryptów.
+- Zmienne NB postaci (`RX_GetNpcVar` / `RX_SetNpcVar`) są zapisywane też w save'ach.
 
-### 0a. AI potworów – potwory nie atakowały – ✅
-- **Plik:** `common/world/objects/npc.cpp`
-- **Objaw:** wilki, gobliny i inne potwory nie reagowały na bohatera i nie atakowały.
-- **Przyczyna:** skrypt NB `ZS_MM_AllScheduler` robi `AI_RemoveWeapon` + `AI_StartState`. Potwory nie mają animacji chowania broni (wilk w trybie pięści, goblin z pałką), więc `AI_RemoveWeapon` wisiał w kolejce AI w nieskończoność i blokował wszystko po nim. Potwór nie dostawał stanu ani percepcji (`percEnemy=0`), więc `PERC_ASSESSENEMY` → `B_MM_AssessEnemy` nigdy się nie uruchamiało.
-- **Poprawka:** u potworów `AI_RemoveWeapon` chowa broń od razu, bez animacji (tak jak `drawWeaponFist` wyciąga ją bez animacji). Kolejka się odblokowuje, a atak dalej idzie przez skrypty NB. Dzięki temu działają wyjątki z NB: przywołańcy i drużyna nie atakują bohatera, potwory z questów czekają na swój etap, wilki najpierw warczą, owce uciekają.
-- **Diagnostyka:** w logu są linie `NB ai: ...` (stan, kolejka, percepcje potwora przy bohaterze). Można je wyłączyć przez `NB_AI_TRACE = false`.
+### 4. Opcje moda z Gothic.ini – ✅ (12.11.2026, sprawdzone na `bSkipLogo=1`)
+- **Plik:** `common/game/gamescript.cpp` (`Menu_ReadInt`, `Menu_WriteInt`)
+- **Przyczyna:** skrypty NB czytają ok. 70 opcji z `Gothic.ini`, sekcja `[AST]` (np. `bSkipLogo`, `bCanSaveGame`, `bShowKarma`). `Menu_ReadInt` / `Menu_WriteInt` dostarczał plugin Union – każda opcja dawała 0, a zapisy przepadały.
+- **Poprawka:** obie funkcje czytają i zapisują ustawienia OpenGothic (`Gothic.ini`).
 
-### 1. Czarny ekran w scenie z Xardasem – ✅ (11.11.2026)
-- **Pliki:** `common/world/triggers/cscamera.cpp`, `common/world/triggers/cscamera.h`
-- **Objaw:** po pierwszym dialogu z Xardasem ekran robił się czarny i zostawały same napisy („Otrzymano parę zwojów…”).
-- **Przyczyna:** kamera filmowa `EVT_START_CAM` miała błędne czasy klatek kluczowych (oryginalny silnik przelicza je sam, OpenGothic nie). Wychodziło dzielenie przez zero, kamera dostawała pozycję NaN i nie widziała nic.
-- **Poprawka:** błędne czasy są rozkładane po trasie kamery, dodane zabezpieczenia przed dzieleniem przez zero. Jeśli kamera mimo to dostanie złą pozycję, scena jest przerywana i wraca zwykła kamera.
-
-### 2. Stoły rzemieślnicze nic nie robiły – ✅ alchemia, runy, demonologia, tabliczki (12.11.2026)
-- **Plik:** `common/game/gamescript.cpp` (funkcja `RX_OPENCRAFT` w bloku NB)
-- **Objaw:** stół alchemiczny, runiczny itd. nie otwierał żadnego menu.
-- **Przyczyna:** NB otwiera stoły przez `RX_OpenCraft(...)`, czyli graficzne okno z pluginu Union, którego OpenGothic nie ma.
-- **Poprawka:** `RX_OpenCraft` otwiera stare menu dialogowe, które nadal jest w skryptach NB (jak `AI_ProcessInfos(hero)` w Gothicu 2). Przepisy i składniki pochodzą ze skryptów moda.
-- **Sprawdzone:** stół alchemiczny, runiczny (kamienie runiczne), demonologiczny i stół z tabliczkami. **Do sprawdzenia:** zwoje, kowadło, piec. Kuchnia, łuki, biżuteria i runy demoniczne mogą nie mieć starego menu.
-
-### 3. Biały ekran wczytywania – ✅ (12.11.2026, poprawione 2x)
-- **Pliki:** `common/gothic.cpp`, `common/mainwindow.cpp`
-- **Objaw:** przy wczytywaniu białe tło, na nim tylko pasek postępu.
-- **Przyczyna:** `LOADING.TGA` w NB to tylko malutka biała zaślepka. Plugin Union losuje prawdziwe obrazki z `/_work/data/textures/_compiled/` według wzoru `LOADING_<ŚWIAT>_<numer>` (sprawdzone w kodzie pluginu). Pierwsza wersja poprawki szukała złego wzoru (`LOADING_<numer>`), dlatego nadal było białe tło.
-- **Poprawka:** losowany jest obrazek `LOADING_<ŚWIAT>_<numer>`. Przy zmianie świata brany jest obrazek tego świata, przy wczytywaniu save'a dowolny. Zaślepki mniejsze niż 64×64 są pomijane, a gdy nie ma żadnego obrazka, tło jest czarne zamiast białego.
-
-### 3a. Ekran wczytywania pokazywał obrazek innego świata – ✅ (12.11.2026)
-- **Pliki:** `common/gothic.cpp`, `common/mainwindow.cpp`
-- **Objaw:** przy wczytywaniu save'a albo teleporcie do Khorinis pokazywał się Jarkendar, Pustynia Adanosa itd.
-- **Przyczyna:** przy wczytywaniu save'a OpenGothic zawsze prosi o `LOADING.TGA`, nie podając świata, więc losowany był obrazek z dowolnego świata. Gdy dla danego świata nie było obrazka, poprawka 3 też brała losowy z innego świata.
-- **Poprawka:** przy wczytywaniu save'a świat jest odczytywany z nagłówka save'a i prosi się o `LOADING_<ŚWIAT>.TGA`, tak jak przy zmianie świata. Kolejność wyboru: losowy obrazek tego świata → obrazek tego świata bez numeru → losowy z dowolnego świata. W logu jest linia `loading screen: ...` z nazwą świata i wybranym obrazkiem.
-
-### 4. Opcje moda z Gothic.ini nie działały – ✅ (12.11.2026, sprawdzone na bSkipLogo=1)
-- **Plik:** `common/game/gamescript.cpp` (`MENU_READINT`, `MENU_WRITEINT` w bloku NB)
-- **Objaw:** skrypty NB czytają swoje opcje z `Gothic.ini`, sekcja `[AST]` (np. `bSkipLogo`, `bCanSaveGame`, `bOptionHealth`, `bOptionMonsterPower`, `bShowKarma`, ok. 70 opcji). Każda zwracała 0, a zapisy przepadały.
-- **Przyczyna:** `Menu_ReadInt` / `Menu_WriteInt` dostarcza plugin Union, a OpenGothic ich nie miał.
-- **Poprawka:** obie funkcje czytają i zapisują ustawienia OpenGothic (`Gothic.ini`). Opcje, które sprawdzają same skrypty NB, działają po wpisaniu ich do `[AST]`, np. `bSkipLogo=1` pomija intro.
-
-### 5. Puste menu „Ustawienia gry” – ✅ (12.11.2026)
-- **Pliki:** `common/ui/gamemenu.cpp`, `common/game/gamescript.cpp`, `common/game/nboptions.h` 🆕 **NOWY PLIK**
-- ⚠️ **`nboptions.h` to NOWY PLIK.** Trzeba go dodać do `common/game/`, obok `gamescript.cpp`. Bez niego build się nie uda.
-- **Objaw:** pierwsza kategoria w ustawieniach („Ustawienia gry”) była pusta.
-- **Przyczyna:** w `MENU.DAT` moda ta strona to pusta rama (`MENU_OPT_CONTROLS_NEWOPTIONS`), wypełnia ją plugin Union. Z kodu pluginu odczytałem pełną listę: ok. 140 opcji, ich klucze w `Gothic.ini`, typy i wartości domyślne.
+### 5, 44. Menu „Ustawienia gry” i domyślne opcje pluginu – ✅ (12.11.2026)
+- **Pliki:** `common/ui/gamemenu.cpp`, `common/game/gamescript.cpp`, 🆕 `common/game/nboptions.h`
+- **Przyczyna:** w `MENU.DAT` moda ta strona to pusta rama (`MENU_OPT_CONTROLS_NEWOPTIONS`), wypełnia ją plugin. Z kodu pluginu odczytana pełna lista: ok. 140 opcji, ich klucze, typy i wartości domyślne.
 - **Poprawka:**
-  - strona pokazuje 19 przełączników, które czytają same skrypty NB. Wśród nich: pomijanie prologu, zapis w dowolnym miejscu, trudniejsi bossowie, okrzyki bohatera, karma bogów, sakiewka i torba na bohaterze, ekran śmierci oraz opcje Gniewu Beliara. Nazwy i „tak/nie” są brane ze skryptów gry, więc są po polsku. Reszty opcji pluginu nie pokazuję, bo sterują funkcjami, które ma tylko Union.
-  - wartości domyślne opcji NB (sekcje `[AST]` i `[BELIARS_RAGE]`) są dopisywane do `Gothic.ini`, jeśli ich tam nie ma, tak jak robi to silnik z Unionem. Przykład: `bCanSaveLeg=1` (zapis w dowolnym miejscu) i `bToggleHardBosses=1` są domyślnie włączone, a wcześniej skrypty widziały 0.
-- **Co robi każdy przełącznik** (sprawdzone w skryptach NB):
-  | Opcja | Co robi skrypt | Działa w OpenGothic? |
+  - strona pokazuje przełączniki, które czytają same skrypty NB (nazwy i „tak/nie” ze skryptów gry, po polsku). Reszty opcji pluginu nie ma, bo sterują funkcjami samego Uniona;
+  - domyślne wartości opcji NB (`[AST]`, `[BELIARS_RAGE]`) są dopisywane do `Gothic.ini`, gdy ich tam nie ma – jak robi silnik z Unionem (np. `bCanSaveLeg=1`, `bToggleHardBosses=1`);
+  - **44:** `IsEnabledDexSwordAnims=1` – opcja czytana przez plugin poza menu; bez niej szable i inne bronie zręcznościowe dostawały animacje zwykłych mieczy.
+- **Przełączniki** (sprawdzone w skryptach NB):
+
+  | Opcja | Co robi skrypt | Działa? |
   |---|---|---|
-  | Pomiń ekran powitalny (`bSkipLogo`) | pomija prolog | ✅ sprawdzone |
-  | Status karmy u bogów (`bShowKarma`) | wypisuje karmę Innosa/Beliara | ✅ powinno (zwykłe teksty) |
-  | Głód/pragnienie/zmęczenie (`bHFTStatus`) | wypisuje potrzeby bohatera | ✅ powinno (zwykłe teksty) |
+  | Pomiń ekran powitalny (`bSkipLogo`) | pomija prolog | ✅ |
+  | Status karmy u bogów (`bShowKarma`) | ikonki karmy Innosa/Beliara | ✅ (poprawka 62) |
+  | Lista efektów (`bShowBuffInfo`, „SHOW_BUFFS”) | liczniki mikstur i błogosławieństw | ✅ (poprawka 62) |
+  | Głód/pragnienie/zmęczenie (`bHFTStatus`) | potrzeby bohatera | ✅ powinno |
   | Nazwy lokacji (`bShowNotice`) | tablice z nazwami miejsc | ✅ powinno |
   | Skalowanie postaci od siły (`bScaleStr`) | `Mdl_SetModelScale` bohatera | ✅ powinno |
   | Ekran śmierci (`bShowDeadScreen`) | dźwięk i ekran po śmierci | ✅ powinno |
-  | Efekt zatrucia (`bShowPoisonHero`) | efekt `SPELLFX_UNDEAD_SCREENBLEND` | ✅ powinno |
+  | Efekt zatrucia (`bShowPoisonHero`) | `SPELLFX_UNDEAD_SCREENBLEND` | ✅ powinno |
   | Efekt ataków Paladyna (`bShowEffectPalUndeadProc`) | efekt przy obrażeniach nieumarłym | ✅ powinno |
   | Trudniejsi bossowie (`bToggleHardBosses`) | umiejętności bossów w AI | ✅ powinno |
   | Okrzyki bohatera (`bToggleHeroVoice`) | dźwięki bohatera w walce | ✅ powinno |
-  | Gniew Beliara (5 opcji) | zmienne trybu Gniewu Beliara | ✅ powinno (tylko w tym trybie) |
-  | Zapis w dowolnym miejscu (`bCanSaveLeg`) | blokada zapisu w NB | ❓ OpenGothic chyba w ogóle nie blokuje zapisu |
-  | Ukryj sakiewki NPC (`bHidePocketsNpc`) | sakiewki na postaciach | ❓ zależy od slotów, patrz niżej |
-  | Mieszek / torba bohatera (`bShowPocket`, `bShowBag`) | `EXT_PutInSlot` / `ActivateZSSlot` | ❌ tych funkcji Uniona jeszcze nie ma |
-  - Usunięte ze strony: `AutoAIM` (skrypty same ustawiają go z powrotem na 0) i „Wytrzymałość przy otwartym ekwipunku” (to funkcja ekwipunku Uniona).
+  | Gniew Beliara (5 opcji) | zmienne trybu Gniewu Beliara | ✅ powinno |
+  | Zapis w dowolnym miejscu (`bCanSaveLeg`) | blokada zapisu w NB | ❓ OpenGothic chyba nie blokuje zapisu |
+  | Ukryj sakiewki NPC (`bHidePocketsNpc`) | sakiewki na postaciach | ❓ zależy od slotów |
+  | Mieszek / torba (`bShowPocket`, `bShowBag`) | `EXT_PutInSlot` / `ActivateZSSlot` | ❌ jeszcze nie ma |
+  | Jasna noc (do testów) | tylko OpenGothic, poprawka 53 | ✅ |
 
-### 6. Brak wpisów do dziennika i zdarzeń w świecie (np. kamień runiczny przy wieży Xardasa) – ✅ (wpis w dzienniku jest) (12.11.2026)
-- **Plik:** `common/game/gamescript.cpp` (pętla NB w `GameScript::tick`)
-- **Objaw:** przy kamieniu runicznym koło wieży Xardasa nie pojawia się wpis „Kamienie runiczne”.
-- **Przyczyna:** ten wpis (i wiele innych zdarzeń w świecie) daje skrypt `B_GetTime`. W NB woła go plugin Union po nazwie, a nie skrypty, więc w OpenGothic nie wołał go nikt. Z kodu pluginu: timer co 1000 ms woła na zmianę `RX_Main_CycleTrigger` i w następnej sekundzie `b_gettime`, a `PerFrame` jest wołany co klatkę.
-- **Poprawka:** pętla działa tak jak w pluginie:
-  - co klatkę `PerFrame` (z `RX_FrameTime` = czas klatki w ms),
-  - co sekundę na zmianę `RX_Main_CycleTrigger` / `B_GetTime`. Uwaga: wcześniej (wersja Copilota) `RX_Main_CycleTrigger` szedł co sekundę, teraz co 2 sekundy, tak jak w pluginie,
-  - co 5 sekund `B_CheckMenuOption` (odczyt opcji moda).
+- Usunięte ze strony: `AutoAIM` (skrypty same ustawiają go na 0) i „Wytrzymałość przy otwartym ekwipunku” (funkcja ekwipunku Uniona).
 
-### 7. Łóżko: po przespaniu bohater nagle stoi, a potem robi animację wychodzenia z łóżka – ✅ (12.11.2026)
-- **Plik:** `common/world/objects/npc.cpp` (`Npc::resetPositionToTA`)
-- **Przyczyna:** sen przewija czas przez `Wld_SetTime`. OpenGothic ustawia wtedy wszystkie postacie według ich planu dnia i przy okazji zatrzymywał animację bohatera, czyli stawiał go na nogi, mimo że ten dalej leżał w łóżku (w menu snu). Gdy zamykałeś menu, łóżko odtwarzało jeszcze animację wstawania.
-- **Poprawka:** jeśli bohater używa obiektu (łóżka), jego animacja i kolejka dialogu zostają bez zmian. Wstaje dopiero normalną animacją łóżka.
-
-### 8. Statystyki postaci (B): ciemny ekran bez niczego – ✅ (12.11.2026)
-- **Pliki:** `common/ui/gamemenu.cpp`, `common/ui/gamemenu.h` (oba zmienione, nowych plików brak)
-- **Przyczyna:** w NB statystyki to okno pluginu Union z 5 zakładkami. `MENU_STATUS` w `MENU.DAT` moda ma tylko pusty nagłówek, więc OpenGothic rysował tylko przyciemnienie.
-- **Poprawka:** własny ekran statystyk w stylu menu ustawień, w dwóch kolumnach:
-  - **Postać:** gildia, poziom, doświadczenie, następny poziom, punkty nauki,
-  - **Atrybuty:** siła, zręczność, **inteligencja** (atrybut NB), mana, punkty życia, **wytrzymałość** (NB),
-  - **Walka:** broń jednoręczna, dwuręczna, łuk, kusza (nazwy ze skryptów gry),
-  - **Ochrona:** broń sieczna, obuchowa, pociski, ogień, magia,
-  - **Czas:** dzień i godzina.
-- **Poprawione po teście:** wytrzymałość pokazywała „99/10” (NB trzyma ją ×10, teraz jest „99/100”), sekcja „Czas” przeszła do lewej kolumny, bo przycisk wstecz zasłaniał dzień, a tytuł nie nachodzi już na przycisk pauzy.
-- **Poprawione po teście 2:** ekran czasem był po angielsku („Character”), bo ustawienie języka gry nie zawsze wynosi 2. Teraz język jest rozpoznawany też po polskich literach w tekstach gry (nazwy talentów i gildii).
-- **Jeszcze nie ma:** pozostałych zakładek Uniona (rzemiosło, trudność itd.), można je dodać później.
-
-### 9. Brak komunikatu na ekranie przy nowym wpisie do dziennika – ✅ (12.11.2026)
-- **Plik:** `common/game/gamescript.cpp` (blok NB)
-- **Objaw:** wpis trafia do dziennika, ale na ekranie nie pojawia się „Zadanie uzupełnione!”.
-- **Przyczyna:** `B_LogEntry` w NB pokazuje komunikat przez `AI_PrintQuest(tytuł, temat)`, czyli funkcję Uniona.
-- **Poprawka:** `AI_PrintQuest`, `AI_PrintQuestComplete` i `AI_PrintQuestFail` wypisują na ekranie tytuł i nazwę tematu. Dodane są też inne komunikaty Uniona (`AI_Print`, `AI_PrintRed`, `AI_PrintBonus`, `AI_NoticePrint`, `AI_FastPrintSkillCraft`), ale tylko wtedy, gdy w skryptach są to funkcje zewnętrzne. Te, które już działają przez skrypty, zostają bez zmian.
-
-### 10. Pełne okno statystyk NB – 5 zakładek – ✅ (12.11.2026)
-- **Pliki:** `common/ui/gamemenu.cpp`, `common/ui/gamemenu.h` (oba zmienione, nowych plików brak)
-- **Co:** ekran statystyk (B) ma zakładki jak okno pluginu Union. Przy każdym otwarciu woła skrypt NB `RefreshStatusMenuData`, który wylicza wszystkie wartości (po polsku, ze skryptów: „mistrz”, „ekspert”, „uczony”, nazwy bossów…):
-  1. **Postać:** gildia, rozdział, poziom, doświadczenie, punkty nauki, dzień, ranga, karma Innosa i Beliara, gildie złodziei, zabójców i kupców, zabici przeciwnicy, cały poziom trudności (PN i życie na poziom, życie, siła i ochrona wrogów, mikstury, pułapki, sen, głód),
-  2. **Umiejętności:** rzemiosło, górnictwo i wytapianie, strzały, myślistwo (skóry, kły, pazury, rogi, łuski smoków…), gotowanie, złodziejstwo, magia, języki, retoryka, regeneracja, dary bogów,
-  3. **Atrybuty:** siła, zręczność i mana (z wartością bazową), inteligencja, życie, wytrzymałość, władanie bronią w % ze stopniem (zielony/adept/ekspert/mistrz), tarcza, dwie bronie, styl orków,
-  4. **Ochrona:** sieczna, obuchowa, pociski, ogień, magia, przewrócenie, odporność na trucizny, zimno i żar,
-  5. **Osiągnięcia:** pokonani bossowie (39 możliwych).
-- Listę przewija się palcem, a zakładkę zmienia się dotknięciem.
-- **Uwaga:** opisów pozycji nie ma w plikach moda (rysuje je plugin), więc są napisane od nowa i mogą się trochę różnić od oryginału. Wartości są oryginalne, ze skryptów.
-
-### 11. Wędrujący ognik od Vatrasa (L-Shift+F5) – ✅ (12.11.2026) – mod JS
-- **Pliki:** 🆕 **NOWY MOD** `mods/nb-wisp/` (`manifest.json`, `index.js`), gotowy do instalacji jako `mods/nb-wisp.zip`. Nie trzeba przebudowywać APK.
-- **Przyczyna:** w NB ognika przywołuje plugin Union pod L-Shift+F5 (`RX_QuickPanel_Wisp` tylko ustawia flagę dla pluginu). W skryptach jest tylko sama postać `WISP_DETECTOR` i jej AI: podąża za bohaterem (`ZS_MM_Rtn_Summoned`) i szuka przedmiotów (`B_MM_WispDetect`).
-- **Mod:**
-  - przywołuje albo odsyła ognika (`WISP_DETECTOR`), jeśli bohater ma amulet wędrującego ognika (`ITAM_ADDON_WISPDETECTORNEW` albo `ITAM_ADDON_WISPDETECTOR`),
-  - włącza się przez **Shift+F5** na klawiaturze, przyciskiem w zakładce **„Ognik”** menu modów (na telefonie: Ustawienia → MODS) albo komendą `ognik` w konsoli,
-  - po zmianie świata albo wczytaniu gry ognik wraca, jeśli był przywołany, a gdy zgubi się daleko (np. po teleporcie), pojawia się znowu przy bohaterze.
-
-### 12. Opis przedmiotów w ekwipunku: był tylko „Wartość” – ✅ (12.11.2026)
-- **Pliki:** 🆕 **NOWY PLIK** `common/game/nbiteminfo.h` (do folderu `common/game/`, obok `gamescript.cpp`), `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`
-- **Przyczyna:** w NB większość broni i pancerzy ma w skrypcie tylko `TEXT[5]` (wartość). Resztę opisu dopisuje plugin Union w chwili pokazania przedmiotu, z pól przedmiotu i tekstów ze stałych skryptu `RX_INV_DESC*`. Bez pluginu zostawała sama „Wartość”.
-- **Poprawka:** kod pluginu przepisany z UNION_ABI.DLL. Wywołuje się przy wybraniu przedmiotu w ekwipunku (`dmaItemInfo`):
-  - **broń biała:** obrażenia (np. „Obrażenia cięte: 15”), „Długość broni: 40 | Jednoręczna”, wymagania („Wymagana siła: 10” albo „Brak wymagań”), wartość,
-  - **łuki i kusze:** obrażenia, typ („Łuk”/„Kusza”), wymagania (też umiejętność łuku/kuszy), wartość,
-  - **pancerze:** ochrona przed cięciem, obuchem, kłuciem, ogniem | magią, wymagania,
-  - **pierścienie i amulety:** „Ulepszenia: siła + N” (tylko gdy przedmiot daje siłę, zręczność albo manę).
-- **Sprawdzone w grze:** broń („Obrażenia cięte: 10”, „Długość broni: 70 | Jednoręczna”), pancerz (ochrony), runy i księgi pokazują swoje opisy.
-- **Okienko opisu (`inventorymenu.cpp`):** przy 5–6 wierszach pierwszy wiersz nachodził na nazwę przedmiotu, a długie wiersze (np. opis Świętej Strzały) wychodziły poza okienko na ekwipunek. Teraz wiersze zmniejszają się, gdy nie mieszczą się pod nazwą, a za długi wiersz dostaje mniejszą czcionkę, żeby zmieścił się na szerokość.
-- **Czego jeszcze nie ma:** dopisków NB zależnych od stanu broni: „Naostrzona”, „Magiczna”, „Przeklęta”, broń orków i jaszczuroludzi, premie z pieczęci, waga.
-
-### 13. Pełne opisy NB: dopiski broni i waga – ✅ waga sprawdzona (12.11.2026)
-- **Pliki:** `common/game/nbiteminfo.h` (🆕 nowy plik z poprawki 12, podmień na nową wersję), `common/game/gamescript.cpp`
-- **Przyczyna:** reszta opisu, którą rysuje plugin: dopiski typu broni zapisane w bitach `C_ITEM.HP` (`SetItemVarTrue(…, BIT_ITEM_…)`) i waga z `RX_SetWeightValue`. Funkcja `RX_SetWeightValueExt` (i `RX_GetWeightValue`) to zewnętrzne funkcje pluginu, których nikt nie obsługiwał, więc wagi się w ogóle nie zapisywały.
-- **Poprawka:**
-  - typ broni dostaje dopiski jak w pluginie: „| Broń orków” (`BIT_ITEM_ORC_WEAPON`; dla Mieczy Draconów „Broń jaszczuroczłeków”), „| Przeklęta” (`BIT_ITEM_UNDEAD_WEAPON`), „| Magiczna” (`BIT_ITEM_MAG_SWORD`), „| Naostrzona” (`BIT_ITEM_SHARPED`),
-  - nowy wiersz **„Waga: N”**: broń biała = `RX_W_CRUSHINDEX` + `RX_W_MELEEWEAPONINDEX`, łuki i kusze = `RX_W_RANGEWEAPONINDEX`, pancerze, hełmy i tarcze = `WEIGHT` przedmiotu,
-  - obsługa `RX_SetWeightValueExt` / `RX_GetWeightValue` (wagę czytają też skrypty, np. `Hero_Poisoned`),
-  - tarcze zostawiają opis ze skryptu (tak robi plugin), dostają tylko wagę,
-  - opis biżuterii tylko dla pierścieni i amuletów (jak w pluginie).
-- **Czego nie ma i nie będzie:** premii z pieczęci (zaklinanie kamieniami `ITMI_ENCHANTSTONE_*`) – to osobne okno i dane pluginu, których OpenGothic nie ma. Naostrzenie plugin też trzyma u siebie, więc „Naostrzona” pojawi się tylko przy broni, którą skrypt oznaczy bitem.
-
-### 14. Gruby pasek wczytywania, wypełnienie wychodzi poza ramkę – ✅ (12.11.2026)
-- **Pliki:** `common/mainwindow.cpp`
-- **Przyczyna:** OpenGothic rysuje pasek (`PROGRESS.TGA`) w rozmiarze tekstury, a marginesy wypełnienia (`PROGRESS_BAR.TGA`) ma na sztywno w pikselach oryginalnej tekstury Gothica II (512 px szerokości: 75 px z boku, 10 px z góry). NB ma tekstury HD 2× większe (ze zrzutu wychodzi ok. 1024×128), więc pasek był dwa razy większy, a wypełnienie zaczynało się przed ramką i nachodziło na lewy ornament.
-- **Poprawka:** gdy tekstura jest szersza niż 512 px, pasek jest rysowany w rozmiarze oryginału (tekstura / skala), a marginesy wypełnienia skalują się razem z teksturą. Dla zwykłego Gothica II nic się nie zmienia. Ta sama poprawka marginesów działa przy pasku na ekranie zapisu.
-
-### 15. Dziennik: puste „Zakończone zadania”, bestiariusz pod „Handel i rzemiosło” – ✅ (12.11.2026)
-- **Pliki:** `common/ui/gamemenu.cpp`, `common/ui/gamemenu.h`
-- **Przyczyna:**
-  - NB zmienia stałe dziennika: `LOG_SUCCESS` = 4 (dla silnika to „nieaktualne”), a wpisy bestiariusza zapisuje jako `LOG_FAILED` (3). OpenGothic pokazywał w zakończonych tylko status 2, więc ta zakładka była pusta (np. runy teleportacyjne, bandyci Cavalorna).
-  - Na telefonie zakładki miały na sztywno kolejność z Gothica II: obecne, zakończone, nieudane, notatki. W NB trzecim przyciskiem jest „Handel i rzemiosło” (notatki), a czwartym „Bestiariusz” (status 3), więc bestiariusz trafiał pod handel, a notatki pod bestiariusz.
-- **Poprawka:**
-  - każda zakładka bierze teraz to, co pokazuje, ze swojego przycisku w MENU.DAT (`EFFECTS MENU_ITEM_LIST_…` → `USERSTRING` listy), a nie z pozycji na ekranie,
-  - w NB lista „FAILEDMISSIONS” (Zakończone zadania) pokazuje zadania o statusie 2 i 4, a lista „OLDMISSIONS” (Bestiariusz) status 3, tak jak w menu moda. Dla zwykłego Gothica II nic się nie zmienia.
-
-### 16. Niewidoczne zbroje paladynów (Lothar, Lord Andre – sama głowa) – ✅ naprawione poprawką 39 (14.11.2026)
-- **Pliki:** `common/world/objects/npc.cpp`
-- **Co wiadomo:** Lord Andre nosi `ITAR_PAL_H_NPC` (model `Armor_Pal_H.asc`), Lothar zbroję paladyna `Armor_Pal_M.asc`. Pancerz straży (`WACHE_ARMOR_V2.asc`) działa. W logu nie ma `unable to load mesh` dla tych zbroi, więc model chyba się wczytuje, tylko się nie rysuje.
-- **Na razie:** do `log.txt` dopisuje się raz na każdy model zbroi linia `armor "…": …` (czy plik jest w archiwach, ile ma części skórowanych, tekstur i doczepianych elementów, rozmiar). Na jej podstawie zrobię właściwą poprawkę.
-
-### 19. Komunikat „Nowy wpis w dzienniku!” wyglądał inaczej niż w oryginale – ✅ (12.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Przyczyna:** ten napis rysuje plugin Union (`AI_PrintQuest`, `AI_PrintQuestComplete`, `AI_PrintQuestFail` z UNION_ABI.DLL), nie silnik gry. W poprawce 9 był wypisywany jak zwykły komunikat (biały, w liście u góry). W pluginie: po lewej stronie, na ok. 29% wysokości ekranu, tytuł czcionką ze skryptu `RX_QuestTitleFont` (`FONT_OLD_20_ZHITE.TGA`) w kolorze: nowy wpis – złoty, zadanie nieudane – czerwony, zakończone – zielony, a pod nim nazwa tematu białą `FONT_OLD_20_WHITE`.
-- **Poprawka:** tak samo: tytuł po lewej czcionką `RX_QuestTitleFont`, pod nim temat, przez 5 s. Kolory: nowy wpis żółty, nieudane czerwone, zakończone białe (OpenGothic ma tylko takie kolory czcionek – zielonego brak).
-
-### 23. NPC walczą jak nowicjusze: brak talentów i animacji walki (cały świat NB) – ✅ (13.11.2026)
-- **Sprawdzone (15.11.2026):** NPC walczą pełnymi animacjami, trafienia krytyczne wchodzą (czasem tak, czasem nie – jak w NB).
-- **Pliki:** `common/game/gamescript.cpp`
-- **Przyczyna:** każda postać NB w swojej definicji wywołuje `B_SetFightSkills(npc, procent)`. Skrypt zapisuje tylko zmienne pomocnicze i całą resztę zostawia pluginowi: `RX_ApplyProperOverlaysForNpc`. OpenGothic nie zna tej funkcji, więc u **wszystkich NPC** (Brago, bandyci, strażnicy, najemnicy …) talent 1H/2H/łuk/kusza zostawał na 0%. Skutki: animacje nieszkolonego nowicjusza (bez `humans_1hST1–3` / `2hST1–3`), żadnych trafień krytycznych (obrażenia zawsze ÷10, minimum 5), słabsze strzelanie.
-- **Poprawka:** przepisany kod z UNION_ABI.DLL (0x10198B20):
-  - procent dodawany do szansy trafienia 1H, 2H, łuku i kuszy (zakres 0–100);
-  - zdejmowane stare nakładki, potem zakładana właściwa: od 90% ST3, od 60% ST2, od 30% ST1, poniżej – bez nakładki (łuk i kusza: od 60% T2, od 30% T1);
-  - ustawiany poziom umiejętności walki (0–3).
-  - `RX_InitAnimations` – w OpenGothic nic nie musi robić (animacje i tak są szukane po nazwie).
-- **Bohater:** jego animacje (rapier, szabla, włócznia, halabarda, kostury, topory, dwie bronie, tarcze) zakładają skrypty NB przy założeniu broni (`RX_ApplyAnim_Weapons`, `EQUIP_*`). To działa także w OpenGothic, dlatego bohater ma np. rapier.
-
-### 24. Bandyci nie atakują bezimiennego w zwykłej zbroi – ✅ (13.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Przyczyna (z logu):** `NB trace: B_AssessEnemy | ATT_HOSTILE false` – reakcja na wroga kończy się na `Npc_GetAttitude(self, hero) != ATT_HOSTILE`. NB w `B_SetAttributesToChapter` daje **każdemu** człowiekowi (bandytom też) osobisty stosunek do bohatera ATT_NEUTRAL. OpenGothic stawia stosunek osobisty ponad gildią, więc bandyci byli dla bohatera neutralni. W NB wrogość gildii (bandyci → bohater: wrogo) wygrywa i bandyci atakują, chyba że bohater ma zbroję bandyty (`C_PlayerIsFakeBandit` – to sprawdzają same skrypty).
-- **Poprawka:**
-  - w NB: gdy osobisty stosunek jest tylko „neutralny”, a gildia jest wroga – NPC jest wrogi. Stosunek „przyjazny”, „zły” i „wrogi” ustawiony przez skrypty zostaje bez zmian;
-  - dodane `Npc_GetGuildAttitude` (stosunek gildii) – brakowało go, a skrypty NB pytają o to po walce (`B_CheckHealth`) i zwracało „wrogo” dla wszystkich.
-- **Uwaga:** błąd `Accessing member "C_NPC.AIVAR" without an instance set (in C_PLAYERISFAKEBANDIT)` jest nieszkodliwy – funkcja zagląda do zmiennych Ramona z obozu bandytów (Jarkendar), którego nie ma w Khorinis; w oryginale tak samo. Diagnostyka z wcześniejszej wersji tej poprawki usunięta.
-
-### 25. NPC nie dobywają broni w walce (Lares stoi i obrywa od zwierząt) – ✅ (lepiej: Lares wybiera cel i bije) (13.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Przyczyna:** `B_SelectWeapon` w NB (wybór broni na początku i w trakcie walki) kończy się wywołaniem pluginu `RX_SelectWeaponNpc(slf, oth)` – to on dobywa miecza lub łuku. OpenGothic tego nie znał, więc NPC w walce (towarzysze, strażnicy, bandyci) nie dobywali broni i stali w miejscu.
-- **Poprawka:** wybór broni jak w zwykłym Gothic 2:
-  - dalej niż `FIGHT_DIST_MELEE` (600) i jest łuk/kusza ze strzałami – broń dystansowa, bliżej – broń biała (albo pięści, gdy nie ma broni);
-  - z pięści na miecz, gdy NPC ma miecz; z łuku na miecz, gdy wróg podejdzie albo skończą się strzały; z magii na broń, gdy `B_SelectSpell` nie wybrało czaru;
-  - polecenie idzie tylko przy pustej kolejce AI (pętla ataku pyta co klatkę).
-
-### 26. Zwierzęta gryzą za szybko, towarzysz (Lares) nie nadąża – ✅ (13.11.2026)
-- **Pliki:** `common/world/objects/npc.cpp`
-- **Przyczyna:** po ataku NPC czekał na następną decyzję tylko do znacznika `DEF_HIT_END` animacji. To okno kombinacji ciosów broni białej. Potwory (i walka pięściami) kombinacji nie mają, więc następny atak zaczynał się zaraz po trafieniu i ucinał resztę animacji – zwierzęta gryzły ok. 1,5 raza szybciej niż w Gothic. Każde ugryzienie przewraca trafionego (animacja „potknięcia”), więc Lares przy kilku zwierzętach ciągle dostawał i nie zdążał oddać.
-- **Poprawka:** w walce pięściami/kłami (wszystkie potwory) NPC czeka do końca animacji ataku. Ludzie z bronią dalej mogą łączyć ciosy w kombinacje.
-
-### 27. Towarzysz (Lares) stoi 0,25–3 s po każdej walce, dialogu i postoju – ✅ (13.11.2026)
-- **Pliki:** `common/game/gamescript.cpp` (+ `common/world/objects/npc.cpp`: wycofana pierwsza próba i diagnostyka)
-- **Przyczyna (z logu diagnostyki):** po zmianie stanu Lares dostawał w kolejce `AI_Wait` ~2,5 s przed `SetWalkMode GoToPoint`. Źródło to skrypt NB: `B_CheckHealth` na początku każdego stanu człowieka (dopóki nie stanie na swoim miejscu – `AIV_TAPOSITION`) woła `B_Npc_Desynchronize(npc, nCycleChar)` = `AI_WaitMS` z globalnym licznikiem 250, 500 … 3000 ms, żeby postacie w jednym miejscu nie ruszały wszystkie naraz. W stanach towarzysza (`ZS_Guide_Player`, `ZS_Follow_Player`) miejsca nigdy nie osiąga, więc czekał przy każdej zmianie stanu. Do tego po walce mówi kwestię końca walki (~3 s) – to normalne.
-- **Poprawka:** dla członków drużyny (`AIV_PARTYMEMBER`) to czekanie jest pomijane; pozostałe postacie czekają jak w NB.
-- **Wycofane:** pierwsza próba (pętla stanu co 100 ms) – nie miała wpływu; diagnostyka `NB comp` usunięta.
-
-### 29. Style walki NPC z pluginu NB (część 1: gildie bez własnej tabeli – m.in. Lares) – ⏸ wycofane z kodu na życzenie (gra lepiej działała bez tej wersji); opis zostaje do późniejszego powrotu (13.11.2026)
-- **Pliki:** (było) `common/game/gamescript.cpp`
-- **Co robi plugin (UNION_ABI.DLL 0x1024A460, co 100 ms):** dla każdego człowieka w promieniu 1500 od bohatera, który walczy (ma wroga) z dobytą bronią jedno- lub dwuręczną i ma więcej niż 1/15 życia, zdejmuje wszystkie nakładki broni (ok. 45: ST1–3, tarcze, rapier, pirat, włócznie, kostury, halabarda, topory, dwie bronie, „zręcznościowe”…) i zakłada jeden styl walki dobrany wg **gildii**, szansy trafienia i losowania. Zmienna `AIVRX_CHANGE_MOVESET` oznacza „styl wybrany”, `AIVRX_NPC_CHANGEMOVESET3` odlicza 40–80 kroków (4–8 s); potem, gdy wróg jest 500+ dalej, styl jest losowany na nowo.
-- **Zrobione teraz – gildie bez własnej tabeli** (Lares ma gildię GIL_NONE, więc to jego przypadek; też VLK, KDF, NOV, BAU, KDW…):
-  - jedna ręka, szansa ≥ 90%: z tarczą Shield_ST1/ST2/ST2/ST3; bez tarczy losowo: brak nakładki, 1hST1, 1hST2, 1hST3, 1hDexST1–3;
-  - ≥ 60%: z tarczą Shield_ST1/ST2; bez: brak, 1hST1, 1hST2, 1hDexST1, 1hDexST2; poniżej 60%: 1hST1 albo brak;
-  - styl „zręcznościowy” zamieniany na zwykły – zawsze przy toporze, inaczej w 80% (jak w pluginie);
-  - dwie ręce, ≥ 90%: 2hST1/2hST2/2hST3/AxeST2; ≥ 60%: 2hST1/2hST2; poniżej: 2hST1.
-- **Do zrobienia (części 2…):** własne tabele gildii BDT, SLD (m.in. Sentenza, Buster, Fester, Bullco, Raoul – po imieniu; rapier dla broni z bitem rapiera), MIL, PAL, DJG, PIR, OUT i szkieletów. Do tego czasu te gildie zostają przy stylach z poprawki 23.
-
-### 28. Lares (i inni ludzie z bronią) odskakuje zamiast bić – ✅ (13.11.2026)
-- **Pliki:** `common/world/objects/npc.cpp`
-- **Przyczyna:** sztuczka OpenGothic „czekanie przy wrogu = odskok” (dla wilków, które podchodzą za blisko) działała też na ludzi z bronią.
-- **Poprawka:** zamiana „czekanie → odskok” tylko dla walczących pięściami/kłami (potwory), najwyżej raz na 2,5 s. (Druga część – reakcja na zamach raz na zamach w `fightalgo.cpp` – wycofana: bez niej gra działa lepiej.)
-
-### 30. NPC bez trafień krytycznych na starym zapisie (Lares bije po 41 zamiast zabić pająka w 2 ciosy) – ✅ (13.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Przyczyna:** obrażenia w NB: trafienie krytyczne (szansa = umiejętność walki w %) daje siła + broń − ochrona, zwykłe tylko 1/10 tego. Szanse NPC ustawia `B_SetFightSkills` → `RX_ApplyProperOverlaysForNpc` (poprawka 23) – ale tylko w chwili tworzenia postaci, czyli przy nowej grze. W zapisie zrobionym przed poprawką 23 wszyscy NPC (Lares – mistrz, 100%) mają szansę 0% i nigdy nie trafiają krytycznie.
-- **Poprawka:** skrypty NB zapisały te procenty także w `AIVAR[84..87]` (1H, 2H, łuk, kusza). NPC w pobliżu bohatera (sprawdzane co 100 ms), który ma wszystkie szanse 0, a te zmienne większe od 0, dostaje szanse z nich (i poziom umiejętności/nakładkę jak w poprawce 23). Nowa gra tego nie potrzebuje.
-- **Wynik:** ✅ wilki, gobliny, topielce i ścierwojady Lares kładzie jednym ciosem.
-
-### 31. Lares (i inni z łukiem) nie strzela – w NB łuk ma pierwszeństwo przed mieczem – ✅ (Lares wyciąga łuk, zwierzęta na jedno trafienie) (13.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Przyczyna:** poprawka 25 wybierała broń jak zwykły Gothic 2 (łuk tylko dalej niż 600, z bliska od razu miecz). Plugin NB (`RX_SelectWeaponNpc`, UNION_ABI.DLL 0x1017F840) ma własne zasady – w oryginale Lares prawie całą drogę strzela z łuku.
-- **Poprawka – zasady z pluginu:**
-  - z łukiem/kuszą i strzałami NPC strzela, chyba że wróg jest bliżej niż 600 (a `AIVRX_NPC_RANGE_ONLY` = 0); do krwiopijców i harpii zawsze strzela; do wrogów odpornych na strzały (ochrona przed strzałami −1, golemy, trolle, strażnicy) tylko „łucznik-potwór” (`AIVRX_IS_MONSTER_ARCHER`);
-  - NPC, który już strzela, **nie zmienia łuku na miecz przy zwierzętach** (wilki, ścierwojady, szczury, gobliny, krwiopijce, warany, pełzacze, kretoszczury…), nawet z bliska;
-  - po zmianie broni następna dopiero po 6 s (`AIVRX_NPC_CHANGEWEAPON_TIMER`), gdy ma strzały;
-  - bez broni białej – pięści.
-- **Poprawka do poprawki (13.11.2026, 23:30):** dalej walczył mieczem – `Npc::hasAmmunition` sprawdza strzały tylko do broni trzymanej w ręku, więc z mieczem w dłoni „nie miał strzał”. Strzały liczone teraz do założonego łuku/kuszy.
-
-### 32. Bohater walczy nożem i pałką jak rapierem – ✅ (13.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Przyczyna:** przy każdej zmianie broni skrypty NB (`RX_ApplyAnim_Weapons` → `RX_ResetAllOverlays`) zdejmują ok. 60 nakładek animacji funkcją pluginu `Mdl_RemoveOverlayMds_NoUpdate`, której OpenGothic nie znał – nic nie było zdejmowane. Raz założony rapier zostawiał `Humans_Rapier_ST*` na zawsze i każda broń jednoręczna (nóż, pałka) walczyła jak rapier.
-- **Poprawka:** dodane `Mdl_RemoveOverlayMds_NoUpdate`, `Mdl_ApplyOverlayMds_NoUpdate` (jak zwykłe zdjęcie/założenie nakładki; „NoUpdate” = bez przeładowania modelu, OpenGothic tego nie potrzebuje) i `Mdl_HasOverlayMds` (log pokazywał je jako niezaimplementowane).
-- **Uwaga:** Lares (NPC) ma już prawidłowe animacje miecza – NPC dostają je z poprawki 23.
-
-### 33. Ścierwojad odskakuje od pierwszego zamachu – rytm walki jak w Gothic – ✅ (14.11.2026)
-- **Pliki:** `common/world/objects/npc.cpp`
-- **Jak jest w NB/Gothic (opis gracza):** ścierwojad ostrzega 3 razy, rzuca się na bohatera; bohater odskakuje, ścierwojad wpada na niego i dostaje 2 ciosy, dopiero wtedy odskakuje – i cykl się powtarza (da się go zabić bez utraty życia).
-- **Przyczyna:** reakcja na zamach (`FA_ENEMY_PREHIT`: ścierwojad – zawsze odskok) jest w oryginale sprawdzana tylko, gdy potwór skończy swoją akcję i przestanie się chwiać po trafieniu. OpenGothic sprawdzał ją co ~0,2 s, więc ścierwojad odskakiwał już od pierwszego zamachu.
-- **Poprawka (na razie tylko ścierwojad, `FAI_SCAVENGER`):** odskok przed zamachem dopiero po 2 trafieniach od poprzedniego odskoku; wcześniej ścierwojad czeka. Jeśli rytm się zgadza, rozszerzę na inne zwierzęta z odskokiem w taktyce (wilk, krwiopijca, waran, szczur, zębacz, cieniostwór, harpia…).
-- **Usunięte:** tymczasowe komunikaty `[odskok] …` na ekranie.
-
-### 34. Rytm walki z poprawki 33 dla wszystkich zwierząt – ✅ (14.11.2026)
-- **Sprawdzone (15.11.2026):** zwierzęta odskakują jak w NB, walka zbalansowana skryptami NB.
-- **Pliki:** `common/world/objects/npc.cpp`
-- Każdy potwór walczący pazurami/kłami odskakuje przed zamachem bohatera dopiero po 2 trafieniach od poprzedniego odskoku (dotąd tylko ścierwojad). Dotyczy zwierząt, które mają odskok w swojej taktyce (`FIGHT.DAT`, `FA_ENEMY_PREHIT`): wilk (odskok/unik), krwiopijca, waran, szczur, zębacz, cieniostwór, harpia, jaszczurka, aligator, niedźwiedź, gargulec, smok… Kretoszczur, goblin, golem nie odskakują – u nich nic się nie zmienia.
-
-### 35. Style walki NPC z pluginu NB wg gildii (bandyci, najemnicy, straż, paladyni, łowcy smoków, piraci, banici) – ✅ (14.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Sprawdzone (14.11.2026):** animacje broni naprawione i zweryfikowane testami w konsoli (mod „Test umiejętności broni”: poziomy 30/60/90%, szpada, szabla, miecz).
-- Wraca mechanizm z poprawki 29 (co 100 ms, wróg w pobliżu, broń w ręku, nowe losowanie po 4–8 s), ale **tylko dla gildii z własną tabelą w pluginie** – postacie bez gildii (Lares, VLK, BAU…) zostają przy stylach z poprawki 23, bo te działają dobrze.
-- **Bandyci, jedna ręka (UNION_ABI.DLL 0x1024AD00):**
-  - Nestor, Franco, Esteban: topór → 1hST1–3 (z tarczą Shield_ST1–3); tarcza → Shield_ST2–4; rapier → Rapier_ST1–3; inaczej 1hST1–3;
-  - Dexter, bandyci BDT_10620–10623, Haart: tarcza → Shield_ST1–3; rapier → Rapier_ST1/ST2/Pirate; inaczej 1hST1–3 albo 1hDexST1–3;
-  - pozostali, szansa ≥ 60%: tarcza ST1/ST2; rapier ST2/ST3; inaczej 1hST2/ST3, 1hDexST2/ST3; poniżej 60%: tarcza ST1–3; rapier ST1/Pirate; inaczej 1hST1/ST2, 1hDexST1/ST2.
-- **Bandyci, dwie ręce (0x1024B810):** Gor Boba – 2h_b_st1; ≥ 85%: 2hST3/AxeST2/SpST2; ≥ 60%: 2hST1/2hST2/AxeST2; poniżej: 2hST1/2hST2.
-- „Rapier” = broń z bitem `BIT_ITEM_PIERCE_DAMAGE` (2) w `C_ITEM.HP`; styl „zręcznościowy” w 80% zamieniany na zwykły (jak w pluginie).
-- **Dodane (14.11.2026, część 2) – reszta gildii z tabel pluginu:**
-  - najemnicy (SLD, 0x1024BA00/C080): AL_Boss3 – Boss03/Boss032; Sentenza – rapier ST1–3 albo 1hST1–3/1hDexST1–2; Buster, Fester, Bullco, Raoul – Pirate/Rapier_ST1/brak albo 1hST1–2/1hDexST1; pozostali – tarcza ST1–2, rapier ST1–2/Pirate, inaczej 1hST1–2/1hDexST1; dwie ręce – 2hST2/AxeST2;
-  - straż (MIL, 0x1024C1D0): Ruga, Pablo, Peck, Wambo, Wulfgar – 1hST1–3/1hDexST1–3; pozostali – 1hST1–2/1hDexST1–2 (dwie ręce bez własnej tabeli);
-  - paladyni (PAL, 0x1024C720/C8D0): tarcza ST2–4, inaczej 1hST2–3/1hDexST2–3; dwie ręce – 2hST2–3/SpST2;
-  - łowcy smoków (DJG, 0x1024CA20/CBD0): tarcza ST2–4, inaczej 1hST2–3/1hDexST2–3; dwie ręce – 2hST2–3;
-  - gildia 16 (Templariusze w NB), dwie ręce (0x1024CD20): 2hST2–3/SpST2;
-  - piraci (PIR, 0x1024CE70/D300): Alligator Jack – 1hST2; wg szansy (≥ 90 / ≥ 60 / mniej) tarcze, rapier/Pirate, 1hST/1hDexST; dwie ręce – 2hST1–2/SpST2;
-  - banici (OUT, 0x1024D450/D6D0): wg szansy tarcze ST1–3, 1hST/1hDexST albo brak nakładki; dwie ręce – 2hST1/2hST3/AxeST2.
-- **Jeszcze nie:** szkielety (GIL_SKELETON) – bardzo długa tabela po nazwach szkieletów (rycerze z tarczą, kapitanowie, marynarze, mroczni wojownicy sfer…).
-
-### 36. Zacinanie się dźwięku na ekranie wczytywania – ✅ razem z 38 (14.11.2026)
-- **Pliki:** `common/gamemusic.cpp` (zmieniony plik z projektu – podmienić)
-- **Z nagrania:** przez cały czas ekran wczytywania „KHORINIS”; w dźwięku między 5,5 a 10,5 s kilkanaście przerw po 0,1–0,6 s.
-- **Przyczyna:** muzykę (GothicKit/DirectMusic) generuje funkcja wywoływana przez OpenAL w jego wątku miksowania. Przy zmianie motywu ta funkcja sama ładowała segment muzyki razem z instrumentami (DLS) – pod blokadą zasobów, którą w tym czasie trzyma wczytywanie świata. Wątek OpenAL czekał, a z nim cały dźwięk (muzyka i efekty).
-- **Poprawka:** segment nowego motywu jest ładowany w wątku gry w chwili wyboru motywu; wątek dźwięku tylko go odtwarza. Gdy coś się nie zgadza (inny plik), działa jak dotąd.
-- **Jeśli dalej się zacina:** druga możliwa przyczyna to zajęty procesor w czasie wczytywania (wątek dźwięku nie dostaje czasu) – wtedy pomoże większy bufor OpenAL.
-- **Test:** zacinki zostały → poprawka 37.
-
-### 37. Zacinanie się dźwięku – priorytet wątku dźwięku i dłuższy bufor – ✅ razem z 38 (14.11.2026)
-- **Pliki:** `common/gamemusic.cpp` (zmieniony plik z projektu – podmienić), `game/main.cpp` (zmieniony plik z projektu – podmienić; folder `game/` w głównym katalogu projektu, nie w `common/`)
-- **Przyczyna:** na Androidzie OpenAL miksuje dźwięk (OpenSL ES) we własnym wątku, a ten wątek chodzi ze zwykłym priorytetem – OpenAL próbuje ustawić priorytet czasu rzeczywistego (SCHED_RR), ale Android nie pozwala na to aplikacji. Bufor to 3 porcje po 20 ms (60 ms). Przy wczytywaniu świata wątki robocze zajmują wszystkie rdzenie i wątek dźwięku nie zdąża przygotować kolejnej porcji – przerwa.
-- **Poprawka:**
-  - `gamemusic.cpp`: przy pierwszym wywołaniu w wątku miksowania (funkcja generująca muzykę jest wywoływana właśnie w nim) podnosi jego priorytet do priorytetu audio Androida (−16, jak `THREAD_PRIORITY_AUDIO`; gdy się nie da, −10);
-  - `main.cpp`: przed pierwszym użyciem OpenAL zapisuje `alsoft.conf` (w folderze gry, obok `log.txt` – wersja `main.cpp` z wyborem folderu gry) z `period_size = 960`, `periods = 6` i wskazuje go zmienną `ALSOFT_CONF` – bufor 120 ms zamiast 60 ms.
-- **Do sprawdzenia:** czy dźwięki w grze (ciosy, kroki) nie wydają się spóźnione – wtedy zmniejszyć `periods` do 4–5.
-- **Test:** zacinki zostały → poprawka 38.
-
-### 38. Zacinanie się dźwięku – muzyka ładowana w osobnym wątku, też dla domyślnej muzyki OpenGothic – ✅ (14.11.2026)
-- **Pliki:** `common/gamemusic.cpp` (zmieniony plik z projektu – podmienić)
-- **Przyczyna:** OpenGothic ma dwa silniki muzyki: „OpenGothic” (domyślny, `soundProviderIndex=0`) i „GothicKit”. Poprawka 36 działała tylko dla GothicKit, a domyślny dalej ładował muzykę motywu (`Resources::loadDxMusic`) w wątku dźwięku – pod blokadą zasobów, którą trzyma wczytywanie świata (im większy mod, tym dłużej). Do tego ekran wczytywania co klatkę zleca motyw `SYS_Loading`, a poprawka 36 ładowała go wtedy od nowa co klatkę.
-- **Poprawka:** oba silniki ładują muzykę nowego motywu w osobnym wątku. Wątek dźwięku zaczyna motyw dopiero, gdy jest załadowany (do tego czasu gra poprzednia muzyka albo cisza – efekty grają dalej). Motyw, który już gra, nie jest ładowany ponownie. Ani wątek gry, ani wątek dźwięku nie czekają na blokadę zasobów.
-
-### 39. Paladyni bez zbroi (Lothar, Lord Andre – sama głowa): hełm zajmował miejsce zbroi – ✅ (14.11.2026)
-- **Pliki:** `common/game/inventory.cpp`, `common/game/inventory.h` (zmienione pliki z projektu – podmienić), `common/world/objects/npc.cpp`
-- **Z logu (diagnostyka 16):** zbroja `Armor_Pal_M.asc` wczytuje się poprawnie (model i tekstury są), ale zaraz po niej ta sama postać zakłada `ItAr_Helm_Pal_NPC_NEW_01.3ds` – hełm. W skryptach hełm to też „zbroja” (`ITEM_KAT_ARMOR`), tylko z `wear = WEAR_HEAD`.
-- **Przyczyna:** Gothic ma dla hełmu osobne miejsce (węzeł `ZS_HELMET` na głowie), a zbroja na ciele zostaje. OpenGothic miał jedno miejsce na zbroję: hełm zdejmował zbroję i był rysowany zamiast ciała – zostawała sama głowa.
-- **Poprawka:**
-  - ekwipunek ma osobne miejsce na hełm (zbroja z `WEAR_HEAD`); zakładanie, zdejmowanie, ochrona i warunki działają jak przy zbroi;
-  - hełm wisi w węźle `ZS_HELMET` (gdy model go nie ma – na `BIP01 HEAD`) i nie znika przy uderzeniu;
-  - „najlepsza zbroja” nie wybiera hełmu;
-  - zapisy: hełm nie ma własnego wpisu w zapisie – odtwarza się z założonych przedmiotów (format zapisu bez zmian). W starych zapisach hełm siedział na miejscu zbroi: przenosi się na swoje miejsce, a NPC (nie bohater) dostaje z powrotem najlepszą zbroję z ekwipunku.
-- Usunięta diagnostyka zbroi z poprawki 16 (linie `armor "…"` w logu).
-
-### 40. Sprint New Balance: klawisz ~ i nowy przycisk na nakładce – ✅ (14.11.2026)
-- **Pliki:** `android/assets/touch-icons/sprint.png` (🆕 nowy plik), `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h` (zmienione pliki z projektu – podmienić)
-- **Jak to działa w NB:** plugin pod klawiszem `~` (`KEY_SPRINT`) wywołuje skrypt `B_Hotkey_Sprint`. Skrypt włącza/wyłącza `SPRINT_ACTIVE` i nakładkę animacji `Humans_MageSprint.MDS`, sprawdza wytrzymałość (bez niej sprint się nie włączy) i mikstury szybkości.
-- **Poprawka:**
-  - klawisz `~` (klawiatura podłączona do telefonu albo komputer) wywołuje `B_Hotkey_Sprint`;
-  - na nakładce nowy przycisk sprintu (biegnąca postać z liniami ruchu, w stylu pozostałych ikon) obok przycisku chodu; podświetlony, gdy sprint jest włączony; pokazuje się tylko w modzie, który ma ten skrypt (NB), i nie po śmierci; w edytorze HUD da się go przesunąć, powiększyć i ukryć.
-
-### 41. Wytrzymałość NB nie spadała i nie było jej paska – ✅ (14.11.2026)
-- **Pliki:** `common/game/nbbars.h` (🆕 nowy plik), `common/game/gamescript.cpp`, `common/mainwindow.cpp`
-- **Jak to działa w NB:** skrypt `Hero_Poisoned` (co cykl, z `RX_Main_CycleTrigger`) zabiera wytrzymałość (`RX_RestoreStamina(-x)`, koszt zależy od wagi zbroi, hełmu, tarczy i broni): przy sprincie – gdy `BS_RUN`, `SPRINT_ACTIVE` i `RX_IsRunAniActive(hero)`; przy skoku, wspinaczce i bloku – po stanach ciała; przy nurkowaniu – `Npc_GetWaterLevel(hero)==WATER_DIVE` albo `BS_DIVE`, bez animacji `S_SWIM`. Pasek rysuje plugin: `PerFrame` → `B_UpdateStaminaBar` → `Bar_SetShow/SetBarTex/SetValue/SetMaxRange(STAMINABAR_INDEX=1, …)`.
-- **Przyczyna:** brakowało funkcji pluginu i silnika: `RX_IsRunAniActive` (zawsze 0 – sprint nic nie kosztował), `RX_IsAniActive`, `Npc_IsAnimationActive`, `Npc_GetWaterLevel` i wszystkich `Bar_*` (paska nie było, więc nie było też widać spadku przy skoku).
-- **Poprawka:**
-  - `RX_IsRunAniActive` – postać gra pętlę biegu (`S_RUNL`, `S_1HRUNL`, `S_FISTRUNL`…); `RX_IsAniActive` / `Npc_IsAnimationActive` – animacja o tej nazwie jest odtwarzana; `Npc_GetWaterLevel` – 0 / 1 (woda, pływanie) / 2 (nurkowanie);
-  - `Bar_*` zapamiętują stan pasków; pasek wytrzymałości (`BAR_Stamina.tga`, przy zatruciu `BAR_Poison.tga`) jest rysowany: na nakładce dotykowej – na środku między życiem a maną (licznik doświadczenia przesuwa się nad niego), na komputerze – na dole na środku (nad paskiem powietrza, gdy jest).
-
-### 42. Paski życia, wytrzymałości i many: przesuwanie i rozmiar w edytorze HUD, liczby wytrzymałości – ✅ (14.11.2026)
-- **Pliki:** `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`
-- **Zgłoszenie:** przy pasku wytrzymałości nie było wartości (bohater ma maks. 100); w NB paski życia, wytrzymałości i many dało się przesuwać i zmieniać ich rozmiar.
-- **Poprawka:**
-  - przy włączonych liczbach (ustawienia nakładki) nad paskiem wytrzymałości jest `wartość/maks.` – tak, jak liczą skrypty NB (`ATR_STAMINA` / `ATR_STAMINA_MAX*10`), licznik doświadczenia stoi nad nim;
-  - paski są częścią edytora HUD (Ustawienia → edycja HUD), jak przyciski: przeciągnięcie przesuwa pasek, stuknięcie zmienia rozmiar (5 kroków), przytrzymanie ukrywa/pokazuje; RESET przywraca miejsca domyślne. Zapisywane w tej samej sekcji co przyciski (`bar_hp`, `bar_stamina`, `bar_mana`). Paski nie odpychają przycisków (mogą na nich leżeć). Pasek wytrzymałości jest w edytorze tylko w modzie, który go ma (NB), pokazany jako pełny.
-- Zrobione w silniku, nie w JS: paski rysuje okno gry, a mody JS nie mają do nich dostępu.
-
-### 46. Broń z wymaganą wytrzymałością nie dawała się założyć („Za mało wytrzymałości…” przy 780/650) – ✅ (14.11.2026)
-- **Pliki:** `common/world/objects/npc.cpp`
-- **Przyczyna:** warunki przedmiotów NB (`C_ITEM.COND_ATR`) wskazują poza zwykłymi atrybutami także zmienne pluginu: `AIVRX_NPC_ATR_BOW` (89), `_SHIELD` (90), `_CROSSBOW` (91), `_STAMINA` (92) – w skryptach 207 przedmiotów wymaga wytrzymałości, 43 łuku, 35 kuszy, 1 tarczy. `Npc::attribute` zwracał 0 dla indeksów ≥ `ATR_MAX`, więc każdy taki warunek był niespełniony.
-- **Poprawka:** dla 89–92 wartość to zmienna NB postaci (`RX_GetNpcVar`); wytrzymałość jest tam trzymana jako `ATR_STAMINA_MAX` (×1, `B_CheckMenuOption` ją synchronizuje), a warunki są ×10 jak wszystko w NB – więc ×10.
-
-### 47. Animacje szpady na poziomie wojownika i mistrza inne niż w oryginale – ✅ wyjaśnione (14.11.2026): talent 6% + nakładki starego moda testowego
-- **Pliki:** `common/world/objects/npc.cpp`, `common/game/gamescript.cpp`
-- **Z nagrań (Winlator):** amator (`Humans_Pirate`) wygląda jak w oryginale; wojownik (`Humans_Rapier_ST2`) – krótkie cięcia w bok; mistrz (`Humans_Rapier_ST3`) – lewa ręka za plecami, bardzo szybkie pchnięcia. W OpenGothic tego nie ma.
-- **Uwaga:** zakładka „Umiejętności” narzędzia z menu modów zmienia poziom i zakłada nakładki `HUMANS_1HST1/ST2` – zastępują one nakładki szpady NB, więc test trzeba robić bez niej (poziom ze skryptów, broń założona na nowo).
-- **Wynik z logu (14.11.2026):** bohater ma naprawdę 6% broni jednoręcznej (`hit1h=6`), więc skrypty NB słusznie zakładają szpadzie poziom amatora (`Humans_Pirate.mds` – wczytuje się). „Mistrz” z modu testowego („Test umiejętności broni”) zmienia tylko poziom talentu i zakłada zwykłe nakładki miecza `HUMANS_1HST1/ST2` – w logu przy ciosach: `HUMANS_1HST2.MDS … Humans_Pirate.mds`, czyli mieszanka szpady amatora i zwykłego miecza („prawie, ale nie do końca”). Animacje mistrza szpady (`Humans_Rapier_ST3`) NB zakłada dopiero przy `HITCHANCE[1]` ≥ 90 (60 – wojownik `ST2`).
-- **Diagnostyka:** w `log.txt` linie `[anim] hero overlay +NAZWA` (z `NOT LOADED`, gdy plik animacji się nie wczytał) i `[anim] hero attack NAZWA comb=… comboLen=… hit1h=… overlays: …` – która animacja ciosu jest odtwarzana i z jakimi nakładkami.
-
-### 48. Mod „Test umiejętności broni” przerobiony pod NB – ✅ (14.11.2026)
-- **Pliki:** `mods/test-umiejetnosci-broni/index.js` (podmienić `index.js` w folderze tego moda; `manifest.json` bez zmian)
-- **Przyczyna:** mod zmieniał tylko poziom talentu (`Npc_SetTalentSkill`), a silnik dokładał zwykłe nakładki `HUMANS_1HST1/ST2`. NB wybiera animacje według procentu trafienia, więc procent zostawał (6%), a nakładki miecza mieszały się z animacją szpady amatora.
-- **Teraz:** przyciski poziomów ustawiają procent (Amator 10%, 30%, 60%, Mistrz 90%) przez `B_RaiseFightTalent` – jak u nauczyciela (procent „prawdziwy” w AIVAR 84–87, % trafienia, poziom talentu, `RX_LastAnim`) – i od razu wołają `RX_ApplyAnim_Weapons(hero, -1)`, więc skrypt NB zakłada właściwe animacje (szpada, szabla, miecz, tarcza, broń dwuręczna…). Pokazuje procent i poziom NB. Wytrzymałość w jednostkach gry (×10, jak pasek i statystyki), kroki ±10/±100. Komenda `tskill` przyjmuje procent (0/1/2 = 10/30/90%).
-
-### 49. Paczka 1: brakujące funkcje najczęściej wołane przez skrypty NB + ukryte opcje pluginu – 🧪 (14.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`, `common/game/nbbars.h`, `common/game/nboptions.h`, `common/mainwindow.cpp`
-- **Jak wybrane:** z GOTHIC.DAT – 735 funkcji zewnętrznych, z tego ok. 230 wołanych przez skrypty i nieobecnych w OpenGothic; posortowane według liczby wywołań. Pominięte na razie: sloty na ciele (`Ext_PutInSlot`, `Ext_RemoveFromSlot`, `ActivateZSSlot` – mieszek/torba, odłożone), okna handlu/rzemiosła/pokera pluginu, dialogi wielu postaci (`RX_Dia*`), wstawianie fragmentów świata (`RX_InsertVobTree` – do osobnej poprawki), funkcje, dla których domyślne 0 jest poprawne.
-- **Dodane:**
-  - `Wld_PlayEffect_Vec` – czary potworów (pajęcza sieć, lodowa włócznia, ognista kula, kwas): efekt od rzucającego do celu i obrażenia minus ochrona przed ich typem (najmniej `NPC_MINIMAL_DAMAGE`), cel reaguje na trafienie; wcześniej potwory „rzucały” bez skutku;
-  - `Npc_ClearInv` (40 wywołań), `Vob_GetDistToVob` (odległość do punktu `FP_…`/`WP_…`, 164), `Wld_GetTimeHour/Min`, `Hlp_GetNpcByInstInRadius`, `Npc_GetItemById`, `Hlp_InventoryIsOpen` (np. pasek wytrzymałości znika przy otwartym ekwipunku), `StrCmp`, `RX_MusicOn/Off/ToggleMusic`, `CreateInvItemsByString`, `Npc_EquipItem`, `Npc_UnequipItem`, `Itm_OneHanded`, `Npc_CanSeeNpc2`.
-- **Ukryte opcje pluginu** (czytane przez skrypty, plugin zapisuje je z domyślną wartością, a w OpenGothic były 0): poziom trudności nowej gry – `bOptionLP` 10 (punkty nauki za poziom!), `bOptionHealth` 3, `bOptionMonsterExp` 2, `bOptionMonsterHealth` 3 (0 = potwory z 25% życia), `bOptionMonsterPower` 2, `bOptionMonsterProt` 2, oraz `FULLSNC_MENU_OPTION` 19, `bToggleQuickLootMessage` 1. Dopisywane do Gothic.ini tylko, gdy ich tam nie ma.
-
-### 50. Paczka 2: brakujące funkcje z log.txt – 🧪 (14.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Z logu (`not implemented call`):**
-  - `StrCmp` – poprawione: w NB zwraca TRUE dla takich samych napisów (bez wielkości liter), a nie 0 jak w C – np. `!StrCmp("WALk", GetWalkModeString(self))` → potwór przechodzi na chód (w paczce 1 było odwrotnie);
-  - `GetWalkModeString` – „WALK”/„RUN”/„SNEAK”/„SWIM”/„DIVE” (potwory zauważają skradającego się bohatera, przełączają chód/bieg);
-  - `Hlp_GetHeroStatus` – 0 spokój, 1 zagrożenie (ktoś celuje w bohatera, broń schowana), 2 walka (jak muzyka walki);
-  - `RX_RestoreNpcHealthSlow/Stop` – gdy bohater ucieknie (ponad 2000), NPC chowa broń i odzyskuje życie: 2% maksimum na sekundę, aż do pełna albo do kolejnego trafienia (wcześniej można było go „ubić na raty”);
-  - wyciszone (zawsze 0 / bez działania, jak w tej wersji moda): `IsNewLegFeatures`, `RX_IsLegAst`, `RX_IsMultActive`, `RX_RoadOfTrialsActive`, `RX_IsHeroInsideOtherNpc`, `RX_Mult_SetPartyNpc`, `Mdl_SetHeroAniFps`, `InfoStatAdd`.
-- **Bez zmian (domyślne 0 jest bezpieczne albo czeka):** `RX_CanReattack` (zmiana celu po trafieniach od nie-wroga), `RX_IsNpcIgnoreTarget`, `RX_NpcIsStrafing`, `RX_IsWaiting`, `RX_ContainsRoutine`, `RX_CallOnDead`, `RX_ResetSummons`, `RX_SetDialogNpc`, `RX_RemoveItemsOnNpcBeat`; `Ext_PutInSlot` / `Ext_RemoveFromSlot` / `ActivateZSSlot` / `Hlp_HasInSlot` – mieszek i torba (odłożone); `Wld_IsRaining` – OpenGothic nie ma deszczu.
-
-### 51. Paczka 3: notatki i książki NB, śmierć postaci, dialogi przypisywane NPC – 🧪 (14.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`, `common/ui/documentmenu.cpp`, `common/ui/documentmenu.h` (dwa ostatnie – nowe w repo, w projekcie borsuczyny są: podmienić)
-- **Uwaga do log.txt z 14.11 (20:51):** gra była zbudowana z paczką 1, ale bez paczki 2 (w logu „bound 116”, a z paczką 2 jest 128) – `gamescript.cpp` z poprawki 50 nie trafił do buildu. Paczka 3 zawiera paczkę 2.
-- **Notatki i książki** (`RX_OpenNote`, `RX_ToggleBookManagerWithSize`, `RX_ToggleBookManager`): 147 listów/notatek i 52 książki/pulpity NB otwierały się bez niczego – plugin ma własne okno. Teraz: tekstura NB (`RX_ScrollTextTexture` / `RX_BookManagerTexture`), rozmiar z `RX_ScrollSizeX/Y` (w % ekranu, kształt jak na monitorze 16:9), tekst w miejscach stron z `RX_BookManager_LP_*`/`RP_StartX` (w książce dwie kolumny), czcionka książek Gothica, `\n` = nowa linia, znaczniki `[POS=…]`, `[COL=…]`, `[/]`, `[RED]`… usunięte. Długi tekst idzie na kolejne strony: **przycisk SKIP / Escape** przewraca stronę, a na ostatniej zamyka (strzałki – w obie strony), pod książką numer strony.
-- **Śmierć postaci** (`RX_CallOnDead`, z `ZS_Dead`): woła funkcję śmierci tej postaci `AI_OnDead_<instancja>` (310 w skryptach – zadania, bossowie, np. po zabiciu celu zadania) i `AI_OnDead_Common` (np. bonus za 20 królików), jak plugin (bit 0x400 zmiennej 71 – raz na postać; handlarz – `RX_AST_RemoveTradeGoods`). Wcześniej żadna z nich się nie wykonywała.
-- **Dialog dla innego NPC** (`RX_SetDialogNpc`, 67 wywołań w `ZS_Talk`): dialog-szablon przypisywany NPC przy rozmowie – poker (Kardif, Orlan, Salandril, Raoul, Snaf, Samuel), maska śniącego u Xardasa (rozdz. 5) i inne. Wcześniej te opcje się nie pojawiały.
-- **Inne:** `Hlp_IsDexSword` (broń zręcznościowa: bit `BIT_ITEM_DEX_SWORD` – premia wytrzymałości do obrażeń, trucizna), `Game_Play3DSound` (np. „nie mogę tego użyć”), wyciszone `UpdateItemsInfoInInv`, `RX_IsRemoteSummon` (tryb wieloosobowy).
-- **Odłożone (widać w nowym logu):** `UpdateKarma` (karma bogów to cały system pluginu z komunikatami i osiągnięciami – osobna poprawka), `RX_KeyPressed` (klawisze skrótów NB z ini – mikstury, strzały, pochodnia…), `RX_CanReattack`, `RX_IsWaiting`, `RX_NpcIsStrafing`, `RX_ResetSummons`, `RX_RemoveItemsOnNpcBeat`, mieszek/torba.
-- **Znalezione przy okazji (do osobnej poprawki):** plugin woła też dla postaci `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…` (mechaniki bossów, ok. 200 funkcji) – w OpenGothic nie działają.
+### 6, 57. Pętle pluginu: `PerFrame`, `RX_Main_CycleTrigger`, `B_GetTime` – ✅ / tempo prologu 🧪 (12. i 15.11.2026)
+- **Plik:** `common/game/gamescript.cpp` (`GameScript::tick`)
+- **Przyczyna:** wiele zdarzeń świata (np. wpis „Kamienie runiczne” przy wieży Xardasa) daje skrypt `B_GetTime`, a w NB woła go plugin po nazwie – w OpenGothic nie wołał go nikt.
+- **Poprawka (zegar pluginu, UNION_ABI.DLL 0x10261040):**
+  - co klatkę `PerFrame` (z `RX_FrameTime` = czas klatki w ms);
+  - co 500 ms na zmianę `RX_Main_CycleTrigger` i `B_GetTime` – każde raz na sekundę; przy `PrologCount==0` (pierwsza chwila nowej gry) co 16 ms;
+  - co 5 s `B_CheckMenuOption` (odczyt opcji moda).
+- **57 – prolog (`bSkipLogo=0`):** wcześniej zegar tykał co 1000 ms (każda funkcja co 2 s), więc prolog trwał ~2 minuty i kamera wieży (60 s) kończyła się w połowie mowy Xardasa. `Hero_Poisoned` zwiększa `PrologCount` raz na wywołanie: 13 – mowa Xardasa, 53 – napis „Khorinis – wieża Xardasa”, 58 – koniec prologu. Teraz tempo jak w oryginale (~58 s). **Do sprawdzenia:** czy prolog mieści się w kamerze; jeśli coś w grze dzieje się „za szybko”, to znak, że wcześniej było za wolno.
 
 ### 52. Rozszerzony log – ✅ (14.11.2026)
-- **Sprawdzone (14.11.2026):** w logach z 22:01 i 22:16 widać skąd i z czym wołane są brakujące funkcje, `[ctx]`, `NB missing` przy zapisie, mniej powtórzeń.
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`
-- **Brakujące funkcje:** `not implemented call [NAZWA] from FUNKCJA_SKRYPTU (argumenty)` – skąd skrypt ją woła i z czym (np. który klawisz, który plik dźwięku). Co 5 minut i przy zapisie gry linia `NB missing (…)`: ile razy każda brakująca funkcja była wołana – od najczęstszej.
-- **`[ctx]` – co robił gracz:** wybrana opcja dialogu (`dialog: Lares -> DIA_LARES_…`), użyty przedmiot, wpis w dzienniku, użyty obiekt (skrzynia, stół…), śmierć postaci i zabójca, otwarta notatka/książka, zapis gry. Błędy w logu mają przez to miejsce w grze.
-- **Mniej śmieci:** ta sama linia `RX_WriteLog` (np. `RX_Main_CycleTrigger {` co 2 s – ok. 600 linii na log) tylko 3 razy, potem przy 100/1000; `Mdl_Apply/RemoveOverlayMds` tylko, gdy plik się nie wczytał (było ok. 900 linii); `NB ai` tylko przy zmianie stanu lub celu potwora (było co 3 s dla każdego).
+- **Brakujące funkcje:** `not implemented call [NAZWA] from FUNKCJA_SKRYPTU (argumenty)`; co 5 minut i przy zapisie `NB missing (…)` – ile razy każda była wołana.
+- **`[ctx]` – co robił gracz:** opcja dialogu, użyty przedmiot, wpis w dzienniku, użyty obiekt, śmierć postaci i zabójca, notatka/książka, zapis, zmiana świata, ognik.
+- **Mniej śmieci:** ta sama linia `RX_WriteLog` tylko 3 razy (potem przy 100/1000), `Mdl_*OverlayMds` tylko przy błędzie, `NB ai` tylko przy zmianie stanu lub celu potwora.
 
 ### 53. Jasna noc (do testów) – ✅ (14.11.2026)
-- **Sprawdzone (14.11.2026):** działa.
-- **Pliki:** `common/graphics/sky/sky.cpp` (nowy w repo, w projekcie borsuczyny jest – podmienić), `common/game/nboptions.h`, `common/ui/gamemenu.cpp`
-- **Co robi:** przełącznik **„Jasna noc (do testów)”** na końcu strony „Ustawienia gry” (zapis w Gothic.ini: `[NB_OG] bNightAsDay=1`). Gdy włączony, światło słońca i niebo zostają między 8:00 a 18:00 – w nocy jest jasno jak za dnia. Czas gry płynie dalej normalnie: NPC śpią, zmieniają zajęcia, nocne zdarzenia i potwory są jak w nocy – zmienia się tylko oświetlenie. Działa od razu, bez wczytywania gry.
-- **Uwaga:** o północy słońce przeskakuje z pozycji 18:00 na 8:00 (z zachodu na wschód) – przy testach bez znaczenia.
+- **Pliki:** `common/graphics/sky/sky.cpp`, `common/game/nboptions.h`, `common/ui/gamemenu.cpp`
+- Przełącznik **„Jasna noc (do testów)”** na końcu strony „Ustawienia gry” (`[NB_OG] bNightAsDay=1`): światło i niebo zostają między 8:00 a 18:00, czas gry płynie normalnie (NPC śpią, nocne zdarzenia są jak w nocy). O północy słońce przeskakuje z 18:00 na 8:00 – przy testach bez znaczenia.
 
-### 54. Czarny goblin stoi w miejscu – ✅ (14.11.2026)
-- **Sprawdzone (15.11.2026):** goblin atakuje.
-- **Pliki:** `common/world/objects/npc.cpp`, `common/game/gamescript.cpp`
-- **Z logów (14.11, 22:01 i 22:16):** goblin budzi się, grozi i przechodzi w atak (`ZS_MM_ATTACK`, cel: bohater), kolejka AI pusta, ale **broń schowana** (`weapon=0`) – i tak stoi, aż zginie (bez oddania ciosu).
-- **Przyczyna:** gobliny walczą maczugą – skrypt daje im ją od razu w ręce (`Npc_SetToFightMode`). Do snu chowają ją, a model goblina nie ma animacji ponownego wyciągnięcia broni. Silnik przed atakiem próbuje dobyć broni (`drawWeaponMelee`) – to się nie udawało, więc próbował w kółko co klatkę zamiast atakować. W Gothicu goblin ma maczugę w ręce od razu.
-- **Poprawka:** gdy potwór (nie człowiek) przez 1 s nie może dobyć broni, dostaje ją od razu do ręki (jak przy `Npc_SetToFightMode`); w logu: `NB ai: Czarny goblin cannot draw its weapon - it takes it at once`.
-- **Dodatkowo:** animacja z `AI_PlayAni`, której potwór nie może zacząć, jest próbowana 1,5 s i pomijana (`cannot start … skipped`) – kolejka AI potwora nie stoi bez końca. Ludzie czekają jak dotąd (np. magowie Kręgu Wody z `T_STAND_2_LGUARD`, póki trzymają coś w ręce).
-- **Diagnostyka:** linie `NB ai` z bronią (`weapon=`) i kolejką AI (`ai=[…]`), cel bohatera jako `hero`; `NB ai: … STUCK 5 s: …`, gdy kolejka potwora przy bohaterze stoi; `[ctx] death: … killer: hero`.
+---
 
-### 55. Kamera na początku gry patrzy w ściany – ✅ (15.11.2026, druga wersja)
-- **Sprawdzone (15.11.2026, nagranie 339416):** kamera krąży wokół pentagramu i trzyma w kadrze Xardasa i bohatera, jak w oryginale.
-- **Pliki:** `common/world/triggers/cscamera.cpp`, `common/world/triggers/cscamera.h`
-- **Z nagrań (oryginał vs OpenGothic):** w NB kamera wstępu (`EVT_START_CAM`, 15 s, 8 punktów, bez punktów celu) krąży po komnacie Xardasa i patrzy na środek – na pentagram, Xardasa i bohatera. W OpenGothic leci tą samą trasą, ale patrzy w ściany i kraty.
-- **Pierwsza wersja (nie pomogła):** kierunek z obrotu punktów trasy. Log pokazał, że punkty tej kamery nie są obrócone (`lerp=1` – tryb PATH, `keyDirections=0`), więc nic się nie zmieniło. Kod zostaje dla kamer, które mają obrócone punkty.
-- **Druga wersja:** kamera bez punktów celu i bez obróconych punktów patrzy na bohatera, gdy jest blisko (do 5000 – w komnacie Xardasa jest zawsze). OpenGothic ustawiał ją w kierunku ruchu – przy krążeniu to bok, czyli ściana. Kamery daleko od bohatera – po staremu.
-- **W logu:** linia `CsCamera: …` ma `lerp=`, `keyDirections=` i `focus="…"` (obiekt, na który kamera ma patrzeć według świata).
+## 2. Brakujące funkcje pluginu (paczki)
+
+Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DAT (735 funkcji zewnętrznych, ok. 230 wołanych przez skrypty i nieobecnych w OpenGothic) i według logów.
+
+### 49. Paczka 1: najczęściej wołane funkcje + ukryte opcje pluginu – 🧪 (14.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/nbbars.h`, `common/game/nboptions.h`, `common/mainwindow.cpp`
+- `Wld_PlayEffect_Vec` – czary potworów (pajęcza sieć, lodowa włócznia, ognista kula, kwas): efekt od rzucającego do celu i obrażenia minus ochrona (wcześniej bez skutku).
+- `Npc_ClearInv`, `Vob_GetDistToVob`, `Wld_GetTimeHour/Min`, `Hlp_GetNpcByInstInRadius`, `Npc_GetItemById`, `Hlp_InventoryIsOpen`, `StrCmp`, `RX_MusicOn/Off/ToggleMusic`, `CreateInvItemsByString`, `Npc_EquipItem`, `Npc_UnequipItem`, `Itm_OneHanded`, `Npc_CanSeeNpc2`.
+- **Ukryte opcje pluginu** (trudność nowej gry, wybierana w oknie pluginu): `bOptionLP` 10 (punkty nauki za poziom!), `bOptionHealth` 3, `bOptionMonsterExp` 2, `bOptionMonsterHealth` 3 (0 = potwory z 25% życia), `bOptionMonsterPower` 2, `bOptionMonsterProt` 2, `FULLSNC_MENU_OPTION` 19, `bToggleQuickLootMessage` 1.
+
+### 50. Paczka 2: funkcje z log.txt – 🧪 (14.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- `StrCmp` – w NB TRUE dla takich samych napisów (bez wielkości liter), nie 0 jak w C;
+- `GetWalkModeString` (WALK/RUN/SNEAK/SWIM/DIVE), `Hlp_GetHeroStatus` (0 spokój, 1 zagrożenie, 2 walka);
+- `RX_RestoreNpcHealthSlow/Stop` – gdy bohater ucieknie (ponad 2000), NPC chowa broń i odzyskuje 2% życia na sekundę;
+- wyciszone (zawsze 0, jak w tej wersji moda): `IsNewLegFeatures`, `RX_IsLegAst`, `RX_IsMultActive`, `RX_RoadOfTrialsActive`, `RX_IsHeroInsideOtherNpc`, `RX_Mult_SetPartyNpc`, `Mdl_SetHeroAniFps`, `InfoStatAdd`.
+
+### 51. Paczka 3: notatki i książki, śmierć postaci, dialogi przypisywane NPC – 🧪 (14.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/ui/documentmenu.cpp`, `common/ui/documentmenu.h`
+- **Notatki i książki** (`RX_OpenNote`, `RX_ToggleBookManagerWithSize`, `RX_ToggleBookManager`): 147 listów i 52 książki/pulpity otwierały się bez niczego. Teraz tekstura NB, rozmiar z `RX_ScrollSizeX/Y`, tekst w miejscach stron (książka – dwie kolumny), czcionka książek Gothica, znaczniki `[POS=…]`, `[COL=…]` usunięte. Długi tekst – kolejne strony: **SKIP / Escape** przewraca stronę, na ostatniej zamyka; numer strony pod książką.
+- **Śmierć postaci** (`RX_CallOnDead`): woła `AI_OnDead_<instancja>` (310 funkcji – zadania, bossowie) i `AI_OnDead_Common`, raz na postać; po śmierci handlarza `RX_AST_RemoveTradeGoods`.
+- **Dialog dla innego NPC** (`RX_SetDialogNpc`, 67 wywołań): poker (Kardif, Orlan, Salandril…), maska śniącego u Xardasa i inne – wcześniej te opcje się nie pojawiały.
+- **Inne:** `Hlp_IsDexSword`, `Game_Play3DSound`; wyciszone `UpdateItemsInfoInInv`, `RX_IsRemoteSummon`.
 
 ### 56. Paczka 4: fragmenty świata, skrzynie, zamki, triggery, towar handlarzy – 🧪 (15.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **`RX_InsertVobTree` / `RX_RemoveVobTree`** (137 + 44 wywołania): skrypty NB dokładają w trakcie gry fragmenty świata z plików `VOBTREE/*.ZEN` – łóżka, skrzynie, dekoracje, przedmioty z zadań (np. zbroja na łóżku Lestera). Teraz są wstawiane do świata (plik szukany po nazwie). Lista wstawionych fragmentów jest w zapisie gry (`nb/vobtrees`) i po wczytaniu albo powrocie do świata wstawiana ponownie – **bez przedmiotów i zawartości skrzyń** (przedmioty są już w zapisie, inaczej byłyby podwójnie; skrzynia z takiego fragmentu po wczytaniu jest pusta). Usuwane mogą być tylko fragmenty wstawione przez skrypty – część oryginalnego .ZEN świata zostaje (w logu: `… was not inserted by the scripts - skipped`).
-- **`Mob_RemoveAllItems`** (20): opróżnia skrzynię o podanej nazwie.
-- **`RX_LockChest` / `RX_LockDoor`**: skrzynia/drzwi otwarte przez skrypt (0) albo zamknięte z powrotem (1) – tylko te, które w świecie mają zamek (np. skrzynia z koroną w piramidzie, drzwi harpii).
-- **`RX_EnableTrigger`**: trigger włączany/wyłączany – np. przejście na tajemniczą wyspę dostępne dopiero z kluczem Hagena.
-- **`RX_RemoveItemsOnNpcBeat`** (UNION_ABI.DLL 0x1017F1C0): po śmierci handlarza znika jego towar (przedmioty z bitem `BIT_ITEM_REMOVE_TRADE`), poza łukami i kuszami.
-- **`RX_IsItemCraft`** (52): przedmiot właśnie zrobiony w rzemiośle pluginu (`CRAFT_ITEM`). **`RX_NpcIsStrafing`**: postać robi unik w bok (animacja `…STRAFE…`). **`RX_IsWaiting`**: zawsze 0 (OpenGothic nie ma kolejki czekania pluginu).
-- **Z listy już były:** `RX_GetNpcVar/SetNpcVar/IncNpcVar`, `RX_Begin/End`, `RX_CallOnDead`, `RX_ClearNpcFocus`, `RX_PrintPerf`, `RX_MusicOn`, `RX_RestoreNpcHealthSlow/Stop`, `RX_IsEnemy`, `RX_Unstuck`, `RX_GetEnemyRadius`, `RX_CallNpcFunc`, `RX_AgroAttack`, `RX_TogglePlayerControls`, `RX_OpenCraft`, `RX_SaveParserVars/RestoreParserVars`, `RX_IsCastingSpell`, `RX_Info_AddChoice`, `RX_SetDialogNpc`, `RX_CallbackNpc`, `RX_CallbackInDialog`, `RX_IsLegAst`.
-- **Odłożone (osobne systemy pluginu):** obrażenia w czasie i trucizny (`RX_ApplyDotDamage`, `RX_ClearAllDots`, `RX_ApplyPoison` – razem z funkcjami bossów `AI_OnTick_…`), przywołania (`RX_SummonNpcToTarget`, `RX_IsValidTargetToSummon`, `RX_ResetSummons`), okna pluginu (`RX_Form_Reinar_SellWeapon`, `RX_OpenChestsPlayer`, wróżka `RX_ShowWisp*`, `RX_FishAll`, `RX_OysterAll`), `RX_SetDoorKeyByCoords` i `RX_ToggleVobVisible` (OpenGothic nie pozwala zmienić klucza drzwi ani ukryć obiektu), `RX_CreateSpellRune`, `RX_SelectSpell`, `RX_Strafe`, `RX_StopAllSound`, `RX_KillNpcDialog`, `RX_CanSleepControlNpc`, `RX_SetFXNpc`, `RX_AST_Blessing`, `RX_GetBonusDamageDuals`, `Npc_ModifyBodyState`, `RX_InteractMobOre`.
+- **Plik:** `common/game/gamescript.cpp`
+- **`RX_InsertVobTree` / `RX_RemoveVobTree`:** skrypty dokładają fragmenty świata z `VOBTREE/*.ZEN` (łóżka, skrzynie, dekoracje, przedmioty z zadań). Lista jest w zapisie (`nb/vobtrees`) i po wczytaniu wstawiana ponownie – bez przedmiotów i zawartości skrzyń (te są już w zapisie). Usuwane mogą być tylko fragmenty wstawione przez skrypty.
+- `Mob_RemoveAllItems` (opróżnia skrzynię), `RX_LockChest` / `RX_LockDoor` (otwarcie/zamknięcie przez skrypt), `RX_EnableTrigger` (np. przejście na tajemniczą wyspę z kluczem Hagena), `RX_RemoveItemsOnNpcBeat` (towar zmarłego handlarza znika), `RX_IsItemCraft`, `RX_NpcIsStrafing`, `RX_IsWaiting` (zawsze 0).
+- **Odłożone:** obrażenia w czasie i trucizny (`RX_ApplyDotDamage`, `RX_ApplyPoison`), przywołania (`RX_SummonNpcToTarget`, `RX_ResetSummons`), okna pluginu (handel, ryby, ostrygi), `RX_SetDoorKeyByCoords`, `RX_ToggleVobVisible`, `RX_CreateSpellRune`, `RX_SelectSpell`, `RX_Strafe` i inne.
 
-### 57. Prolog (bSkipLogo=0): kamera wieży kończy się w połowie mowy Xardasa – 🧪 (15.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`
-- **Jak działa prolog NB:** co wywołanie `RX_Main_CycleTrigger` skrypt `Hero_Poisoned` zwiększa `PrologCount`: 0 – kamera `EVT_CAMERA_PROLOG` (60 s) i bohater czeka, 3/16/26/53 – grzmoty i deszcz, 13 – mowa Xardasa (`Xardas_Intro`), 53 – napis „Khorinis – wieża Xardasa”, 58 – koniec prologu i dialog z Xardasem. W NB to jedno wywołanie na sekundę, więc prolog trwa ~58 s i mieści się w 60 s kamery.
-- **Przyczyna:** zegar pluginu (UNION_ABI.DLL 0x10261040) tyka co 500 ms i na zmianę woła `RX_Main_CycleTrigger` i `b_gettime` – każde **raz na sekundę** (a przy `PrologCount==0`, w pierwszej chwili nowej gry, co 16 ms). Tutaj był zegar 1000 ms, czyli każde co 2 sekundy: prolog trwał ~2 minuty, mowa zaczynała się w 26 s i kamera (60 s) kończyła się w jej połowie – bohater stał już przed Xardasem, a mowa trwała.
-- **Poprawka:** zegar jak w pluginie (500 ms, 16 ms przy `PrologCount==0`).
-- **Uwaga:** wszystko, co skrypty NB robią w tych dwóch funkcjach (zdarzenia świata, liczniki, część regeneracji/efektów), działa teraz w tempie oryginału, czyli dwa razy szybciej niż dotąd. Jeśli coś zacznie się dziać „za szybko”, to znak, że wcześniej było za wolno.
+---
+
+## 3. Prolog, kamery, wczytywanie, zapisy
+
+### 1, 55. Kamera na początku gry (`EVT_START_CAM`): czarny ekran, potem patrzenie w ściany – ✅ (11. i 15.11.2026)
+- **Pliki:** `common/world/triggers/cscamera.cpp`, `common/world/triggers/cscamera.h`
+- **1 – czarny ekran:** po pierwszym dialogu z Xardasem zostawały same napisy. Kamera miała błędne czasy klatek kluczowych (oryginał je przelicza), wychodziło dzielenie przez zero i pozycja NaN. Teraz błędne czasy są rozkładane po trasie; przy złej pozycji scena jest przerywana.
+- **55 – patrzenie w ściany:** kamera (15 s, 8 punktów, bez punktów celu) leciała dobrą trasą, ale patrzyła w kierunku ruchu, czyli w ściany. Teraz kamera bez punktów celu patrzy na bohatera, gdy jest blisko (do 5000) – krąży wokół pentagramu z Xardasem i bohaterem w kadrze, jak w oryginale (sprawdzone na nagraniu). W logu `CsCamera: … lerp= keyDirections= focus=`.
+- Prolog z kamerą wieży – zob. poprawka 57 w sekcji 1.
+
+### 3, 3a, 14. Ekran wczytywania: białe tło, obrazek innego świata, gruby pasek – ✅ (12.11.2026)
+- **Pliki:** `common/gothic.cpp`, `common/mainwindow.cpp`
+- **Obrazek:** `LOADING.TGA` w NB to biała zaślepka – plugin losuje obrazki `LOADING_<ŚWIAT>_<numer>`. Teraz tak samo; przy wczytywaniu save'a świat jest brany z nagłówka save'a. Kolejność: losowy obrazek tego świata → obrazek świata bez numeru → losowy z dowolnego. Zaślepki mniejsze niż 64×64 pomijane, bez obrazka tło czarne. W logu `loading screen: …`.
+- **Pasek (14):** NB ma tekstury paska HD 2× większe, a OpenGothic rysował je w rozmiarze tekstury z marginesami na sztywno – pasek był za gruby i wypełnienie wychodziło za ramkę. Teraz pasek w rozmiarze oryginału, marginesy skalowane (też na ekranie zapisu).
 
 ### 58. Import zapisów z PC z New Balance (Union) – ✅ (15.11.2026)
 - **Pliki:** `patches/zenkit-opengothic.patch`, `common/game/originalsave.cpp`, `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/world/objects/npc.cpp`, `docs/ORYGINALNE_ZAPISY.md`, `patches/README.md`
-- **Zapisy z Unionem:** Union zapisuje postacie i przedmioty jako `oCNpcEx` / `oCItemEx`. ZenKit ich nie znał i pomijał wszystkie postacie, więc import kończył się błędem „the original save has no player in its current world”. Łatka ZenKit czyta je jak `oCNpc` / `oCItem` (dodatkowe pola Uniona są pomijane).
-- **Ludzkie gildie NB:** New Balance ma `GIL_SEPERATOR_HUM = 21`, więc gildie 16..20 (np. 19 – bohater po dołączeniu) były brane za potwory i miały ich wartości ruchu. Bohater z zapisu nie miał ludzkich animacji, zbroi ani ekwipunku i ślizgał się na każdym zboczu. Teraz granice gildii i `Gil_Values` są brane ze skryptów.
-- **Ekwipunek:** zakładane są tylko przedmioty faktycznie założone w zapisie (`ITEM_ACTIVE`). Wcześniej sześć niezałożonych amuletów zastępowało się nawzajem, a skrypty NB zdejmowały przy tym szatę i łuk. Zbroja, hełm, tarcza i broń są zakładane po biżuterii.
-- **Postacie ze spawnu:** te, które gra chwilowo wyjęła ze świata, mają w zapisie pozycję 0,0,0, czyli port Khorinis (w zapisie NB było ich 230: krwiopijce, kretoszczury, żółwie…). Teraz wracają na miejsce swojego spawnu – nie ma tłumu w porcie ani lagów.
-- **Sprawdzone (15.11.2026):** zapisy z New Balance z PC wczytują się prawidłowo.
+- Postacie i przedmioty Uniona (`oCNpcEx` / `oCItemEx`) czytane jak `oCNpc` / `oCItem` (łatka ZenKit) – wcześniej import kończył się błędem „no player”.
+- Ludzkie gildie NB (`GIL_SEPERATOR_HUM = 21`, gildie 16–20 też ludzkie) i `Gil_Values` brane ze skryptów – bohater z zapisu nie ślizga się i ma ludzkie animacje.
+- Zakładane tylko przedmioty faktycznie założone (`ITEM_ACTIVE`), zbroja i broń po biżuterii; postacie ze spawnu (pozycja 0,0,0) wracają na swoje miejsce zamiast tłoczyć się w porcie.
 
-### 59. Teleport między światami (ZEN) nie działa – 🧪 (15.11.2026)
+---
+
+## 4. Interfejs: menu, statystyki, dziennik, opisy, napisy
+
+### 8, 10. Statystyki postaci (B) – okno NB z 5 zakładkami – ✅ (12.11.2026)
+- **Pliki:** `common/ui/gamemenu.cpp`, `common/ui/gamemenu.h`
+- **Przyczyna:** statystyki to okno pluginu; `MENU_STATUS` moda ma tylko pusty nagłówek, więc był ciemny ekran.
+- **Poprawka:** ekran z zakładkami jak w pluginie. Przy każdym otwarciu woła skrypt NB `RefreshStatusMenuData` (wartości po polsku, ze skryptów):
+  1. **Postać:** gildia, rozdział, poziom, doświadczenie, PN, dzień, ranga, karma, gildie złodziei/zabójców/kupców, zabici przeciwnicy, poziom trudności;
+  2. **Umiejętności:** rzemiosło, górnictwo, strzały, myślistwo, gotowanie, złodziejstwo, magia, języki, retoryka, regeneracja, dary bogów;
+  3. **Atrybuty:** siła, zręczność, mana, inteligencja, życie, wytrzymałość (×10 jak w NB), władanie bronią w %, tarcza, dwie bronie;
+  4. **Ochrona:** sieczna, obuchowa, pociski, ogień, magia, przewrócenie, trucizny, zimno, żar;
+  5. **Osiągnięcia:** pokonani bossowie (39).
+- Lista przewijana palcem; język rozpoznawany też po polskich literach w tekstach gry. Opisy pozycji napisane od nowa (plugin je rysuje), wartości oryginalne.
+
+### 9, 19, 45. Komunikaty pluginu: wpis w dzienniku i inne – ✅ (12. i 14.11.2026)
 - **Plik:** `common/game/gamescript.cpp`
-- **Przyczyna:** NB zmienia świat własną funkcją pluginu `Wld_ChangeLevel_AB(plik ZEN, punkt)` – 17 wywołań: kamienie i runy teleportacji NB (`RX_OnTeleportLocation`), przedmioty przeniesienia (`ItMi_DarkTransfer`, `ItMi_TransferStreamersLoc`), runa powrotu Galoma z klasztoru, świątynia Azgalora, dolina Adanosa, finał zadania z jointami. Nie była zaimplementowana, więc teleport zabierał manę/przedmiot i nic się nie działo. Nie było jej też w liście braków w logu, bo ta pokazywała tylko funkcje `RX_…`.
-- **Poprawka:** jak w pluginie (UNION_ABI.DLL 0x10159E20 → `oCGame::TriggerChangeLevel`): zmiana świata tak samo jak przez przejście między światami (np. przełęcz), bohater pojawia się w podanym punkcie. W logu: `[ctx] change of the world: … -> …`.
+- **Dziennik (9, 19):** `B_LogEntry` pokazuje komunikat przez `AI_PrintQuest` / `AI_PrintQuestComplete` / `AI_PrintQuestFail` pluginu. Teraz jak w pluginie: po lewej, na ok. 29% wysokości, tytuł czcionką `RX_QuestTitleFont` (nowy – żółty, nieudany – czerwony, zakończony – biały; zielonego OpenGothic nie ma), pod nim temat, przez 5 s.
+- **Inne komunikaty (9, 45):** `AI_Print`, `AI_PrintRed`, `AI_PrintBonus`, `AI_NoticePrint`, `AI_FastPrintSkillCraft`, `AI_PrintItemInfo`, `AI_PrintClr` i pozostałe – wcześniej np. odmowa u nauczyciela („za mało punktów nauki”) była niema.
 
-### 60. Bohater traci zbroję po teleporcie – ✅ (15.11.2026)
-- **Sprawdzone (15.11.2026):** zbroja zostaje po teleporcie. Naprawiło to też początek nowej gry: po rozmowie z Xardasem w prologu bezimienny biegał bez zbroi, teraz ma łachmany, tak jak powinien.
-- **Plik:** `common/game/gamescript.cpp` (+ diagnostyka w `common/game/inventory.cpp`)
-- **Z logu (15.11, 19:15):** po każdej zmianie świata (świątynia Ashtara, Górnicza Dolina, obóz piratów) `[ctx] item of the hero: UNEQUIP_ITAR_KDF_L … last script: RX_APPLYHEROHEAD`.
-- **Przyczyna:** `RX_ApplyHeroHead` (z `PerFrame`, po każdym wczytaniu i zmianie świata) ustawia głowę i ciało bohatera przez `Mdl_SetVisualBody(…, NO_ARMOR)`. W Gothicu `NO_ARMOR` (-1) znaczy „nie zakładaj nowej zbroi” i założona zostaje. W tej wersji OpenGothic (dla Archolos) `NO_ARMOR` zdejmuje założoną zbroję – więc NB zdejmowało ją po każdym teleporcie.
-- **Poprawka:** w New Balance `Mdl_SetVisualBody` z `NO_ARMOR` nie zdejmuje zbroi (wygląd zbroi wraca od razu na nowe ciało). Archolos i inne gry – bez zmian.
-- **Diagnostyka zostaje:** `[ctx] the hero takes off …: attribute X is Y, needed Z` (zdjęcie przez silnik, gdy brakuje atrybutu) i `last script: …` przy zdejmowaniu przez skrypt.
-- **Przy okazji z logu:** broń i łuk znikały z rąk w świątyni Ashtara, bo bohater zginął (ognisty jaszczur) – to normalne.
+### 12, 13. Opisy przedmiotów w ekwipunku i waga – ✅ (12.11.2026)
+- **Pliki:** 🆕 `common/game/nbiteminfo.h`, `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`
+- **Przyczyna:** w NB większość broni i pancerzy ma w skrypcie tylko „Wartość”, resztę dopisuje plugin w chwili pokazania przedmiotu (pola przedmiotu + teksty `RX_INV_DESC*`).
+- **Poprawka – kod pluginu przepisany z UNION_ABI.DLL:**
+  - broń biała: obrażenia, „Długość broni: 40 | Jednoręczna”, wymagania; łuki i kusze: obrażenia, typ, wymagania; pancerze: ochrony; pierścienie i amulety: „Ulepszenia: …”;
+  - dopiski z bitów `C_ITEM.HP`: „| Broń orków” / „Broń jaszczuroczłeków”, „| Przeklęta”, „| Magiczna”, „| Naostrzona”;
+  - **„Waga: N”** (broń, łuki, pancerze, hełmy, tarcze) i obsługa `RX_SetWeightValueExt` / `RX_GetWeightValue` (czytają je też skrypty);
+  - okienko opisu: wiersze zmniejszają się, gdy nie mieszczą się pod nazwą, za długi wiersz dostaje mniejszą czcionkę.
+- **Nie będzie:** premii z pieczęci (osobne okno pluginu).
 
-### 61. Ognik od Vatrasa: szukanie, zbieranie przedmiotów i chodzenie za bohaterem – ✅ (15.11.2026)
-- **Plik:** `common/game/gamescript.cpp` (+ komentarz w `mods/nb-wisp/index.js`; napisy „Coś znaleziono!” / „Zdobyto: …” z poprawki 62). Połączone poprawki 61, 63, 64, 65, 66.
-- **Sprawdzone (15.11.2026, 21:43):** ognik leci za bohaterem, znajduje przedmioty i przynosi je do ekwipunku.
-- **Zgłoszenia (Discord i testy):** ognik nie podnosił przedmiotów, nic nie trafiało do ekwipunku, a potem okazało się, że w ogóle nie leci za bohaterem.
-- **Przyczyna:** w NB całego ognika (`WISP_DETECTOR`) prowadzi plugin Union (UNION_ABI.DLL 0x102740c0), a nie skrypty:
-  - skrypty mają `B_MM_WispDetect` → `Wld_DetectItem` + `AI_GotoItem`, ale NB nigdzie tego nie wywołuje – szukanie i zbieranie robi plugin;
-  - `ZS_MM_Rtn_Summoned` prowadzi do bohatera wszystkie przywołane stwory oprócz ognika – za bohaterem prowadzi go plugin.
-  Kolejne próby (najpierw podpięcie pod `AI_GotoItem` skryptów, potem sama odległość) nic nie dały – dopiero log z wpisami `[ctx] wisp search` pokazał, że ognik nigdy nie dostaje przedmiotu i stoi 12–25 m od bohatera.
-- **Poprawka – silnik robi to, co plugin:**
-  - **Chodzenie za bohaterem:** gdy ognik nie leci po przedmiot i jest dalej niż 3 m, biegnie do bohatera; dalej niż 25 m (teleport, zmiana poziomu) – od razu staje obok bohatera.
-  - **Szukanie (co 0,5 s):** gdy ognik jest do 20 m od bohatera – najbliższy przedmiot leżący do 10 m od bohatera, nie wyżej/niżej niż 5 m. Pomija klucze (`ITKE_*`, poza wytrychami – jak plugin) i, gdy w rozmowie z ognikiem wyłączono zbieranie wartościowych przedmiotów (`RX_Wisp_DontTakeImportantItems`), zbroje i mikstury.
-  - **Przedmioty z właścicielem:** bierze je, gdy w promieniu 20 m od przedmiotu nie ma żywego właściciela ani nikogo z jego gildii (kradzieży nikt nie widzi) – w NB sporo przedmiotów na odludziu ma właściciela. Przy właścicielu nie bierze.
-  - **Zbieranie:** ognik leci do przedmiotu („Coś znaleziono!”); gdy jest nad nim (do 2,5 m po ziemi i do 4 m w pionie – ognik lata nad ziemią), przedmiot idzie do ekwipunku („Zdobyto: …”). Nie doleci w 15 s – odpuszcza ten przedmiot na minutę i bierze następny.
-- **Szybsze zbieranie – 🧪 (15.11, 22:00):** zgłoszenie: zbiera, ale wolno – kilka wyrzuconych broni 10–15 s, a na PC natychmiast (20 grzybów w 2–3 s). Teraz:
-  - wszystko, co leży do 3,5 m od ognika, trafia do ekwipunku od razu, bez lotu (do 5 przedmiotów naraz, jeden komunikat „Zdobyto: a, b, c”) – ognik trzyma się przy bohaterze, więc rzeczy wokół bohatera znikają w chwilę;
-  - szukanie co 0,1 s zamiast 0,5 s, po każdym zebraniu następne od razu;
-  - leci do przedmiotu najbliższego ognikowi (nie bohaterowi) – krótsze przeloty; za przedmiot uznaje 3,5 m od niego zamiast 2,5 m.
-- **Log:** co 10 s `[ctx] wisp search: the wisp at … cm, items in 10 m: N (owner near …, skipped …, important …, keys …, height …) -> nazwa`, oraz `the wisp found: …`, `the wisp brings: …`, `the wisp takes an item of an owner (…)`, `the wisp did not reach the item: closest …`, `the wisp was … cm away: next to the hero again`.
-- **Czego jeszcze nie ma:** umiejętności ognika z pluginu (1–10: rodzaje przedmiotów, większy obszar, szybkość, łup z przeciwników – plugin trzyma je u siebie, tu ognik zbiera wszystkie rodzaje), opcja „zbieranie w pomieszczeniach”, pokazywanie rzadkich roślin i tabliczek (`RX_ShowWispRare`, `RX_ShowWispStone`, `FindPlates`…).
+### 15. Dziennik: puste „Zakończone zadania”, bestiariusz pod „Handel i rzemiosło” – ✅ (12.11.2026)
+- **Pliki:** `common/ui/gamemenu.cpp`, `common/ui/gamemenu.h`
+- NB zmienia stałe dziennika (`LOG_SUCCESS` = 4, bestiariusz jako `LOG_FAILED` = 3), a zakładki na telefonie miały kolejność z Gothica II. Teraz każda zakładka bierze to, co pokazuje, ze swojego przycisku w MENU.DAT; w NB „Zakończone” = status 2 i 4, „Bestiariusz” = status 3.
 
-### 62. Napisy NB na ekranie: liczniki efektów, karma bogów, ognik – ✅ (15.11.2026)
-- **Sprawdzone (15.11.2026, zrzut):** liczniki działają („(02:10) Napój wytrzymałości”, „Ochrona na następny atak”), są też ikonki karmy (3 i czerwone 1 8) i „Strzały: 1113”.
+### 62. Napisy NB na ekranie: liczniki efektów, karma bogów, strzały – ✅ (15.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, 🆕 `common/game/nbtexts.h`, `common/game/nboptions.h`
-- **Zgłoszenie:** brakowało napisów z wersji PC: w prawym górnym rogu liczników mikstur i błogosławieństw (np. „(13:03) Błogosławieństwo - regeneracja many”), ikonek karmy Innosa i Beliara oraz komunikatu ognika „Coś znaleziono!”.
-- **Przyczyna:** to rysowały dwie rzeczy, których tu nie było:
-  - funkcja skryptów `GamePaused`, którą plugin woła w każdej klatce – karma bogów (ikonki z czcionki `FONT_OLD_10_WHITE_HO`, na czerwono, gdy nie było dziś modlitwy), licznik strzał, głód/pragnienie/zmęczenie, ikonki stanu bohatera;
-  - sam plugin (UNION_ABI.DLL 0x10254b20) – lista efektów „(mm:ss) nazwa”: 21 zmiennych skryptów z sekundami (przyspieszenie, niewidzialność, regeneracje many i wytrzymałości, odporności, serca golemów, błogosławieństwa Isgarotha…) oraz tarcza magiczna, ognista tarcza, przemiana zwojem, medytacje, aury nekromanty, zimno/upał i inne.
+- **Sprawdzone (zrzut):** „(02:10) Napój wytrzymałości”, „Ochrona na następny atak”, ikonki karmy (3 i czerwone 1 8), „Strzały: 1113”.
+- **Przyczyna:** rysowały to dwie rzeczy, których tu nie było:
+  - funkcja skryptów `GamePaused` (plugin woła ją co klatkę) – karma bogów (ikonki z czcionki `FONT_OLD_10_WHITE_HO`, czerwone bez dzisiejszej modlitwy), licznik strzał, głód/pragnienie/zmęczenie, ikonki stanu;
+  - sam plugin (0x10254b20) – lista „(mm:ss) nazwa”: 21 zmiennych z sekundami (przyspieszenie, niewidzialność, regeneracje, odporności, serca golemów, błogosławieństwa Isgarotha…) oraz tarcza magiczna, ognista tarcza, przemiana zwojem, medytacje, aury nekromanty, zimno/upał.
 - **Poprawka:**
-  - `GamePaused` wołane co 250 ms (napisy skryptów trwają 1 s); kolor z `PrintScreenColor` (czerwony/żółty) działa.
-  - Lista efektów odtworzona jak w pluginie: te same zmienne, warunki i nazwy. Teksty z `AB_Translation.lbr` z folderu gry (`System` lub `System/Autorun`), a gdy go nie ma – wbudowane polskie z tego pliku. Lista zaczyna się od 6% wysokości, co 3% (w pluginie co 2,4%), żeby większe litery na telefonie nie zachodziły na siebie ani na karmę.
-  - Lista pokazuje się, gdy włączone są „informacje na ekranie” skryptów (`MoreInfoOnScreen`, włącza je rozmowa z Xardasem) i opcja `bShowBuffInfo` – dodana do menu ustawień gry („SHOW_BUFFS”).
-  - Ognik: „Coś znaleziono!” raz na każdy znaleziony przedmiot, a po przyniesieniu „Zdobyto: …” (teksty pluginu zamiast mojego „Ognik przyniósł”).
-  - `RX_PrintCutscene` wyłączone: pisało „Pomiń, wciśnij G lub R” na scenach, a pominięcie idzie przez `RX_KeyPressed`, którego tu nie ma.
-- **Bez tego (na razie):** liczniki wampira, Full SnC+, umiejętności karmy i spowolnienia czasu (plugin trzyma je u siebie) oraz „Dzień: …” w lewym górnym rogu.
+  - `GamePaused` co 250 ms; kolor z `PrintScreenColor` (czerwony/żółty);
+  - lista efektów jak w pluginie; teksty z `AB_Translation.lbr` z folderu gry (`System` lub `System/Autorun`), a bez niego – wbudowane polskie. Od 6% wysokości, co 3% (w pluginie 2,4%), żeby na telefonie nie zachodziła na karmę;
+  - pokazuje się przy „informacjach na ekranie” skryptów (`MoreInfoOnScreen`, włącza rozmowa z Xardasem) i opcji `bShowBuffInfo` (w menu: „SHOW_BUFFS”);
+  - `RX_PrintCutscene` wyłączone – pisało „Pomiń, wciśnij G lub R”, a pominięcie wymaga `RX_KeyPressed`, którego nie ma.
+- **Jeszcze nie ma:** liczników wampira, Full SnC+, umiejętności karmy i spowolnienia czasu, „Dzień: …” w lewym górnym rogu.
 
-### 63. Wyrzucało z gry przy zbieraniu przez ognika – 🧪 (15.11.2026)
+---
+
+## 5. Bohater: sprint, wytrzymałość, paski, animacje broni
+
+### 40, 41, 42, 45. Sprint, wytrzymałość NB i paski w edytorze HUD – ✅ (14.11.2026)
+- **Pliki:** 🆕 `android/assets/touch-icons/sprint.png`, 🆕 `common/game/nbbars.h`, `common/game/gamescript.cpp`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`
+- **Sprint (40):** plugin pod `~` woła `B_Hotkey_Sprint` (włącza `SPRINT_ACTIVE` i `Humans_MageSprint.MDS`, sprawdza wytrzymałość). Teraz klawisz `~` i nowy przycisk na nakładce (podświetlony przy sprincie, tylko w NB, do przesunięcia/ukrycia w edytorze HUD).
+- **Wytrzymałość (41):** `Hero_Poisoned` zabiera ją przy sprincie, skoku, wspinaczce, bloku i nurkowaniu, ale brakowało `RX_IsRunAniActive`, `RX_IsAniActive`, `Npc_IsAnimationActive`, `Npc_GetWaterLevel` i `Bar_*` – sprint nic nie kosztował, paska nie było. Teraz są, a pasek (`BAR_Stamina.tga`, przy zatruciu `BAR_Poison.tga`) jest rysowany między życiem a maną.
+- **Paski w edytorze HUD (42, 45):** paski życia, wytrzymałości i many da się przesuwać, zmieniać im rozmiar (5 kroków) i ukrywać w edytorze HUD (`bar_hp`, `bar_stamina`, `bar_mana`); przy liczbach nad paskiem wytrzymałości `wartość/maks.` liczone jak w skryptach (`ATR_STAMINA` / `ATR_STAMINA_MAX*10`).
+
+### 46. Broń z wymaganą wytrzymałością nie dawała się założyć – ✅ (14.11.2026)
+- **Plik:** `common/world/objects/npc.cpp`
+- Warunki przedmiotów NB wskazują też zmienne pluginu: `AIVRX_NPC_ATR_BOW` (89), `_SHIELD` (90), `_CROSSBOW` (91), `_STAMINA` (92) – 207 przedmiotów wymaga wytrzymałości. `Npc::attribute` zwracał 0 dla indeksów ≥ `ATR_MAX` („Za mało wytrzymałości…” przy 780/650). Teraz wartość to zmienna NB postaci (wytrzymałość ×10).
+
+### 32. Bohater walczył nożem i pałką jak rapierem – ✅ (13.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- Przy zmianie broni skrypty zdejmują ok. 60 nakładek funkcją pluginu `Mdl_RemoveOverlayMds_NoUpdate`, której nie było – raz założony rapier zostawał na zawsze. Dodane `Mdl_RemoveOverlayMds_NoUpdate`, `Mdl_ApplyOverlayMds_NoUpdate`, `Mdl_HasOverlayMds`.
+
+### 43, 47, 48. Poziom animacji broni bohatera i mod testowy – ✅ (14.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `mods/test-umiejetnosci-broni/index.js`
+- **43:** `RX_LastAnim_1h/2h` to poziom wybrany w szybkim panelu pluginu (−1 = według talentu). Panelu nie ma, więc zostawało 0 (amator) i każda broń, także u mistrza, miała animacje amatora. Teraz po nauce talentu wraca −1 i `B_CheckMenuOption` zakłada animacje poziomu talentu.
+- **47 – wyjaśnione:** „inne animacje szpady” brały się z tego, że bohater miał naprawdę 6% (poziom amatora, `Humans_Pirate`), a stary mod testowy zakładał zwykłe nakładki miecza. Szpada wojownika (`Rapier_ST2`) od 60%, mistrza (`Rapier_ST3`) od 90%. Diagnostyka `[anim] hero overlay …` i `[anim] hero attack …` w logu.
+- **48:** mod „Test umiejętności broni” ustawia procent (10/30/60/90%) przez `B_RaiseFightTalent` i woła `RX_ApplyAnim_Weapons`, więc animacje zakłada skrypt NB.
+
+---
+
+## 6. Walka i AI postaci
+
+### 0a, 54. Potwory nie atakowały / czarny goblin stał w miejscu – ✅ (przed logiem, 14.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/game/gamescript.cpp`
-- **Z crash.log:** `SIGSEGV` (adres 0xe0) w `Item::position` ← `Npc::nextAiAction` – zaraz po `[ctx] the wisp brings: Grawerowany miecz jednoręczny`.
-- **Przyczyna:** ognik miał w kolejce jeszcze nierozpoczęte „leć do przedmiotu” (przed nim „biegnij do bohatera” z poprawki 61). Doleciał wcześniej i przedmiot trafił do ekwipunku. Silnik w takiej sytuacji czyści w kolejce wskaźnik na przedmiot, ale `AI_GotoItem` potem i tak z niego korzystał – odwołanie do pustego przedmiotu.
-- **Poprawka:** `AI_GotoItem` z przedmiotem, którego już nie ma, nic nie robi (to samo mogło się zdarzyć każdej postaci, gdy ktoś zabrał przedmiot, do którego szła). Dodatkowo ognik czyści swoją kolejkę, zanim odda przedmiot.
+- **0a:** `ZS_MM_AllScheduler` robi `AI_RemoveWeapon` + `AI_StartState`, a potwory nie mają animacji chowania broni – kolejka AI stała bez końca i potwór nie dostawał percepcji. Teraz potwór chowa broń od razu.
+- **54:** goblin z maczugą schowaną do snu nie mógł jej dobyć (brak animacji) i próbował w kółko zamiast atakować. Teraz potwór, który przez 1 s nie dobędzie broni, dostaje ją od razu do ręki; animacja `AI_PlayAni`, której potwór nie może zacząć, jest pomijana po 1,5 s (ludzie czekają jak dotąd).
+- **Log:** `NB ai: …` (stan, kolejka, broń, percepcje potwora przy bohaterze), `STUCK 5 s`, `cannot draw its weapon - it takes it at once`.
 
-## Do zrobienia
+### 23. NPC bez talentów i animacji walki (cały świat NB) – ✅ (13.11.2026, sprawdzone 15.11)
+- **Plik:** `common/game/gamescript.cpp`
+- Każda postać NB woła `B_SetFightSkills` → `RX_ApplyProperOverlaysForNpc` pluginu. Bez niego talenty wszystkich NPC były 0%: animacje nowicjusza, brak trafień krytycznych. Przepisany kod z UNION_ABI.DLL (0x10198B20): procent do szansy trafienia, nakładka ST1/ST2/ST3 od 30/60/90% (łuk, kusza – T1/T2), poziom umiejętności.
 
-- [x] Czarny goblin nie atakuje, stoi w miejscu – naprawione (poprawka 54). Z logu: wrogi (attitude=0), czuje bohatera (sense=5 przy ~1100), ale zostaje w `ZS_MM_RTN_ROAM` bez celu – reakcja na wroga (`B_MM_AssessEnemy`) nie przełącza go na atak; raz pojawia się `ZS_MM_ThreatenEnemy`. `RX_GobboClan` (niezaimplementowane) jest tylko w `AI_OnDead_Gobbo_Black_Clan` – przy śmierci, nie przy ataku. Do zbadania z włączonymi śladami `B_MM_AssessEnemy` (więcej niż 3 na komunikat).
-- [ ] **Animacje broni NB – sprawdzić, co się za nimi kryje (w toku).** Ustalone do tej pory:
-  - bohater: animacje zakładają skrypty (`RX_ApplyAnim_Weapons` → `RX_ApplyAni_1H_Rapier` / `_DexSword` / `_1H_Sword` / `_2H_Speer` / `_2H_Staff` / `_2H_Hallberd` / `_2H_Common`, tarcze `RX_ApplyShieldAni`, dwie bronie `Humans_1x2ST3` / `2x2ST3`, topory orków `HUMANS_AXEST2`) – w OpenGothic działa;
-  - NPC: talenty i nakładki ST1–3 z pluginu – poprawka 23;
-  - do sprawdzenia w grze: czy zestawy rapiera/szabli/włóczni mają w plikach .MDS ciosy, które OpenGothic odtwarza inaczej niż oryginał (kilka pchnięć w jednej animacji, kombinacje, zasięg) – potrzebne nagranie walki rapierem i zwykłym mieczem;
-  - kod wyboru dla NPC z innymi broniami (ok. 0x1024AE00 w DLL) – do przejrzenia.
-- [ ] Potwory w walce za często odskakują/krążą (ścierwojad cofa się zamiast atakować). To problem silnika OpenGothic, nie tylko NB – to samo widać w modzie Renovation (goblin). Reguła `FA_ENEMY_PREHIT` (odskok, gdy przeciwnik bierze zamach) jest w OpenGothic sprawdzana przy każdej decyzji potwora – do porównania z oryginałem.
-- [ ] Walka kilku postaci z jednym celem: cel „głupieje” (krąży, nie atakuje) – do zbadania (nagranie z obozu bandytów, Brago)
-- [ ] `EXT_PutInSlot` / `ActivateZSSlot`: mieszek i torba na bohaterze (opcje z poprawki 5)
-- [ ] Funkcje bossów i postaci wołane przez plugin: `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…` (z poprawki 51)
-- [ ] Karma bogów (`UpdateKarma`, 130 wywołań) i klawisze skrótów NB (`RX_KeyPressed`, 100 wywołań)
+### 29, 35. Style walki NPC z pluginu według gildii – ✅ (14.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- Plugin co 100 ms dobiera walczącym ludziom z bronią w ręku styl walki według gildii, szansy trafienia i losowania (nowe losowanie po 4–8 s).
+- **29 – ⏸ wycofane:** wersja dla gildii bez własnej tabeli (Lares, VLK, BAU…) – gra działała lepiej bez niej; te gildie zostają przy stylach z poprawki 23.
+- **35 – zrobione:** gildie z własną tabelą w pluginie: bandyci (Nestor, Franco, Esteban, Dexter, Gor Boba…), najemnicy (Sentenza, Buster, Fester, Bullco, Raoul…), straż, paladyni, łowcy smoków, templariusze, piraci (Alligator Jack), banici. „Rapier” = broń z bitem `BIT_ITEM_PIERCE_DAMAGE`; styl „zręcznościowy” w 80% zamieniany na zwykły.
+- **Jeszcze nie:** szkielety (`GIL_SKELETON`, długa tabela po nazwach).
+
+### 24. Bandyci nie atakowali bezimiennego w zwykłej zbroi – ✅ (13.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- NB daje każdemu człowiekowi osobisty stosunek do bohatera „neutralny”, a OpenGothic stawiał go ponad gildią. Teraz przy „neutralnym” wygrywa wroga gildia (jak w NB). Dodane `Npc_GetGuildAttitude`.
+- Błąd `Accessing member "C_NPC.AIVAR" without an instance set (in C_PLAYERISFAKEBANDIT)` jest nieszkodliwy (zmienne Ramona z Jarkendaru; w oryginale tak samo).
+
+### 25, 31. Wybór broni NPC: dobywanie broni, łuk przed mieczem – ✅ (13.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- `B_SelectWeapon` kończy się `RX_SelectWeaponNpc` pluginu (UNION_ABI.DLL 0x1017F840) – bez niego NPC nie dobywali broni. Teraz zasady pluginu:
+  - z łukiem/kuszą i strzałami NPC strzela, chyba że wróg jest bliżej niż 600; do krwiopijców i harpii zawsze; do odpornych na strzały tylko „łucznik-potwór”;
+  - strzelający nie zmienia łuku na miecz przy zwierzętach; po zmianie broni następna dopiero po 6 s; bez broni białej – pięści;
+  - strzały liczone do założonego łuku (nie tylko do broni w ręku).
+- Lares strzela z łuku i kładzie zwierzęta jednym trafieniem.
+
+### 26, 28, 22. Tempo ataków i odskoki – ✅ (13.11.2026)
+- **Plik:** `common/world/objects/npc.cpp`
+- **26:** potwory po ataku czekały tylko do okna kombinacji (`DEF_HIT_END`) i gryzły ~1,5× szybciej niż w Gothicu. Teraz w walce pięściami/kłami czekają do końca animacji.
+- **28, 22:** „czekanie przy wrogu = odskok” działało też na ludzi z bronią i co drugą decyzję. Teraz tylko dla walczących pięściami/kłami i najwyżej raz na 2,5 s.
+
+### 33, 34. Rytm walki ze zwierzętami jak w Gothicu – ✅ (14.11.2026, sprawdzone 15.11)
+- **Plik:** `common/world/objects/npc.cpp`
+- Reakcja na zamach (`FA_ENEMY_PREHIT`) była sprawdzana co ~0,2 s, więc np. ścierwojad odskakiwał od pierwszego zamachu. Teraz zwierzęta z odskokiem w taktyce (wilk, krwiopijca, waran, szczur, zębacz, cieniostwór, harpia, ścierwojad…) odskakują dopiero po 2 trafieniach od poprzedniego odskoku.
+
+### 27. Towarzysz (Lares) stał 0,25–3 s po każdej walce i dialogu – ✅ (13.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- `B_CheckHealth` woła `B_Npc_Desynchronize` (`AI_WaitMS` 250–3000 ms) przy każdej zmianie stanu, a towarzysz nigdy nie osiąga swojego miejsca. Dla członków drużyny (`AIV_PARTYMEMBER`) to czekanie jest pomijane.
+
+### 30. NPC bez trafień krytycznych na starym zapisie – ✅ (13.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- Szanse NPC ustawia poprawka 23 przy tworzeniu postaci, więc w starych zapisach były 0%. NPC przy bohaterze z szansami 0 i procentami w `AIVAR[84..87]` dostaje szanse z nich. Lares znowu kładzie zwierzęta jednym ciosem.
+
+### 17, 18, 20, 21. Wcześniejsze poprawki walki bez osobnego opisu – ✅
+- Z tabeli plików (szczegółowy opis się nie zachował): `npc.cpp` – efekty krwi przy trafieniu, prędkość ruchu przeskalowanych istot; `playercontrol.cpp` (18) – „lepki” focus przeciwnika w walce wręcz (bohater sam się do niego obraca).
+
+---
+
+## 7. Świat: rzemiosło, zbroje, teleport, ognik
+
+### 2. Stoły rzemieślnicze nic nie robiły – ✅ (12.11.2026)
+- **Plik:** `common/game/gamescript.cpp` (`RX_OpenCraft`)
+- NB otwiera stoły graficznym oknem pluginu. Teraz `RX_OpenCraft` otwiera stare menu dialogowe, które nadal jest w skryptach NB (przepisy i składniki ze skryptów).
+- **Sprawdzone:** stół alchemiczny, runiczny, demonologiczny, stół z tabliczkami, pulpity z księgami (inteligencja 5 → 6). **Do sprawdzenia:** zwoje, kowadło, piec; kuchnia, łuki, biżuteria i runy demoniczne mogą nie mieć starego menu.
+
+### 7. Łóżko: po przespaniu bohater nagle stał, a potem wstawał z łóżka – ✅ (12.11.2026)
+- **Plik:** `common/world/objects/npc.cpp` (`Npc::resetPositionToTA`)
+- Sen przewija czas (`Wld_SetTime`), a OpenGothic przy tym zatrzymywał animację bohatera. Teraz bohater w łóżku zostaje i wstaje normalną animacją łóżka.
+
+### 16, 39. Paladyni bez zbroi (Lothar, Lord Andre – sama głowa) – ✅ (14.11.2026)
+- **Pliki:** `common/game/inventory.cpp`, `common/game/inventory.h`, `common/world/objects/npc.cpp`
+- **16 – diagnostyka:** zbroja wczytywała się poprawnie, ale zaraz po niej postać zakładała hełm (`ITEM_KAT_ARMOR` z `WEAR_HEAD`).
+- **39 – poprawka:** OpenGothic miał jedno miejsce na zbroję i hełm ją zastępował. Teraz hełm ma osobne miejsce (węzeł `ZS_HELMET`, a bez niego `BIP01 HEAD`), zbroja zostaje; „najlepsza zbroja” nie wybiera hełmu; stare zapisy są poprawiane przy wczytaniu (format zapisu bez zmian).
+
+### 59, 60. Teleport między światami i zbroja po teleporcie – teleport 🧪, zbroja ✅ (15.11.2026)
+- **Pliki:** `common/game/gamescript.cpp` (+ diagnostyka w `common/game/inventory.cpp`)
+- **59 – teleport:** NB zmienia świat funkcją pluginu `Wld_ChangeLevel_AB(plik ZEN, punkt)` (kamienie i runy teleportacji, przedmioty przeniesienia, runa Galoma, świątynia Azgalora, dolina Adanosa…). Nie było jej, więc teleport zabierał manę i nic się nie działo. Teraz zmiana świata jak przy przejściu między światami. W logu `[ctx] change of the world: … -> …`.
+- **60 – zbroja:** `RX_ApplyHeroHead` ustawia ciało bohatera przez `Mdl_SetVisualBody(…, NO_ARMOR)`. W Gothicu to znaczy „nie zakładaj nowej zbroi”, a w tej wersji OpenGothic (dla Archolos) zdejmowało założoną. W NB zbroja teraz zostaje. Naprawiło to też koniec prologu – bezimienny ma łachmany. Diagnostyka `[ctx] the hero takes off …` zostaje.
+
+### 11, 61, 63. Ognik od Vatrasa – ✅ (podstawa), szybsze zbieranie i crash 🧪 (12. i 15.11.2026)
+- **Pliki:** 🆕 `mods/nb-wisp/` (`manifest.json`, `index.js`, gotowy `mods/nb-wisp.zip`), `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`
+- **Przyczyna:** w NB całego ognika (`WISP_DETECTOR`) prowadzi plugin (przywołanie pod L-Shift+F5, szukanie i zbieranie – UNION_ABI.DLL 0x102740c0, chodzenie za bohaterem). Skrypty mają tylko postać i `B_MM_WispDetect`, którego NB nigdzie nie wywołuje, a `ZS_MM_Rtn_Summoned` prowadzi do bohatera wszystkie przywołane stwory oprócz ognika.
+- **11 – przywołanie (mod JS):** gdy bohater ma amulet (`ITAM_ADDON_WISPDETECTOR(NEW)`) – **Shift+F5**, przycisk w zakładce **„Ognik”** menu modów albo komenda `ognik`. Po zmianie świata ognik wraca.
+- **61 – szukanie, zbieranie, chodzenie (silnik):**
+  - **chodzenie:** dalej niż 3 m od bohatera – biegnie do niego; dalej niż 25 m – staje od razu obok;
+  - **szukanie:** co 0,1 s, gdy ognik jest do 20 m od bohatera – najbliższy ognikowi przedmiot leżący do 10 m od bohatera (nie wyżej/niżej niż 5 m); pomija klucze (`ITKE_*`, poza wytrychami), a przy wyłączonym w rozmowie z ognikiem „zbieraniu wartościowych przedmiotów” – zbroje i mikstury;
+  - **przedmioty z właścicielem:** bierze, gdy w promieniu 20 m nie ma żywego właściciela ani nikogo z jego gildii;
+  - **zbieranie:** wszystko do 3,5 m od ognika od razu do ekwipunku (do 5 naraz, „Zdobyto: a, b, c”); po dalsze leci („Coś znaleziono!”); nie doleci w 15 s – odpuszcza na minutę;
+  - **sprawdzone (21:43):** leci za bohaterem i przynosi przedmioty. **Do sprawdzenia:** szybkość zbierania (zgłoszenie: 10–15 s na kilka broni, na PC natychmiast).
+- **63 – crash przy zbieraniu:** `SIGSEGV` w `Item::position` ← `Npc::nextAiAction`. Ognik miał w kolejce nierozpoczęte „leć do przedmiotu”, a przedmiot był już zebrany; silnik czyścił wskaźnik, ale `AI_GotoItem` z niego korzystał. Teraz `AI_GotoItem` bez przedmiotu nic nie robi (dotyczy każdej postaci), a ognik czyści kolejkę przed oddaniem przedmiotu.
+- **Log:** co 10 s `[ctx] wisp search: …`, oraz `the wisp found / brings / takes an item of an owner / did not reach / was … cm away`.
+- **Jeszcze nie ma:** umiejętności ognika z pluginu (rodzaje przedmiotów, obszar, szybkość, łup z przeciwników), „zbieranie w pomieszczeniach”, pokazywanie rzadkich roślin i tabliczek (`RX_ShowWispRare`, `RX_ShowWispStone`, `FindPlates`).
+
+---
+
+## 8. Dźwięk
+
+### 36–38. Zacinanie się dźwięku przy wczytywaniu – ✅ (14.11.2026)
+- **Pliki:** `common/gamemusic.cpp`, `game/main.cpp` (folder `game/` w głównym katalogu projektu)
+- **Przyczyna:** muzykę ładował wątek miksowania OpenAL – pod blokadą zasobów, którą w tym czasie trzyma wczytywanie świata; do tego na Androidzie wątek dźwięku ma zwykły priorytet i krótki bufor (60 ms).
+- **Poprawka:**
+  - **36, 38:** oba silniki muzyki (domyślny „OpenGothic” i „GothicKit”) ładują nowy motyw w osobnym wątku; wątek dźwięku zaczyna go dopiero po załadowaniu, motyw, który już gra, nie jest ładowany ponownie;
+  - **37:** priorytet wątku miksowania podnoszony do priorytetu audio Androida (−16, gdy się nie da −10); bufor OpenAL 120 ms (`alsoft.conf` obok `log.txt`: `period_size = 960`, `periods = 6`). Jeśli dźwięki wydają się spóźnione – zmniejszyć `periods` do 4–5.
+
+---
+
+## 9. Do zrobienia
+
+- [ ] **Animacje broni NB:** sprawdzić, czy zestawy rapiera/szabli/włóczni mają w .MDS ciosy, które OpenGothic odtwarza inaczej (kilka pchnięć w animacji, kombinacje, zasięg) – potrzebne nagranie walki rapierem i mieczem; kod wyboru NPC z innymi broniami (ok. 0x1024AE00 w DLL).
+- [ ] Potwory w walce za często odskakują/krążą – problem silnika OpenGothic (widać też w Renovation); `FA_ENEMY_PREHIT` do porównania z oryginałem.
+- [ ] Walka kilku postaci z jednym celem: cel „głupieje” (krąży, nie atakuje) – nagranie z obozu bandytów, Brago.
+- [ ] Style walki szkieletów (`GIL_SKELETON`) – poprawka 35.
+- [ ] Mieszek i torba na bohaterze (`EXT_PutInSlot`, `ActivateZSSlot`) – opcje z poprawki 5.
+- [ ] Znikanie pustych ciał (opcja optymalizacji NB).
+- [ ] Funkcje bossów wołane przez plugin: `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…`, razem z obrażeniami w czasie i truciznami (`RX_ApplyDotDamage`, `RX_ApplyPoison`).
+- [ ] System karmy pluginu (`UpdateKarma`, 130 wywołań – wydarzenia, znaki, osiągnięcia); samo wyświetlanie karmy działa (poprawka 62).
+- [ ] Klawisze skrótów NB (`RX_KeyPressed`, 100 wywołań – mikstury, strzały, pochodnia, pomijanie scenek).
+- [ ] Przywołania (`RX_SummonNpcToTarget`, `RX_ResetSummons`) i okna pluginu (handel, rzemiosło z listą, poker).
+- [ ] Ognik: umiejętności z pluginu i pokazywanie rzadkich roślin/tabliczek (poprawka 61).
+- [ ] Napisy: „Dzień: …” w lewym górnym rogu, liczniki wampira i Full SnC+ (poprawka 62).
