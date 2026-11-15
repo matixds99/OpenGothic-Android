@@ -547,6 +547,8 @@ void Controls::buildHudEditor() {
   }
 
 void Controls::buildMenu(const Anchor&) {
+  if(bareOpen)
+    return;
   if(modsOpen) {
     // the window of the mods has its own close button at the top right: the settings do not cover it
     round(fromRight(70), fromBottom(70),  66,"BACK",    Key::Escape);
@@ -738,6 +740,14 @@ void Controls::cancelFinger(Finger& f) {
     joyActive = false;
     }
   f.blocked = true;
+  }
+
+void Controls::bareMenu(bool on) {
+  if(bareOpen==on)
+    return;
+  cancel();
+  bareOpen = on;
+  rebuild();
   }
 
 void Controls::modMenu(bool on) {

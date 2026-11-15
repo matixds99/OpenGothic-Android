@@ -267,6 +267,8 @@ class Controls {
     bool  settingsVisible() const { return settingsOpen; }
     /// The menu of the mods is open: it has the screen, the settings and the buttons of the menu are not under it
     void  modMenu(bool on);
+    /// a window that has all its buttons (the sales of New Balance): the menu without the buttons of the overlay
+    void  bareMenu(bool on);
     bool  movementAvailable() const { return availableMovement; }
     bool  held(Key key) const { return refs[size_t(key)]>0; }
     float unit() const { return scale; }
@@ -350,6 +352,7 @@ class Controls {
     bool     shift    = false;   // the next letter of the keyboard is a capital one
     bool     settingsOpen = false;
     bool     modsOpen     = false;   // the menu of the mods covers the screen
+    bool     bareOpen     = false;   // NB fix 68: a window with its own buttons, no buttons of the overlay
     bool     twoLists = false; // the inventory shows the other list too
     bool     padVisible = false;
     bool     featureSpeed  = false;   // a mod has asked for the fast forward

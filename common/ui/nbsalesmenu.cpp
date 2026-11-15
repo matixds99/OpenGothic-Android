@@ -54,24 +54,28 @@ size_t NbSalesMenu::owned(size_t i) const {
   }
 
 NbSalesMenu::Layout NbSalesMenu::layout() const {
+  // as the window of the plugin (UNION_ABI.DLL, AS_BACK_CRAFT_*.TGA): the list on the left third of the screen, the
+  // chosen item on the right third, the middle is free (the hero at the table or the trader)
   const float s = Gothic::interfaceScale(this);
   Layout l;
   const int W = w(), H = h();
-  const int m = std::max(8,int(12*s));
-  // the list: the left 42% of the screen, the panel: the right 40%; the middle stays free (the hero, as in the plugin)
-  l.list  = Rect(m, m+int(36*s), int(float(W)*0.42f), H-2*m-int(36*s));
-  l.row   = std::max(int(44*s), l.list.h/8);
-  l.panel = Rect(W-int(float(W)*0.40f)-m, m+int(36*s), int(float(W)*0.40f), H-2*m-int(36*s));
-  const int bh = std::max(int(44*s), l.panel.h/9);
+  const int pw = int(float(W)*0.34f);
+  const int m  = std::max(6,int(10*s));
+  const int top = m+int(44*s);   // the title (the tabs in the plugin)
+  l.list  = Rect(m, top, pw-2*m, H-top-m);
+  l.row   = std::max(int(48*s), l.list.h/7);
+  l.panel = Rect(W-pw, 0, pw, H);
+  const int bh = std::max(int(44*s), H/10);
   const int bw = bh;
-  const int by = l.panel.y+l.panel.h-2*bh-3*m;
-  l.minus = Rect(l.panel.x+m,                 by, bw, bh);
-  l.plus  = Rect(l.panel.x+l.panel.w-m-2*bw-m/2, by, bw, bh);
-  l.max   = Rect(l.panel.x+l.panel.w-m-bw,    by, bw, bh);
-  l.count = Rect(l.minus.x+bw+m/2, by, l.plus.x-(l.minus.x+bw+m/2)-m/2, bh);
-  l.sell  = Rect(l.panel.x+m, by+bh+m, l.panel.w-2*m, bh+m);
+  const int bottom = H-m-bh-m;
+  l.sell  = Rect(l.panel.x+2*m, bottom, l.panel.w-4*m, bh);
+  const int cy = bottom-m-bh;
+  l.minus = Rect(l.panel.x+2*m, cy, bw, bh);
+  l.max   = Rect(l.panel.x+l.panel.w-2*m-bw, cy, bw, bh);
+  l.plus  = Rect(l.max.x-m/2-bw, cy, bw, bh);
+  l.count = Rect(l.minus.x+bw+m/2, cy, l.plus.x-(l.minus.x+bw+m/2)-m/2, bh);
   const int cs = int(40*s);
-  l.close = Rect(W-m-cs, m-int(4*s), cs, cs);
+  l.close = Rect(l.panel.x-cs-m, m, cs, cs);
   return l;
   }
 
@@ -141,9 +145,6 @@ void NbSalesMenu::mobileTap(float x, float y) {
   if(l.plus .contains(p)) { changeCount(+1); return; }
   if(l.max  .contains(p)) { changeCount(int(owned(sel))); return; }
   if(l.sell .contains(p)) { sell(); return; }
-  // outside of the list and the panel: closes, as a tap next to a menu
-  if(!l.panel.contains(p))
-    close();
   }
 
 void NbSalesMenu::mobileScroll(float dy) {
@@ -203,82 +204,118 @@ void NbSalesMenu::paintEvent(PaintEvent& e) {
   auto&       fnt = Resources::font(Resources::FontType::Normal,s);
   auto&       yel = Resources::font(Resources::FontType::Yellow,s);
   auto&       dis = Resources::font(Resources::FontType::Disabled,s);
+  auto&       big = Resources::font("FONT_OLD_20_WHITE.TGA",Resources::FontType::Yellow,s);
   const int   th  = std::max(1,int(2*s));
 
+  // the textures of the window of the plugin (in the data of New Balance), or a plain panel without them
+  const auto tex = [](const char* name) -> const Texture2d* {
+    auto* t = Resources::loadTexture(name);
+    return (t!=nullptr && !t->isEmpty() && t->w()>8) ? t : nullptr;
+    };
+  const auto image = [&](const Texture2d* t, const Rect& r, const Color& fallback) {
+    if(t!=nullptr) {
+      p.setBrush(Brush(*t));
+      p.drawRect(r.x,r.y,r.w,r.h, 0,0,t->w(),t->h());
+      } else {
+      frame(p,r,th,PanelLine,fallback);
+      }
+    };
   const auto textMid = [&](const GthFont& f, const Rect& r, std::string_view txt) {
     const auto sz = f.textSize(txt);
     f.drawText(p, r.x+(r.w-sz.w)/2, r.y+(r.h+sz.h)/2-int(4*s), txt);
     };
 
-  bar(p,0,0,w(),h(),Dim);
+  static const char* const TexLeft   = "AS_BACK_CRAFT_LEFT.TGA";
+  static const char* const TexRight  = "AS_BACK_CRAFT_RIGHT.TGA";
+  static const char* const TexRecipe = "AS_BACK_CRAFT_RECIPE.TGA";
+  static const char* const TexDesc   = "AS_BACK_CRAFT_RECIPE_DESC.TGA";
+  static const char* const TexCreate = "AS_BACK_CRAFT_CREATE.TGA";
+  static const char* const TexPlus   = "AS_BACK_CRAFT_PLUS.TGA";
+  static const char* const TexMinus  = "AS_BACK_CRAFT_MINUS.TGA";
+  static const char* const TexIngr   = "AS_BACK_CRAFT_INGRIDIENT.TGA";
 
-  // the title and the gold
-  {
-    const std::string title = "Sprzeda\xBF";   // cp1250: "Sprzedaż"
-    yel.drawText(p, l.list.x, l.list.y-int(8*s), title);
-    string_frm gold("Z\xB3oto: ",int(player->inventory().goldCount()));
-    const auto sz = fnt.textSize(gold);
-    fnt.drawText(p, l.panel.x+l.panel.w-sz.w, l.panel.y-int(8*s), gold);
-  }
+  // the left panel: the title and the list
+  image(tex(TexLeft),Rect(0,0,l.list.x*2+l.list.w,h()),PanelFill);
+  big.drawText(p, l.list.x+int(8*s), l.list.y-int(12*s), "Sprzeda\xBF");   // cp1250: "Sprzedaż"
 
-  // the list
-  frame(p,l.list,th,PanelLine,PanelFill);
+  const auto* recipe = tex(TexRecipe);
+  const auto* desc   = tex(TexDesc);
   const int visible = std::max(1,l.list.h/std::max(1,l.row));
   for(int r=0; r<visible; ++r) {
     const size_t i = size_t(scroll+r);
     if(i>=items.size())
       break;
-    const Rect row(l.list.x+th, l.list.y+th+r*l.row, l.list.w-2*th, l.row-th);
-    if(i==sel)
-      bar(p,row.x,row.y,row.w,row.h,RowSel);
-    bar(p,row.x,row.y+row.h,row.w,1,Hairline);
+    const int  y    = l.list.y+r*l.row;
+    const int  side = l.row-int(6*s);
+    const Rect slot(l.list.x, y, side, side);
+    const Rect box (l.list.x+side+int(8*s), y, l.list.w-side-int(8*s), side);
+    image(recipe,slot,RowSel);
+    image(desc,box,PanelFill);
+    if(i==sel) {
+      bar(p,box.x,box.y,box.w,th*2,Gold);
+      bar(p,box.x,box.y+box.h-th*2,box.w,th*2,Gold);
+      }
     const size_t have = owned(i);
-    string_frm   txt(items[i].name," (x",int(have),")");
     const GthFont& f = have==0 ? dis : (i==sel ? yel : fnt);
-    const auto sz = f.textSize(txt);
-    f.drawText(p, row.x+int(12*s), row.y+(row.h+sz.h)/2-int(4*s), txt);
-    string_frm price(int(items[i].price));
-    const auto ps = f.textSize(price);
-    f.drawText(p, row.x+row.w-ps.w-int(12*s), row.y+(row.h+ps.h)/2-int(4*s), price);
+    textMid(f,box,string_frm(items[i].name," (x",int(have),")"));
+    // the price in the parchment (the plugin has the picture of the item there)
+    textMid(have==0 ? dis : yel,slot,string_frm(int(items[i].price)));
     }
   if(scroll>0)
-    chevron(p,float(l.list.x+l.list.w/2),float(l.list.y+int(10*s)),10*s,2*s,false,Gold);
+    chevron(p,float(l.list.x+l.list.w/2),float(l.list.y-int(4*s)),10*s,2*s,false,Gold);
+  if(scroll+visible<int(items.size()))
+    chevron(p,float(l.list.x+l.list.w/2),float(l.list.y+l.list.h-int(6*s)),10*s,2*s,true,Gold);
 
-  // the chosen item
-  frame(p,l.panel,th,PanelLine,PanelFill);
+  // the right panel: the chosen item
+  image(tex(TexRight),l.panel,PanelFill);
+  {
+    string_frm gold("Z\xB3oto: ",int(player->inventory().goldCount()));
+    textMid(fnt,Rect(l.panel.x,int(10*s),l.panel.w,int(30*s)),gold);
+  }
   if(sel<items.size()) {
     const auto&  it   = items[sel];
     const size_t have = owned(sel);
-    const int    lh   = int(float(yel.pixelSize())*1.5f);
-    int          y    = l.panel.y+int(16*s)+lh;
-    textMid(yel,Rect(l.panel.x,y-lh,l.panel.w,lh),it.name);
-    y += lh;
-    string_frm price("Cena: ",int(it.price));
-    textMid(fnt,Rect(l.panel.x,y-lh,l.panel.w,lh),price);
-    y += lh;
-    string_frm max("Maksymalnie: ",int(have));
-    textMid(have>0 ? fnt : dis,Rect(l.panel.x,y-lh,l.panel.w,lh),max);
-    y += lh;
-    string_frm total("Razem: ",int(int64_t(it.price)*int64_t(have>0 ? std::min(count,have) : 0)));
-    textMid(yel,Rect(l.panel.x,y-lh,l.panel.w,lh),total);
-    if(!message.empty()) {
-      y += lh;
-      textMid(fnt,Rect(l.panel.x,y-lh,l.panel.w,lh),message);
-      }
+    const size_t n    = have>0 ? std::min(count,have) : 0;
+    const int    card = std::min(l.panel.w/2,int(float(h())*0.24f));
+    const Rect   cr(l.panel.x+(l.panel.w-card)/2, int(44*s), card, card);
+    image(recipe,cr,RowSel);
+    textMid(big,cr,string_frm(int(it.price)));
+    const int lh = int(float(fnt.pixelSize())*1.6f);
+    int y = cr.y+cr.h+int(6*s);
+    textMid(yel,Rect(l.panel.x,y,l.panel.w,lh),it.name);                          y += lh;
+    textMid(have>0 ? fnt : dis,Rect(l.panel.x,y,l.panel.w,lh),string_frm("Maksymalnie: ",int(have))); y += lh;
+    // the place of the ingredients in the plugin: the price of one and the sum
+    const int ib = std::min(int(float(l.panel.w)*0.36f),int(float(h())*0.16f));
+    const Rect i1(l.panel.x+l.panel.w/2-ib-int(6*s), y, ib, ib);
+    const Rect i2(l.panel.x+l.panel.w/2+int(6*s),    y, ib, ib);
+    image(tex(TexIngr),i1,PanelFill);
+    image(tex(TexIngr),i2,PanelFill);
+    textMid(fnt,Rect(i1.x,i1.y,i1.w,i1.h/2),"Cena");
+    textMid(yel,Rect(i1.x,i1.y+i1.h/2,i1.w,i1.h/2),string_frm(int(it.price)));
+    textMid(fnt,Rect(i2.x,i2.y,i2.w,i2.h/2),"Razem");
+    textMid(yel,Rect(i2.x,i2.y+i2.h/2,i2.w,i2.h/2),string_frm(int(int64_t(it.price)*int64_t(n))));
+    y += ib+int(6*s);
+    if(!message.empty())
+      textMid(fnt,Rect(l.panel.x,y,l.panel.w,lh),message);
 
     // -  count  +  max
-    frame(p,l.minus,th,PanelLine,RowSel);
-    stroke(p,float(l.minus.x+l.minus.w/4),float(l.minus.y+l.minus.h/2),float(l.minus.x+l.minus.w*3/4),float(l.minus.y+l.minus.h/2),3*s,Gold);
-    frame(p,l.plus,th,PanelLine,RowSel);
-    stroke(p,float(l.plus.x+l.plus.w/4),float(l.plus.y+l.plus.h/2),float(l.plus.x+l.plus.w*3/4),float(l.plus.y+l.plus.h/2),3*s,Gold);
-    stroke(p,float(l.plus.x+l.plus.w/2),float(l.plus.y+l.plus.h/4),float(l.plus.x+l.plus.w/2),float(l.plus.y+l.plus.h*3/4),3*s,Gold);
-    frame(p,l.max,th,PanelLine,RowSel);
+    const auto* minus = tex(TexMinus);
+    const auto* plus  = tex(TexPlus);
+    image(minus,l.minus,RowSel);
+    if(minus==nullptr)
+      stroke(p,float(l.minus.x+l.minus.w/4),float(l.minus.y+l.minus.h/2),float(l.minus.x+l.minus.w*3/4),float(l.minus.y+l.minus.h/2),3*s,Gold);
+    image(plus,l.plus,RowSel);
+    if(plus==nullptr) {
+      stroke(p,float(l.plus.x+l.plus.w/4),float(l.plus.y+l.plus.h/2),float(l.plus.x+l.plus.w*3/4),float(l.plus.y+l.plus.h/2),3*s,Gold);
+      stroke(p,float(l.plus.x+l.plus.w/2),float(l.plus.y+l.plus.h/4),float(l.plus.x+l.plus.w/2),float(l.plus.y+l.plus.h*3/4),3*s,Gold);
+      }
+    frame(p,l.max,th,PanelLine,Dark);
     textMid(yel,l.max,"Max");
-    frame(p,l.count,th,PanelLine,PanelFill);
-    textMid(fnt,l.count,string_frm(int(have>0 ? std::min(count,have) : 0)));
+    bar(p,l.count.x,l.count.y,l.count.w,l.count.h,Color(0,0,0,0.6f));
+    textMid(fnt,l.count,string_frm(int(n)));
 
-    frame(p,l.sell,th,have>0 ? Gold : PanelLine,have>0 ? RowSel : PanelFill);
-    textMid(have>0 ? yel : dis,l.sell,"Sprzedaj");
+    image(tex(TexCreate),l.sell,have>0 ? RowSel : PanelFill);
+    textMid(have>0 ? big : dis,l.sell,"Sprzedaj");
     }
 
   // close

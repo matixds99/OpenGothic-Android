@@ -106,6 +106,7 @@ class Controller {
     const std::map<std::string,Mobile::HudPlace>& hudPlaces() const { return controls.hudPlaces(); }
     bool  editingHud() const { return controls.editingHud(); }
     void  modMenu(bool on) { controls.modMenu(on); }
+    void  bareMenu(bool on) { controls.bareMenu(on); }
 
     /// Pointer input: touches on Android, the mouse on desktop builds.
     void  pointerDown(int id, float x, float y);

@@ -334,7 +334,7 @@ void MainWindow::paintEvent(PaintEvent& event) {
       if(auto* pl = Gothic::inst().player())
         world->script().dmaFocus(*pl,focus);
       // CoM hides the status of the player in a camera of a cutscene (OCGAME__UPDATEPLAYERSTATUS_REPLACECHECKINGGLOBALCUTSCENE)
-      const bool inCamera = world->script().dmaCutsceneStatusHidden();
+      const bool inCamera = world->script().dmaCutsceneStatusHidden() || nbSales.isActive();   // NB fix 68: hidden under the window
       if(!inCamera) {
         paintFocus(p,focus,vp);
         CombatFx::inst().paint(p,vp,w(),h(),Gothic::interfaceScale(this));
@@ -1353,6 +1353,7 @@ uint64_t MainWindow::tick() {
     static bool typing = false;
     const bool  wants  = modMenu.wantsText() || dialogs.wantsText() || rootMenu.wantsText();
     androidControls.modMenu(modMenu.isActive());
+    androidControls.bareMenu(nbSales.isActive());   // NB fix 68: no buttons of the overlay over the sales window
     if(dialogs.takeKeyboardRequest()) {
       typing = true;
       androidControls.keyboard(true);
