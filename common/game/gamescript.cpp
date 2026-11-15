@@ -169,6 +169,9 @@ struct NbState {
   // right, and the list "Ognik: name xN" of the brought items on the left (the last 7, 10 s each)
   uint64_t                                    wispSeen       = 0;  // the wisp was near the hero (for the texts)
   bool                                        wispReturn     = false; // NB fix 64: flying back to the hero
+  // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
+  std::weak_ptr<zenkit::INpc>                 wispBody;
+  std::unordered_map<const zenkit::INpc*,uint64_t> wispBodySkip;
   std::vector<std::pair<std::string,uint64_t>> wispLines;          // the brought items: text, until
   std::unordered_map<const zenkit::IItem*,uint64_t> wispSkip;      // the items it did not reach: not again for 60 s
   float                                       wispBestH = 0;
@@ -3897,7 +3900,7 @@ void GameScript::tick(uint64_t dt) {
     if(!Gothic::inst().isInDialog()) {
       auto& fnt = Resources::font("FONT_OLD_10_WHITE.TGA",Resources::FontType::Normal,1.f);
       if(tickCount()<st.wispSeen+1000) {
-        const bool busy = !st.wispItem.expired();
+        const bool busy = !st.wispItem.expired() || !st.wispBody.expired();
         const std::string txt = busy ? std::string(NbTexts::get("sWispSearch")) : std::string("Szukanie...");
         Gothic::inst().onPrintScreen(txt,84,36,1,fnt);
         }
@@ -3915,7 +3918,7 @@ void GameScript::tick(uint64_t dt) {
   // the plugin does it in itself, UNION_ABI.DLL 0x102740c0): every 500 ms, when the wisp (WISP_DETECTOR) is near the
   // hero and has no item, the nearest item lying around the hero (10 m, without an owner, not higher than 5 m) - the
   // wisp flies to it, "Coś znaleziono!", and the code of fix 61 below gives it to the hero
-  if(st.wispItem.expired() && tickCount()>=st.nextWispSearch) {
+  if(st.wispItem.expired() && st.wispBody.expired() && tickCount()>=st.nextWispSearch) {
     st.nextWispSearch = tickCount()+100;   // NB fix 61: was 500 ms (slow next to the speed of the plugin)
     Npc* hero = world().player();
     Npc* wisp = nullptr;
@@ -4069,6 +4072,77 @@ void GameScript::tick(uint64_t dt) {
             }
           }
         }
+      // NB fix 65: nothing lies around - the loot of the dead (as the skill 10 of the plugin: „Zbieranie
+      // przedmiotów z przeciwników"): the nearest body in 20 m with something to take (what the hero sees in it)
+      else if(nearWisp.empty()) {
+        for(auto i=st.wispBodySkip.begin(); i!=st.wispBodySkip.end();)
+          i = (i->second<tickCount()) ? st.wispBodySkip.erase(i) : std::next(i);
+        Npc*  body  = nullptr;
+        float bodyD = std::numeric_limits<float>::max();
+        world().detectNpc(hp,2000.f,[&](Npc& n) {
+          if(!n.isDead() || &n==hero || &n==wisp || st.wispBodySkip.count(n.handlePtr().get()))
+            return;
+          if(std::abs(n.position().y-hp.y)>500.f)
+            return;
+          if(!n.inventory().iterator(Inventory::T_Ransack).isValid())
+            return;
+          const float q = (n.position()-wp).quadLength();
+          if(q<bodyD) {
+            bodyD = q;
+            body  = &n;
+            }
+          });
+        if(body!=nullptr) {
+          wisp->clearAiQueue();
+          st.wispReturn = false;
+          st.wispNpc    = wisp->handlePtr();
+          st.wispBody   = body->handlePtr();
+          st.wispSince  = tickCount();
+          nbCtx("the wisp found the body: ",body->displayName());
+          }
+        }
+      }
+    }
+
+  // NB fix 65: the wisp at the body: everything that the hero would take from it goes to the inventory
+  if(auto wBody = st.wispBody.lock()) {
+    auto  wNpc = st.wispNpc.lock();
+    auto* wisp = wNpc!=nullptr ? findNpc(wNpc.get()) : nullptr;
+    auto* body = findNpc(wBody.get());
+    auto* hero = world().player();
+    if(wisp==nullptr || body==nullptr || hero==nullptr || !body->isDead() || tickCount()>st.wispSince+15000) {
+      if(body!=nullptr)
+        st.wispBodySkip[wBody.get()] = tickCount()+60000;
+      st.wispBody.reset();
+      }
+    else {
+      const auto to = body->position()+Tempest::Vec3(0,60.f,0);
+      const auto d  = to-wisp->position();
+      if(std::sqrt(d.x*d.x+d.z*d.z)<350.f && std::abs(d.y)<400.f) {
+        std::vector<std::pair<size_t,size_t>> loot;   // the class, the count
+        std::vector<std::string>              names;
+        for(auto it = body->inventory().iterator(Inventory::T_Ransack); it.isValid(); ++it) {
+          loot.emplace_back(it->clsId(),it.count());
+          names.emplace_back(std::string(it->displayName())+" x"+std::to_string(std::max<size_t>(it.count(),1)));
+          }
+        for(auto& [cls,cnt]:loot)
+          hero->addItem(cls,*body,cnt);
+        for(auto& n:names) {
+          st.wispLines.emplace_back(std::string(NbTexts::get("sWispName"))+": "+n,tickCount()+10000);
+          nbCtx("the wisp brings: ",n," (from the body of ",body->displayName(),")");
+          }
+        st.wispBodySkip[wBody.get()] = tickCount()+600000;  // done (what is left the hero does not see either)
+        st.wispBody.reset();
+        st.nextWispSearch = 0;
+        }
+      else {
+        const float dist = d.length();
+        const float step = std::min(dist,1500.f*float(dt)/1000.f);
+        if(dist>1.f) {
+          wisp->setPosition(wisp->position()+d*(step/dist));
+          wisp->setDirection(Tempest::Vec3(d.x,0,d.z));
+          }
+        }
       }
     }
 
@@ -4085,7 +4159,7 @@ void GameScript::tick(uint64_t dt) {
     w.setPosition(w.position()+d*(step/dist));
     w.setDirection(Tempest::Vec3(d.x,0,d.z));
     };
-  if(st.wispReturn && st.wispItem.expired()) {
+  if(st.wispReturn && st.wispItem.expired() && st.wispBody.expired()) {
     auto  wNpc = st.wispNpc.lock();
     auto* wisp = wNpc!=nullptr ? findNpc(wNpc.get()) : nullptr;
     auto* hero = world().player();
