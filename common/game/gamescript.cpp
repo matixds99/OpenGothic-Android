@@ -154,6 +154,10 @@ struct NbState {
     std::vector<std::unique_ptr<Vob>>*   vobs = nullptr;
     };
   std::vector<VobTree>                        vobTrees;
+  // NB fix 61: the item that the wisp of Vatras flies to (AI_GotoItem of B_GetWispDetectedItem)
+  std::weak_ptr<zenkit::INpc>                 wispNpc;
+  std::weak_ptr<zenkit::IItem>                wispItem;
+  uint64_t                                    wispSince = 0;
   const World*                                vobWorld = nullptr;
   };
 
@@ -3705,6 +3709,46 @@ void GameScript::tick(uint64_t dt) {
     callNb(st.perFrame);
     }
 
+  // NB fix 61: the wisp of Vatras brings the item it flew to (in NB the Union plugin does it, the scripts only send it
+  // to the item): when it is at the item, the item goes to the inventory of the hero. Not the items of others (a theft)
+  if(auto wItm = st.wispItem.lock()) {
+    auto wNpc = st.wispNpc.lock();
+    auto* wisp = wNpc!=nullptr ? findNpc(wNpc.get()) : nullptr;
+    auto* hero = world().player();
+    if(wisp==nullptr || wisp->isDead() || hero==nullptr || tickCount()>st.wispSince+20000) {
+      st.wispItem.reset();   // lost, or 20 s without reaching it
+      }
+    else if(auto* itm = findItem(wItm.get())) {
+      const auto d = itm->position()-wisp->position();
+      if(d.quadLength()<160.f*160.f) {
+        // is it still lying in the world (not taken by someone already)?
+        bool inWorld = false;
+        for(uint32_t i=0; auto* w = world().itmById(i); ++i)
+          if(w==itm) {
+            inWorld = true;
+            break;
+            }
+        st.wispItem.reset();
+        const bool owned = itm->handle().owner!=0 || itm->handle().owner_guild!=0;
+        if(inWorld && !owned) {
+          const std::string name(itm->displayName());
+          const size_t      cnt = itm->count();
+          if(auto ptr = world().takeItem(*itm)) {
+            hero->addItem(std::move(ptr));
+            nbCtx("the wisp brings: ",name);
+            // cp1250, as the fonts of Gothic: "Ognik przyniósł: "
+            const std::string head = "Ognik przyni\xF3s\xB3: ";
+            const std::string msg  = cnt>1 ? head+name+" x"+std::to_string(cnt) : head+name;
+            Gothic::inst().onPrint(msg.c_str());
+            }
+          }
+        }
+      }
+    else {
+      st.wispItem.reset();
+      }
+    }
+
   // B_CheckMenuOption: the plugin calls it after the menu; here once in 5 s (it only reads the options)
   if(st.checkMenu!=nullptr && tickCount()>=st.nextMenuCheck) {
     st.nextMenuCheck = tickCount()+5000;
@@ -5643,6 +5687,16 @@ void GameScript::ai_gotoitem(std::shared_ptr<zenkit::INpc> npcRef, std::shared_p
   auto npc = findNpc(npcRef);
   if(npc!=nullptr && itm!=nullptr)
     npc->aiPush(AiQueue::aiGotoItem(*itm));
+  // NB fix 61: the wisp of Vatras goes to an item it has found; the plugin gives the item to the hero then
+  if(npc!=nullptr && itm!=nullptr && nbStates.count(this)) {
+    auto* sym = vm.find_symbol_by_index(npcRef->symbol_index());
+    if(sym!=nullptr && sym->name()=="WISP_DETECTOR") {
+      auto& st = nbStates[this];
+      st.wispNpc   = npcRef;
+      st.wispItem  = itmRef;
+      st.wispSince = tickCount();
+      }
+    }
   }
 
 void GameScript::ai_pointat(std::shared_ptr<zenkit::INpc> npcRef, std::string_view waypoint) {

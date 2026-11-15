@@ -460,6 +460,12 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Diagnostyka zostaje:** `[ctx] the hero takes off …: attribute X is Y, needed Z` (zdjęcie przez silnik, gdy brakuje atrybutu) i `last script: …` przy zdejmowaniu przez skrypt.
 - **Przy okazji z logu:** broń i łuk znikały z rąk w świątyni Ashtara, bo bohater zginął (ognisty jaszczur) – to normalne.
 
+### 61. Ognik od Vatrasa nie podnosi przedmiotów – 🧪 (15.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- **Zgłoszenie (Discord):** ognik leci do przedmiotów, ale ich nie podnosi i nic nie trafia do ekwipunku.
+- **Przyczyna:** skrypty NB tylko szukają przedmiotu i wysyłają do niego ognika (`B_MM_WispDetect` → `B_WispDetectedItem` → `Wld_DetectItem` + `AI_GotoItem`), według wyuczonych umiejętności ognika (broń, amunicja, klucze, runy, magia, jedzenie, mikstury…). Samo przyniesienie przedmiotu robił plugin Union, którego tu nie ma.
+- **Poprawka:** gdy ognik (`WISP_DETECTOR`) doleci do przedmiotu, do którego go wysłano (do 1,6 m), przedmiot trafia do ekwipunku bohatera i jest komunikat „Ognik przyniósł: …”. Przedmiotów z właścicielem nie bierze (to byłaby kradzież) – po te bohater musi sięgnąć sam. Jeśli ognik nie doleci w 20 s, odpuszcza i skrypt znajdzie mu następny. W logu: `[ctx] the wisp brings: …`.
+
 ## Do zrobienia
 
 - [x] Czarny goblin nie atakuje, stoi w miejscu – naprawione (poprawka 54). Z logu: wrogi (attitude=0), czuje bohatera (sense=5 przy ~1100), ale zostaje w `ZS_MM_RTN_ROAM` bez celu – reakcja na wroga (`B_MM_AssessEnemy`) nie przełącza go na atak; raz pojawia się `ZS_MM_ThreatenEnemy`. `RX_GobboClan` (niezaimplementowane) jest tylko w `AI_OnDead_Gobbo_Black_Clan` – przy śmierci, nie przy ataku. Do zbadania z włączonymi śladami `B_MM_AssessEnemy` (więcej niż 3 na komunikat).
