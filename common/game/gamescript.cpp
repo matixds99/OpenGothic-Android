@@ -290,6 +290,28 @@ std::vector<std::unique_ptr<Vob>>* nbLoadVobTree(World& world, const std::string
   return ret;
   }
 
+/// NB fix 66: the skills of the wisp, as the scripts keep them (the dialog of the wisp, RX_WispLearnLoot_*):
+/// WISPSKILL0 the loot of the dead, 1 weapons, 2 potions and stone tablets, 3 food and plants, 4 armors, 5 magic
+/// items (rings, amulets), 6 runes and scrolls, 7 documents (known from the start), 8 a larger area, 9 speed
+bool nbWispSkill(zenkit::DaedalusVm& vm, int n) {
+  auto* s = vm.find_symbol_by_name("WISPSKILL"+std::to_string(n));
+  return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member() && s->get_int()!=0;
+  }
+
+/// the skill that the wisp needs for this item (-1: none of them - not taken)
+int nbWispSkillFor(int32_t mainFlag, std::string_view name) {
+  if(name.find("STONEPLATE")!=std::string_view::npos || name.find("SKILLTABLET")!=std::string_view::npos)
+    return 2;
+  if(mainFlag & (2|4|8))      return 1;   // ITEM_KAT_NF, FF, MUN
+  if(mainFlag & 128)          return 2;   // ITEM_KAT_POTIONS
+  if(mainFlag & 32)           return 3;   // ITEM_KAT_FOOD (the plants too)
+  if(mainFlag & 16)           return 4;   // ITEM_KAT_ARMOR
+  if(mainFlag & int32_t(1u<<31)) return 5; // ITEM_KAT_MAGIC
+  if(mainFlag & 512)          return 6;   // ITEM_KAT_RUNE (and the scrolls)
+  if(mainFlag & 64)           return 7;   // ITEM_KAT_DOCS
+  return -1;
+  }
+
 /// NB fix 62: the list of the effects with their time in the upper right corner (UNION_ABI.DLL 0x10254b20): lines
 /// "(mm:ss) name" at x 5200 and y 40+200*n of the virtual 8192 of ZenGin. The names: the texts of the plugin
 /// (AB_Translation.lbr) or the strings of GOTHIC.DAT (as the plugin). Not here: the vampire, Full SnC+ and the karma
@@ -3978,7 +4000,10 @@ void GameScript::tick(uint64_t dt) {
       const auto wp = wisp->position();
       std::vector<Item*> nearWisp;   // NB fix 61: the items right at the wisp - taken at once, without flying
       int nAll = 0, nOwned = 0, nSkip = 0, nImportant = 0, nKey = 0, nHigh = 0;
-      world().detectItem(hp,2000.f,[&](Item& it) {   // NB fix 64: 20 m around the hero (was 10 m)
+      // NB fix 66: the area: 10 m, with the skill „Zwiększony obszar zbierania" 20 m
+      const float area = nbWispSkill(vm,8) ? 2000.f : 1000.f;
+      int nUnlearned = 0;
+      world().detectItem(hp,area,[&](Item& it) {
         auto& h = it.handle();
         ++nAll;
         if(h.owner!=0 || h.owner_guild!=0) {
@@ -4010,6 +4035,12 @@ void GameScript::tick(uint64_t dt) {
           const std::string_view nm = sym->name();
           if(nm.size()>=4 && nm.substr(0,4)=="ITKE" && nm!="ITKE_LOCKPICK") {
             ++nKey;
+            return;
+            }
+          // NB fix 66: only what the wisp has learned (from Vatras it can take the documents only)
+          const int skill = nbWispSkillFor(h.main_flag,nm);
+          if(skill<0 || !nbWispSkill(vm,skill)) {
+            ++nUnlearned;
             return;
             }
           }
@@ -4052,8 +4083,8 @@ void GameScript::tick(uint64_t dt) {
         }
       if(tickCount()>=st.nextWispLog) {
         st.nextWispLog = tickCount()+10000;
-        nbCtx("wisp search: the wisp at ",int((wisp->position()-hp).length())," cm, items in 10 m: ",nAll,
-              " (owner near ",nOwned,", skipped ",nSkip,", important ",nImportant,", keys ",nKey,", height ",nHigh,")",
+        nbCtx("wisp search: the wisp at ",int((wisp->position()-hp).length())," cm, items in ",int(area/100.f)," m: ",nAll,
+              " (not learned ",nUnlearned,", owner near ",nOwned,", skipped ",nSkip,", important ",nImportant,", keys ",nKey,", height ",nHigh,")",
               best!=nullptr ? std::string(" -> ")+std::string(best->displayName()) : std::string());
         }
       if(best!=nullptr) {
@@ -4074,12 +4105,12 @@ void GameScript::tick(uint64_t dt) {
         }
       // NB fix 65: nothing lies around - the loot of the dead (as the skill 10 of the plugin: „Zbieranie
       // przedmiotów z przeciwników"): the nearest body in 20 m with something to take (what the hero sees in it)
-      else if(nearWisp.empty()) {
+      else if(nearWisp.empty() && nbWispSkill(vm,0)) {   // NB fix 66: only with the skill 0
         for(auto i=st.wispBodySkip.begin(); i!=st.wispBodySkip.end();)
           i = (i->second<tickCount()) ? st.wispBodySkip.erase(i) : std::next(i);
         Npc*  body  = nullptr;
         float bodyD = std::numeric_limits<float>::max();
-        world().detectNpc(hp,2000.f,[&](Npc& n) {
+        world().detectNpc(hp,area,[&](Npc& n) {
           if(!n.isDead() || &n==hero || &n==wisp || st.wispBodySkip.count(n.handlePtr().get()))
             return;
           if(std::abs(n.position().y-hp.y)>500.f)
@@ -4137,7 +4168,7 @@ void GameScript::tick(uint64_t dt) {
         }
       else {
         const float dist = d.length();
-        const float step = std::min(dist,1500.f*float(dt)/1000.f);
+        const float step = std::min(dist,(nbWispSkill(vm,9) ? 1500.f : 800.f)*float(dt)/1000.f);
         if(dist>1.f) {
           wisp->setPosition(wisp->position()+d*(step/dist));
           wisp->setDirection(Tempest::Vec3(d.x,0,d.z));
@@ -4155,7 +4186,7 @@ void GameScript::tick(uint64_t dt) {
     float dist = d.length();
     if(dist<1.f)
       return;
-    const float step = std::min(dist,1500.f*float(dt)/1000.f);
+    const float step = std::min(dist,(nbWispSkill(vm,9) ? 1500.f : 800.f)*float(dt)/1000.f);
     w.setPosition(w.position()+d*(step/dist));
     w.setDirection(Tempest::Vec3(d.x,0,d.z));
     };
