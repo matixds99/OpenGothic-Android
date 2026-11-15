@@ -7,6 +7,7 @@
 #include <functional>
 #include <string>
 
+#include "ui/gamepadmodel.h"
 #include "ui/mobilecontrolsmodel.h"
 
 #ifdef __ANDROID__
@@ -36,7 +37,7 @@ enum Icon : int {
   IconCategoryAll, IconCategoryWeapons, IconCategoryArmor, IconCategoryJewelry, IconCategoryMagic,
   IconCategoryFood, IconCategoryPotion, IconCategoryDocuments, IconCategoryMisc,
   IconInvUse, IconInvDrop, IconInvTransfer, IconInvUp, IconInvDown, IconInvSlot, IconInvSlotSelected,
-  IconSkip, IconTalk, IconTargetLock, IconFastForward, IconSave,
+  IconSkip, IconTalk, IconTargetLock, IconFastForward, IconSave, IconHuman, IconInvStack,
   IconSprint,
   IconCount
   };
@@ -62,7 +63,8 @@ struct Preferences {
   int speed       = 200; // fast forward, percent of the normal speed
   int hudNumbers  = 0;   // 1: the numbers of life and mana (5/10) over the bars
   int hudXp       = 0;   // 1: the experience (500/1000) between the bars
-  int strafe      = 1;   // 1: the buttons of the side steps on the HUD
+  int strafe      = 1;   // 1: the buttons of the side steps (and the arrows forward and back) on the HUD
+  int autoLock    = 0;   // 1: the lock of the target is taken by itself when a weapon is drawn
   };
 
 Preferences preferences();
@@ -118,6 +120,9 @@ class Controller {
     const Tempest::Sprite&     icon(Icon id) const { return icons.at(size_t(id)); }
     const std::vector<Mobile::Button>& buttons() const { return controls.buttons(); }
     bool  settingsVisible() const { return controls.settingsVisible(); }
+    /// The left stick of a gamepad: the angle of a diagonal walk and the push to the side, see Mobile::Controls::padMove
+    float moveYaw() const { return controls.moveYaw(); }
+    float moveSide() const { return controls.moveSide(); }
 
     Hud   hud;
 
@@ -130,7 +135,10 @@ class Controller {
   private:
 #ifdef __ANDROID__
     int32_t onInput(AInputEvent* event);
+    int32_t onPadKey(AInputEvent* event);
+    int32_t onPadMotion(AInputEvent* event);
 #endif
+    void    pushPadAxes();
     void    applyPreferences();
     void    loadHudPlaces();
     void    saveHudPlaces();
@@ -145,6 +153,14 @@ class Controller {
     void    paintSprite(Tempest::Painter& p, Icon id, const Mobile::Rect& r, float alpha) const;
 
     Mobile::Controls controls;
+    Mobile::Gamepad  pad;
+    // what the gamepad has said last: the sticks and triggers are axes, a pad may also say the triggers and the D-pad as keys
+    struct PadState {
+      float lx = 0, ly = 0, rx = 0, ry = 0, lt = 0, rt = 0;
+      bool  keyLt = false, keyRt = false;
+      std::array<bool,4> dpadKey{}, dpadHat{};   // up, down, left, right
+      } padState;
+    float            padSensitivity = 1;
     bool             paused = false;
 
     std::array<Tempest::Sprite,IconCount> icons;

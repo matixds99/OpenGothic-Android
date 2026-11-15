@@ -756,6 +756,14 @@ void GameScript::dmaBeforeSave() {
     dma->eventBeforeSaveGame();
   }
 
+auto GameScript::dmaSaveWorldName(std::string_view fallback) -> std::string {
+  return dma==nullptr ? std::string(fallback) : dma->saveWorldName(fallback);
+  }
+
+auto GameScript::dmaLoadingTexture() -> std::string {
+  return dma==nullptr ? std::string() : dma->loadingTexture();
+  }
+
 void GameScript::dmaLoad(Serialize& fin) {
   if(dma!=nullptr)
     dma->eventLoadGame(fin);
@@ -2008,7 +2016,7 @@ void GameScript::initCommon() {
       for(auto it = npc->inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it) {
         auto& itm = *it;
         const int32_t fl = int32_t(itm.handle().flags);
-        if((fl & (ITM_BOW | ITM_CROSSBOW))!=0)
+        if((uint32_t(fl) & uint32_t(ITM_BOW | ITM_CROSSBOW))!=0)
           continue;
         if((uint32_t(itm.handle().hp) & (1u<<25))!=0)
           del.emplace_back(itm.clsId(),it.count());
@@ -2350,7 +2358,7 @@ void GameScript::initCommon() {
       goldTxt = item->name;
       }
     //
-    tradeValMult    = 1.f;
+    tradeValMult    = 0.5f;   // Gothic 1: a trader pays the half (see Item::sellCost)
     viewTimePerChar = 550.f;
     ItKE_lockpick   = vm.find_symbol_by_name("itkelockpick");
     }
@@ -3398,6 +3406,10 @@ bool GameScript::isAttack(const Npc& pl) const {
   return pl.isInState(ZS_Attack) || pl.isInState(ZS_MM_Attack);
   }
 
+bool GameScript::isMonsterAttack(const Npc& pl) const {
+  return ZS_MM_Attack!=0 && pl.isInState(ZS_MM_Attack);
+  }
+
 std::string_view GameScript::messageFromSvm(std::string_view id, int voice) const {
   return svm->find(id,voice);
   }
@@ -3490,6 +3502,18 @@ Attitude GameScript::personAttitude(const Npc &p0, const Npc &p1) const {
     }
   att = guildAttitude(p0,p1);
   return att;
+  }
+
+/// The attitude without the temporary one: the permanent attitude of the character, else the one of the guilds.
+Attitude GameScript::personAttitudeNoTemp(const Npc &p0, const Npc &p1) const {
+  if(!p0.isPlayer() && !p1.isPlayer())
+    return guildAttitude(p0,p1);
+
+  const Npc& npc = p0.isPlayer() ? p1 : p0;
+  Attitude   att = npc.attitude();
+  if(att!=ATT_NULL)
+    return att;
+  return guildAttitude(p0,p1);
   }
 
 bool GameScript::isFriendlyFire(const Npc& src, const Npc& dst) const {
@@ -4231,28 +4255,14 @@ void GameScript::mdl_startfaceani(std::shared_ptr<zenkit::INpc> npcRef, std::str
     findNpc(npcRef.get())->startFaceAnim(ani,intensity,uint64_t(time*1000.f));
   }
 
-void GameScript::mdl_applyrandomani(std::shared_ptr<zenkit::INpc> npcRef, std::string_view s1, std::string_view s0) {
-  (void)npcRef;
-  (void)s1;
-  (void)s0;
-
-  static bool first=true;
-  if(first){
-    Log::e("not implemented call [mdl_applyrandomani]");
-    first=false;
-    }
+void GameScript::mdl_applyrandomani(std::shared_ptr<zenkit::INpc> npcRef, std::string_view baseAni, std::string_view randomAni) {
+  if(auto npc = findNpc(npcRef))
+    npc->setRandomAni(baseAni,randomAni);
   }
 
-void GameScript::mdl_applyrandomanifreq(std::shared_ptr<zenkit::INpc> npcRef, std::string_view s1, float f0) {
-  (void)f0;
-  (void)s1;
-  (void)npcRef;
-
-  static bool first=true;
-  if(first){
-    Log::e("not implemented call [mdl_applyrandomanifreq]");
-    first=false;
-    }
+void GameScript::mdl_applyrandomanifreq(std::shared_ptr<zenkit::INpc> npcRef, std::string_view baseAni, float seconds) {
+  if(auto npc = findNpc(npcRef))
+    npc->setRandomAniFreq(baseAni,seconds);
   }
 
 void GameScript::mdl_applyrandomfaceani(std::shared_ptr<zenkit::INpc> npcRef, std::string_view name, float timeMin, float timeMinVar, float timeMax, float timeMaxVar, float probMin) {

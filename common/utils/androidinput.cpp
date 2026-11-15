@@ -19,6 +19,7 @@
 
 #include "gothic.h"
 #include "resources.h"
+#include "winpad.h"
 #include "scripting/modhost.h"
 
 #include "touchassets.h"
@@ -30,7 +31,8 @@ namespace {
 
 constexpr int      GlyphAlpha = 48; // pixels below this are considered a halo, not a part of the glyph
 constexpr char     Section[]  = "MOBILE";
-constexpr char     HudSection[] = "MOBILE_HUD";   // places of the buttons of the HUD: <id>_x, <id>_y (permille+1, 0: not set), <id>_h
+// places of the buttons of the HUD: <id>_x, <id>_y (permille+1, 0: not set), <id>_h (hidden), <id>_s (size step+1)
+constexpr char     HudSection[] = "MOBILE_HUD";
 
 // Files of android/assets/touch-icons, in the order of AndroidInput::Icon
 const char* const IconFiles[AndroidInput::IconCount] = {
@@ -44,12 +46,13 @@ const char* const IconFiles[AndroidInput::IconCount] = {
   "all.png", "weapons.png", "armor.png", "jewelry.png", "magic.png",
   "food.png", "potion.png", "documents.png", "misc.png",
   "use_new.png", "drop.png", "transfer_new.png", "up_new.png", "down_new.png", "inv_slot.png", "inv_slot_selected.png",
-  "skip.png", "talk.png", "target_lock.png", "fast_forward.png", "save.png",
+  "skip.png", "talk.png", "target_lock.png", "fast_forward.png", "save.png", "human.png", "transfer_all.png",
   "sprint.png"
   };
 
 const char* const SettingNames[Mobile::SettingCount] = {
-  "buttons", "resolution", "shadows", "effects", "fps", "deadzone", "sensitivity", "vibration", "gui", "speed", "hudnumbers", "hudxp", "strafe"
+  "buttons", "resolution", "shadows", "effects", "fps", "deadzone", "sensitivity", "vibration", "gui",
+  "speed", "hudnumbers", "hudxp", "strafe", "autolock"
   };
 
 // Gives access to the dispatch functions of SystemApi
@@ -182,6 +185,7 @@ int nextValue(int setting, int value) {
     case Mobile::SettingHudNumbers:
     case Mobile::SettingHudXp:
     case Mobile::SettingStrafe:
+    case Mobile::SettingAutoLock:
       return value ? 0 : 1;
     }
   return value;
@@ -198,7 +202,9 @@ std::string settingText(int setting, const std::string& label) {
   if(setting==Mobile::SettingHudXp)
     return value ? "XP counter: ON" : "XP counter: OFF";
   if(setting==Mobile::SettingStrafe)
-    return value ? "Side step buttons: ON" : "Side step buttons: OFF";
+    return value ? "Step buttons: ON" : "Step buttons: OFF";
+  if(setting==Mobile::SettingAutoLock)
+    return value ? "Auto lock on weapon draw: ON" : "Auto lock on weapon draw: OFF";
   if(setting==Mobile::SettingSpeed)
     return label+"   "+std::to_string(value/100)+"."+std::to_string(value%100/10)+"x";
 
@@ -294,6 +300,8 @@ AndroidInput::Preferences AndroidInput::preferences() {
     }
   if(Gothic::settingsGetI(Section,"version")>=6)
     ret.strafe = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingStrafe])!=0 ? 1 : 0;
+  if(Gothic::settingsGetI(Section,"version")>=7)
+    ret.autoLock = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingAutoLock])!=0 ? 1 : 0;
   return ret;
   }
 
@@ -313,11 +321,12 @@ void AndroidInput::Controller::bind() {
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingHudNumbers], def.hudNumbers);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingHudXp],      def.hudXp);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingStrafe],     def.strafe);
-    Gothic::settingsSetI(Section,"version",6);
+    Gothic::settingsSetI(Section,SettingNames[Mobile::SettingAutoLock],   def.autoLock);
+    Gothic::settingsSetI(Section,"version",7);
     Gothic::flushSettings();
     } else
-  if(Gothic::settingsGetI(Section,"version")<6) {
-    // settings saved before the vibration, the scale of the interface, the fast forward and the side steps were added
+  if(Gothic::settingsGetI(Section,"version")<7) {
+    // settings saved before the vibration, the scale of the interface, the fast forward, the side steps and the auto lock were added
     const Preferences def;
     const int version = Gothic::settingsGetI(Section,"version");
     if(version<2)
@@ -331,8 +340,12 @@ void AndroidInput::Controller::bind() {
       Gothic::settingsSetI(Section,SettingNames[Mobile::SettingHudXp],def.hudXp);
       }
     // the side step buttons were always there: they stay until the player switches them off
-    Gothic::settingsSetI(Section,SettingNames[Mobile::SettingStrafe],def.strafe);
-    Gothic::settingsSetI(Section,"version",6);
+    if(version<6)
+      Gothic::settingsSetI(Section,SettingNames[Mobile::SettingStrafe],def.strafe);
+    // the lock of the target by itself is off until the player switches it on
+    if(version<7)
+      Gothic::settingsSetI(Section,SettingNames[Mobile::SettingAutoLock],def.autoLock);
+    Gothic::settingsSetI(Section,"version",7);
     Gothic::flushSettings();
     }
   loadHudPlaces();
@@ -356,11 +369,105 @@ void AndroidInput::Controller::unbind() {
 
 void AndroidInput::Controller::cancel() {
   controls.resetPointers();
+  padState = PadState();
+  pad.reset();
   }
 
 #ifdef __ANDROID__
+namespace {
+
+/// the flags of the source are unsigned in the NDK
+bool hasSource(int32_t source, uint32_t mask) {
+  return (uint32_t(source) & mask)==mask;
+  }
+
+bool isPadSource(int32_t source) {
+  return hasSource(source,uint32_t(AINPUT_SOURCE_GAMEPAD)) || hasSource(source,uint32_t(AINPUT_SOURCE_DPAD));
+  }
+
+/// The buttons that only a gamepad has; the D-pad is a gamepad's only when the source says so (a keyboard has the arrows too)
+bool padButton(int32_t keyCode, int32_t source, Mobile::Pad& out, int& trigger) {
+  trigger = 0;
+  switch(keyCode) {
+    case AKEYCODE_BUTTON_A:      out = Mobile::Pad::A;           return true;
+    case AKEYCODE_BUTTON_B:      out = Mobile::Pad::B;           return true;
+    case AKEYCODE_BUTTON_X:      out = Mobile::Pad::X;           return true;
+    case AKEYCODE_BUTTON_Y:      out = Mobile::Pad::Y;           return true;
+    case AKEYCODE_BUTTON_L1:     out = Mobile::Pad::LeftBumper;  return true;
+    case AKEYCODE_BUTTON_R1:     out = Mobile::Pad::RightBumper; return true;
+    case AKEYCODE_BUTTON_THUMBL: out = Mobile::Pad::LeftStick;   return true;
+    case AKEYCODE_BUTTON_THUMBR: out = Mobile::Pad::RightStick;  return true;
+    case AKEYCODE_BUTTON_START: out = Mobile::Pad::Start;       return true;
+    case AKEYCODE_BUTTON_SELECT:
+    case AKEYCODE_BUTTON_MODE:   out = Mobile::Pad::Select;      return true;
+    case AKEYCODE_BUTTON_L2:     out = Mobile::Pad::A; trigger = -1; return true;
+    case AKEYCODE_BUTTON_R2:     out = Mobile::Pad::A; trigger = +1; return true;
+    case AKEYCODE_DPAD_UP:       out = Mobile::Pad::DpadUp;      return isPadSource(source);
+    case AKEYCODE_DPAD_DOWN:     out = Mobile::Pad::DpadDown;    return isPadSource(source);
+    case AKEYCODE_DPAD_LEFT:     out = Mobile::Pad::DpadLeft;    return isPadSource(source);
+    case AKEYCODE_DPAD_RIGHT:    out = Mobile::Pad::DpadRight;   return isPadSource(source);
+    default:
+      break;
+    }
+  return false;
+  }
+
+}
+
+void AndroidInput::Controller::pushPadAxes() {
+  const auto& s = padState;
+  pad.axes(s.lx,s.ly,s.rx,s.ry,std::max(s.lt,s.keyLt ? 1.f : 0.f),std::max(s.rt,s.keyRt ? 1.f : 0.f));
+  static const Mobile::Pad dpad[4] = {Mobile::Pad::DpadUp,Mobile::Pad::DpadDown,Mobile::Pad::DpadLeft,Mobile::Pad::DpadRight};
+  for(size_t i=0; i<4; ++i)
+    pad.button(dpad[i],s.dpadKey[i] || s.dpadHat[i]);
+  }
+
+int32_t AndroidInput::Controller::onPadKey(AInputEvent* e) {
+  Mobile::Pad button = Mobile::Pad::A;
+  int         trigger = 0;
+  const int32_t code = AKeyEvent_getKeyCode(e);
+  if(!padButton(code,AInputEvent_getSource(e),button,trigger))
+    return 0;
+
+  const bool down = AKeyEvent_getAction(e)==AKEY_EVENT_ACTION_DOWN;
+  if(AKeyEvent_getRepeatCount(e)!=0)
+    return 1;
+  if(trigger!=0) {
+    (trigger<0 ? padState.keyLt : padState.keyRt) = down;
+    } else
+  if(code==AKEYCODE_DPAD_UP || code==AKEYCODE_DPAD_DOWN || code==AKEYCODE_DPAD_LEFT || code==AKEYCODE_DPAD_RIGHT) {
+    const size_t i = code==AKEYCODE_DPAD_UP ? 0 : code==AKEYCODE_DPAD_DOWN ? 1 : code==AKEYCODE_DPAD_LEFT ? 2 : 3;
+    padState.dpadKey[i] = down;
+    } else {
+    pad.button(button,down);
+    }
+  pushPadAxes();
+  return 1;
+  }
+
+int32_t AndroidInput::Controller::onPadMotion(AInputEvent* e) {
+  if((AMotionEvent_getAction(e) & AMOTION_EVENT_ACTION_MASK)!=AMOTION_EVENT_ACTION_MOVE)
+    return 1;
+  auto axis = [&](int32_t id) { return AMotionEvent_getAxisValue(e,id,0); };
+  auto& s = padState;
+  s.lx = axis(AMOTION_EVENT_AXIS_X);
+  s.ly = axis(AMOTION_EVENT_AXIS_Y);
+  // the right stick of the common pads (Xbox, DualShock/DualSense, Switch) is Z/RZ; RX/RY are the triggers of some of them
+  s.rx = axis(AMOTION_EVENT_AXIS_Z);
+  s.ry = axis(AMOTION_EVENT_AXIS_RZ);
+  s.lt = std::max(axis(AMOTION_EVENT_AXIS_LTRIGGER),axis(AMOTION_EVENT_AXIS_BRAKE));
+  s.rt = std::max(axis(AMOTION_EVENT_AXIS_RTRIGGER),axis(AMOTION_EVENT_AXIS_GAS));
+  const float hx = axis(AMOTION_EVENT_AXIS_HAT_X);
+  const float hy = axis(AMOTION_EVENT_AXIS_HAT_Y);
+  s.dpadHat = {hy<-0.5f, hy>0.5f, hx<-0.5f, hx>0.5f};
+  pushPadAxes();
+  return 1;
+  }
+
 int32_t AndroidInput::Controller::onInput(AInputEvent* e) {
   if(AInputEvent_getType(e)==AINPUT_EVENT_TYPE_KEY) {
+    if(onPadKey(e))
+      return 1;
     const auto key = translate(AKeyEvent_getKeyCode(e));
     if(key==Key::Count)
       return 0;
@@ -370,6 +477,11 @@ int32_t AndroidInput::Controller::onInput(AInputEvent* e) {
     }
   if(AInputEvent_getType(e)!=AINPUT_EVENT_TYPE_MOTION)
     return 0;
+
+  // The sticks and the triggers of a gamepad are motion with axes, not touches: they must never move a pointer
+  const int32_t source = AInputEvent_getSource(e);
+  if(hasSource(source,uint32_t(AINPUT_SOURCE_JOYSTICK)) && !hasSource(source,uint32_t(AINPUT_SOURCE_TOUCHSCREEN)))
+    return onPadMotion(e);
 
   const int32_t action = AMotionEvent_getAction(e);
   const int32_t masked = action & AMOTION_EVENT_ACTION_MASK;
@@ -420,6 +532,7 @@ void AndroidInput::Controller::physical(Mobile::Key key, bool down) {
 void AndroidInput::Controller::applyPreferences() {
   const auto pref = preferences();
   controls.preferences(float(pref.buttons)/100.f,float(pref.deadzone)/100.f,float(pref.sensitivity)/100.f);
+  padSensitivity = float(pref.sensitivity)/100.f;
   // the game is vanilla: the fast forward is on the HUD and in the settings only when a mod has asked for it
   controls.features(Scripting::ModHost::inst().fastForwardWanted(),pref.strafe!=0);
   }
@@ -474,6 +587,14 @@ bool AndroidInput::Controller::update(Window& window, Mobile::Mode mode) {
     }
 
   controls.tick(Application::tickCount());
+#if defined(_WIN32)
+  WinPad::poll(pad);
+#endif
+  pad.update(controls,mode,Application::tickCount(),padSensitivity);
+  if(const int step = pad.takeCategoryStep(); step!=0 && action) {
+    const int count = Mobile::CategoryCount;
+    action(Mobile::Special::FirstCategory+(hud.inventoryCategory+step+count)%count);
+    }
   for(const auto& input:controls.drain())
     dispatch(window,mode,input);
   if(controls.takeHudChanged())
@@ -632,7 +753,7 @@ int AndroidInput::Controller::iconFor(const Mobile::Button& b) const {
     switch(b.key) {
       case Key::Enter:  return IconInvUse;
       case Key::Weapon: return hud.inventoryTransfer ? IconInvTransfer : IconInvDrop;
-      case Key::Jump:   return IconInvTransfer;
+      case Key::Jump:   return IconInvStack;   // the whole stack: its own icon, else it looks like the button of one item
       case Key::Up:     return IconInvUp;
       case Key::Down:   return IconInvDown;
       default:          break;
@@ -663,9 +784,9 @@ int AndroidInput::Controller::iconFor(const Mobile::Button& b) const {
     case Key::Sneak:      return IconSneak;
     case Key::Inventory:  return IconInventory;
     case Key::Weapon:     return game ? IconWeapon : IconTransfer;
-    case Key::Up:         return game ? NoIcon : IconUp;
-    case Key::Down:       return game ? NoIcon : IconDown;
-    case Key::Enter:      return game ? NoIcon : IconConfirm;
+    case Key::Up:         return game && b.id!="stepforward" ? NoIcon : IconUp;
+    case Key::Down:       return game && b.id!="stepback"    ? NoIcon : IconDown;
+    case Key::Enter:      return game ? (b.id=="human" ? IconHuman : IconBack) : IconConfirm;
     default:              break;
     }
   return NoIcon;
@@ -788,7 +909,7 @@ void AndroidInput::Controller::paintInventoryButton(Painter& p, Font& font, size
     }
 
   frame(p,r,border,active,b.enabled);
-  const Icon id = b.key==Key::Enter ? IconInvUse : b.key==Key::Weapon ? (hud.inventoryTransfer ? IconInvTransfer : IconInvDrop) : IconInvTransfer;
+  const Icon id = b.key==Key::Enter ? IconInvUse : b.key==Key::Weapon ? (hud.inventoryTransfer ? IconInvTransfer : IconInvDrop) : IconInvStack;
   glyph(id,r,0.68f);
   }
 

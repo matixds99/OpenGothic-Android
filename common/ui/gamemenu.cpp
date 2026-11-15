@@ -650,9 +650,9 @@ static float nbStatMaxScroll(const NbStatGeom& g) {
 /// Polish in the code page of the game (windows-1250): the language setting is not always 2 for a Polish game
 static bool nbHasPolishLetters(std::string_view s) {
   static const unsigned char pl[] = {0xB9,0xE6,0xEA,0xB3,0xF1,0xF3,0x9C,0x9F,0xBF,0xA5,0xC6,0xCA,0xA3,0xD1,0xD3,0x8C,0x8F,0xAF};
-  for(unsigned char c:s)
+  for(char ch:s)
     for(auto p:pl)
-      if(c==p)
+      if(static_cast<unsigned char>(ch)==p)
         return true;
   return false;
   }

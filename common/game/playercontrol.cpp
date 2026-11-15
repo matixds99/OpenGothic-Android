@@ -1,7 +1,9 @@
 #include "playercontrol.h"
+
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
 #include "world/objects/npc.h"
 #include "world/objects/item.h"
 #include "world/objects/interactive.h"
@@ -11,10 +13,13 @@
 #include "gothic.h"
 
 namespace {
+
 // 25 m: the units of the world are centimeters
 constexpr float LockRange = 2500.f;
-}
+constexpr float LockTurnSpeed = 360.f;   // degrees per second
+constexpr float PadStepAt     = 0.5f;    // the push of the gamepad stick to the side that is a side step around the locked target
 
+}
 
 PlayerControl::PlayerControl(DialogMenu& dlg, InventoryMenu &inv)
   :dlg(dlg),inv(inv) {
@@ -211,12 +216,16 @@ void PlayerControl::onKeyPressed(KeyCodec::Action a, Tempest::KeyEvent::KeyType 
   }
 
 void PlayerControl::onKeyReleased(KeyCodec::Action a, KeyCodec::Mapping mapping) {
-  ctrl[a] = false;
-
-  handleMovementAction(KeyCodec::ActionMapping{a, mapping}, false);
-
   auto w  = Gothic::inst().world();
   auto pl = w ? w->player() : nullptr;
+
+  // The key of the way back from a transformation is read by implMove() in the next tick. A tap of the touch screen
+  // presses and releases it in the same frame, so it is kept until implMove() takes it (and drops it itself).
+  const bool latch = (a==Action::K_ENTER && pl!=nullptr && pl->isTransformed());
+  if(!latch)
+    ctrl[a] = false;
+
+  handleMovementAction(KeyCodec::ActionMapping{a, mapping}, false);
 
   if(a==KeyCodec::Map && pl!=nullptr) {
     w->script().playerHotKeyScreenMap(*pl);
@@ -467,7 +476,7 @@ void PlayerControl::moveFocus(FocusAction act) {
     return;
   currentFocus.npc = next;
   if(lockedNpc!=nullptr)
-  lockedNpc = next;
+    lockedNpc = next;
   }
 
 void PlayerControl::toggleWalkMode() {
@@ -640,7 +649,16 @@ bool PlayerControl::tickMove(uint64_t dt) {
   if(pl==nullptr)
     return true;
 
+  diagonalOk = false;
   implMove(dt);
+
+  {
+    // a diagonal walk of the gamepad: the body and the step turn to the side smoothly, and back to straight when the walk is over
+    const float dest = diagonalOk ? padYaw : 0.f;
+    const float cur  = pl->moveYaw();
+    const float stp  = 540.f*dtF;
+    pl->setMoveYaw(cur+std::clamp(dest-cur,-stp,stp));
+    }
 
   float runAngle = pl->runAngle();
   if(runAngle!=0.f || std::fabs(runAngleDest)>0.01f) {
@@ -741,30 +759,41 @@ void PlayerControl::implMove(uint64_t dt) {
     return;
     }
 
+  // The lock holds the hero turned to the target all the time (not only while the action key is held): turning by hand would only
+  // fight it, so the turn input of the stick is the step to the side instead and goes around the target.
+  const bool lockFace = lockedNpc!=nullptr && ws!=WeaponState::NoWeapon && pl.isRotationAllowed();
+
   int rotation = 0;
   if(allowRot) {
-    if(this->wantsToTurnLeft()) {
-      rot += rspeed;
-      rotation = -1;
-      rotMouse=0;
-      }
-    if(this->wantsToTurnRight()) {
-      rot -= rspeed;
-      rotation = 1;
-      rotMouse=0;
-      }
-    if(std::fabs(rotMouse)>0.f) {
-      if(rotMouse>0)
-        rotation = -1; else
+    if(lockFace) {
+      rotMouse = 0;
+      } else {
+      if(this->wantsToTurnLeft()) {
+        rot += rspeed;
+        rotation = -1;
+        rotMouse=0;
+        }
+      if(this->wantsToTurnRight()) {
+        rot -= rspeed;
         rotation = 1;
-      rot += rotMouse;
-      rotMouse  = 0;
+        rotMouse=0;
+        }
+      if(std::fabs(rotMouse)>0.f) {
+        if(rotMouse>0)
+          rotation = -1; else
+          rotation = 1;
+        rot += rotMouse;
+        rotMouse  = 0;
+        }
       }
     rotY+=rotMouseY;
     } else {
     rotMouse  = 0;
     rotMouseY = 0;
     }
+
+  if(lockFace)
+    processLockRotate(pl,rot,dt);
 
   pl.setDirectionY(rotY);
   if(pl.isFalling() || pl.isSlide() || pl.isInAir() || pl.isJump() || pl.isJumpUp()){
@@ -915,10 +944,13 @@ void PlayerControl::implMove(uint64_t dt) {
       }
     }
 
-  if(this->wantsToStrafeLeft()) {
+  // the left stick of a gamepad pushed to the side while the target is locked: a side step around it
+  const bool padLeft  = lockFace && padSide<-PadStepAt;
+  const bool padRight = lockFace && padSide> PadStepAt;
+  if(this->wantsToStrafeLeft() || padLeft || (lockFace && this->wantsToTurnLeft())) {
     ani = Npc::Anim::MoveL;
     }
-  else if(this->wantsToStrafeRight()) {
+  else if(this->wantsToStrafeRight() || padRight || (lockFace && this->wantsToTurnRight())) {
     ani = Npc::Anim::MoveR;
     }
   else if(this->wantsToMoveForward()) {
@@ -1003,6 +1035,7 @@ void PlayerControl::implMove(uint64_t dt) {
 
     if(ani!=Npc::Anim::NoAnim)
       pl.setAnim(ani);
+    diagonalOk = ani==Npc::Anim::Move && !lockFace && !pl.isAttackAnim();
     }
 
   setAnimRotate(pl, rot, ani==Npc::Anim::Idle ? rotation : 0, movement.turnRightLeft.any(), dt);
@@ -1168,6 +1201,18 @@ void PlayerControl::processAutoRotate(Npc& pl, float& rot, uint64_t dt) {
     }
   }
 
+/// Turns the hero to the held target, as fast as the turn of the hero with the action key held (or faster for a slow one)
+void PlayerControl::processLockRotate(Npc& pl, float& rot, uint64_t dt) {
+  if(lockedNpc==nullptr)
+    return;
+  auto  dp   = lockedNpc->centerPosition() - pl.centerPosition();
+  auto  gl   = pl.guild();
+  float step = float(pl.world().script().guildVal().turn_speed[gl])*2.f;
+  step = std::max(step,LockTurnSpeed);
+  pl.rotateTo(dp.x,dp.z,step,AnimationSolver::TurnType::Std,dt);
+  rot = pl.rotation();
+  }
+
 bool PlayerControl::validateLock() {
   auto w  = Gothic::inst().world();
   auto pl = w!=nullptr ? w->player() : nullptr;
@@ -1232,7 +1277,13 @@ void PlayerControl::unlockTarget(Npc& pl) {
   pl.setTarget(nullptr);
   }
 
-void PlayerControl::cycleTarget() {
+void PlayerControl::autoLock() {
+  if(lockedNpc!=nullptr)
+    return;
+  cycleTarget(true);
+  }
+
+void PlayerControl::cycleTarget(bool fightOnly) {
   auto w  = Gothic::inst().world();
   auto c  = Gothic::inst().camera();
   auto pl = w!=nullptr ? w->player() : nullptr;
@@ -1275,8 +1326,14 @@ void PlayerControl::cycleTarget() {
     cand.npc     = npc;
     cand.x       = p.x;
     cand.score   = std::abs(p.x) + 0.5f*std::abs(p.y) + 0.3f*dist/LockRange;
-    cand.hostile = pl->isEnemy(*npc);
+    // An enemy by the attitude, or a character that attacks the hero now: the opponent of a duel (the arena) is not an enemy by the attitude,
+    // the script of the dialog only sends him to attack (Npc_SetTarget, AI_StartState ZS_Attack).
+    cand.hostile = pl->isEnemy(*npc) || (npc->isAttack() && npc->target()==pl);
     list.push_back(cand);
+    }
+  if(fightOnly) {
+    // the lock that is taken by itself is for a fight: a peaceful character is never locked
+    list.erase(std::remove_if(list.begin(),list.end(),[](const Candidate& c) { return !c.hostile; }),list.end());
     }
   if(list.empty()) {
     // nobody to take: the button lets the held target go
@@ -1295,16 +1352,13 @@ void PlayerControl::cycleTarget() {
   if(lockedNpc!=nullptr) {
     // the next one to the right; after the last one (or when the held target is out of the view) the lock is
     // released, so the button can turn the lock off. The next press takes the nearest to the center again.
-    bool found = false;
     for(size_t i=0; i<list.size(); ++i) {
       if(list[i].npc==lockedNpc) {
-        found = true;
         if(i+1<list.size())
           next = list[i+1].npc;
         break;
         }
       }
-    (void)found;
     if(next==nullptr) {
       unlockTarget(*pl);
       return;

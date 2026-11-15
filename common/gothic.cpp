@@ -21,10 +21,12 @@
 #include "game/definitions/particlesdefinitions.h"
 
 #include "world/objects/npc.h"
+#include "game/savestore.h"
 
 #include "utils/fileutil.h"
 #include "utils/androidinput.h"
 #include "utils/inifile.h"
+#include "utils/crashlog.h"
 #include "graphics/renderdistance.h"
 
 #include "commandline.h"
@@ -524,6 +526,19 @@ void Gothic::startSave(Tempest::Texture2d&& tex,
   implStartLoadSave("",false,f);
   }
 
+std::string Gothic::loadingBannerName(GameScript* script, std::string_view fallback) {
+  std::string alt = script==nullptr ? std::string() : script->dmaLoadingTexture();
+  for(auto& c:alt)
+    c = char(std::toupper(static_cast<unsigned char>(c)));
+  if(alt.size()>4 && alt.compare(alt.size()-4,4,".TGA")==0) {
+    // the pictures of the mods are compiled textures
+    const std::string tex = alt.substr(0,alt.size()-4)+"-C.TEX";
+    if(Resources::hasFile(tex) || Resources::hasFile(alt))
+      return alt;
+    }
+  return std::string(fallback);
+  }
+
 void Gothic::startLoad(std::string_view banner,
                        const std::function<std::unique_ptr<GameSession>(std::unique_ptr<GameSession>&&)> f) {
   implStartLoadSave(banner,true,f);
@@ -638,6 +653,8 @@ void Gothic::implStartLoadSave(std::string_view banner,
         loadingFlag.compare_exchange_strong(curState,LoadState::Finalize);
         }
       catch(std::bad_alloc&){
+        // how much the process and the system have at this moment: the log of the player says where the memory has gone
+        Tempest::Log::e("memory: ", CrashLog::memoryInfo());
         fail("out of memory");
         }
       catch(std::system_error& e){
@@ -694,12 +711,20 @@ void Gothic::updateAnimation(uint64_t dt) {
     game->updateAnimation(dt);
   }
 
-void Gothic::quickSave() {
-  save(saveFileName(0),"Quick save");
+int Gothic::quickSave() {
+  std::string file;
+  const size_t n = SaveStore::nextQuick(file);
+  save(file,"Quick save "+std::to_string(n));
+  return int(n);
   }
 
 void Gothic::quickLoad() {
-  load(saveFileName(0));
+  SaveStore::Entry e;
+  if(!SaveStore::newestQuick(e)) {
+    onPrint("No quick save");
+    return;
+    }
+  load(e.file);
   }
 
 void Gothic::save(std::string_view slot, std::string_view name) {

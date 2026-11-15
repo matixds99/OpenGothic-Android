@@ -80,6 +80,7 @@ enum Setting : int {
   SettingHudNumbers,
   SettingHudXp,
   SettingStrafe,
+  SettingAutoLock,
   SettingCount
   };
 
@@ -106,8 +107,8 @@ inline float hotbarSlot(float buttons) {
 
 /// Names of the buttons of the HUD that can be moved and switched off (see Controls::hudPlace)
 constexpr const char* HudIds[] = {
-  "menu", "character", "speed", "log", "map", "sneak", "walk", "stepleft", "stepright",
-  "action", "hitleft", "hitright", "block", "jump", "inventory", "target", "spells", "weapon", "quicksave",
+  "menu", "character", "speed", "log", "map", "sneak", "walk", "stepleft", "stepright", "stepforward", "stepback",
+  "action", "hitleft", "hitright", "block", "jump", "inventory", "target", "spells", "weapon", "quicksave", "human",
   "sprint", "bar_hp", "bar_stamina", "bar_mana"
   };
 constexpr int HudIdCount = int(sizeof(HudIds)/sizeof(HudIds[0]));
@@ -212,7 +213,8 @@ class Controls {
     void  dialogPad(bool visible);
     /// Scale of the interface, the inventory follows it
     void  gui(float scale);
-    /// What the HUD has: the button of the speed is shown only when a mod asks for it, the side steps are an option
+    /// What the HUD has: the button of the speed is shown only when a mod asks for it, the step buttons (the side steps and the arrows forward and back)
+    /// are an option
     void  features(bool speed, bool strafe);
     bool  speedAllowed() const { return featureSpeed; }
     /// The scripts have a sprint (New Balance: B_Hotkey_Sprint): its button is on the HUD (NB fix 40)
@@ -240,6 +242,19 @@ class Controls {
     void  resetPointers();
     void  tick(uint64_t now);
     void  physical(Key key, bool down);
+
+    /// A gamepad (see Gamepad): its keys are counted apart from the keyboard and the fingers, so they do not release each other
+    void  padKey(Key key, bool down);
+    void  padTap(Key key) { pulse(key); }
+    void  padLook(float yaw, float pitch);
+    /// The left stick of a gamepad: the angle of a diagonal walk (degrees, 0 straight ahead, the sign of the angle of the hero: positive to the left) and the push to the side (-1..1, positive to the right)
+    void  padMove(float yaw, float side) { padYaw = yaw; padSide = side; }
+    float moveYaw() const { return padYaw; }
+    float moveSide() const { return padSide; }
+    void  padSpecial(int id);
+    bool  padHeld(Key key) const { return padHeld_[size_t(key)]; }
+    /// The key does something now (the weapon is in the hand, ...): the buttons of the screen hide the others
+    bool  available(Key key) const { return (availableKeys & keyMask(key))!=0; }
 
     std::vector<Event>         drain();
     const std::vector<Button>& buttons() const { return layout; }
@@ -322,6 +337,7 @@ class Controls {
     float    width  = 1000, height = 500;
     float    scale  = 1;
     float    joyX   = 0, joyY = 0;
+    float    padYaw = 0, padSide = 0;
     float    joyOx  = 0, joyOy = 0;
     bool     joyActive = false;
     float    lookSensitivity = 1;
@@ -337,7 +353,7 @@ class Controls {
     bool     twoLists = false; // the inventory shows the other list too
     bool     padVisible = false;
     bool     featureSpeed  = false;   // a mod has asked for the fast forward
-    bool     featureStrafe = true;    // the buttons of the side steps
+    bool     featureStrafe = true;    // the step buttons: the side steps and the arrows forward and back
     bool     featureSprint = false;   // the scripts have a sprint (NB fix 40)
     bool     featureStamina = false;  // the scripts have a bar of the stamina (NB fix 42)
     bool     dead          = false;   // the player is dead
@@ -355,6 +371,7 @@ class Controls {
     std::map<int,Finger>                 fingers;
     std::array<unsigned,size_t(Key::Count)> refs{};
     std::array<bool,size_t(Key::Count)>  physicalHeld{};
+    std::array<bool,size_t(Key::Count)>  padHeld_{};
     std::array<bool,2>                   joyHeld{};
     std::vector<Button>                  layout;
     std::vector<Event>                   events;

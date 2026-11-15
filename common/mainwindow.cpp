@@ -22,6 +22,7 @@
 #include "world/triggers/abstracttrigger.h"
 #include "world/objects/npc.h"
 #include "world/objects/item.h"
+#include "game/originalsave.h"
 #include "game/serialize.h"
 #include "game/savegameheader.h"
 #include "game/globaleffects.h"
@@ -859,7 +860,8 @@ void MainWindow::paintFocus(Painter& p, const Focus& focus, const Matrix4x4& vp)
     if(co.active && co.showEnemyHp && barBack!=nullptr) {
       const int   barW = int(200.f*scale*float(std::min(w(),800))/800.f);
       const int   barH = int(float(barBack->h())*float(barW)/float(std::max(barBack->w(),1)));
-      const std::string text = std::to_string(focus.npc->attribute(ATR_HITPOINTS))+"/"+std::to_string(focus.npc->attribute(ATR_HITPOINTSMAX));
+      const std::string text = std::to_string(focus.npc->attribute(ATR_HITPOINTS))+"/"+
+                               std::to_string(focus.npc->attribute(ATR_HITPOINTSMAX));
       const auto  ts   = fnt.textSize(text);
       const int   tx   = w()/2-ts.w/2;
       const int   ty   = 10+barH+ts.h;
@@ -983,7 +985,8 @@ void MainWindow::drawTouchBars(Painter& p, Npc& pl) {
   const auto  pref      = AndroidInput::preferences();
   const bool  numbers   = pref.hudNumbers!=0;
   const bool  xp        = pref.hudXp!=0;
-  const auto  hpText    = std::to_string(pl.attribute(ATR_HITPOINTS))+"/"+std::to_string(pl.attribute(ATR_HITPOINTSMAX));
+  const auto  hpText    = std::to_string(pl.attribute(ATR_HITPOINTS))+"/"+
+                          std::to_string(pl.attribute(ATR_HITPOINTSMAX));
   const auto  mpText    = std::to_string(pl.attribute(ATR_MANA))+"/"+std::to_string(pl.attribute(ATR_MANAMAX));
   const auto  xpText    = std::to_string(pl.experience())+"/"+std::to_string(pl.experienceNext());
   auto&       hudFont   = Resources::font(Gothic::interfaceScale(this));
@@ -1363,6 +1366,8 @@ uint64_t MainWindow::tick() {
   if(st==Gothic::LoadState::Finalize || st==Gothic::LoadState::FailedLoad || st==Gothic::LoadState::FailedSave) {
     const std::string failure = Gothic::inst().loadError();
     Gothic::inst().finishLoading();
+    if(st==Gothic::LoadState::Finalize && OriginalSave::takeSaveName(importedSaveName))
+      importedSaveDelay = 30; // a few frames, the save takes a picture of the screen
     if(st==Gothic::LoadState::FailedLoad) {
       // the game was dropped by the start of loading: nothing to continue, back to the menu with the reason on the screen
       rootMenu.setMainMenu();
@@ -1386,6 +1391,12 @@ uint64_t MainWindow::tick() {
   video.tick();
   if(video.isActive())
     return 0;
+
+  if(importedSaveDelay>0 && --importedSaveDelay==0 && Gothic::inst().isInGame()) {
+    // an imported original save gets a slot of its own right away: it is on the list of the saves like any other
+    Gothic::inst().save(SaveStore::newFile(),importedSaveName);
+    importedSaveName.clear();
+    }
 
   if(Gothic::inst().isPause()) {
     return 0;
@@ -1416,6 +1427,8 @@ uint64_t MainWindow::tick() {
 #ifdef OPENGOTHIC_TOUCH_UI
   total = fastForwardDt(dt);
 #endif
+  if(dialogs.isActive())
+    ;//clearInput();
   const uint64_t steps = std::max<uint64_t>(1,(total+49)/50);
   for(uint64_t i=0; i<steps; ++i) {
     const uint64_t step = total/steps + (i<total%steps ? 1 : 0);
@@ -1425,6 +1438,9 @@ uint64_t MainWindow::tick() {
       clearInput();
     if(i==0)
       tickMouse(dt);
+#ifdef OPENGOTHIC_TOUCH_UI
+    player.setPadMove(androidControls.moveYaw(),androidControls.moveSide());
+#endif
     player.tickMove(step);
     }
   update();
@@ -1563,14 +1579,27 @@ Camera::Mode MainWindow::solveCameraMode() const {
   }
 
 void MainWindow::startGame(std::string_view slot) {
+  // before the old game is dropped: the scripts of the mod choose the picture
+  const std::string banner = Gothic::loadingBannerName(Gothic::inst().world()!=nullptr ? &Gothic::inst().world()->script() : nullptr,"LOADING.TGA");
   // gothic.emitGlobalSound(gothic.loadSoundFx("NEWGAME"));
 
   if(Gothic::inst().checkLoading()==Gothic::LoadState::Idle){
     setGameImpl(nullptr);
     }
 
-  Gothic::inst().startLoad("LOADING.TGA",[slot=std::string(slot)](std::unique_ptr<GameSession>&& game){
+  Gothic::inst().startLoad(banner,[slot=std::string(slot)](std::unique_ptr<GameSession>&& game){
     game = nullptr; // clear world-memory now
+    OriginalSave original;
+    if(OriginalSave::pending(original)) {
+      try {
+        return std::unique_ptr<GameSession>(new GameSession(original));
+        }
+      catch(const std::exception& e) {
+        // the next New game is a plain one; the reason is on the screen
+        OriginalSave::retire(original,false,"");
+        throw std::runtime_error(std::string("original save import: ")+e.what());
+        }
+      }
     std::unique_ptr<GameSession> w(new GameSession(slot));
     return w;
     });
@@ -1580,6 +1609,8 @@ void MainWindow::startGame(std::string_view slot) {
   }
 
 void MainWindow::loadGame(std::string_view slot) {
+  // before the old game is dropped: the scripts of the mod choose the picture
+  std::string banner = Gothic::loadingBannerName(Gothic::inst().world()!=nullptr ? &Gothic::inst().world()->script() : nullptr,"LOADING.TGA");
   if(auto* w = Gothic::inst().world(); w!=nullptr && w->script().dmaLoadDisabled()) {
     Log::i("The scripts of the mod do not allow loading now (ENABLELOADGAME)");
     return;
@@ -1590,8 +1621,7 @@ void MainWindow::loadGame(std::string_view slot) {
 
   Gothic::inst().setBenchmarkMode(Benchmark::None);
   // the loading picture of the world of the save (LOADING_NEWWORLD.TGA), as for a change of the world:
-  // the mods on Union (New Balance) choose LOADING_<WORLD>_<number> by it
-  std::string banner = "LOADING.TGA";
+  // the mods on Union (New Balance) choose LOADING_<WORLD>_<number> by it; without the header the picture of the scripts stays
   try {
     Tempest::RFile fin{std::string(slot)};
     Serialize      reader(fin);
@@ -2081,8 +2111,8 @@ void MainWindow::onMobileAction(int id) {
     auto* w  = Gothic::inst().world();
     if(mobileContext()==Mobile::Mode::Game && pl!=nullptr && w!=nullptr && !pl->isDown() &&
        !dialogs.isActive() && w->currentCs()==nullptr && !w->script().dmaSaveDisabled()) {
-      Gothic::inst().quickSave();
-      Gothic::inst().onPrint("Quick save");
+      const int n = Gothic::inst().quickSave();
+      Gothic::inst().onPrint("Quick save "+std::to_string(n));
       }
     return;
     }
@@ -2092,9 +2122,11 @@ void MainWindow::onMobileAction(int id) {
     auto* pl = Gothic::inst().player();
     if(pl!=nullptr && pl->isDead()) {
       const auto saves = SaveStore::list();
-      if(!saves.empty())
-        Gothic::inst().load(saves.front().file); else
+      if(saves.empty()) {
         Gothic::inst().onPrint("No save to load");
+        } else {
+        Gothic::inst().load(saves.front().file);
+        }
       }
     return;
     }
@@ -2119,6 +2151,19 @@ void MainWindow::onMobileAction(int id) {
     }
   }
 
+/// The option of the settings: a weapon in the hand locks the opponent by itself, as the lock button does
+void MainWindow::updateAutoLock() {
+  auto* pl = Gothic::inst().player();
+  const bool drawn = pl!=nullptr && pl->weaponState()!=WeaponState::NoWeapon;
+  const bool fresh = drawn && !weaponWasDrawn;
+  weaponWasDrawn   = drawn;
+  if(!fresh || AndroidInput::preferences().autoLock==0)
+    return;
+  if(mobileContext()!=Mobile::Mode::Game || pl->isDown() || pl->interactive()!=nullptr)
+    return;
+  player.autoLock();
+  }
+
 /// Damage is felt: the stronger the hit, the longer and stronger the vibration
 void MainWindow::updateHaptics() {
   auto pl = Gothic::inst().player();
@@ -2139,6 +2184,7 @@ void MainWindow::updateHaptics() {
 
 void MainWindow::updateMobileControls() {
   updateHaptics();
+  updateAutoLock();
   updateMobileAvailability();
   androidControls.inventoryLists(inventory.mobileTwoLists());
   androidControls.gui(Gothic::interfaceScale(this));
@@ -2181,6 +2227,8 @@ void MainWindow::updateMobileAvailability() {
       movement = alive && active;
       if(alive)
         allowed |= keyMask(Key::Status) | keyMask(Key::Log) | keyMask(Key::Map);
+      if(alive && pl->isTransformed())
+        allowed |= keyMask(Key::Enter);   // the only way back to the human form: the touch screen has no keyboard
       if(ground) {
         allowed |= keyMask(Key::Inventory) | keyMask(Key::Weapon) | keyMask(Key::Walk);
         if(pl->canSneak())
@@ -2192,8 +2240,11 @@ void MainWindow::updateMobileAvailability() {
           allowed |= keyMask(Key::Action);
         if(melee)
           allowed |= keyMask(Key::AttackLeft) | keyMask(Key::AttackRight) | keyMask(Key::Block);
-        if(armed)
+        if(armed) {
           allowed |= keyMask(Key::StrafeLeft) | keyMask(Key::StrafeRight);
+          // the arrows forward and back with the side steps (the back one is the jump back of the fight)
+          allowed |= keyMask(Key::Up) | keyMask(Key::Down);
+          }
 
         target = armed;
 

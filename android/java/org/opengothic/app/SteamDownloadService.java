@@ -54,6 +54,8 @@ public final class SteamDownloadService extends Service {
                 return;
             }
             Log.e("OpenGothic/Steam", "uncaught in " + thread.getName(), error);
+            if (error instanceof OutOfMemoryError)
+                ++SteamSession.memoryStrikes;
             record(error);
             s.error = error instanceof OutOfMemoryError ? "Not enough memory for the download, try again."
                     : "The download failed: " + error;
@@ -64,6 +66,8 @@ public final class SteamDownloadService extends Service {
     }
 
     /** What went wrong, for the person who looks for it: files/steam-error.txt of the application. */
+    private volatile long lastNotification;
+
     private void record(Throwable error) {
         File dir = getExternalFilesDir(null);
         if (dir == null)
@@ -71,6 +75,8 @@ public final class SteamDownloadService extends Service {
         try (java.io.PrintWriter out = new java.io.PrintWriter(new java.io.FileWriter(new File(dir, "steam-error.txt"), true))) {
             out.println("---- " + new java.util.Date());
             error.printStackTrace(out);
+            if (error instanceof OutOfMemoryError)
+                out.print(SteamSession.memoryReport());
         } catch (java.io.IOException ignored) {
         }
     }
@@ -144,20 +150,18 @@ public final class SteamDownloadService extends Service {
                 public void bytes(long done, long total) {
                     s.text = "";
                     s.progress(done, total);
-                    update(s);
+                    // a chunk is a megabyte: on a fast network this is hundreds of calls in a second, and every notification is a new object
+                    long now = System.currentTimeMillis();
+                    if (now - lastNotification >= 1000) {
+                        lastNotification = now;
+                        update(s);
+                    }
                 }
             });
 
             File game = installationIn(part);
             if (game == null)
                 throw new SteamSession.Failure("The files of the game are not what was expected (no Data, _work and System).", false);
-            // a download that finished with archives that are empty is not an installation: the next try must not resume into it
-            java.util.List<String> broken = GameFiles.brokenArchives(game);
-            if (!broken.isEmpty()) {
-                remove(part);
-                throw new SteamSession.Failure("The downloaded files are damaged (" + broken.size() + " archives, for example " + broken.get(0)
-                        + "). They were removed, download the game again.", false);
-            }
             remove(new File(game, ".DepotDownloader"));
             File target = new File(external, folder);
             if (target.exists())
@@ -173,6 +177,8 @@ public final class SteamDownloadService extends Service {
             s.error = e.getMessage();
         } catch (Throwable e) {
             Log.e("OpenGothic/Steam", "download", e);
+            if (e instanceof OutOfMemoryError)
+                ++SteamSession.memoryStrikes;
             record(e);
             s.error = e instanceof OutOfMemoryError ? "Not enough memory for the download, try again." : "The download failed: " + e;
         } finally {
