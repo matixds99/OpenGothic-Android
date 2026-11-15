@@ -501,7 +501,7 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Log (co 10 s):** `[ctx] wisp search: the wisp at … cm, items in 10 m: N (owned …, skipped …, important …, keys …, height …) -> nazwa` albo `WISP_DETECTOR is in the world, but not in 20 m of the hero`. Pierwszy test (21:18): nadal nie zbiera. Log z 21:26: szukanie działa (`the wisp found: Eliksir many` → `the wisp brings: Eliksir many`), ale ognik prawie zawsze był 12–25 m od bohatera, bo za nim nie leciał – poprawka 65.
 - **Czego jeszcze nie ma:** umiejętności ognika z pluginu (1–10: rodzaje przedmiotów, większy obszar, szybkość, łup z przeciwników) – plugin trzyma je u siebie; tu ognik zbiera wszystkie rodzaje. Ani opcji „zbieranie w pomieszczeniach”.
 
-### 65. Ognik nie leci za bohaterem – 🧪 (15.11.2026)
+### 65. Ognik nie leci za bohaterem – ✅ (15.11.2026, w logu z 21:33 ognik 0,5–3,7 m od bohatera)
 - **Plik:** `common/game/gamescript.cpp`
 - **Zgłoszenie + log (21:26):** ognik zostaje w miejscu. W logu co 10 s: „ognik 12–16 m od bohatera” albo „dalej niż 20 m”, więc szukanie z poprawki 64 prawie nigdy nie ruszało (raz ruszyło i przyniosło eliksir many).
 - **Przyczyna:** `ZS_MM_Rtn_Summoned` prowadzi do bohatera wszystkie przywołane stwory oprócz `WISP_DETECTOR` – ognika prowadził plugin.
@@ -510,6 +510,11 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
   - dalej niż 25 m (teleport, zmiana poziomu) – staje od razu obok bohatera (`[ctx] the wisp was … cm away`);
   - szuka przedmiotów, gdy jest do 20 m od bohatera (bohater widziany do 60 m).
 - **Z logu przy okazji:** jedyny przedmiot obok w czasie rozmowy z ognikiem miał właściciela („owned 1”), więc ognik go nie brał – tak ma być.
+
+### 66. Ognik pomijał przedmioty z właścicielem – 🧪 (15.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- **Z logu (21:33):** ognik już leci za bohaterem, ale jedyny przedmiot obok ma właściciela (`owned 1`), więc go nie brał – w NB wiele przedmiotów leżących na odludziu ma właściciela.
+- **Poprawka:** przedmiot z właścicielem ognik bierze, gdy w promieniu 20 m od przedmiotu nie ma żywego właściciela ani nikogo z jego gildii – kradzieży nikt nie widzi. Przy właścicielu dalej nie bierze. W logu: `owner near N` (pominięte, bo właściciel blisko) i `the wisp takes an item of an owner (…)`.
 
 ## Do zrobienia
 

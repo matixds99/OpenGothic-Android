@@ -3951,8 +3951,20 @@ void GameScript::tick(uint64_t dt) {
         auto& h = it.handle();
         ++nAll;
         if(h.owner!=0 || h.owner_guild!=0) {
-          ++nOwned;
-          return;   // a theft
+          // NB fix 66: an item with an owner, as the plugin outside of the houses: taken when the owner (or one of
+          // the guild of the owner) is not within 20 m - no one sees the theft. In the wild NB has many such items
+          bool witness = false;
+          world().detectNpc(it.position(),2000.f,[&](Npc& n) {
+            if(witness || n.isDead() || &n==hero || &n==wisp)
+              return;
+            if((h.owner!=0 && int32_t(n.handle().symbol_index())==h.owner) ||
+               (h.owner_guild!=0 && n.handle().guild==h.owner_guild))
+              witness = true;
+            });
+          if(witness) {
+            ++nOwned;
+            return;   // a theft before the eyes of the owner
+            }
           }
         if(st.wispSkip.count(&h)) {
           ++nSkip;
@@ -3984,7 +3996,7 @@ void GameScript::tick(uint64_t dt) {
       if(tickCount()>=st.nextWispLog) {
         st.nextWispLog = tickCount()+10000;
         nbCtx("wisp search: the wisp at ",int((wisp->position()-hp).length())," cm, items in 10 m: ",nAll,
-              " (owned ",nOwned,", skipped ",nSkip,", important ",nImportant,", keys ",nKey,", height ",nHigh,")",
+              " (owner near ",nOwned,", skipped ",nSkip,", important ",nImportant,", keys ",nKey,", height ",nHigh,")",
               best!=nullptr ? std::string(" -> ")+std::string(best->displayName()) : std::string());
         }
       if(best!=nullptr) {
@@ -4038,12 +4050,12 @@ void GameScript::tick(uint64_t dt) {
             }
         st.wispItem.reset();
         st.wispBest = 1e9f;
-        const bool owned = itm->handle().owner!=0 || itm->handle().owner_guild!=0;
+        // the owner: checked by the search (fix 66 - no owner within 20 m)
         if(!inWorld)
           nbCtx("the wisp is at the item, but it is not in the world any more");
-        else if(owned)
-          nbCtx("the wisp is at the item, but it has an owner (",itm->handle().owner,"/",itm->handle().owner_guild,"): not taken");
-        if(inWorld && !owned) {
+        if(inWorld) {
+          if(itm->handle().owner!=0 || itm->handle().owner_guild!=0)
+            nbCtx("the wisp takes an item of an owner (",itm->handle().owner,"/",itm->handle().owner_guild,"), no one of them near");
           const std::string name(itm->displayName());
           const size_t      cnt = itm->count();
           if(auto ptr = world().takeItem(*itm)) {
