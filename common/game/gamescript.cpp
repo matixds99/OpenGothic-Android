@@ -298,7 +298,8 @@ bool nbWispSkill(zenkit::DaedalusVm& vm, int n) {
   return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member() && s->get_int()!=0;
   }
 
-/// the skill that the wisp needs for this item (-1: none of them - not taken)
+/// the skill that the wisp needs for this item (-1: none - the other items: pouches, gold, ore, trophies, keys of
+/// the lockpicks... are taken always, NB fix 67)
 int nbWispSkillFor(int32_t mainFlag, std::string_view name) {
   if(name.find("STONEPLATE")!=std::string_view::npos || name.find("SKILLTABLET")!=std::string_view::npos)
     return 2;
@@ -4039,7 +4040,7 @@ void GameScript::tick(uint64_t dt) {
             }
           // NB fix 66: only what the wisp has learned (from Vatras it can take the documents only)
           const int skill = nbWispSkillFor(h.main_flag,nm);
-          if(skill<0 || !nbWispSkill(vm,skill)) {
+          if(skill>=0 && !nbWispSkill(vm,skill)) {
             ++nUnlearned;
             return;
             }
