@@ -168,6 +168,7 @@ struct NbState {
   // NB fix 64: the texts of the wisp as in the plugin (video of the PC): "Szukanie..." / "Coś znaleziono!" on the
   // right, and the list "Ognik: name xN" of the brought items on the left (the last 7, 10 s each)
   uint64_t                                    wispSeen       = 0;  // the wisp was near the hero (for the texts)
+  bool                                        wispReturn     = false; // NB fix 64: flying back to the hero
   std::vector<std::pair<std::string,uint64_t>> wispLines;          // the brought items: text, until
   std::unordered_map<const zenkit::IItem*,uint64_t> wispSkip;      // the items it did not reach: not again for 60 s
   float                                       wispBestH = 0;
@@ -3947,9 +3948,10 @@ void GameScript::tick(uint64_t dt) {
       else if(dist>800.f) {
         // NB fix 64: the wisp of the plugin does not stay at the hero, it flies around and searches - back to the
         // hero only when it has nothing to do and is farther than 8 m
-        if(wisp->isAiQueueEmpty()) {
-          wisp->aiPush(AiQueue::aiSetWalkMode(WalkBit::WM_Run));
-          wisp->aiPush(AiQueue::aiGoToNpc(hero));
+        if(!st.wispReturn) {
+          wisp->clearAiQueue();
+          st.wispNpc    = wisp->handlePtr();
+          st.wispReturn = true;   // the flight itself: below, every frame
           }
         }
       wispNear = dist<=3000.f;
@@ -4054,7 +4056,9 @@ void GameScript::tick(uint64_t dt) {
       if(best!=nullptr) {
         auto ref = best->handlePtr();
         if(ref!=nullptr) {
-          wisp->aiPush(AiQueue::aiGotoItem(*best));
+          // NB fix 64: the wisp flies straight to the item, fast (below, every frame) - not by walking of the AI
+          wisp->clearAiQueue();
+          st.wispReturn = false;
           st.wispNpc   = wisp->handlePtr();
           st.wispItem  = ref;
           st.wispSince = tickCount();
@@ -4070,6 +4074,30 @@ void GameScript::tick(uint64_t dt) {
 
   // NB fix 61: the wisp of Vatras brings the item it flew to (in NB the Union plugin does it, the scripts only send it
   // to the item): when it is at the item, the item goes to the inventory of the hero. Not the items of others (a theft)
+  // NB fix 64: the flight of the wisp: straight, 15 m/s, as the wisp of the plugin (2-3 s for a heap of items).
+  // The walking of the AI was slow and went around every stone
+  const auto wispFly = [&](Npc& w, const Tempest::Vec3& to) {
+    auto  d    = to-w.position();
+    float dist = d.length();
+    if(dist<1.f)
+      return;
+    const float step = std::min(dist,1500.f*float(dt)/1000.f);
+    w.setPosition(w.position()+d*(step/dist));
+    w.setDirection(Tempest::Vec3(d.x,0,d.z));
+    };
+  if(st.wispReturn && st.wispItem.expired()) {
+    auto  wNpc = st.wispNpc.lock();
+    auto* wisp = wNpc!=nullptr ? findNpc(wNpc.get()) : nullptr;
+    auto* hero = world().player();
+    if(wisp==nullptr || hero==nullptr || wisp->isDead()) {
+      st.wispReturn = false;
+      } else {
+      const auto to = hero->position()+Tempest::Vec3(0,120.f,0);
+      if((to-wisp->position()).length()<300.f)
+        st.wispReturn = false; else
+        wispFly(*wisp,to);
+      }
+    }
   if(auto wItm = st.wispItem.lock()) {
     auto wNpc = st.wispNpc.lock();
     auto* wisp = wNpc!=nullptr ? findNpc(wNpc.get()) : nullptr;
@@ -4083,6 +4111,7 @@ void GameScript::tick(uint64_t dt) {
       st.wispItem.reset();
       }
     else if(auto* itm = findItem(wItm.get())) {
+      wispFly(*wisp,itm->position()+Tempest::Vec3(0,60.f,0));
       // NB fix 61: the distance on the ground and the height apart - the wisp flies above the item (the 3D distance
       // of 160 cm of fix 61 was never reached: it stopped above the item and the item stayed)
       const auto  d  = itm->position()-wisp->position();
