@@ -36,7 +36,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/graphics/sky/sky.cpp` | jasna noc do testów: światło i niebo między 8:00 a 18:00 (`[NB_OG] bNightAsDay`) | 53 |
 | `common/game/inventory.cpp` | osobne miejsce na hełm (zbroja z `WEAR_HEAD`), stare zapisy: hełm z miejsca zbroi na swoje | 39 |
 | `common/game/inventory.h` | j.w. (`currentHelmet`, `isHelmet`) | 39 |
-| `common/mainwindow.cpp` | sprint NB: klawisz `~` i przycisk na nakładce wywołują `B_Hotkey_Sprint`; pasek wytrzymałości NB, paski w miejscach i rozmiarach z edytora HUD, okno sprzedaży NB (sygnał `onOpenPlayerSales`) | 40, 41, 42, 45, 49, 68 |
+| `common/mainwindow.cpp` | sprint NB: klawisz `~` i przycisk na nakładce wywołują `B_Hotkey_Sprint`; pasek wytrzymałości NB, paski w miejscach i rozmiarach z edytora HUD, okno sprzedaży NB (widżet, tryb menu nakładki, dotyk i klawisze) | 40, 41, 42, 45, 49, 68 |
 | `common/ui/mobilecontrolsmodel.cpp` | przycisk sprintu na nakładce (obok chodu), da się go przesuwać i ukryć w edytorze HUD; paski życia/wytrzymałości/many w edytorze HUD | 40, 42 |
 | `common/ui/mobilecontrolsmodel.h` | j.w. (`Special::Sprint`, `sprint()`, id `sprint`, `hudBarRect`, id `bar_*`) | 40, 42 |
 | `common/utils/androidinput.cpp` | ikona sprintu, podświetlenie, gdy sprint włączony; ramki pasków w edytorze HUD | 40, 42 |
@@ -48,8 +48,10 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `game/main.cpp` | dłuższy bufor dźwięku OpenAL (`alsoft.conf`, 6 × 20 ms) | 37 |
 | `common/game/playercontrol.cpp` | „lepki” focus przeciwnika w walce wręcz (bohater sam się do niego obraca) | 18 |
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |
-| `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko, okno sprzedaży NB: tylko przedmioty z listy skryptu, ich ceny, nic do kupienia | 12, 68 |
-| `common/ui/inventorymenu.h` | okno sprzedaży NB: `playerSales`, ceny z listy | 68 |
+| `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko | 12 |
+| 🆕 `common/ui/nbsalesmenu.cpp` | okno sprzedaży NB (jak okno pluginu, dotykowe) | 68 |
+| 🆕 `common/ui/nbsalesmenu.h` | j.w. | 68 |
+| `common/mainwindow.h` | okno sprzedaży NB (`nbSales`) | 68 |
 | `common/gothic.h` | sygnał `onOpenPlayerSales` (okno sprzedaży NB) | 68 |
 
 ---

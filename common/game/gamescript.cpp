@@ -171,7 +171,7 @@ struct NbState {
   bool                                        wispReturn     = false; // NB fix 64: flying back to the hero
   // NB fix 68: the window of the plugin to sell given items (RX_Craft_PlayerSales_*): the list and the trader. The
   // window opens after the dialog is closed (the scripts call AI_StopProcessInfos before it)
-  std::vector<std::pair<size_t,int32_t>>      salesList;
+  std::vector<Gothic::NbSaleItem>             salesList;
   std::weak_ptr<zenkit::INpc>                 salesNpc;
   bool                                        salesPending = false;
   // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
@@ -2300,7 +2300,15 @@ void GameScript::initCommon() {
         Log::e("NB: RX_Craft_PlayerSales_AddToProductList: no item \"",name,"\"");
         return;
         }
-      nbStates[this].salesList.emplace_back(sym->index(),price);
+      Gothic::NbSaleItem it;
+      it.cls   = sym->index();
+      it.price = price;
+      // the name of the item for the window (the instance is made once, as for ITMI_GOLD)
+      if(auto inst = vm.init_instance<zenkit::IItem>(sym); inst!=nullptr)
+        it.name = inst->name;
+      if(it.name.empty())
+        it.name = up;
+      nbStates[this].salesList.push_back(std::move(it));
       });
     bindNb("RX_OPENCRAFT_PLAYERSALES", [this](std::shared_ptr<zenkit::INpc> npc) {
       auto& st = nbStates[this];

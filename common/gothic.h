@@ -181,7 +181,12 @@ class Gothic final {
     Tempest::Signal<void()>                                            onStopAllSounds;
     Tempest::Signal<void(Npc&,Npc&)>                                    onOpenTrade;   // the player and the trader, without a dialog (mods)
     // NB fix 68: the window of the plugin of New Balance to sell given items for given prices (RX_OpenCraft_PlayerSales)
-    Tempest::Signal<void(Npc&,Npc&,const std::vector<std::pair<size_t,int32_t>>&)> onOpenPlayerSales;
+    struct NbSaleItem {
+      size_t      cls   = 0;
+      int32_t     price = 0;
+      std::string name;
+      };
+    Tempest::Signal<void(Npc&,Npc&,const std::vector<NbSaleItem>&)> onOpenPlayerSales;
     std::function<bool(const Npc*)>                                     isNpcInDialogFn;
 
     Tempest::Signal<void(std::string_view,int,int,int,const GthFont&)>  onPrintScreen;

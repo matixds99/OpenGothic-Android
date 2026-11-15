@@ -201,6 +201,7 @@ MainWindow::~MainWindow() {
   takeWidget(&chapter);
   takeWidget(&document);
   takeWidget(&video);
+  takeWidget(&nbSales);
   takeWidget(&rootMenu);
   takeWidget(&modMenu);
   // every child added by setupUi() is a member: removeAllWidgets() calls `delete` on whatever is left in the list
@@ -229,6 +230,7 @@ void MainWindow::setupUi() {
   addWidget(&inventory);
   addWidget(&chapter);
   addWidget(&video);
+  addWidget(&nbSales);
 #if defined(__MOBILE_PLATFORM__) && !defined(OPENGOTHIC_TOUCH_UI)
   addWidget(&mobileUi);
 #endif
@@ -243,7 +245,7 @@ void MainWindow::setupUi() {
   Gothic::inst().onDialogCameraReset.bind(this,&MainWindow::requestDialogCamera);
   Gothic::inst().onStopAllSounds.bind(&dialogs,&DialogMenu::stopSounds);
   Gothic::inst().onOpenTrade   .bind(&inventory,&InventoryMenu::trade);
-  Gothic::inst().onOpenPlayerSales.bind(&inventory,&InventoryMenu::playerSales);
+  Gothic::inst().onOpenPlayerSales.bind(&nbSales,&NbSalesMenu::open);
   Gothic::inst().isNpcInDialogFn = std::bind(&DialogMenu::isNpcInDialog, &dialogs, std::placeholders::_1);
 
   Gothic::inst().onPrintScreen .bind(&dialogs,&DialogMenu::printScreen);
@@ -631,6 +633,12 @@ void MainWindow::keyDownEvent(KeyEvent &event) {
       uiKeyUp=&chapter;
       return;
       }
+    }
+
+  if(nbSales.isActive()) {   // NB fix 68
+    event.accept();
+    nbSales.keyDownEvent(event);
+    return;
     }
 
   if(document.isActive()){
@@ -1233,7 +1241,7 @@ void MainWindow::drawSaving(Painter& p, const Tempest::Texture2d& back, int sw, 
   }
 
 void MainWindow::isDialogClosed(bool& ret) {
-  ret = !(dialogs.isActive() || document.isActive());
+  ret = !(dialogs.isActive() || document.isActive() || nbSales.isActive());
   }
 
 template<Tempest::KeyEvent::KeyType k>
@@ -2009,6 +2017,8 @@ Mobile::Mode MainWindow::mobileContext() const {
     return Mobile::Mode::Loading;
   if(video.isActive() || chapter.isActive() || document.isActive())
     return Mobile::Mode::Video;
+  if(nbSales.isActive())
+    return Mobile::Mode::Menu;   // NB fix 68: the sales window - the controls of the game are hidden
   if(rootMenu.isActive())
     return rootMenu.isTouchMenu() ? Mobile::Mode::Menu : Mobile::Mode::Dialog;
   if(inventory.isOpen()==InventoryMenu::State::LockPicking)
@@ -2050,6 +2060,8 @@ void MainWindow::setupMobileControls() {
       modMenu.mobileTap(x,y); else
     if(rootMenu.isActive())
       rootMenu.mobileTap(x,y); else
+    if(nbSales.isActive())
+      nbSales.mobileTap(x,y); else
     if(inventory.isActive())
       inventory.mobileTap(x,y); else
     if(dialogs.isActive())
@@ -2060,6 +2072,8 @@ void MainWindow::setupMobileControls() {
       errorScreen.scroll(dy>0 ? 2 : -2); else
     if(rootMenu.isActive())
       rootMenu.mobileScroll(dy); else
+    if(nbSales.isActive())
+      nbSales.mobileScroll(dy); else
     if(inventory.isActive())
       inventory.mobileScroll(dy);
     };

@@ -187,15 +187,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Jeszcze nie ma:** liczników wampira, Full SnC+, umiejętności karmy i spowolnienia czasu, „Dzień: …” w lewym górnym rogu.
 
 ### 68. Okno sprzedaży NB (Hanna, Kardif, Halvor, Kreol, Xardas…) – 🧪 (15.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`, `common/ui/inventorymenu.h`, `common/gothic.h`, `common/mainwindow.cpp`
+- **Pliki:** 🆕 `common/ui/nbsalesmenu.cpp`, 🆕 `common/ui/nbsalesmenu.h`, `common/game/gamescript.cpp`, `common/gothic.h`, `common/mainwindow.cpp`, `common/mainwindow.h`
 - **Zgłoszenie:** u Hanny (klejnoty, szkatułki), Kardifa (surowe mięso), Halvora (perły, muszle, kosztowności), Kreola i Xardasa-nekromanty po wybraniu „sprzedaj” nic się nie otwiera.
-- **Przyczyna:** NB robi to oknem pluginu: skrypt czyści listę (`RX_Craft_PlayerSales_ClearProductList`), dodaje przedmioty z ceną za sztukę (`RX_Craft_PlayerSales_AddToProductList("ItMi_Ruby", 350)`, 126 wywołań w skryptach) i otwiera okno (`RX_OpenCraft_PlayerSales(npc)` – UNION_ABI.DLL 0x1017EC40, okno rzemiosła pluginu w trybie 13). Żadnej z tych funkcji nie było.
-- **Poprawka:** po zamknięciu dialogu otwiera się okno handlu z tą postacią, ale:
-  - po stronie bohatera widać tylko przedmioty z listy skryptu, z ceną z listy (np. rubin 350, szafir 500);
-  - sprzedanie zabiera przedmiot i daje złoto według tej ceny (liczba sztuk jak w zwykłym handlu – przytrzymanie sprzedaje więcej);
-  - strona handlarza jest pusta – nic się tu nie kupuje.
+- **Przyczyna:** NB robi to oknem pluginu: skrypt czyści listę (`RX_Craft_PlayerSales_ClearProductList`), dodaje przedmioty z ceną za sztukę (`RX_Craft_PlayerSales_AddToProductList("ItMi_Ruby", 350)`, 126 wywołań) i otwiera okno (`RX_OpenCraft_PlayerSales(npc)` – UNION_ABI.DLL 0x1017EC40: okno rzemiosła pluginu w trybie 13). Żadnej z tych funkcji nie było.
+- **Poprawka:** po zamknięciu dialogu otwiera się własne okno w układzie okna pluginu (zrzut z PC): reszta interfejsu znika (tryb menu nakładki), po lewej lista przedmiotów z listy skryptu – „nazwa (xN)” i cena (przedmioty, których bohater nie ma, wyszarzone), po prawej wybrany przedmiot: nazwa, cena, „Maksymalnie: N”, razem, przyciski **−**, ilość, **+**, **Max** i **Sprzedaj**; złoto u góry, X zamyka (także stuknięcie obok okna). Napisy żółte (zielonej czcionki OpenGothic nie ma). Klawiatura: strzałki, Enter – sprzedaj, Escape – zamknij.
+  - sprzedanie zabiera przedmioty i daje złoto według ceny z listy (komunikat „Sprzedano: … (+złoto)”);
+  - bez obrazków przedmiotów (w pluginie są), na razie tylko nazwy.
 - W logu `[ctx] sales window: N items`.
-- **To samo okno w pluginie robi rzemiosło** (`RX_OpenCraft` z `CRAFT_ALCHEMY`, `CRAFT_SMITH`, `CRAFT_RUNE`, `CRAFT_FORCEARMOR`, `CRAFT_BOWS`, `CRAFT_JEWELRY`, `CRAFT_FOOD`, `CRAFT_PIE`, `CRAFT_SOUP_COMPOTE`, `CRAFT_SCROLLS`, `CRAFT_ORE_SMELTING`, `CRAFT_SKINS_ARMOR`, `CRAFT_DEMONRUNE`) – na razie zostaje przy starych menu dialogowych z poprawki 2.
+- **To samo okno w pluginie robi rzemiosło** (`RX_OpenCraft` z `CRAFT_ALCHEMY`, `CRAFT_SMITH`, `CRAFT_RUNE`, `CRAFT_FORCEARMOR`, `CRAFT_BOWS`, `CRAFT_JEWELRY`, `CRAFT_FOOD`, `CRAFT_PIE`, `CRAFT_SOUP_COMPOTE`, `CRAFT_SCROLLS`, `CRAFT_ORE_SMELTING`, `CRAFT_SKINS_ARMOR`, `CRAFT_DEMONRUNE`). Przepisy są tam zaszyte w kodzie pluginu (nie w skryptach) – na razie zostają stare menu dialogowe z poprawki 2; to okno jest pod nie przygotowane.
 
 ---
 
