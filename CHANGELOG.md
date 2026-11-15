@@ -498,6 +498,7 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
   - opcja z rozmowy z ognikiem „Wyłącz zbieranie wartościowych przedmiotów” (`RX_Wisp_DontTakeImportantItems`) – pomija zbroje i mikstury;
   - ognik leci do przedmiotu („Coś znaleziono!”), po dolocie przedmiot idzie do ekwipunku („Zdobyto: …”, kod z poprawek 61/63);
   - nie doleci w 15 s → odpuszcza ten przedmiot na minutę i bierze następny.
+- **Log (co 10 s):** `[ctx] wisp search: the wisp at … cm, items in 10 m: N (owned …, skipped …, important …, keys …, height …) -> nazwa` albo `WISP_DETECTOR is in the world, but not in 20 m of the hero`. Pierwszy test (21:18): nadal nie zbiera – czekam na log z tymi wpisami.
 - **Czego jeszcze nie ma:** umiejętności ognika z pluginu (1–10: rodzaje przedmiotów, większy obszar, szybkość, łup z przeciwników) – plugin trzyma je u siebie; tu ognik zbiera wszystkie rodzaje. Ani opcji „zbieranie w pomieszczeniach”.
 
 ## Do zrobienia

@@ -164,6 +164,7 @@ struct NbState {
   const zenkit::IItem*                        wispFound = nullptr; // "Coś znaleziono!" once for an item (fix 62)
   float                                       wispBest  = 1e9f;    // the closest the wisp came to it (log, fix 63)
   uint64_t                                    nextWispSearch = 0;  // NB fix 64: the search of the plugin, every 500 ms
+  uint64_t                                    nextWispLog    = 0;  // the state of the search in the log, every 10 s
   std::unordered_map<const zenkit::IItem*,uint64_t> wispSkip;      // the items it did not reach: not again for 60 s
   float                                       wispBestH = 0;
   const World*                                vobWorld = nullptr;
@@ -3905,6 +3906,11 @@ void GameScript::tick(uint64_t dt) {
           wisp = &n;
         });
       }
+    if(wisp==nullptr && hero!=nullptr && tickCount()>=st.nextWispLog) {
+      st.nextWispLog = tickCount()+10000;
+      if(auto* ws = vm.find_symbol_by_name("WISP_DETECTOR"); ws!=nullptr && findNpc(ws)!=nullptr)
+        nbCtx("wisp search: WISP_DETECTOR is in the world, but not in 20 m of the hero");
+      }
     if(wisp!=nullptr && !Gothic::inst().isInDialog()) {
       const auto katOf = [this](std::string_view name, int32_t def) {
         auto* k = vm.find_symbol_by_name(name);
@@ -3920,29 +3926,47 @@ void GameScript::tick(uint64_t dt) {
       Item* best  = nullptr;
       float bestD = std::numeric_limits<float>::max();
       const auto hp = hero->position();
+      int nAll = 0, nOwned = 0, nSkip = 0, nImportant = 0, nKey = 0, nHigh = 0;
       world().detectItem(hp,1000.f,[&](Item& it) {
         auto& h = it.handle();
-        if(h.owner!=0 || h.owner_guild!=0)
+        ++nAll;
+        if(h.owner!=0 || h.owner_guild!=0) {
+          ++nOwned;
           return;   // a theft
-        if(st.wispSkip.count(&h))
+          }
+        if(st.wispSkip.count(&h)) {
+          ++nSkip;
           return;
-        if(noImportant && (h.main_flag & important)!=0)
+          }
+        if(noImportant && (h.main_flag & important)!=0) {
+          ++nImportant;
           return;
+          }
         if(auto* sym = vm.find_symbol_by_index(uint32_t(it.clsId())); sym!=nullptr) {
           // the plugin leaves the keys (but the lockpicks) to the hero
           const std::string_view nm = sym->name();
-          if(nm.size()>=4 && nm.substr(0,4)=="ITKE" && nm!="ITKE_LOCKPICK")
+          if(nm.size()>=4 && nm.substr(0,4)=="ITKE" && nm!="ITKE_LOCKPICK") {
+            ++nKey;
             return;
+            }
           }
         const auto d = it.position()-hp;
-        if(std::abs(d.y)>500.f)
+        if(std::abs(d.y)>500.f) {
+          ++nHigh;
           return;
+          }
         const float q = d.quadLength();
         if(q<bestD) {
           bestD = q;
           best  = &it;
           }
         });
+      if(tickCount()>=st.nextWispLog) {
+        st.nextWispLog = tickCount()+10000;
+        nbCtx("wisp search: the wisp at ",int((wisp->position()-hp).length())," cm, items in 10 m: ",nAll,
+              " (owned ",nOwned,", skipped ",nSkip,", important ",nImportant,", keys ",nKey,", height ",nHigh,")",
+              best!=nullptr ? std::string(" -> ")+std::string(best->displayName()) : std::string());
+        }
       if(best!=nullptr) {
         auto ref = best->handlePtr();
         if(ref!=nullptr) {
