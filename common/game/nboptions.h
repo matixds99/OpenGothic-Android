@@ -173,6 +173,7 @@ struct Option {
 // (not here: AutoAIM - the scripts set it back to 0 themselves; bShowStaminaWhenInvOpen - the inventory of the plugin)
 inline constexpr Option shown[] = {
   {"SHOW_GODS_KARMA", "AST", "bShowKarma", 0},
+  {"SHOW_BUFFS", "AST", "bShowBuffInfo", 0},   // NB fix 62: the list of the effects (game/gamescript.cpp)
   {"SHOW_HUNGER", "AST", "bHFTStatus", 0},
   {"SHOW_PLACES_NAMES", "AST", "bShowNotice", 0},
   {"SHOW_HERO_POCKET", "AST", "bShowPocket", 0},

@@ -466,6 +466,20 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Przyczyna:** skrypty NB tylko szukają przedmiotu i wysyłają do niego ognika (`B_MM_WispDetect` → `B_WispDetectedItem` → `Wld_DetectItem` + `AI_GotoItem`), według wyuczonych umiejętności ognika (broń, amunicja, klucze, runy, magia, jedzenie, mikstury…). Samo przyniesienie przedmiotu robił plugin Union, którego tu nie ma.
 - **Poprawka:** gdy ognik (`WISP_DETECTOR`) doleci do przedmiotu, do którego go wysłano (do 1,6 m), przedmiot trafia do ekwipunku bohatera i jest komunikat „Ognik przyniósł: …”. Przedmiotów z właścicielem nie bierze (to byłaby kradzież) – po te bohater musi sięgnąć sam. Jeśli ognik nie doleci w 20 s, odpuszcza i skrypt znajdzie mu następny. W logu: `[ctx] the wisp brings: …`.
 
+### 62. Napisy NB na ekranie: liczniki efektów, karma bogów, ognik – 🧪 (15.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, 🆕 `common/game/nbtexts.h`, `common/game/nboptions.h`
+- **Zgłoszenie:** brakowało napisów z wersji PC: w prawym górnym rogu liczników mikstur i błogosławieństw (np. „(13:03) Błogosławieństwo - regeneracja many”), ikonek karmy Innosa i Beliara oraz komunikatu ognika „Coś znaleziono!”.
+- **Przyczyna:** to rysowały dwie rzeczy, których tu nie było:
+  - funkcja skryptów `GamePaused`, którą plugin woła w każdej klatce – karma bogów (ikonki z czcionki `FONT_OLD_10_WHITE_HO`, na czerwono, gdy nie było dziś modlitwy), licznik strzał, głód/pragnienie/zmęczenie, ikonki stanu bohatera;
+  - sam plugin (UNION_ABI.DLL 0x10254b20) – lista efektów „(mm:ss) nazwa”: 21 zmiennych skryptów z sekundami (przyspieszenie, niewidzialność, regeneracje many i wytrzymałości, odporności, serca golemów, błogosławieństwa Isgarotha…) oraz tarcza magiczna, ognista tarcza, przemiana zwojem, medytacje, aury nekromanty, zimno/upał i inne.
+- **Poprawka:**
+  - `GamePaused` wołane co 250 ms (napisy skryptów trwają 1 s); kolor z `PrintScreenColor` (czerwony/żółty) działa.
+  - Lista efektów odtworzona jak w pluginie: te same zmienne, warunki i nazwy. Teksty z `AB_Translation.lbr` z folderu gry (`System` lub `System/Autorun`), a gdy go nie ma – wbudowane polskie z tego pliku. Lista zaczyna się od 6% wysokości, co 3% (w pluginie co 2,4%), żeby większe litery na telefonie nie zachodziły na siebie ani na karmę.
+  - Lista pokazuje się, gdy włączone są „informacje na ekranie” skryptów (`MoreInfoOnScreen`, włącza je rozmowa z Xardasem) i opcja `bShowBuffInfo` – dodana do menu ustawień gry („SHOW_BUFFS”).
+  - Ognik: „Coś znaleziono!” raz na każdy znaleziony przedmiot, a po przyniesieniu „Zdobyto: …” (teksty pluginu zamiast mojego „Ognik przyniósł”).
+  - `RX_PrintCutscene` wyłączone: pisało „Pomiń, wciśnij G lub R” na scenach, a pominięcie idzie przez `RX_KeyPressed`, którego tu nie ma.
+- **Bez tego (na razie):** liczniki wampira, Full SnC+, umiejętności karmy i spowolnienia czasu (plugin trzyma je u siebie) oraz „Dzień: …” w lewym górnym rogu.
+
 ## Do zrobienia
 
 - [x] Czarny goblin nie atakuje, stoi w miejscu – naprawione (poprawka 54). Z logu: wrogi (attitude=0), czuje bohatera (sense=5 przy ~1100), ale zostaje w `ZS_MM_RTN_ROAM` bez celu – reakcja na wroga (`B_MM_AssessEnemy`) nie przełącza go na atak; raz pojawia się `ZS_MM_ThreatenEnemy`. `RX_GobboClan` (niezaimplementowane) jest tylko w `AI_OnDead_Gobbo_Black_Clan` – przy śmierci, nie przy ataku. Do zbadania z włączonymi śladami `B_MM_AssessEnemy` (więcej niż 3 na komunikat).

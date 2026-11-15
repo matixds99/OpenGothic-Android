@@ -2,6 +2,7 @@
 #include "nboptions.h"
 #include "nbiteminfo.h"
 #include "nbbars.h"
+#include "nbtexts.h"
 
 #include <Tempest/Log>
 #include <Tempest/SoundEffect>
@@ -126,6 +127,8 @@ struct NbState {
   zenkit::DaedalusSymbol*  getTime         = nullptr;
   zenkit::DaedalusSymbol*  perFrame        = nullptr;
   zenkit::DaedalusSymbol*  checkMenu       = nullptr;
+  zenkit::DaedalusSymbol*  gamePaused      = nullptr; // GamePaused: the HUD of the scripts, the plugin calls it every frame
+  uint64_t                 nextHud         = 0;       // NB fix 62: GamePaused and the effects, every 250 ms here
   zenkit::DaedalusSymbol*  frameTime       = nullptr;
   int                      unionCycle      = 0;
   uint64_t                 nextCycle       = 0;   // the next tick of the timer of the plugin (NB fix 57)
@@ -158,6 +161,7 @@ struct NbState {
   std::weak_ptr<zenkit::INpc>                 wispNpc;
   std::weak_ptr<zenkit::IItem>                wispItem;
   uint64_t                                    wispSince = 0;
+  const zenkit::IItem*                        wispFound = nullptr; // "Coś znaleziono!" once for an item (fix 62)
   const World*                                vobWorld = nullptr;
   };
 
@@ -271,6 +275,151 @@ std::vector<std::unique_ptr<Vob>>* nbLoadVobTree(World& world, const std::string
       if(auto p = Vob::load(nullptr,world,*v,flags))
         ret->emplace_back(std::move(p));
   return ret;
+  }
+
+/// NB fix 62: the list of the effects with their time in the upper right corner (UNION_ABI.DLL 0x10254b20): lines
+/// "(mm:ss) name" at x 5200 and y 40+200*n of the virtual 8192 of ZenGin. The names: the texts of the plugin
+/// (AB_Translation.lbr) or the strings of GOTHIC.DAT (as the plugin). Not here: the vampire, Full SnC+ and the karma
+/// skills, the slowing of time (the plugin keeps them in itself)
+void nbBuffPanel(zenkit::DaedalusVm& vm) {
+  const auto var = [&vm](std::string_view name) -> int32_t {
+    auto* s = vm.find_symbol_by_name(name);
+    return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member() ? s->get_int() : 0;
+    };
+  const auto str = [&vm](std::string_view name) -> std::string {
+    auto* s = vm.find_symbol_by_name(name);
+    return s!=nullptr && s->type()==zenkit::DaedalusDataType::STRING && !s->is_member() ? std::string(s->get_string()) : std::string();
+    };
+  const auto mmss = [](int32_t sec) {
+    sec = std::max(sec,0);
+    char buf[32] = {};
+    std::snprintf(buf,sizeof(buf),"(%02d:%02d) ",int(sec/60),int(sec%60));
+    return std::string(buf);
+    };
+
+  if(Gothic::settingsGetI("AST","bShowBuffInfo")==0 || var("MOREINFOONSCREEN")==0)
+    return;
+  if(var("BHEROISINCUTSCENE")!=0 || var("HEROISDEAD")!=0 || Gothic::inst().isInDialog())
+    return;
+
+  std::vector<std::string> lines;
+  const auto timed = [&](int32_t sec, std::string_view label) {
+    if(!label.empty())
+      lines.push_back(mmss(sec)+std::string(label));
+    };
+
+  // the scroll of a transformation
+  if(var("HEROTRANS")!=0 && var("HEROTRANSSCROLL")!=0 && var("HEROTRANSCOUNT")<=var("TEMPTRANSTIME"))
+    timed(var("TEMPTRANSTIME")-var("HEROTRANSCOUNT"),str("RX_SCROLLTRANSTIME"));
+
+  // the timers of the potions and the blessings: the seconds left in the variable
+  static const std::pair<const char*,const char*> timers[] = {
+    {"TEMPPALLIGHTISON",         "sHolyLight"},
+    {"RX_POTIONHOLY",            "sEffectResistCurse"},
+    {"RX_SPEEDPOTION",           "sEffectAcceleration"},
+    {"RX_INVISIBLEPOTION",       "sEffectInvisible"},
+    {"RX_STAMINAFASTPOTION",     "sEffectStamina"},
+    {"RX_POTIONMANAREG",         "sEffectWeakMana"},
+    {"RX_POTIONMANAREG2",        "sEffectMiddleMana"},
+    {"RX_POTIONMANAREG3",        "sEffectStrongMana"},
+    {"RX_POTIONANTIPOISON",      "sEffectResistPoison"},
+    {"RX_NP_RESIST",             "sEffectResist"},
+    {"RX_MAGICPOWERTIMER",       "sEffectMagicPower"},
+    {"RX_STAMINAFASTPOTION2",    "sEffectStamina2"},
+    {"RX_SERAFISBONUS",          "sEffectSerafis"},
+    {"RX_FOODHEALTHBONUS",       "sEffectHealthRegen"},
+    {"BUFFSTONEGOLEMHEARTCOUNT", "sBuffStoneGolemHeartCount"},
+    {"BUFFFIREGOLEMHEARTCOUNT",  "sBuffFireGolemHeartCount"},
+    {"BUFFICEGOLEMHEARTCOUNT",   "sBuffIceGolemHeartCount"},
+    {"BUFFSWAMPGOLEMHEARTCOUNT", "sBuffSwampGolemHeartCount"},
+    {"RX_ISGAROTHREGEN",         "sNextIsgarothBonus"},
+    {"RX_ISGAROTHREGENSTA",      "sNextIsgarothBonusSta"},
+    {"RX_ISGAROTHMANA",          "sNextIsgarothBonusMana"},
+    };
+  for(auto& [v,key]:timers) {
+    const int32_t sec = var(v);
+    if(sec<=0)
+      continue;
+    if(std::string_view(v)=="RX_INVISIBLEPOTION" && sec==1)
+      continue; // as the plugin
+    timed(sec,NbTexts::get(key));
+    }
+
+  if(const int32_t shield = var("RX_MAGICSHIELDACTIVE"); shield>0)
+    lines.push_back(std::string(NbTexts::get("sMagicShieldAbsorbeLeft"))+std::to_string(shield));
+
+  // the curse of the Nightmare (less healing) in some worlds
+  if(var("RX_NIGHTMARE")>0 && var("RX_NP_CURSERESISTACTIVE")==0) {
+    const int32_t lvl = var("CURRENTLEVEL");
+    if(lvl==3 || lvl==0x21 || lvl==0x11 || lvl==0x26 || lvl==0x23 || (lvl==9 && var("BLKDRAGNISDEAD")==0)) {
+      if(auto s = str("RX_STR_LESSHEAL"); !s.empty())
+        lines.push_back(s);
+      }
+    }
+  if(var("RX_NEXTHITIGNORE")!=0)
+    lines.push_back(std::string(NbTexts::get("sNextHitPotion")));
+
+  if(var("FIRESHIELDISUP")!=0)
+    timed(3600-var("TEMPFIRESHIELDTICK"),str("RX_BUFFFIRESHIELD"));
+  if(var("ACIDISON")!=0)
+    timed((var("ACIDISSCROLL")!=0 ? 1800 : 3600)-var("TEMPACIDISON"),str("RX_TIMER_SEVERESTINK"));
+  if(const int32_t sec = var("RX_POTIONRESISTINGWEAKNESS"); sec>0)
+    timed(sec,str("RX_POTIONRESISTINGWEAKNESS_STR"));
+  if(const int32_t sec = var("RX_POTIONRESISTINGTOSICKNESS"); sec>0)
+    timed(sec,str("RX_POTIONRESISTINGTOSICKNESS_STR"));
+  if(const int32_t type = var("JOINTBONUSTYPE"); type==2 || type==3) {
+    const int32_t cnt = var("TEMPJOINTBONUSCOUNT");
+    if(cnt<=600) {
+      const char* s = var("WARTRANSE")!=0 ? "RX_INFOWARTRANSE" : var("FIGHTMEDITATION")!=0 ? "RX_INFOFIGHTMEDITATION" : "RX_INFOMAGICMEDITATION";
+      timed(600-cnt,str(s));
+      }
+    }
+  if(var("SC_ISOBSESSED")>0)
+    if(auto s = str("RX_STR_OBSESSIONEFFECT"); !s.empty())
+      lines.push_back(s);
+  static const std::pair<const char*,const char*> auras[] = {
+    {"RX_NECRORUNEAURAACTIVE",    "RX_STR_NECROAURA_ON"},
+    {"RX_NECRORUNEAURAACTIVE_02", "RX_STR_NECROAURA_02_ON"},
+    {"RX_NECRORUNEAURAACTIVE_03", "RX_STR_NECROAURA_03_ON"},
+    {"RX_NECRORUNEAURAACTIVE_04", "RX_STR_NECROAURA_04_ON"},
+    {"RX_NECRORUNEAURAACTIVE_05", "RX_STR_NECROAURA_05_ON"},
+    };
+  for(auto& [v,s]:auras)
+    if(var(v)!=0)
+      if(auto txt = str(s); !txt.empty())
+        lines.push_back(txt);
+  if(const int32_t sec = var("RX_SCOUT_SKILL_DAMAGEDIMTIME"); sec!=0)
+    timed(sec,str("RX_STR_SCOUTDAMAGEDIM"));
+  if(const int32_t sec = var("RX_ISSNEAKINVISTIMER"); sec!=0)
+    timed(sec,str("RX_STR_SCOUTINVISRESTORE"));
+  if(var("RX_ISSNEAKINVIS")!=0)
+    timed(var("HEROINVISIBLETIMERNOW")-var("HEROINVISIBLETIMER"),str("RX_STR_SCOUTINVISACTIVE"));
+  if(const int32_t ms = var("RX_LIGHTSPELL_TIME"); ms!=0)
+    timed(ms/1000,str("RX_COMMON_SPELL_LIGHTISON"));
+  if(const int32_t sec = var("RX_STAMINAHEALRUNEBONUS"); sec>0)
+    timed(sec,str("RX_STR_HEALRUNEREGENSTAMINABONUS"));
+  if(const int32_t sec = var("RX_NP_CURSERESISTACTIVE"); sec>0)
+    timed(sec,str("RX_STR_LEGCURSEPLACERESIST"));
+  if(var("HEROTRANS")==0 && var("RX_OLDSTAMINA")==0) {
+    if(var("RX_STATUSCOLD")>0)
+      if(auto s = str("RX_BUFFINFO_COLD"); !s.empty())
+        lines.push_back(s);
+    if(var("RX_STATUSHEAT")>0)
+      if(auto s = str("RX_BUFFINFO_HEAT"); !s.empty())
+        lines.push_back(s);
+    }
+  if(const int32_t ms = var("RX_ITPO_STAMINA_SEC"); ms>0)
+    timed(ms/1000,str("RX_BUFFINFO_STAMINA_POTION"));
+  if(var("RX_OLDSTAMINA")==0)
+    if(const int32_t ms = var("RX_STAMINAZEROSLOW"); ms!=0)
+      timed(ms/1000+1,str("RX_BUFFINFO_ZEROSLOW"));
+
+  // PrintScreen of OpenGothic: x, y in % of the screen; the same place replaces the text, it is gone after 1 s.
+  // The step: 3% (the plugin: 200/8192 = 2.4%, too little for the larger letters of a phone); from 6%: under the karma
+  // of the scripts (x 90 and 95, y 1 and 3), which the longer lines would cover with the letters of a phone
+  auto& fnt = Resources::font("FONT_OLD_10_WHITE.TGA",Resources::FontType::Normal,1.f);
+  for(size_t i=0; i<lines.size() && i<30; ++i)
+    Gothic::inst().onPrintScreen(lines[i],63,6+int(i)*3,1,fnt);
   }
 
 /// another world or a loaded save: the parts of this world again (the old objects stay with the old world)
@@ -1053,6 +1202,7 @@ void GameScript::initCommon() {
     nbState.getTime   = nbFunc("B_GETTIME");
     nbState.perFrame  = nbFunc("PERFRAME");
     nbState.checkMenu = nbFunc("B_CHECKMENUOPTION");
+    nbState.gamePaused = nbFunc("GAMEPAUSED");
     if(auto* ft = vm.find_symbol_by_name("RX_FRAMETIME"); ft!=nullptr && ft->type()==zenkit::DaedalusDataType::INT && !ft->is_member())
       nbState.frameTime = ft;
     // NB fix 52: a missing external goes to the log with the function of the script that calls it and the
@@ -1493,8 +1643,18 @@ void GameScript::initCommon() {
     bindNb("AI_PRINTPOS",       [nbPrint](std::string_view msg, int32_t, int32_t, std::string_view, int32_t, int32_t) { nbPrint(msg); });
     bindNb("AI_PRINTPOS_CLEAR", []() {});
     bindNb("AI_PRINTCLRSCREEN", []() {});
-    bindNb("PRINTSCREENCOLOR",  [](std::string_view msg, int32_t x, int32_t y, std::string_view font, int32_t time, std::string_view /*color*/) {
-      Gothic::inst().onPrintScreen(msg,x,y,time,Resources::font(font,Resources::FontType::Normal,1.0));
+    bindNb("PRINTSCREENCOLOR",  [](std::string_view msg, int32_t x, int32_t y, std::string_view font, int32_t time, std::string_view color) {
+      // NB fix 62: the colors of OpenGothic fonts: red (the karma without the prayer of the day: "#FF0000"), yellow
+      auto type = Resources::FontType::Normal;
+      if(color.size()==7 && color[0]=='#') {
+        const auto hex = [&](size_t i) { return int(std::strtol(std::string(color.substr(i,2)).c_str(),nullptr,16)); };
+        const int r = hex(1), g = hex(3), b = hex(5);
+        if(r>=200 && g<100 && b<100)
+          type = Resources::FontType::Red;
+        else if(r>=200 && g>=150 && b<100)
+          type = Resources::FontType::Yellow;
+        }
+      Gothic::inst().onPrintScreen(msg,x,y,time,Resources::font(font,type,1.0));
       });
     // B_LogEntry: "Nowy wpis w dzienniku!" + the name of the topic. As the Union plugin draws it: on the left,
     // at 29% of the height, the title in RX_QuestTitleFont (new: gold, failed: red, finished: green in the
@@ -1628,6 +1788,12 @@ void GameScript::initCommon() {
     // characters of a place do not all move at the same moment. In ZS_Guide_Player / ZS_Follow_Player the
     // position is never reached, so a companion waited up to 3 s after every fight, dialog and stop before it
     // went on. For the members of the party (AIV_PARTYMEMBER) the wait is skipped, the others wait as in NB.
+    // NB fix 62: RX_PrintCutscene (in GamePaused) writes "Pomiń, wciśnij G lub R" over the scenes of NB; the keys
+    // come through RX_KeyPressed of the plugin, which is not here - the scene cannot be skipped, so no text either
+    if(auto* pc = vm.find_symbol_by_name("RX_PRINTCUTSCENE"); pc!=nullptr && !pc->is_external() &&
+       pc->type()==zenkit::DaedalusDataType::FUNCTION && vm.find_parameters_for_function(pc).empty() && !pc->has_return()) {
+      vm.override_function("RX_PRINTCUTSCENE", []() {});
+      }
     if(auto* ds = vm.find_symbol_by_name("B_NPC_DESYNCHRONIZE"); ds!=nullptr && !ds->is_external()) {
       vm.override_function("B_NPC_DESYNCHRONIZE", [this](std::shared_ptr<zenkit::INpc> slf, int32_t ncycle) {
         auto* npc = findNpcRaw(slf);
@@ -3709,6 +3875,15 @@ void GameScript::tick(uint64_t dt) {
     callNb(st.perFrame);
     }
 
+  // NB fix 62: the HUD of NB - GamePaused of the scripts (the karma of the gods, the arrows, the hunger, the icons of
+  // the state; PrintScreen for 1 s, so the plugin calls it every frame - here every 250 ms) and the list of the
+  // effects with their time of the plugin
+  if(tickCount()>=st.nextHud || st.nextHud>tickCount()+1000) {
+    st.nextHud = tickCount()+250;
+    callNb(st.gamePaused);
+    nbBuffPanel(vm);
+    }
+
   // NB fix 61: the wisp of Vatras brings the item it flew to (in NB the Union plugin does it, the scripts only send it
   // to the item): when it is at the item, the item goes to the inventory of the hero. Not the items of others (a theft)
   if(auto wItm = st.wispItem.lock()) {
@@ -3736,8 +3911,8 @@ void GameScript::tick(uint64_t dt) {
           if(auto ptr = world().takeItem(*itm)) {
             hero->addItem(std::move(ptr));
             nbCtx("the wisp brings: ",name);
-            // cp1250, as the fonts of Gothic: "Ognik przyniósł: "
-            const std::string head = "Ognik przyni\xF3s\xB3: ";
+            // "Zdobyto: " of the plugin (sAcquired)
+            const std::string head(NbTexts::get("sAcquired"));
             const std::string msg  = cnt>1 ? head+name+" x"+std::to_string(cnt) : head+name;
             Gothic::inst().onPrint(msg.c_str());
             }
@@ -5695,6 +5870,11 @@ void GameScript::ai_gotoitem(std::shared_ptr<zenkit::INpc> npcRef, std::shared_p
       st.wispNpc   = npcRef;
       st.wispItem  = itmRef;
       st.wispSince = tickCount();
+      // NB fix 62: "Coś znaleziono!" of the plugin (sWispSearch), once for an item
+      if(st.wispFound!=itmRef.get()) {
+        st.wispFound = itmRef.get();
+        Gothic::inst().onPrint(std::string(NbTexts::get("sWispSearch")).c_str());
+        }
       }
     }
   }
