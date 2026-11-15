@@ -11,11 +11,26 @@ import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 
 /**
- * The logs of the game: the engine writes log.txt and crash.log to the files of the application, where only the application
- * can read them. The launcher shows the end of them and hands them to another application (a message, a mail).
+ * The logs of the game: the engine works in the folder of the game that the player has chosen (the first line of game.txt) and
+ * writes log.txt, crash.log and the files of the safe GPU mode there, next to the saves. The launcher shows the end of them and
+ * hands them to another application (a message, a mail).
  */
 final class Logs {
     private Logs() {
+    }
+
+    /** The folder of the game that was started last: the first line of game.txt; the files of the application without it. */
+    static File gameDir(Context c) {
+        File external = c.getExternalFilesDir(null);
+        if (external != null) {
+            String first = tail(new File(external, "game.txt"), 4096).split("\n", 2)[0].trim();
+            if (!first.isEmpty()) {
+                File dir = new File(first);
+                if (dir.isDirectory())
+                    return dir;
+            }
+        }
+        return c.getFilesDir();
     }
 
     /** The last part of a file, from the start of a line. Empty when there is no file. */
@@ -42,7 +57,7 @@ final class Logs {
 
     /** The log of the last run of the game and the crash, if there was one. */
     static String report(Context c, int maxBytes) {
-        File dir = c.getFilesDir();
+        File dir = gameDir(c);
         StringBuilder b = new StringBuilder();
         b.append("OpenGothic ").append(version(c)).append(", Android ").append(android.os.Build.VERSION.RELEASE)
                 .append(" (API ").append(android.os.Build.VERSION.SDK_INT).append("), ")
@@ -102,11 +117,11 @@ final class Logs {
 
     /** Is there a log of a crash that is newer than the given time. */
     static boolean crashedSince(Context c, long time) {
-        File crash = new File(c.getFilesDir(), "crash.log");
+        File crash = new File(gameDir(c), "crash.log");
         return crash.isFile() && crash.lastModified() >= time;
     }
 
     static boolean hasLog(Context c) {
-        return new File(c.getFilesDir(), "log.txt").isFile();
+        return new File(gameDir(c), "log.txt").isFile();
     }
 }
