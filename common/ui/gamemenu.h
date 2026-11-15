@@ -61,6 +61,7 @@ class GameMenu : public Tempest::Widget {
       Old       = uint8_t(QuestLog::Status::Success),
       Failed    = uint8_t(QuestLog::Status::Failed),
       Log       = uint8_t(5),
+      NbDone    = uint8_t(6), // New Balance: LOG_SUCCESS is 4 there (= Obsolete), see toStatus
       };
 
     struct ListContentDialog;
@@ -190,6 +191,7 @@ class GameMenu : public Tempest::Widget {
     LogView                               touchLogView() const;
     std::vector<const QuestLog::Quest*>   touchLogQuests() const;
     std::array<std::string,4>             touchLogTabNames() const;
+    std::array<QuestStat,4>               touchLogTabStatus() const;
     void                                  mobileLogTouch(float x, float y, int phase);
     void                                  mobileLogTap(float x, float y);
     void                                  paintTouchLog(Tempest::Painter& p);
@@ -220,6 +222,12 @@ class GameMenu : public Tempest::Widget {
     Item*                                 selectedContentItem(Item* it);
     void                                  setSelection(int cur, int seek=1);
     void                                  initItems();
+    // Returning New Balance: its status screen is a window of the Union plugin, MENU_STATUS has only a heading
+    bool                                  isNbStatus() const;
+    void                                  initNbStatus();
+#ifdef OPENGOTHIC_TOUCH_UI
+    void                                  paintNbStatus(Tempest::Painter& p);
+#endif
     void                                  getText(const Item &it, std::vector<char>& out);
     const GthFont&                        getTextFont(const Item &it);
     Item*                                 touchHitTest(Item& p, Tempest::Point pos);

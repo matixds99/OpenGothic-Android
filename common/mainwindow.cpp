@@ -10,6 +10,8 @@
 #include <Tempest/Application>
 #include <Tempest/Log>
 
+#include <algorithm>
+
 #include "ui/dialogmenu.h"
 #include "ui/menuroot.h"
 #include "ui/stacklayout.h"
@@ -20,8 +22,8 @@
 #include "world/triggers/abstracttrigger.h"
 #include "world/objects/npc.h"
 #include "world/objects/item.h"
-#include "game/originalsave.h"
 #include "game/serialize.h"
+#include "game/savegameheader.h"
 #include "game/globaleffects.h"
 #include "game/definitions/musicdefinitions.h"
 #include "utils/gthfont.h"
@@ -29,6 +31,7 @@
 #include "game/savestore.h"
 #include "game/combatfx.h"
 #include "game/worldmarkers.h"
+#include "game/nbbars.h"
 #include "scripting/gameapi.h"
 #include "utils/dbgpainter.h"
 
@@ -36,6 +39,63 @@
 #include "gothic.h"
 
 using namespace Tempest;
+
+// PROGRESS.TGA of Gothic II is 512 px wide; mods (New Balance) have HD textures 2x/4x bigger
+static float progressTexScale(const Tempest::Texture2d* loadBox) {
+  if(loadBox==nullptr || Gothic::inst().version().game==1 || loadBox->w()<=512)
+    return 1.f;
+  return float(loadBox->w())/512.f;
+  }
+
+// NB fix 40: the sprint of New Balance. In the original the Union plugin calls B_Hotkey_Sprint with the key ~ (the script
+// switches the overlay Humans_MageSprint.MDS and SPRINT_ACTIVE, it checks the stamina and the potion of the speed).
+static zenkit::DaedalusSymbol* nbSprintFn() {
+  auto* w = Gothic::inst().world();
+  return w==nullptr ? nullptr : w->script().getVm().find_symbol_by_name("B_HOTKEY_SPRINT");
+  }
+
+/// NB fix 41: the bar of the stamina of New Balance (shown by the scripts with Bar_*), nullptr when it is hidden.
+/// NB fix 45: the numbers are taken from the variables of the scripts (ATR_STAMINA / ATR_STAMINA_MAX*10, as the
+/// screen of the statistics and B_UpdateStaminaBar count them), so the bar never shows other numbers than the menu.
+static const NbBars::Bar* nbStaminaBar(const Tempest::Texture2d*& tex, float& value) {
+  auto* b = NbBars::at(NbBars::Stamina);
+  auto* w = Gothic::inst().world();
+  if(b==nullptr || !b->show || w==nullptr)
+    return nullptr;
+  auto& vm  = w->script().getVm();
+  auto* cur = vm.find_symbol_by_name("ATR_STAMINA");
+  auto* max = vm.find_symbol_by_name("ATR_STAMINA_MAX");
+  if(cur!=nullptr && max!=nullptr && !cur->is_member() && !max->is_member() &&
+     cur->type()==zenkit::DaedalusDataType::INT && max->type()==zenkit::DaedalusDataType::INT && max->get_int()>0) {
+    b->value    = cur->get_int();
+    b->maxRange = max->get_int()*10;
+    }
+  if(b->maxRange<=0)
+    return nullptr;
+  tex   = Resources::loadTexture(b->tex.empty() ? std::string("BAR_Stamina.tga") : b->tex);
+  value = std::clamp(float(b->value)/float(b->maxRange),0.f,1.f);
+  return tex!=nullptr ? b : nullptr;
+  }
+
+static bool nbToggleSprint() {
+  auto* w  = Gothic::inst().world();
+  auto* pl = Gothic::inst().player();
+  auto* fn = nbSprintFn();
+  if(fn==nullptr || pl==nullptr || pl->isDead() || pl->isDown() || Gothic::inst().isPause() || Gothic::inst().isInDialog())
+    return false;
+  w->script().getVm().call_function<void>(fn);
+  return true;
+  }
+
+#ifdef OPENGOTHIC_TOUCH_UI
+static bool nbSprintActive() {
+  auto* w = Gothic::inst().world();
+  if(w==nullptr)
+    return false;
+  auto* sym = w->script().getVm().find_symbol_by_name("SPRINT_ACTIVE");
+  return sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INT && sym->get_int()!=0;
+  }
+#endif
 
 MainWindow::MainWindow(Device& device)
   : Window(CommandLine::inst().isWindowMode() ? Normal : Maximized),device(device),swapchain(device,hwnd()),
@@ -231,10 +291,15 @@ void MainWindow::paintEvent(PaintEvent& event) {
     if(st==Gothic::LoadState::Saving) {
       drawSaving(p);
       } else {
-      if(auto back = Gothic::inst().loadingBanner()) {
+      auto back = Gothic::inst().loadingBanner();
+      if(back!=nullptr && !back->isEmpty()) {
         p.setBrush(Brush(*back,Painter::NoBlend));
         p.drawRect(0,0,this->w(),this->h(),
                    0,0,back->w(),back->h());
+        } else {
+        // no picture: black, not a white rectangle of an empty texture
+        p.setBrush(Brush(Color(0,0,0,1),Painter::NoBlend));
+        p.drawRect(0,0,this->w(),this->h());
         }
       if(loadBox!=nullptr && !loadBox->isEmpty()) {
         if(Gothic::inst().version().game==1) {
@@ -242,7 +307,12 @@ void MainWindow::paintEvent(PaintEvent& event) {
           int lh = int(h()*0.05);
           drawLoading(p,(w()-lw)/2, int(h()*0.75), lw, lh);
           } else {
-          drawLoading(p,int(w()*0.92)-loadBox->w(), int(h()*0.12), loadBox->w(),loadBox->h());
+          // the bar is made for PROGRESS.TGA of 512 px; a mod with a bigger (HD) texture, as New Balance
+          // with 1024x128, is drawn at the same size, not 2x bigger (see progressTexScale)
+          const float k  = progressTexScale(loadBox);
+          const int   lw = int(float(loadBox->w())/k);
+          const int   lh = int(float(loadBox->h())/k);
+          drawLoading(p,int(w()*0.92)-lw, int(h()*0.12), lw, lh);
           }
         }
       }
@@ -289,12 +359,23 @@ void MainWindow::paintEvent(PaintEvent& event) {
             drawBar(p,barHp, 10, h()-10, hp, AlignLeft | AlignBottom);
           if(showManaBar)
             drawBar(p,barMana, w()-10, h()-10, mp, AlignRight | AlignBottom);
+          bool swimDrawn = false;
           if(showSwimBar) {
             auto     v  = float(pl->diveTimeLimit())/1000.f;
             if(v>0) {
               auto t = float(pl->diveTime())/1000.f;
               drawBar(p,barMisc,w()/2,h()-10, (v-t)/(v), AlignHCenter | AlignBottom);
+              swimDrawn = true;
               }
+            }
+          // NB fix 41: the stamina in the middle, above the bar of the air when it is there
+          const Tempest::Texture2d* stTex = nullptr;
+          float                     stVal = 0;
+          if(nbStaminaBar(stTex,stVal)!=nullptr) {
+            const float scale = Gothic::interfaceScale(this);
+            const int   barW  = int(200.f*scale*float(std::min(w(),800))/800.f);
+            const int   barH  = barBack==nullptr ? 0 : int(float(barBack->h())*float(barW)/float(std::max(barBack->w(),1)));
+            drawBar(p,stTex,w()/2,h()-10-(swimDrawn ? barH+4 : 0),stVal,AlignHCenter | AlignBottom);
             }
           }
         }
@@ -578,6 +659,12 @@ void MainWindow::keyDownEvent(KeyEvent &event) {
     }
   uiKeyUp=nullptr;
 
+  // NB fix 40: ~ switches the sprint of New Balance, as in the original
+  if((event.code=='`' || event.code=='~') && nbToggleSprint()) {
+    event.accept();
+    return;
+    }
+
   auto act     = keycodec.tr(event);
   auto mapping = keycodec.mapping(event);
   player.onKeyPressed(act,event.key,mapping);
@@ -772,8 +859,7 @@ void MainWindow::paintFocus(Painter& p, const Focus& focus, const Matrix4x4& vp)
     if(co.active && co.showEnemyHp && barBack!=nullptr) {
       const int   barW = int(200.f*scale*float(std::min(w(),800))/800.f);
       const int   barH = int(float(barBack->h())*float(barW)/float(std::max(barBack->w(),1)));
-      const std::string text = std::to_string(focus.npc->attribute(ATR_HITPOINTS))+"/"+
-                               std::to_string(focus.npc->attribute(ATR_HITPOINTSMAX));
+      const std::string text = std::to_string(focus.npc->attribute(ATR_HITPOINTS))+"/"+std::to_string(focus.npc->attribute(ATR_HITPOINTSMAX));
       const auto  ts   = fnt.textSize(text);
       const int   tx   = w()/2-ts.w/2;
       const int   ty   = 10+barH+ts.h;
@@ -897,8 +983,7 @@ void MainWindow::drawTouchBars(Painter& p, Npc& pl) {
   const auto  pref      = AndroidInput::preferences();
   const bool  numbers   = pref.hudNumbers!=0;
   const bool  xp        = pref.hudXp!=0;
-  const auto  hpText    = std::to_string(pl.attribute(ATR_HITPOINTS))+"/"+
-                          std::to_string(pl.attribute(ATR_HITPOINTSMAX));
+  const auto  hpText    = std::to_string(pl.attribute(ATR_HITPOINTS))+"/"+std::to_string(pl.attribute(ATR_HITPOINTSMAX));
   const auto  mpText    = std::to_string(pl.attribute(ATR_MANA))+"/"+std::to_string(pl.attribute(ATR_MANAMAX));
   const auto  xpText    = std::to_string(pl.experience())+"/"+std::to_string(pl.experienceNext());
   auto&       hudFont   = Resources::font(Gothic::interfaceScale(this));
@@ -930,37 +1015,73 @@ void MainWindow::drawTouchBars(Painter& p, Npc& pl) {
   if(mode!=Mobile::Mode::Game)
     return;
 
-  // above the hotbar of the controls, same units as the model
-  // the hotbar follows the size of the buttons (settings), so do the bars over it
-  const float s     = std::min(float(w())/1000.f,float(h())/440.f);
-  const float slot  = Mobile::hotbarSlot(float(pref.buttons)/100.f);
-  const int   half  = int(slot*5*s);
-  const int   width = int(slot*3.2f*s);   // the frame keeps its proportions, so it is not too tall
-  const int   y     = h()-int((Mobile::HotbarBottom+slot+9)*s);
+  // NB fix 42: the bars stand where the editor of the HUD has put them (by default over the ends of the hotbar, the
+  // stamina of New Balance in the middle), in the size chosen there; a hidden bar is not drawn (in the editor it is)
+  const auto& places  = androidControls.hudPlaces();
+  const bool  editing = androidControls.editingHud();
+  const float buttons = float(pref.buttons)/100.f;
+  auto placeOf = [&](int i) {
+    const auto it = places.find(Mobile::HudBarIds[i]);
+    return it==places.end() ? Mobile::HudPlace() : it->second;
+    };
+  struct Drawn {
+    bool visible = false;
+    int  x = 0, top = 0, width = 0, bottom = 0;
+    };
+  Drawn drawn[Mobile::HudBarCount];
+  auto drawHudBar = [&](int i, const Tempest::Texture2d* tex, float value) {
+    const auto place = placeOf(i);
+    if(place.hidden && !editing)
+      return;
+    const auto r     = Mobile::hudBarRect(i,float(w()),float(h()),buttons,place);
+    const int  width = int(r.w);
+    const int  bh    = barHeight(width);
+    const int  bot   = int(r.y+r.h/2)+bh/2;
+    drawBar(p,tex,int(r.x),bot,width,value,AlignLeft | AlignBottom);
+    drawn[i] = {true,int(r.x),bot-bh,width,bot};
+    };
 
-  // the bars stand over the ends of the hotbar
-  drawBar(p,barHp,w()/2-half,y,width,hp,AlignLeft | AlignBottom);
-  const int xr = w()/2+half-width;
+  drawHudBar(0,barHp,hp);
   if(pl.isDive()) {
     const float total = float(pl.diveTimeLimit())/1000.f;
     const float left  = total>0 ? (total-float(pl.diveTime())/1000.f)/total : 0.f;
-    drawBar(p,barMisc,xr,y,width,left,AlignLeft | AlignBottom);
+    drawHudBar(2,barMisc,left);
     } else {
-    drawBar(p,barMana,xr,y,width,mp,AlignLeft | AlignBottom);
+    drawHudBar(2,barMana,mp);
     }
 
-  const int bh = barHeight(width);
+  // the stamina of New Balance (filled by the scripts with Bar_*): in the editor it is shown full to be placed
+  const Tempest::Texture2d* stTex = nullptr;
+  float                     stVal = 0;
+  const auto*               stBar = nbStaminaBar(stTex,stVal);
+  androidControls.stamina(NbBars::at(NbBars::Stamina)->maxRange>0);
+  if(stBar!=nullptr)
+    drawHudBar(1,stTex,stVal); else
+  if(editing && NbBars::at(NbBars::Stamina)->maxRange>0)
+    drawHudBar(1,Resources::loadTexture("BAR_Stamina.tga"),1.f);
+
   const int th = hudFont.textSize(hpText).h;
+  auto textOver = [&](const Drawn& d, const std::string& text, int line) {
+    // centered over the frame (the text is above it, not in it); line 1 is one more line higher
+    drawText(text,d.x+(d.width-hudFont.textSize(text).w)/2,d.top-2-line*(th+2));
+    };
   if(numbers) {
-    // centered over the bars (the text is above the frame, not in it)
-    const int top = y-bh-2;
-    drawText(hpText,w()/2-half+(width-hudFont.textSize(hpText).w)/2,top);
-    if(!pl.isDive())
-      drawText(mpText,xr+(width-hudFont.textSize(mpText).w)/2,top);
+    if(drawn[0].visible)
+      textOver(drawn[0],hpText,0);
+    if(drawn[2].visible && !pl.isDive())
+      textOver(drawn[2],mpText,0);
+    if(drawn[1].visible && stBar!=nullptr)
+      textOver(drawn[1],std::to_string(stBar->value)+"/"+std::to_string(stBar->maxRange),0);
     }
   if(xp) {
-    // between the bars, on the level of the frames
-    drawText(xpText,w()/2-hudFont.textSize(xpText).w/2,y-(bh-th)/2);
+    if(drawn[1].visible) {
+      // above the stamina (and its numbers)
+      textOver(drawn[1],xpText,numbers && stBar!=nullptr ? 1 : 0);
+      } else {
+      // between the bars of life and mana, on the level of the frames (the default place)
+      const auto r = Mobile::hudBarRect(1,float(w()),float(h()),buttons,Mobile::HudPlace());
+      drawText(xpText,w()/2-hudFont.textSize(xpText).w/2,int(r.y+r.h/2)+th/2);
+      }
     }
   }
 #endif
@@ -1046,8 +1167,11 @@ void MainWindow::drawProgress(Painter &p, int x, int y, int w, int h, float v) {
   p.setBrush(*loadBox);
   p.drawRect(x,y,w,h, 0,0,loadBox->w(),loadBox->h());
 
-  int paddL = int((float(w)*75.f)/float(loadBox->w()));
-  int paddT = int((float(h)*10.f)/float(loadBox->h()));
+  // the margins of the bar are in the pixels of the original 512 px texture: for an HD texture
+  // of a mod they are scaled with it, else the bar is drawn over the frame
+  const float k = progressTexScale(loadBox);
+  int paddL = int((float(w)*75.f*k)/float(loadBox->w()));
+  int paddT = int((float(h)*10.f*k)/float(loadBox->h()));
 
   if(Gothic::inst().version().game==1) {
     paddL = int((float(w)*30.f)/float(loadBox->w()));
@@ -1204,6 +1328,7 @@ uint64_t MainWindow::tick() {
   if(errorScreen.isActive())
     clearInput();
   Scripting::game::tick();
+  NbBars::inventoryOpen() = inventory.isActive();   // NB fix 49: Hlp_InventoryIsOpen
   if(auto* w = Gothic::inst().world()) {
     // a script (CoM, fistfight) closes the inventory of the player
     if(w->script().dmaTakeInventoryClose() && inventory.isActive())
@@ -1238,8 +1363,6 @@ uint64_t MainWindow::tick() {
   if(st==Gothic::LoadState::Finalize || st==Gothic::LoadState::FailedLoad || st==Gothic::LoadState::FailedSave) {
     const std::string failure = Gothic::inst().loadError();
     Gothic::inst().finishLoading();
-    if(st==Gothic::LoadState::Finalize && OriginalSave::takeSaveName(importedSaveName))
-      importedSaveDelay = 30; // a few frames, the save takes a picture of the screen
     if(st==Gothic::LoadState::FailedLoad) {
       // the game was dropped by the start of loading: nothing to continue, back to the menu with the reason on the screen
       rootMenu.setMainMenu();
@@ -1263,12 +1386,6 @@ uint64_t MainWindow::tick() {
   video.tick();
   if(video.isActive())
     return 0;
-
-  if(importedSaveDelay>0 && --importedSaveDelay==0 && Gothic::inst().isInGame()) {
-    // an imported original save gets a slot of its own right away: it is on the list of the saves like any other
-    Gothic::inst().save(SaveStore::newFile(),importedSaveName);
-    importedSaveName.clear();
-    }
 
   if(Gothic::inst().isPause()) {
     return 0;
@@ -1299,8 +1416,6 @@ uint64_t MainWindow::tick() {
 #ifdef OPENGOTHIC_TOUCH_UI
   total = fastForwardDt(dt);
 #endif
-  if(dialogs.isActive())
-    ;//clearInput();
   const uint64_t steps = std::max<uint64_t>(1,(total+49)/50);
   for(uint64_t i=0; i<steps; ++i) {
     const uint64_t step = total/steps + (i<total%steps ? 1 : 0);
@@ -1310,9 +1425,6 @@ uint64_t MainWindow::tick() {
       clearInput();
     if(i==0)
       tickMouse(dt);
-#ifdef OPENGOTHIC_TOUCH_UI
-    player.setPadMove(androidControls.moveYaw(),androidControls.moveSide());
-#endif
     player.tickMove(step);
     }
   update();
@@ -1451,27 +1563,14 @@ Camera::Mode MainWindow::solveCameraMode() const {
   }
 
 void MainWindow::startGame(std::string_view slot) {
-  // before the old game is dropped: the scripts of the mod choose the picture
-  const std::string banner = Gothic::loadingBannerName(Gothic::inst().world()!=nullptr ? &Gothic::inst().world()->script() : nullptr,"LOADING.TGA");
   // gothic.emitGlobalSound(gothic.loadSoundFx("NEWGAME"));
 
   if(Gothic::inst().checkLoading()==Gothic::LoadState::Idle){
     setGameImpl(nullptr);
     }
 
-  Gothic::inst().startLoad(banner,[slot=std::string(slot)](std::unique_ptr<GameSession>&& game){
+  Gothic::inst().startLoad("LOADING.TGA",[slot=std::string(slot)](std::unique_ptr<GameSession>&& game){
     game = nullptr; // clear world-memory now
-    OriginalSave original;
-    if(OriginalSave::pending(original)) {
-      try {
-        return std::unique_ptr<GameSession>(new GameSession(original));
-        }
-      catch(const std::exception& e) {
-        // the next New game is a plain one; the reason is on the screen
-        OriginalSave::retire(original,false,"");
-        throw std::runtime_error(std::string("original save import: ")+e.what());
-        }
-      }
     std::unique_ptr<GameSession> w(new GameSession(slot));
     return w;
     });
@@ -1481,8 +1580,6 @@ void MainWindow::startGame(std::string_view slot) {
   }
 
 void MainWindow::loadGame(std::string_view slot) {
-  // before the old game is dropped: the scripts of the mod choose the picture
-  const std::string banner = Gothic::loadingBannerName(Gothic::inst().world()!=nullptr ? &Gothic::inst().world()->script() : nullptr,"LOADING.TGA");
   if(auto* w = Gothic::inst().world(); w!=nullptr && w->script().dmaLoadDisabled()) {
     Log::i("The scripts of the mod do not allow loading now (ENABLELOADGAME)");
     return;
@@ -1492,6 +1589,27 @@ void MainWindow::loadGame(std::string_view slot) {
     }
 
   Gothic::inst().setBenchmarkMode(Benchmark::None);
+  // the loading picture of the world of the save (LOADING_NEWWORLD.TGA), as for a change of the world:
+  // the mods on Union (New Balance) choose LOADING_<WORLD>_<number> by it
+  std::string banner = "LOADING.TGA";
+  try {
+    Tempest::RFile fin{std::string(slot)};
+    Serialize      reader(fin);
+    SaveGameHeader hdr;
+    reader.setEntry("header");
+    reader.read(hdr);
+    std::string w = hdr.world;
+    const size_t beg = w.find_last_of("\\/");
+    if(beg!=std::string::npos)
+      w = w.substr(beg+1);
+    const size_t end = w.rfind('.');
+    if(end!=std::string::npos)
+      w.resize(end);
+    if(!w.empty())
+      banner = "LOADING_" + w + ".TGA";
+    }
+  catch(...) {
+    }
   Gothic::inst().startLoad(banner,[slot=std::string(slot)](std::unique_ptr<GameSession>&& game){
     game = nullptr; // clear world-memory now
     try {
@@ -1963,8 +2081,8 @@ void MainWindow::onMobileAction(int id) {
     auto* w  = Gothic::inst().world();
     if(mobileContext()==Mobile::Mode::Game && pl!=nullptr && w!=nullptr && !pl->isDown() &&
        !dialogs.isActive() && w->currentCs()==nullptr && !w->script().dmaSaveDisabled()) {
-      const int n = Gothic::inst().quickSave();
-      Gothic::inst().onPrint("Quick save "+std::to_string(n));
+      Gothic::inst().quickSave();
+      Gothic::inst().onPrint("Quick save");
       }
     return;
     }
@@ -1974,11 +2092,9 @@ void MainWindow::onMobileAction(int id) {
     auto* pl = Gothic::inst().player();
     if(pl!=nullptr && pl->isDead()) {
       const auto saves = SaveStore::list();
-      if(saves.empty()) {
+      if(!saves.empty())
+        Gothic::inst().load(saves.front().file); else
         Gothic::inst().onPrint("No save to load");
-        } else {
-        Gothic::inst().load(saves.front().file);
-        }
       }
     return;
     }
@@ -1986,6 +2102,11 @@ void MainWindow::onMobileAction(int id) {
   if(id==Mobile::Special::Speed) {
     if(Scripting::ModHost::inst().fastForwardWanted())
       fastForward = !fastForward;
+    return;
+    }
+  if(id==Mobile::Special::Sprint) {
+    if(mobileContext()==Mobile::Mode::Game)
+      nbToggleSprint();
     return;
     }
   if(mobileContext()!=Mobile::Mode::Game)
@@ -1996,19 +2117,6 @@ void MainWindow::onMobileAction(int id) {
     if(auto pl = Gothic::inst().player())
       cycleSpell(*pl);
     }
-  }
-
-/// The option of the settings: a weapon in the hand locks the opponent by itself, as the lock button does
-void MainWindow::updateAutoLock() {
-  auto* pl = Gothic::inst().player();
-  const bool drawn = pl!=nullptr && pl->weaponState()!=WeaponState::NoWeapon;
-  const bool fresh = drawn && !weaponWasDrawn;
-  weaponWasDrawn   = drawn;
-  if(!fresh || AndroidInput::preferences().autoLock==0)
-    return;
-  if(mobileContext()!=Mobile::Mode::Game || pl->isDown() || pl->interactive()!=nullptr)
-    return;
-  player.autoLock();
   }
 
 /// Damage is felt: the stronger the hit, the longer and stronger the vibration
@@ -2031,7 +2139,6 @@ void MainWindow::updateHaptics() {
 
 void MainWindow::updateMobileControls() {
   updateHaptics();
-  updateAutoLock();
   updateMobileAvailability();
   androidControls.inventoryLists(inventory.mobileTwoLists());
   androidControls.gui(Gothic::interfaceScale(this));
@@ -2050,8 +2157,12 @@ void MainWindow::updateMobileAvailability() {
   const auto mode  = mobileContext();
 
   // a dead player: no button of the speed, a button that loads the newest save instead
-  const auto* dead = Gothic::inst().player();
-  androidControls.playerDead(mode==Mobile::Mode::Game && dead!=nullptr && dead->isDead());
+  {
+  auto pl = Gothic::inst().player();
+  androidControls.playerDead(mode==Mobile::Mode::Game && pl!=nullptr && pl->isDead());
+  // NB fix 40: the button of the sprint, when the scripts have it
+  androidControls.sprint(nbSprintFn()!=nullptr);
+  }
 
   if(mode==Mobile::Mode::Game) {
     bool target = false, spells = false, movement = false;
@@ -2070,8 +2181,6 @@ void MainWindow::updateMobileAvailability() {
       movement = alive && active;
       if(alive)
         allowed |= keyMask(Key::Status) | keyMask(Key::Log) | keyMask(Key::Map);
-      if(alive && pl->isTransformed())
-        allowed |= keyMask(Key::Enter);   // the only way back to the human form: the touch screen has no keyboard
       if(ground) {
         allowed |= keyMask(Key::Inventory) | keyMask(Key::Weapon) | keyMask(Key::Walk);
         if(pl->canSneak())
@@ -2083,11 +2192,8 @@ void MainWindow::updateMobileAvailability() {
           allowed |= keyMask(Key::Action);
         if(melee)
           allowed |= keyMask(Key::AttackLeft) | keyMask(Key::AttackRight) | keyMask(Key::Block);
-        if(armed) {
+        if(armed)
           allowed |= keyMask(Key::StrafeLeft) | keyMask(Key::StrafeRight);
-          // the arrows forward and back with the side steps (the back one is the jump back of the fight)
-          allowed |= keyMask(Key::Up) | keyMask(Key::Down);
-          }
 
         target = armed;
 
@@ -2136,6 +2242,7 @@ void MainWindow::updateMobileOverlay() {
   hud.inventoryTransfer = inventory.isOpen()!=InventoryMenu::State::Equip;
   hud.targetLocked = player.hasLock();
   hud.fastForward  = fastForward;
+  hud.sprint       = nbSprintActive();
   if(mobileContext()==Mobile::Mode::Inventory)
     hud.useLabel = std::string(inventory.mobileActionLabel());
 

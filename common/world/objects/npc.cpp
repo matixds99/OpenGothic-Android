@@ -5,6 +5,8 @@
 #include <Tempest/Matrix4x4>
 #include <Tempest/Log>
 #include <cctype>
+#include <cmath>
+#include <unordered_map>
 
 #include "graphics/mesh/skeleton.h"
 #include "graphics/visualfx.h"
@@ -22,8 +24,66 @@
 #include "camera.h"
 #include "gothic.h"
 #include "resources.h"
+#include "graphics/mesh/protomesh.h"
+#include "graphics/mesh/submesh/animmesh.h"
+#include "graphics/effect.h"
+#include "world/objects/pfxemitter.h"
+#include <unordered_set>
 
 using namespace Tempest;
+
+/// Returning NB: why a monster near the hero does not react (the state, the queue, the perceptions, the attitude).
+/// "NB ai" in the log, when the state or the target of the character changes (NB fix 52). false, once the AI works.
+static constexpr bool  NB_AI_TRACE      = true;
+static constexpr float NB_AI_TRACE_DIST = 2500.f;
+
+static bool nbAiTraceDue(const void* npc, uint64_t now) {
+  static std::unordered_map<const void*,uint64_t> next;
+  if(next.size()>4096)
+    next.clear();
+  auto& t = next[npc];
+  if(now<t)
+    return false;
+  t = now+3000;
+  return true;
+  }
+
+static bool nbAiTraceChanged(const void* npc, std::string key) {
+  static std::unordered_map<const void*,std::string> last;
+  if(last.size()>4096)
+    last.clear();
+  auto& l = last[npc];
+  if(l==key)
+    return false;
+  l = std::move(key);
+  return true;
+  }
+
+/// NB fix 54: an animation of AI_PlayAni that the model has but cannot start now (e.g. T_WARN of a goblin that holds its
+/// club - the goblins are in the fight mode from Npc_SetToFightMode) was put back to the queue without end: the queue
+/// never got empty and the monster stood still (AI_Attack waits for an empty queue). It is tried 1.5 s, then dropped.
+static bool nbAniRetry(const void* npc, const std::string& ani, uint64_t now) {
+  static std::unordered_map<const void*,std::pair<std::string,uint64_t>> since;
+  if(since.size()>4096)
+    since.clear();
+  auto it = since.find(npc);
+  if(it==since.end() || it->second.first!=ani) {
+    since[npc] = {ani,now};
+    return true;
+    }
+  if(now<it->second.second+1500)
+    return true;
+  since.erase(it);
+  return false;
+  }
+
+/// NB fix 33: the hits a character got since its last jump back
+static std::unordered_map<const void*,int>& nbHitsSinceJump() {
+  static std::unordered_map<const void*,int> m;
+  if(m.size()>4096)
+    m.clear();
+  return m;
+  }
 
 /// how long AI_WaitTillEnd waits for a character before the scene goes on (ms)
 static constexpr uint64_t WAIT_TILL_END_MAX = 30000;
@@ -221,6 +281,26 @@ Npc::~Npc(){
     hnpc->user_ptr = nullptr;
   }
 
+int32_t Npc::newBalanceGetNpcVar(int32_t index) const {
+  if(index<0) {
+    Log::e("RX_GETNPCVAR: negative index ",index);
+    return 0;
+    }
+  auto it = newBalanceNpcVars.find(index);
+  return it==newBalanceNpcVars.end() ? 0 : it->second;
+  }
+
+void Npc::newBalanceSetNpcVar(int32_t index, int32_t value) {
+  if(index<0) {
+    Log::e("RX_SETNPCVAR: negative index ",index);
+    return;
+    }
+  if(value==0)
+    newBalanceNpcVars.erase(index);
+  else
+    newBalanceNpcVars[index] = value;
+  }
+
 void Npc::save(Serialize &fout, size_t id, std::string_view directory) {
   fout.setEntry("worlds/",fout.worldName(),directory,id,"/data");
   fout.write(*hnpc);
@@ -265,6 +345,12 @@ void Npc::save(Serialize &fout, size_t id, std::string_view directory) {
   fout.setEntry("worlds/",fout.worldName(),directory,id,"/inventory");
   if(!invent.isEmpty() || id==size_t(-1))
     invent.save(fout);
+  if(!newBalanceNpcVars.empty()) {
+    fout.setEntry("worlds/",fout.worldName(),directory,id,"/new-balance-npc-vars");
+    fout.write(uint8_t(1),uint32_t(newBalanceNpcVars.size()));
+    for(const auto& [index,value]:newBalanceNpcVars)
+      fout.write(index,value);
+    }
   if(!walkStopChasmEnabled) {
     fout.setEntry("worlds/",fout.worldName(),directory,id,"/compat-movement");
     fout.write(uint8_t(1),walkStopChasmEnabled);
@@ -277,15 +363,6 @@ void Npc::save(Serialize &fout, size_t id, std::string_view directory) {
     fout.setEntry("worlds/",fout.worldName(),directory,id,"/compat-model-clock");
     fout.write(uint8_t(1));
     visual.pose().saveModelClock(fout);
-    }
-  if(!randomAni.empty()) {
-    fout.setEntry("worlds/",fout.worldName(),directory,id,"/compat-random-ani");
-    fout.write(uint8_t(1),uint32_t(randomAni.size()));
-    for(auto& r:randomAni) {
-      fout.write(r.base,r.freq,uint32_t(r.list.size()));
-      for(auto& i:r.list)
-        fout.write(i);
-      }
     }
   if(auto* light = owner.script().findSymbol("SPL_LIGHT"); light!=nullptr && light->type()==zenkit::DaedalusDataType::INT) {
     const uint64_t remaining = visual.spellRemainingTime(light->get_int(),owner.tickCount());
@@ -365,6 +442,21 @@ void Npc::load(Serialize &fin, size_t id, std::string_view directory) {
   if(fin.setEntry("worlds/",fin.worldName(),directory,id,"/inventory"))
     invent.load(fin,*this);
 
+  newBalanceNpcVars.clear();
+  if(fin.setEntry("worlds/",fin.worldName(),directory,id,"/new-balance-npc-vars")) {
+    uint8_t version = 0;
+    uint32_t count = 0;
+    fin.read(version,count);
+    if(version!=1 || count>fin.remaining()/8)
+      throw SaveGameError("Invalid New Balance NPC variables in savegame");
+    for(uint32_t i=0; i<count; ++i) {
+      int32_t index = 0, value = 0;
+      fin.read(index,value);
+      if(index<0 || !newBalanceNpcVars.emplace(index,value).second)
+        throw SaveGameError("Invalid New Balance NPC variable index in savegame");
+      }
+    }
+
   walkStopChasmEnabled = true;
   if(fin.setEntry("worlds/",fin.worldName(),directory,id,"/compat-movement")) {
     uint8_t version = 0;
@@ -379,27 +471,6 @@ void Npc::load(Serialize &fin, size_t id, std::string_view directory) {
     fin.read(version);
     if(version==1)
       fin.read(compatDiveLimit,compatDiveRemaining);
-    }
-
-  randomAni.clear();
-  if(fin.setEntry("worlds/",fin.worldName(),directory,id,"/compat-random-ani")) {
-    uint8_t  version = 0;
-    uint32_t count   = 0;
-    fin.read(version);
-    if(version==1) {
-      fin.read(count);
-      for(uint32_t i=0; i<count && i<64; ++i) {
-        RandomAni r;
-        uint32_t  n = 0;
-        fin.read(r.base,r.freq,n);
-        for(uint32_t j=0; j<n && j<256; ++j) {
-          std::string name;
-          fin.read(name);
-          r.list.push_back(std::move(name));
-          }
-        randomAni.push_back(std::move(r));
-        }
-      }
     }
 
   // post-alignment
@@ -572,13 +643,6 @@ void Npc::setRunAngle(float angle) {
   runAng = angle;
   }
 
-void Npc::setMoveYaw(float angle) {
-  if(moveYawDeg==angle)
-    return;
-  durtyTranform |= TR_Rot;
-  moveYawDeg = angle;
-  }
-
 float Npc::angleDir(float x, float z) {
   float a = 0;
   if(x!=0.f || z!=0.f)
@@ -615,6 +679,11 @@ bool Npc::resetPositionToTA() {
   invent.clearSlot(*this,"",currentInteract!=nullptr);
   if(!isPlayer())
     setInteraction(nullptr,true);
+
+  // the player on a bed (Wld_SetTime of the sleep, in the dialog of the mob): the animation of the bed and the
+  // queue of the dialog stay, otherwise he stands up at once and then plays the animation of leaving the bed
+  if(isPlayer() && currentInteract!=nullptr)
+    return true;
 
   // return monsters to their way-points
   // if(routines.empty() && !isPlayer())
@@ -705,22 +774,10 @@ bool Npc::checkHealth(bool onChange, bool allowUnconscious) {
 
   const int minHp = isMonster() ? 0 : 1;
   if(hnpc->attribute[ATR_HITPOINTS]<=minHp) {
-    // Gothic 1: B_CombatReactToDamage / ZS_ReactToDamage set the TEMPORARY attitude to ATT_HOSTILE on every hit of the hero
-    // (except for friends). Counted here, it made every beaten man a dead one. Whether a man is knocked out or killed
-    // depends on the permanent attitude (and the guilds), as in the attitude of the engine without the temporary value.
-    const bool g1   = owner.version().game==1;
-    const bool hostile = currentOther!=nullptr &&
-                         (g1 ? owner.script().personAttitudeNoTemp(*this,*currentOther)
-                             : owner.script().personAttitude      (*this,*currentOther))==ATT_HOSTILE;
-    if(currentOther==nullptr || !allowUnconscious || !isHuman() || hostile){
-      if(hnpc->attribute[ATR_HITPOINTS]<=0) {
-        // a human is killed instead of being knocked out: the reason (see the attitude) goes to the log
-        if(onChange && isHuman() && currentOther!=nullptr && !isMonster())
-          Log::d("Npc::checkHealth: '",displayName().data(),"' is killed, not knocked out: allowUnconscious=",allowUnconscious,
-                 ", attitude=",int(owner.script().personAttitude(*this,*currentOther)),
-                 " (temp=",int(tempAttitude()),", perm=",int(attitude()),")");
+    if(currentOther==nullptr || !allowUnconscious || !isHuman() ||
+       owner.script().personAttitude(*this,*currentOther)==ATT_HOSTILE){
+      if(hnpc->attribute[ATR_HITPOINTS]<=0)
         onNoHealth(true,HS_Dead);
-        }
       return false;
       }
 
@@ -733,13 +790,41 @@ bool Npc::checkHealth(bool onChange, bool allowUnconscious) {
   return true;
   }
 
+// The blood of the original engine: a hit shows the particles of C_GilValues.blood_emitter of the guild
+// of the victim (in New Balance: BFX_Preset1 = the feathers of a scavenger, BFX_Golem = stones ...),
+// and the death - the same emitter with "_DEAD" (BFX_Preset1_DEAD), if the scripts define one.
+// OpenGothic played only the sound of a hit, so a hit "did not land".
+static void emitBloodFx(World& world, const Npc& victim, const Npc* attacker, bool death) {
+  const auto& gv = world.script().guildVal();
+  const auto  gl = std::min<uint32_t>(victim.guild(),zenkit::IGuildValues::count-1);
+  if(gv.blood_disabled[gl]!=0)
+    return;
+  std::string name = gv.blood_emitter[gl];
+  if(name.empty())
+    return;
+  if(death)
+    name += "_DEAD";
+  if(Gothic::inst().loadParticleFx(name,true)==nullptr)
+    return;
+
+  Tempest::Vec3 p = victim.centerPosition();
+  if(attacker!=nullptr && attacker!=&victim)
+    p += (attacker->centerPosition()-p)*0.3f;
+  Tempest::Matrix4x4 pos;
+  pos.identity();
+  pos.translate(p);
+
+  Effect e(PfxEmitter(world,name),"");
+  e.setObjMatrix(pos);
+  e.setActive(true);
+  world.runEffect(std::move(e));
+  }
+
 void Npc::onNoHealth(bool death, HitSound sndMask) {
+  if(death)
+    emitBloodFx(owner,*this,lastHit,true);
   invent.switchActiveWeapon(*this,Item::NSLOT);
-  // The runes of a monster are its body parts: the heart of an ice golem is the rune of Ice Cube. The rune that the monster had
-  // cast with stays equipped, and the equipped items are not shown in the list of the dead body: the heart could not be taken
-  // (Xardas asks for the hearts of the golems).
-  if(death && isMonster())
-    invent.unequipRunes(*this);  // CoM: in some scenes the hero keeps the weapon when he falls unconscious
+  // CoM: in some scenes the hero keeps the weapon when he falls unconscious
   if(death || !owner.script().dmaDropUnconscious(*this))
     visual.dropWeapon(*this);
   visual.dropShield(*this);
@@ -907,35 +992,19 @@ float Npc::qDistTo(const Item& p) const {
 Tempest::Vec3 Npc::fightDistanceTo(const Npc& tg) const {
   //NOTE: game script decribe comabt distance as distance between BIP01
   // however, in practice, it's easier and more relieble to use rootTr
-  //NOTE2: the root of the swamp shark is at the tip of its tail, 3.6 meters behind the origin of the model, and 2 meters
-  // outside of its collision box. The distance from there made the shark come to the character with its tail and cover
-  // it with the body, and it did not bite (the character was beside the head): the middle of the body is used for a root
-  // that is far outside of the body. The rotation and the scale of every character are its own.
-  static const float rootFarOutside = 150;
+  Vec3 cen, tgCen;
+  if(auto sk = visual.visualSkeleton()) {
+    cen = sk->rootTr;
+    transform().project(cen);
+    }
+  cen += position();
 
-  auto fightPoint = [](const Npc& n) {
-    Vec3 pos = n.position();
-    auto sk  = n.visual.visualSkeleton();
-    if(sk==nullptr)
-      return pos;
-
-    Vec3 root = sk->rootTr;
-    const auto& bMin = sk->bboxCol[0];
-    const auto& bMax = sk->bboxCol[1];
-    const float dx   = std::max(std::max(bMin.x-root.x, root.x-bMax.x), 0.f);
-    const float dz   = std::max(std::max(bMin.z-root.z, root.z-bMax.z), 0.f);
-    if(dx*dx+dz*dz>rootFarOutside*rootFarOutside) {
-      root.x = (bMin.x+bMax.x)*0.5f;
-      root.z = (bMin.z+bMax.z)*0.5f;
-      }
-
-    // the matrix of the model has the position too, and it can be one frame late: only the rotation and the scale are taken
-    Vec3 zero = {};
-    n.transform().project(zero);
-    n.transform().project(root);
-    return pos + (root-zero);
-    };
-  return fightPoint(*this) - fightPoint(tg);
+  if(auto sk = tg.visual.visualSkeleton()) {
+    tgCen = sk->rootTr;
+    transform().project(tgCen);
+    }
+  tgCen += tg.position();
+  return (cen-tgCen);
   }
 
 uint8_t Npc::calcAniComb() const {
@@ -1050,7 +1119,14 @@ void Npc::dropTorch(bool burnout) {
   }
 
 Tempest::Vec3 Npc::animMoveSpeed(uint64_t dt) const {
-  return visual.pose().animMoveSpeed(owner.tickCount(),dt);
+  // the movement of the animation (root motion) is scaled with the model, as in the original engine:
+  // a scaled down creature (Mdl_SetModelScale, e.g. the young wolf of New Balance with 0.7) also makes shorter
+  // steps. Without it the small wolf ran 1/0.7 = ~1.4x too fast for its legs.
+  auto v = visual.pose().animMoveSpeed(owner.tickCount(),dt);
+  v.x *= sz[0];
+  v.y *= sz[1];
+  v.z *= sz[2];
+  return v;
   }
 
 void Npc::setVisual(const Skeleton* v) {
@@ -1058,7 +1134,6 @@ void Npc::setVisual(const Skeleton* v) {
     return;
   visual.setVisual(v);
   visual.clearOverlays();
-  randomAni.clear();   // they belong to the model
   invalidateTalentOverlays();
   }
 
@@ -1105,6 +1180,20 @@ void Npc::updateArmor() {
       auto  vbody = asc.empty() ? MeshObjects::Mesh() : w.addView(asc,vColor,0,bdColor);
       visual.setArmor(*this,std::move(vbody));
       }
+    }
+
+  // NB fix 39: the helmet (an armor with wear=WEAR_HEAD) hangs in the slot ZS_HELMET, the armor of the body stays.
+  // Before it took the place of the armor: the paladins of New Balance (Lothar, Lord Andre) had only the head.
+  auto* sk = visual.visualSkeleton();
+  if(sk==nullptr)
+    return;
+  const std::string_view slot = sk->findNode("ZS_HELMET")!=size_t(-1) ? "ZS_HELMET" : "BIP01 HEAD";
+  if(auto hm = invent.currentHelmet()) {
+    auto& itData = hm->handle();
+    auto& vis    = itData.visual_change.empty() ? itData.visual : itData.visual_change;
+    visual.setDecor(vis.empty() ? MeshObjects::Mesh() : w.addView(vis),slot);
+    } else {
+    visual.clearDecor(slot);
     }
   }
 
@@ -1182,82 +1271,6 @@ void Npc::setScale(float x, float y, float z) {
 
 const Animation::Sequence* Npc::playAnimByName(std::string_view name, BodyState bs) {
   return visual.startAnimAndGet(*this,name,calcAniComb(),bs);
-  }
-
-static std::string upperName(std::string_view name) {
-  std::string ret(name);
-  for(auto& c:ret)
-    c = char(std::toupper(static_cast<unsigned char>(c)));
-  return ret;
-  }
-
-void Npc::setRandomAni(std::string_view base, std::string_view ani) {
-  if(base.empty() || ani.empty())
-    return;
-  const std::string b = upperName(base), a = upperName(ani);
-  auto it = std::find_if(randomAni.begin(),randomAni.end(),[&b](const RandomAni& r){ return r.base==b; });
-  if(it==randomAni.end()) {
-    randomAni.emplace_back();
-    randomAni.back().base = b;
-    it = randomAni.end()-1;
-    }
-  if(std::find(it->list.begin(),it->list.end(),a)==it->list.end())
-    it->list.push_back(a);
-  }
-
-void Npc::setRandomAniFreq(std::string_view base, float seconds) {
-  if(base.empty() || !std::isfinite(seconds) || seconds<=0.f)
-    return;
-  const std::string b = upperName(base);
-  auto it = std::find_if(randomAni.begin(),randomAni.end(),[&b](const RandomAni& r){ return r.base==b; });
-  if(it==randomAni.end()) {
-    randomAni.emplace_back();
-    randomAni.back().base = b;
-    it = randomAni.end()-1;
-    }
-  it->freq   = seconds;
-  it->nextAt = 0;
-  }
-
-void Npc::tickRandomAni() {
-  const uint64_t now = owner.tickCount();
-  const auto&    pose = visual.pose();
-
-  for(auto& r:randomAni) {
-    if(!r.playing.empty()) {
-      if(pose.isInAnim(r.playing))
-        continue;
-      // it has ended: the 'next' of the animation leads back to the base one
-      r.playing.clear();
-      r.nextAt = 0;
-      }
-
-    if(r.list.empty() || !pose.isInAnim(r.base)) {
-      r.nextAt = 0;
-      continue;
-      }
-
-    if(r.nextAt==0) {
-      // between half and one and a half of the frequency
-      const uint64_t span = uint64_t(double(r.freq)*1000.0);
-      r.nextAt = now + span/2 + owner.script().rand(uint32_t(std::min<uint64_t>(span+1,UINT32_MAX)));
-      continue;
-      }
-    if(now<r.nextAt)
-      continue;
-    r.nextAt = 0;
-
-    // only the animations that lead back to the base one: otherwise the character would be left in a pose that nobody ends
-    const std::string& pick = r.list[owner.script().rand(uint32_t(r.list.size()))];
-    const auto* sq = visual.findAnim(pick);
-    if(sq==nullptr || sq->next!=r.base) {
-      Log::d("random animation ",pick," of ",r.base," is not played: ",sq==nullptr ? "there is no such animation" : "it does not lead back");
-      r.list.erase(r.list.begin()+(&pick-r.list.data()));
-      continue;
-      }
-    if(playAnimByName(pick,BS_NONE)!=nullptr)
-      r.playing = pick;
-    }
   }
 
 bool Npc::setAnim(Npc::Anim a) {
@@ -1371,10 +1384,6 @@ bool Npc::isFlyAnim() const {
 
 bool Npc::isFalling() const {
   return mvAlgo.state()==MoveAlgo::Falling;
-  }
-
-float Npc::falldownHeight() const {
-  return mvAlgo.falldownHeight();
   }
 
 bool Npc::isFallingDeep() const {
@@ -1522,6 +1531,14 @@ void Npc::setRefuseTalk(uint64_t milis) {
 int32_t Npc::attribute(Attribute a) const {
   if(a<ATR_MAX)
     return hnpc->attribute[a];
+  // NB fix 46: the conditions of the items of New Balance (C_ITEM.COND_ATR) name also the variables of the plugin:
+  // AIVRX_NPC_ATR_BOW 89, _SHIELD 90, _CROSSBOW 91, _STAMINA 92 (RX_GetNpcVar). The stamina is kept there as
+  // ATR_STAMINA_MAX (x1, B_CheckMenuOption keeps it so), the conditions are x10 like everything shown by NB:
+  // "the stamina needed: 650" with 780 of stamina. Before every such item was refused ("not enough stamina").
+  if(89<=int32_t(a) && int32_t(a)<=92) {
+    const int32_t v = newBalanceGetNpcVar(int32_t(a));
+    return int32_t(a)==92 ? v*10 : v;
+    }
   return 0;
   }
 
@@ -1820,7 +1837,7 @@ bool Npc::implGoTo(uint64_t dt, float destDist) {
     }
 
   // a scene of a mod waits for the characters that it sends to the way points (AI_WaitTillEnd): one that is blocked by a collision
-  // that the scripts should have switched off would hold the scene for ever.
+  // that the scripts should have switched off would hold the scene for ever
   const Npc* player = owner.player();
   if(go2.wp!=nullptr && !isInAir() && !isSwim() && !isDive() && !isDown() && interactive()==nullptr && owner.script().hasDma() &&
      player!=nullptr && (player->position()-position()).length()<4000.f &&   // near the player: a routine or the commands of a script
@@ -1951,11 +1968,35 @@ bool Npc::implAttack(uint64_t dt) {
   // NOTE: in original-game, this behaviour seem to be hardcoded
   // test case: wolf jump-back quite often when close, but programmed to jump only if attacked
   // so far promoting wait to jump seem to work best
-  const bool jmp = fghAlgo.isInCloseupRange(*this,*currentTarget,owner.script()) && fghAlgo.isInFocusAngle(*this,*currentTarget);
+  // Fix (NB, Renovation, vanilla G2 alike): the promotion was done for any WAIT/TURN within 0.75 of the
+  // base fight distance - that is the normal melee distance of a wolf or a scavenger, so with
+  // FA_MY_W_FOCUS = {ATTACK, WAIT} every second decision became a jump back: monsters kept backing off
+  // and circling instead of fighting. Now only a WAIT, and only when the bodies really overlap
+  // (closer than half of the base distance), is a step back - the "too close" correction of the script.
+  const float closeD = fghAlgo.baseDistance(*this,*currentTarget,owner.script())*0.5f;
+  const bool  jmp    = fghAlgo.qDistTo(*this,*currentTarget)<=closeD*closeD && fghAlgo.isInFocusAngle(*this,*currentTarget);
 
   // vanilla behavior, required for orcs in G1 orcgraveyard
   if(ws==WeaponState::NoWeapon && isAiQueueEmpty() && canSwitchWeapon()) {
-    drawWeaponMelee();
+    // NB fix 54: a goblin (a monster with a club, Npc_SetToFightMode) that put the club away to sleep has no animation
+    // to take it again: drawWeaponMelee failed every frame and the goblin stood in ZS_MM_Attack (weapon=0, the queue
+    // empty). In Gothic it has the club in the hand at once - here after 1 s of failures too.
+    static std::unordered_map<const Npc*,uint64_t> drawFail;
+    if(drawWeaponMelee()) {
+      drawFail.erase(this);
+      }
+    else if(!isHuman() && invent.currentMeleeWeapon()!=nullptr) {
+      if(drawFail.size()>4096)
+        drawFail.clear();
+      auto it = drawFail.find(this);
+      if(it==drawFail.end())
+        drawFail[this] = owner.tickCount(); else
+      if(owner.tickCount()>it->second+1000) {
+        drawFail.erase(it);
+        Log::i("NB ai: ",displayName().data()," cannot draw its weapon - it takes it at once");
+        setToFightMode(invent.currentMeleeWeapon()->clsId());
+        }
+      }
     return true;
     }
 
@@ -2056,7 +2097,11 @@ bool Npc::implAttack(uint64_t dt) {
       const bool atk     = doAttack(atkType, BS_HIT);
 
       if(atk || mvAlgo.isSwim() || mvAlgo.isDive()) {
-        uint64_t aniTime = visual.pose().atkTotalTime()+1;
+        // NB fix 26: atkTotalTime ends at DEF_HIT_END - the window of the combo of a weapon. A monster (and a
+        // fist) has no combo: the next decision came at the end of the hit and the new attack cut the
+        // animation, so the animals bit ~1.5 times faster than in Gothic. They wait for the whole animation.
+        uint64_t aniTime = (ws==WeaponState::Fist ? visual.pose().animationTotalTime()
+                                                  : visual.pose().atkTotalTime())+1;
         implFaiWait(aniTime);
         if(bs==BS_RUN)
           implAniWait(aniTime);
@@ -2114,7 +2159,32 @@ bool Npc::implAttack(uint64_t dt) {
     return true;
     }
 
-  if(act==FightAlgo::MV_JUMPBACK || (act==FightAlgo::MV_WAIT && jmp) || (act==FightAlgo::MV_TURN && jmp)) {
+  // NB fix 22: WAIT->JUMPBACK promotion (too close) limited by a cooldown, so W_FOCUS={ATTACK,WAIT}
+  // does not turn into a jump-back every second decision
+  // (kept here, not in FightAlgo, so npc.cpp builds with the fightalgo.h of the project)
+  static std::unordered_map<const Npc*,uint64_t> closeJumpTime;
+  const uint64_t now       = owner.tickCount();
+  const auto     cjIt      = closeJumpTime.find(this);
+  const bool     cjReady   = (cjIt==closeJumpTime.end() || now>=cjIt->second+2500);
+  // NB fix 28: the promotion is a trick for the monsters (a wolf that is too close); a human with a weapon
+  // (Lares) jumped back instead of hitting whenever its tactic chose WAIT near the enemy
+  const bool     closeJump = (act==FightAlgo::MV_WAIT && jmp && cjReady && ws==WeaponState::Fist);
+  // NB fix 33: the rhythm of a scavenger in Gothic: it jumps back from the swing of the hero only after it got two
+  // hits (the engine lets it decide only when its action ended and its stagger is over). OpenGothic decided every
+  // 0.2 s and the scavenger jumped back already from the first swing. Until the second hit it does not jump, it
+  // waits (and runs into the blade). Fix 34: every monster (a fight with fists/claws), not only FAI_SCAVENGER.
+  if(act==FightAlgo::MV_JUMPBACK && !closeJump && ws==WeaponState::Fist && currentTarget->isPrehit()) {
+    auto& hits = nbHitsSinceJump();
+    auto  it   = hits.find(this);
+    if(it==hits.end() || it->second<2) {
+      fghAlgo.consumeAction();
+      implFaiWait(200);
+      return true;
+      }
+    }
+  if(act==FightAlgo::MV_JUMPBACK || closeJump) {
+    if(closeJump)
+      closeJumpTime[this] = now;
     if(isSwim()) {
       fghAlgo.consumeAction();
       return true;
@@ -2130,6 +2200,7 @@ bool Npc::implAttack(uint64_t dt) {
       return true;
       }
     if(setAnim(Npc::Anim::MoveBack)) {
+      nbHitsSinceJump().erase(this);
       implFaiWait(visual.pose().animationTotalTime());
       fghAlgo.consumeAction();
       }
@@ -2441,8 +2512,11 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
   hitResult = DamageCalculator::damageValue(other,*this,b,isSpell,dmg,bMask);
   owner.script().dmaDamageEnd(*this,dmaDamage);
   dontKill = dmaDamage.dontKill;
-  if(!isSpell && !isDown() && hitResult.hasHit)
+  if(!isSpell && !isDown() && hitResult.hasHit) {
     owner.addWeaponHitEffect(other,b,*this).play();
+    if(hitResult.value>0)
+      emitBloodFx(owner,*this,&other,false);
+    }
 
   if(isDown()) {
     onNoHealth(dontKill,HS_NoSound);
@@ -2450,6 +2524,7 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
     }
 
   if(hitResult.hasHit) {
+    ++nbHitsSinceJump()[this];   // NB fix 33
     auto state = bodyStateMasked();
     if(interactive()==nullptr && ((state&BS_FLAG_INTERRUPTABLE)!=BS_NONE || state==BS_RUN || state==BS_NONE)) {
       //NONE/RUN requires for monsters like waran
@@ -2507,8 +2582,7 @@ void Npc::takeFallDamage(const Vec3& fallSpeed) {
       setAnim(lastHitType=='A' ? Anim::FallenA : Anim::FallenB);
       }
     }
-  // only the vertical speed counts: the speed of a run or a jump forward made a small drop look like a high one
-  auto dmg = DamageCalculator::damageFall(*this,std::abs(fallSpeed.y));
+  auto dmg = DamageCalculator::damageFall(*this,fallSpeed.length());
   if(!dmg.hasHit)
     return;
   int32_t hp = attribute(ATR_HITPOINTS);
@@ -2978,11 +3052,6 @@ void Npc::tick(uint64_t dt) {
     return;
     }
 
-  if(!randomAni.empty() && !isDead())
-    tickRandomAni();
-
-  tickAggroLeash();
-
   if(compatDiveLimit>=0) {
     // Gothic counts remaining milliseconds down under water, and refills them
     // at twice that rate outside it. CoM's Dive10 buff writes 30000/31000 every
@@ -3173,6 +3242,14 @@ void Npc::nextAiAction(AiQueue& queue, uint64_t dt) {
         if(closeWeapon(false)) {
           stopWalkAnimation();
           }
+        else if(isMonster() && !isPlayer()) {
+          // the monsters have no animation to put the weapon away (a wolf in the fist mode, a goblin with its club):
+          // without it, AI_RemoveWeapon stays in the queue for ever and blocks everything after it
+          // (ZS_MM_AllScheduler of Returning NB: AI_RemoveWeapon + AI_StartState, the monster never gets its state
+          // and its perceptions). The same as drawWeaponFist does for the monsters: the mode without the animation.
+          closeWeapon(true);
+          stopWalkAnimation();
+          }
         auto ws = weaponState();
         if(ws!=WeaponState::NoWeapon){
           queue.pushFront(std::move(act));
@@ -3224,8 +3301,13 @@ void Npc::nextAiAction(AiQueue& queue, uint64_t dt) {
         } else {
         if(act.s0.compare(0,14,"T_CUTSCENEJUMP")==0)
           Log::i("[",displayName().data(),"] the animation ",act.s0," was not found");
-        if(visual.hasAnim(act.s0))
-          queue.pushFront(std::move(act));
+        if(visual.hasAnim(act.s0)) {
+          // a human waits (e.g. T_STAND_2_LGUARD until it has put away the item in its hand), as before
+          if(isHuman() || nbAniRetry(this,act.s0,owner.tickCount()))
+            queue.pushFront(std::move(act)); else
+            Log::i("NB ai: ",displayName().data()," cannot start ",act.s0," (weapon=",int(weaponState()),
+                   ", body=",int(bodyStateMasked()),") - skipped, the AI goes on");
+          }
         }
       break;
       }
@@ -3837,57 +3919,6 @@ void Npc::tickRoutine() {
     }
   }
 
-void Npc::tickAggroLeash() {
-  // A monster has to give up when its target runs away. The scripts do it in the original game, but here some monsters
-  // (swamp sharks, snappers, ...) follow the character over the whole map. This is a safety net that does not depend on
-  // the script: the target is out of the senses range for a long time -> the monster loses it.
-  // Two kinds of the chase:
-  //  - the fight state (ZS_MM_Attack) with the target;
-  //  - the slow walk to the enemy (AI_GotoNpc) before the fight. The script loop of the state does not run while the
-  //    monster walks, so the script can not stop this walk itself.
-  static const uint64_t LOST_TIME_MS = 6000;
-  static const float    MIN_RANGE    = 1500;   // cm
-
-  Npc* tg = nullptr;
-  if(!isPlayer() && !isDown() && !isTalk()) {
-    if(currentTarget!=nullptr && (owner.script().isMonsterAttack(*this) || (isMonster() && isAttack())))
-      tg = currentTarget;
-    else if(go2.npc!=nullptr && go2.flag==GT_Way && isMonster() && isEnemy(*go2.npc))
-      tg = go2.npc;
-    }
-  if(tg==nullptr || tg->isDown()) {
-    aggroLostSince = 0;
-    return;
-    }
-
-  const float range = std::max(float(hnpc->senses_range), MIN_RANGE);
-  if(qDistTo(*tg)<=range*range) {
-    aggroLostSince = 0;
-    return;
-    }
-
-  const uint64_t now = owner.tickCount();
-  if(aggroLostSince==0) {
-    aggroLostSince = now;
-    Log::i("[AGGRO] [",displayName().data(),"] [",tg->displayName().data(),"] is out of range ",int(std::sqrt(qDistTo(*tg)))," > ",int(range),
-           ", state ",(aiState.funcIni.isValid() ? aiState.hint : "none"),(tg==currentTarget ? ", fight" : ", walk to the enemy"));
-    return;
-    }
-  if(now-aggroLostSince<LOST_TIME_MS)
-    return;
-
-  Log::i("[AGGRO] [",displayName().data(),"] loses [",tg->displayName().data(),"]: out of range ",int(std::sqrt(qDistTo(*tg)))," > ",int(range),
-         " for ",(now-aggroLostSince)/1000," s, state ",(aiState.funcIni.isValid() ? aiState.hint : "none")," (state time ",stateTime()/1000," s)");
-
-  aggroLostSince = 0;
-  clearAiQueue();      // also stops the walk to the enemy
-  clearState(false);   // ZS_MM_Attack_End; the routine of the monster starts on the next tick
-  currentOther  = nullptr;
-  currentVictim = nullptr;
-  nearestEnemy  = nullptr;
-  setTarget(nullptr);
-  fghAlgo.onClearTarget();
-  }
 void Npc::setTarget(Npc *t) {
   if(currentTarget==t)
     return;
@@ -4768,7 +4799,20 @@ bool Npc::doAttack(Anim anim, BodyState bs) {
   const auto wlk = walkMode();
   visual.setAnimRotate(*this,0);
   if(auto sq = visual.continueCombo(*this,anim,bs,weaponSt,wlk)) {
-    (void)sq;
+    // NB diagnostics (fix 47): which attack the hero plays and with which overlays of the animations (the rapier
+    // of the fighter and of the master look otherwise than in the original). Once for every new combination.
+    if(isPlayer()) {
+      static std::string lastAtk;
+      std::string ov;
+      for(auto& n:visual.overlayNames())
+        ov += n + " ";
+      const std::string key = sq->name + "|" + ov;
+      if(key!=lastAtk) {
+        lastAtk = key;
+        Log::i("[anim] hero attack ",sq->name," comb=",int(sq->comb.size())," comboLen=",int(visual.comboLength()),
+               " hit1h=",hnpc->hitchance[TALENT_1H]," overlays: ",ov);
+        }
+      }
     // implAniWait(uint64_t(sq->atkTotalTime(visual.comboLength())+1));
     return true;
     }
@@ -5182,6 +5226,38 @@ bool Npc::perceptionProcess(Npc &pl) {
     }
 
   const float quadDist = pl.qDistTo(*this);
+  if(NB_AI_TRACE && pl.isPlayer() && !isHuman() && !isDown() && quadDist<NB_AI_TRACE_DIST*NB_AI_TRACE_DIST &&
+     owner.script().findSymbol("RX_ISSPACETNET")!=nullptr) {
+    auto*       st     = owner.script().findSymbol(aiState.funcIni.ptr);
+    const char* stName = (aiState.funcIni.isValid() && st!=nullptr ? st->name().c_str() : "<none>");
+    float       range  = float(world().script().percRanges().at(PERC_ASSESSENEMY, hnpc->senses_range));
+    if(nbAiTraceChanged(this,std::string(stName)+"|"+(currentTarget!=nullptr ? std::string(currentTarget->displayName()) : "-")))
+    Log::i("NB ai: ",displayName().data()," guild=",int(guild()),
+           " state=",stName,
+           " started=",int(aiState.started)," queue=",int(aiQueue.size()),
+           " percEnemy=",int(hasPerc(PERC_ASSESSENEMY))," percDamage=",int(hasPerc(PERC_ASSESSDAMAGE)),
+           " attitude=",int(owner.script().personAttitude(*this,pl)),
+           " sense=",int(canSenseNpc(pl,true)),
+           " dist=",int(std::sqrt(quadDist))," range=",int(range),
+           " target=",(currentTarget!=nullptr ? (currentTarget->isPlayer() ? "hero" : currentTarget->displayName().data()) : "-"),
+           " weapon=",int(weaponState())," ai=[",aiQueue.describe(4),"]");
+    // NB fix 54: the same not empty AI queue for 5 s near the hero - what blocks the monster
+    if(aiQueue.size()>0) {
+      static std::unordered_map<const void*,std::tuple<std::string,uint64_t,bool>> stall;
+      if(stall.size()>4096)
+        stall.clear();
+      auto  desc = aiQueue.describe(4);
+      auto& e    = stall[this];
+      if(std::get<0>(e)!=desc) {
+        e = {desc,owner.tickCount(),false};
+        }
+      else if(!std::get<2>(e) && owner.tickCount()>std::get<1>(e)+5000) {
+        std::get<2>(e) = true;
+        Log::i("NB ai: ",displayName().data()," STUCK 5 s: state=",stName," weapon=",int(weaponState()),
+               " body=",int(bodyStateMasked())," ai=[",desc,"]");
+        }
+      }
+    }
   if(hasPerc(PERC_ASSESSPLAYER) && canSenseNpc(pl,false)!=SensesBit::SENSE_NONE) {
     if(perceptionProcess(pl,nullptr,quadDist,PERC_ASSESSPLAYER)) {
       ret = true;
@@ -5212,6 +5288,12 @@ bool Npc::perceptionProcess(Npc &pl) {
   }
 
 bool Npc::perceptionProcess(Npc &pl, Npc* victim, float quadDist, PercType perc) {
+  if(NB_AI_TRACE && !aiState.started && aiState.funcIni.isValid() && (perc==PERC_ASSESSDAMAGE || perc==PERC_ASSESSENEMY) &&
+     !isHuman() && owner.script().findSymbol("RX_ISSPACETNET")!=nullptr && nbAiTraceDue(&perception[perc],owner.tickCount())) {
+    auto* st = owner.script().findSymbol(aiState.funcIni.ptr);
+    Log::i("NB ai: ",displayName().data()," DROPS ",(perc==PERC_ASSESSDAMAGE ? "PERC_ASSESSDAMAGE" : "PERC_ASSESSENEMY"),
+           ": the state ",(st!=nullptr ? st->name().c_str() : "?")," is not started, queue=",int(aiQueue.size()));
+    }
   if(!aiState.started && aiState.funcIni.isValid()) {
     // avoid ugly soft-lock (ZS_MM_Attack <-> B_MM_AssessWarn) for the orks near ramp
     return false;
@@ -5850,7 +5932,7 @@ Matrix4x4 Npc::mkPositionMatrix() const {
   Matrix4x4 mt = Matrix4x4();
   mt.identity();
   mt.translate(x,y,z);
-  mt.rotateOY(90-angle-(isPlayer() ? moveYawDeg : 0.f));
+  mt.rotateOY(90-angle);
   if(angY!=0)
     mt.rotateOX(-angY);
   if(isPlayer() && !align) {

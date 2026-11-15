@@ -83,7 +83,6 @@ class Inventory final {
     void   equipBestRangedWeapon(Npc &owner);
     void   unequipWeapons(GameScript &vm, Npc &owner);
     void   unequipArmor(GameScript &vm, Npc &owner);
-    void   unequipRunes(Npc &owner);
     void   clear(GameScript &vm, Npc &owner, bool includeMissionItm = false);
     void   clear(GameScript &vm, Interactive &owner, bool includeMissionItm = false);
     bool   hasSpell(int32_t spl) const;
@@ -104,6 +103,8 @@ class Inventory final {
     void   switchActiveSpell (int32_t spell, Npc &owner);
 
     Item*  currentArmor()          { return armor;      }
+    Item*  currentHelmet()         { return helmet;     } // NB fix 39: an armor with wear=WEAR_HEAD, worn with the armor
+    static bool isHelmet(const Item& it);
     Item*  currentMeleeWeapon()    { return melee;      }
     Item*  currentRangedWeapon()   { return range;      }
     Item*  currentShield()         { return shield;     }
@@ -163,6 +164,7 @@ class Inventory final {
     Item*                              readPtr(Serialize& fin);
 
     Item*                              armor      = nullptr;
+    Item*                              helmet     = nullptr; // not in the save: restored from the equipped items
     Item*                              belt       = nullptr;
     Item*                              amulet     = nullptr;
     Item*                              ringL      = nullptr;

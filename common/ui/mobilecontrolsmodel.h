@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <map>
@@ -58,6 +59,7 @@ namespace Special {
     HudDone,       // the editor of the HUD: back to the settings
     HudReset,      // the editor of the HUD: every button goes back to its place
     FirstSetting  = 11,
+    Sprint        = 29,   // NB fix 40: the sprint of New Balance (B_Hotkey_Sprint, the key ~ in the original)
     QuickSave     = 30,   // saves the game to the quick save slot
     LoadSave      = 31,   // the player is dead: loads the newest save (above the settings, below the categories)
     FirstCategory = 32
@@ -78,7 +80,6 @@ enum Setting : int {
   SettingHudNumbers,
   SettingHudXp,
   SettingStrafe,
-  SettingAutoLock,
   SettingCount
   };
 
@@ -105,8 +106,9 @@ inline float hotbarSlot(float buttons) {
 
 /// Names of the buttons of the HUD that can be moved and switched off (see Controls::hudPlace)
 constexpr const char* HudIds[] = {
-  "menu", "character", "speed", "log", "map", "sneak", "walk", "stepleft", "stepright", "stepforward", "stepback",
-  "action", "hitleft", "hitright", "block", "jump", "inventory", "target", "spells", "weapon", "quicksave", "human"
+  "menu", "character", "speed", "log", "map", "sneak", "walk", "stepleft", "stepright",
+  "action", "hitleft", "hitright", "block", "jump", "inventory", "target", "spells", "weapon", "quicksave",
+  "sprint", "bar_hp", "bar_stamina", "bar_mana"
   };
 constexpr int HudIdCount = int(sizeof(HudIds)/sizeof(HudIds[0]));
 
@@ -132,6 +134,33 @@ struct Rect {
     return px>=x && py>=y && px<x+w && py<y+h;
     }
   };
+
+/// NB fix 42: the status bars over the hotbar are a part of the HUD, as in New Balance: they are moved, resized and
+/// hidden in the editor of the HUD. Index 0 life, 1 stamina (New Balance), 2 mana.
+constexpr const char* HudBarIds[] = {"bar_hp", "bar_stamina", "bar_mana"};
+constexpr int   HudBarCount  = 3;
+constexpr float HudBarAspect = 0.125f;   // the height of the frame (BAR_BACK.TGA) to its width
+
+/// The frame of a status bar on the screen, for the size of the buttons (in percent/100)
+inline Rect hudBarRect(int bar, float width, float height, float buttons, const HudPlace& place) {
+  const float s      = std::min(width/1000.f,height/440.f);
+  const float slot   = hotbarSlot(buttons);
+  const float half   = slot*5*s;
+  const float w0     = slot*3.2f*s;                  // the normal width: the bars stand over the ends of the hotbar
+  const float w      = w0*hudSizeFactor(place.size);
+  const float h      = w*HudBarAspect;
+  const float bottom = height-(HotbarBottom+slot+9)*s;
+  float cx = 0, cy = 0;
+  if(place.placed) {
+    cx = place.x*width;
+    cy = place.y*height;
+    } else {
+    const float left = bar==0 ? width/2-half : bar==2 ? width/2+half-w0 : width/2-w0/2;
+    cx = left+w0/2;
+    cy = bottom-w0*HudBarAspect/2;
+    }
+  return {cx-w/2,cy-h/2,w,h};
+  }
 
 /// Positions of the inventory screen. Shared by the controls and the inventory widget.
 struct InventoryLayout {
@@ -161,6 +190,7 @@ struct Button {
   bool        enabled   = true;
   std::string id;                   // a button of the HUD that can be moved, see HudIds
   bool        dimmed    = false;    // a hidden button in the editor of the HUD
+  bool        bar       = false;    // a status bar in the editor of the HUD (NB fix 42): a rectangle, not solid
   };
 
 struct Event {
@@ -182,10 +212,14 @@ class Controls {
     void  dialogPad(bool visible);
     /// Scale of the interface, the inventory follows it
     void  gui(float scale);
-    /// What the HUD has: the button of the speed is shown only when a mod asks for it, the step buttons (the side steps and the arrows forward and back)
-    /// are an option
+    /// What the HUD has: the button of the speed is shown only when a mod asks for it, the side steps are an option
     void  features(bool speed, bool strafe);
     bool  speedAllowed() const { return featureSpeed; }
+    /// The scripts have a sprint (New Balance: B_Hotkey_Sprint): its button is on the HUD (NB fix 40)
+    void  sprint(bool available);
+    /// The scripts have a bar of the stamina (New Balance): it is in the editor of the HUD (NB fix 42)
+    void  stamina(bool available);
+    float buttonsScale() const { return buttonScale; }
     /// The player is dead: the button of the speed is hidden, the button that loads the newest save is shown
     void  playerDead(bool dead);
 
@@ -206,19 +240,6 @@ class Controls {
     void  resetPointers();
     void  tick(uint64_t now);
     void  physical(Key key, bool down);
-
-    /// A gamepad (see Gamepad): its keys are counted apart from the keyboard and the fingers, so they do not release each other
-    void  padKey(Key key, bool down);
-    void  padTap(Key key) { pulse(key); }
-    void  padLook(float yaw, float pitch);
-    /// The left stick of a gamepad: the angle of a diagonal walk (degrees, 0 straight ahead, the sign of the angle of the hero: positive to the left) and the push to the side (-1..1, positive to the right)
-    void  padMove(float yaw, float side) { padYaw = yaw; padSide = side; }
-    float moveYaw() const { return padYaw; }
-    float moveSide() const { return padSide; }
-    void  padSpecial(int id);
-    bool  padHeld(Key key) const { return padHeld_[size_t(key)]; }
-    /// The key does something now (the weapon is in the hand, ...): the buttons of the screen hide the others
-    bool  available(Key key) const { return (availableKeys & keyMask(key))!=0; }
 
     std::vector<Event>         drain();
     const std::vector<Button>& buttons() const { return layout; }
@@ -301,7 +322,6 @@ class Controls {
     float    width  = 1000, height = 500;
     float    scale  = 1;
     float    joyX   = 0, joyY = 0;
-    float    padYaw = 0, padSide = 0;
     float    joyOx  = 0, joyOy = 0;
     bool     joyActive = false;
     float    lookSensitivity = 1;
@@ -317,7 +337,9 @@ class Controls {
     bool     twoLists = false; // the inventory shows the other list too
     bool     padVisible = false;
     bool     featureSpeed  = false;   // a mod has asked for the fast forward
-    bool     featureStrafe = true;    // the step buttons: the side steps and the arrows forward and back
+    bool     featureStrafe = true;    // the buttons of the side steps
+    bool     featureSprint = false;   // the scripts have a sprint (NB fix 40)
+    bool     featureStamina = false;  // the scripts have a bar of the stamina (NB fix 42)
     bool     dead          = false;   // the player is dead
     bool     editing    = false;      // the editor of the HUD
     bool     hudChanged = false;
@@ -333,7 +355,6 @@ class Controls {
     std::map<int,Finger>                 fingers;
     std::array<unsigned,size_t(Key::Count)> refs{};
     std::array<bool,size_t(Key::Count)>  physicalHeld{};
-    std::array<bool,size_t(Key::Count)>  padHeld_{};
     std::array<bool,2>                   joyHeld{};
     std::vector<Button>                  layout;
     std::vector<Event>                   events;

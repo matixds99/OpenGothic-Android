@@ -57,7 +57,6 @@ class ErrorScreen : public Tempest::Widget {
     bool                     active = false;
     int                      firstLine = 0;
     int                      seenCount = 0;
-    int                      lastLines = 0;
     std::set<std::string>    seen;
 
     uint64_t                 serial = 0;

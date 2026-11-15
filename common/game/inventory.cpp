@@ -139,6 +139,32 @@ void Inventory::implLoad(Npc* owner, World& world, Serialize &s) {
   for(auto& i:numslot)
     i = readPtr(s);
 
+  // NB fix 39: the helmet is not a slot of the save - it is the equipped armor with wear=WEAR_HEAD. Saves made before:
+  // the helmet took the slot of the armor and the armor was taken off (the paladins - only the head was drawn).
+  helmet = nullptr;
+  const bool oldHelmet = armor!=nullptr && isHelmet(*armor);
+  if(oldHelmet) {
+    helmet = armor;
+    armor  = nullptr;
+    }
+  for(auto& i:items) {
+    if(!i->isEquipped() || (ItmFlags(i->handle().main_flag) & ITM_CAT_ARMOR)==0)
+      continue;
+    if(helmet==nullptr && isHelmet(*i))
+      helmet = i.get();
+    else if(armor==nullptr && !isHelmet(*i))
+      armor = i.get();
+    }
+  // the armor goes back on the NPCs only: the hero (the policy of the player is not set yet while loading) chose himself
+  if(oldHelmet && armor==nullptr && owner!=nullptr &&
+     owner->handle().symbol_index()!=owner->world().script().findSymbolIndex("PC_HERO")) {
+    if(auto best = bestArmor(*owner)) {
+      armor = best;
+      armor->setAsEquipped(true);
+      applyArmor(*armor,*owner,1);
+      }
+    }
+
   uint8_t id=255;
   s.read(id);
   if(id==1)
@@ -360,6 +386,10 @@ void Inventory::unequip(Item *it, Npc &owner) {
     setSlot(armor,nullptr,owner,false);
     return;
     }
+  if(helmet==it) {
+    setSlot(helmet,nullptr,owner,false);
+    return;
+    }
   if(belt==it) {
     setSlot(belt,nullptr,owner,false);
     return;
@@ -491,13 +521,21 @@ void Inventory::updateView(Npc& owner) {
   }
 
 void Inventory::updateArmorView(Npc& owner) {
-  if(armor==nullptr)
+  if(armor==nullptr && helmet==nullptr)
     return;
 
-  auto& itData = armor->handle();
+  auto& itData = (armor!=nullptr ? armor : helmet)->handle();
   auto  flag   = ItmFlags(itData.main_flag);
   if(flag & ITM_CAT_ARMOR)
     owner.updateArmor();
+  }
+
+bool Inventory::isHelmet(const Item& it) {
+  // Gothic: an armor with WEAR_HEAD goes to the slot ZS_HELMET, the armor of the body stays (New Balance: the helmets of
+  // the paladins - Lothar, Lord Andre)
+  static constexpr int32_t WEAR_HEAD = 2;
+  auto& itData = it.handle();
+  return (ItmFlags(itData.main_flag) & ITM_CAT_ARMOR) && (itData.wear & WEAR_HEAD);
   }
 
 void Inventory::updateSwordView(Npc &owner) {
@@ -570,11 +608,6 @@ void Inventory::unequipArmor(GameScript &, Npc &owner) {
   setSlot(armor,nullptr,owner,false);
   }
 
-void Inventory::unequipRunes(Npc &owner) {
-  for(auto& i:numslot)
-    if(i!=nullptr)
-      setSlot(i,nullptr,owner,false);
-  }
 void Inventory::clear(GameScript&, Npc&, bool includeMissionItm) {
   std::vector<std::unique_ptr<Item>> used;
   for(auto& i:items)
@@ -909,7 +942,7 @@ bool Inventory::use(size_t cls, Npc &owner, uint8_t slotHint, bool force) {
     }
 
   if(mainflag & ITM_CAT_ARMOR)
-    return setSlot(armor,it,owner,force);
+    return setSlot(isHelmet(*it) ? helmet : armor,it,owner,force);
 
   if(flag & ITM_BELT)
     return setSlot(belt,it,owner,force);
@@ -963,6 +996,7 @@ void Inventory::invalidateCond(Npc &owner) {
   if(!owner.isPlayer())
     return; // gothic doesn't care
   invalidateCond(armor,owner);
+  invalidateCond(helmet,owner);
   invalidateCond(belt  ,owner);
   invalidateCond(amulet,owner);
   invalidateCond(ringL ,owner);
@@ -1043,6 +1077,8 @@ Item* Inventory::bestItem(Npc &owner, ItmFlags f) {
     auto  flag   = ItmFlags(itData.main_flag);
     if((flag & f)==0)
       continue;
+    if(f==ITM_CAT_ARMOR && isHelmet(*i))
+      continue; // the best armor of the body, not a helmet (NB fix 39)
     if(!i->checkCond(owner))
       continue;
     if(itData.munition>0 && findByClass(size_t(itData.munition))==nullptr)
@@ -1072,15 +1108,6 @@ Item *Inventory::bestRangedWeapon(Npc &owner) {
 void Inventory::applyWeaponStats(Npc& owner, const Item &weapon, int sgn) {
   auto& hnpc = owner.handle();
   //hnpc.damagetype = sgn>0 ? weapon.handle()->damageType : (1 << GEngineClasses::DAM_INDEX_BLUNT);
-  if(sgn>0) {
-    // self-heal: the damage of a character without a weapon in hand cannot be below zero.
-    // a negative remainder (an unbalanced plus/minus of an earlier weapon, saved in the game) would eat the damage of this weapon
-    for(size_t i=0; i<zenkit::DamageType::NUM; ++i)
-      if(hnpc.damage[i]<0) {
-        Tempest::Log::d("DMG: reset negative base damage, type ",i," value ",hnpc.damage[i]);
-        hnpc.damage[i] = 0;
-        }
-    }
   for(size_t i=0; i<zenkit::DamageType::NUM; ++i){
     hnpc.damage[i] += sgn*weapon.handle().damage[i];
     if(weapon.handle().damage_type & (1<<i)) {
@@ -1088,12 +1115,9 @@ void Inventory::applyWeaponStats(Npc& owner, const Item &weapon, int sgn) {
       }
     }
 
-  // inconsistent plus/minus: damage of a character cannot be negative (an earlier weapon was taken off more than once)
+  // assert inconsistent plus/minus
   for(size_t i=0; i<zenkit::DamageType::NUM; ++i) {
-    if(hnpc.damage[i]<0) {
-      Tempest::Log::d("DMG: negative damage after weapon change, type ",i," value ",hnpc.damage[i]," - reset to 0");
-      hnpc.damage[i] = 0;
-      }
+    assert(hnpc.damage[i]>=0);
     }
   }
 
@@ -1170,3 +1194,5 @@ Item *Inventory::readPtr(Serialize &fin) {
     return items[v].get();
   return nullptr;
   }
+
+

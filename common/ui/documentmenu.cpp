@@ -6,6 +6,8 @@
 #include "utils/keycodec.h"
 #include "gothic.h"
 
+#include <algorithm>
+
 using namespace Tempest;
 
 DocumentMenu::DocumentMenu(const KeyCodec& key)
@@ -17,6 +19,9 @@ DocumentMenu::DocumentMenu(const KeyCodec& key)
 void DocumentMenu::show(const DocumentMenu::Show &doc) {
   document = doc;
   active   = true;
+  nbSpread = 0;
+  nbLines  = 0;
+  nbTotal  = 0;
   update();
   }
 
@@ -35,11 +40,88 @@ void DocumentMenu::keyDownEvent(KeyEvent &e) {
     return;
     }
 
+  if(!document.nb.img.empty()) {
+    // NB fix 51: the spreads of a book. Escape (the button SKIP of the touch screen) turns the page, and closes
+    // the book on the last one; the arrows go both ways
+    if(e.key==Event::K_Left || e.key==Event::K_Up) {
+      nbSpread = std::max(0,nbSpread-1);
+      update();
+      return;
+      }
+    if(e.key==Event::K_Right || e.key==Event::K_Down) {
+      if(nbHasNext())
+        ++nbSpread;
+      update();
+      return;
+      }
+    if(e.key==Event::K_ESCAPE && nbHasNext()) {
+      ++nbSpread;
+      update();
+      return;
+      }
+    }
+
   if(e.key!=Event::K_ESCAPE && keycodec.tr(e)!=KeyCodec::Inventory){
     e.ignore();
     return;
     }
   close();
+  }
+
+bool DocumentMenu::nbHasNext() const {
+  const int cols = int(document.nb.columns.size());
+  return cols>0 && nbLines>0 && (nbSpread+1)*cols*nbLines<nbTotal;
+  }
+
+void DocumentMenu::paintNb(Tempest::Painter& p) {
+  auto& nb   = document.nb;
+  auto  back = Resources::loadTexture(nb.img);
+  if(back==nullptr || nb.w<=0 || nb.h<=0)
+    return;
+
+  // the plugin gives the size in % of the screen; it is made for 16:9, so the shape stays as on a monitor
+  float h = float(this->h())*nb.h;
+  float w = h*(nb.w*16.f)/(nb.h*9.f);
+  if(w>float(this->w())*0.98f) {
+    h *= float(this->w())*0.98f/w;
+    w  = float(this->w())*0.98f;
+    }
+  const int x0 = (this->w()-int(w))/2;
+  const int y0 = (this->h()-int(h))/2;
+
+  p.setBrush(*back);
+  p.drawRect(x0,y0,int(w),int(h), 0,0,back->w(),back->h());
+
+  const float scale = Gothic::interfaceScale(this);
+  auto& fnt = Resources::font("FONT_10_BOOK.TGA",Resources::FontType::Normal,scale);
+  const int ph = std::max(1,fnt.pixelSize());
+
+  nbLines = 0;
+  nbTotal = 0;
+  const int cols = int(nb.columns.size());
+  for(int i=0; i<cols; ++i) {
+    auto& c  = nb.columns[size_t(i)];
+    const int cx = x0+int(c.x0*w);
+    const int cy = y0+int(c.y0*h);
+    const int cw = std::max(1,int((c.x1-c.x0)*w));
+    const int ch = std::max(1,int((c.y1-c.y0)*h));
+    if(i==0) {
+      nbLines = std::max(1,ch/ph);
+      nbTotal = fnt.lineCount(cw,nb.text);
+      }
+    const int first = (nbSpread*cols+i)*nbLines;
+    if(first>=nbTotal)
+      break;
+    fnt.drawText(p,cx,cy+ph,cw,nbLines*ph,nb.text,Tempest::AlignLeft,first);
+    }
+
+  if(nbSpread>0 || nbHasNext()) {
+    // the number of the spread, under the texture
+    const int  all = std::max(1,(nbTotal+cols*nbLines-1)/std::max(1,cols*nbLines));
+    const auto num = std::to_string(nbSpread+1)+" / "+std::to_string(all);
+    auto& f2 = Resources::font(scale);
+    f2.drawText(p,(this->w()-f2.textSize(num).w)/2,std::min(this->h()-4,y0+int(h)+f2.pixelSize()+4),num);
+    }
   }
 
 void DocumentMenu::keyUpEvent(KeyEvent&) {
@@ -48,6 +130,12 @@ void DocumentMenu::keyUpEvent(KeyEvent&) {
 void DocumentMenu::paintEvent(PaintEvent &e) {
   if(!active)
     return;
+
+  if(!document.nb.img.empty()) {
+    Painter p(e);
+    paintNb(p);
+    return;
+    }
 
   const float scale = Gothic::interfaceScale(this);
   float mw = 0, mh = 0;
