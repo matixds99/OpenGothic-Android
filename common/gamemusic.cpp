@@ -39,8 +39,9 @@ static void boostAudioThread() {
   if(done)
     return;
   done = true;
-  if(setpriority(PRIO_PROCESS, gettid(), -16)!=0)
-    setpriority(PRIO_PROCESS, gettid(), -10);
+  const id_t tid = static_cast<id_t>(gettid());
+  if(setpriority(PRIO_PROCESS, tid, -16)!=0)
+    setpriority(PRIO_PROCESS, tid, -10);
 #endif
   }
 
