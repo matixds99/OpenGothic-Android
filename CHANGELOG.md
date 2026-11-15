@@ -451,11 +451,13 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Przyczyna:** NB zmienia świat własną funkcją pluginu `Wld_ChangeLevel_AB(plik ZEN, punkt)` – 17 wywołań: kamienie i runy teleportacji NB (`RX_OnTeleportLocation`), przedmioty przeniesienia (`ItMi_DarkTransfer`, `ItMi_TransferStreamersLoc`), runa powrotu Galoma z klasztoru, świątynia Azgalora, dolina Adanosa, finał zadania z jointami. Nie była zaimplementowana, więc teleport zabierał manę/przedmiot i nic się nie działo. Nie było jej też w liście braków w logu, bo ta pokazywała tylko funkcje `RX_…`.
 - **Poprawka:** jak w pluginie (UNION_ABI.DLL 0x10159E20 → `oCGame::TriggerChangeLevel`): zmiana świata tak samo jak przez przejście między światami (np. przełęcz), bohater pojawia się w podanym punkcie. W logu: `[ctx] change of the world: … -> …`.
 
-### 60. Bohater traci zbroję po teleporcie – 🔍 (15.11.2026, diagnostyka)
-- **Pliki:** `common/game/inventory.cpp`, `common/game/gamescript.cpp`
-- **Z logu (15.11, 19:06):** po teleporcie do Górniczej Doliny (`OLDWORLD`, `OC_MAGE_IN`), już po wczytaniu świata, wykonuje się `UNEQUIP_ITAR_KDF_L` (szata). Zbroja przechodzi do nowego świata założona – zapis bohatera przy zmianie świata zakłada ją bez skryptów – więc zdejmuje ją coś później. Skrypty NB przy wejściu do świata (`Hero_Poisoned` po wczytaniu, `B_InitGuildAttitudes`, `PerFrame`) jej nie zdejmują.
-- **Podejrzenie:** silnik zdejmuje przedmioty bohatera, których warunków już nie spełnia, za każdym razem, gdy któryś atrybut spada (szata: maks. mana ≥ 50).
-- **Diagnostyka:** gdy silnik zdejmuje przedmiot, w logu jest `[ctx] the hero takes off …: attribute X is Y, needed Z`; przy zdejmowaniu przez skrypt `[ctx] item of the hero: UNEQUIP_… last script: …`.
+### 60. Bohater traci zbroję po teleporcie – 🧪 (15.11.2026)
+- **Plik:** `common/game/gamescript.cpp` (+ diagnostyka w `common/game/inventory.cpp`)
+- **Z logu (15.11, 19:15):** po każdej zmianie świata (świątynia Ashtara, Górnicza Dolina, obóz piratów) `[ctx] item of the hero: UNEQUIP_ITAR_KDF_L … last script: RX_APPLYHEROHEAD`.
+- **Przyczyna:** `RX_ApplyHeroHead` (z `PerFrame`, po każdym wczytaniu i zmianie świata) ustawia głowę i ciało bohatera przez `Mdl_SetVisualBody(…, NO_ARMOR)`. W Gothicu `NO_ARMOR` (-1) znaczy „nie zakładaj nowej zbroi” i założona zostaje. W tej wersji OpenGothic (dla Archolos) `NO_ARMOR` zdejmuje założoną zbroję – więc NB zdejmowało ją po każdym teleporcie.
+- **Poprawka:** w New Balance `Mdl_SetVisualBody` z `NO_ARMOR` nie zdejmuje zbroi (wygląd zbroi wraca od razu na nowe ciało). Archolos i inne gry – bez zmian.
+- **Diagnostyka zostaje:** `[ctx] the hero takes off …: attribute X is Y, needed Z` (zdjęcie przez silnik, gdy brakuje atrybutu) i `last script: …` przy zdejmowaniu przez skrypt.
+- **Przy okazji z logu:** broń i łuk znikały z rąk w świątyni Ashtara, bo bohater zginął (ognisty jaszczur) – to normalne.
 
 ## Do zrobienia
 

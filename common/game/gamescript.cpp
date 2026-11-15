@@ -4238,8 +4238,10 @@ void GameScript::mdl_setvisualbody(std::shared_ptr<zenkit::INpc> npcRef, std::st
       npc->addItem(uint32_t(armor),1);
     npc->equipItem(uint32_t(armor));
     }
-  else if(armor<0) {
+  else if(armor<0 && nbStates.count(this)==0) {
     // NO_ARMOR is -1. CoM's NPC_ChangeFace passes 0 to retain the armor.
+    // NB fix 60: not in New Balance - RX_ApplyHeroHead (PerFrame, after every load and change of the world) sets the
+    // head of the hero with NO_ARMOR, and in Gothic the armor stays on: here it was taken off every time
     if(auto* equipped = npc->currentArmor())
       npc->unequipItem(equipped->clsId());
     }
