@@ -451,6 +451,12 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Przyczyna:** NB zmienia świat własną funkcją pluginu `Wld_ChangeLevel_AB(plik ZEN, punkt)` – 17 wywołań: kamienie i runy teleportacji NB (`RX_OnTeleportLocation`), przedmioty przeniesienia (`ItMi_DarkTransfer`, `ItMi_TransferStreamersLoc`), runa powrotu Galoma z klasztoru, świątynia Azgalora, dolina Adanosa, finał zadania z jointami. Nie była zaimplementowana, więc teleport zabierał manę/przedmiot i nic się nie działo. Nie było jej też w liście braków w logu, bo ta pokazywała tylko funkcje `RX_…`.
 - **Poprawka:** jak w pluginie (UNION_ABI.DLL 0x10159E20 → `oCGame::TriggerChangeLevel`): zmiana świata tak samo jak przez przejście między światami (np. przełęcz), bohater pojawia się w podanym punkcie. W logu: `[ctx] change of the world: … -> …`.
 
+### 60. Bohater traci zbroję po teleporcie – 🔍 (15.11.2026, diagnostyka)
+- **Pliki:** `common/game/inventory.cpp`, `common/game/gamescript.cpp`
+- **Z logu (15.11, 19:06):** po teleporcie do Górniczej Doliny (`OLDWORLD`, `OC_MAGE_IN`), już po wczytaniu świata, wykonuje się `UNEQUIP_ITAR_KDF_L` (szata). Zbroja przechodzi do nowego świata założona – zapis bohatera przy zmianie świata zakłada ją bez skryptów – więc zdejmuje ją coś później. Skrypty NB przy wejściu do świata (`Hero_Poisoned` po wczytaniu, `B_InitGuildAttitudes`, `PerFrame`) jej nie zdejmują.
+- **Podejrzenie:** silnik zdejmuje przedmioty bohatera, których warunków już nie spełnia, za każdym razem, gdy któryś atrybut spada (szata: maks. mana ≥ 50).
+- **Diagnostyka:** gdy silnik zdejmuje przedmiot, w logu jest `[ctx] the hero takes off …: attribute X is Y, needed Z`; przy zdejmowaniu przez skrypt `[ctx] item of the hero: UNEQUIP_… last script: …`.
+
 ## Do zrobienia
 
 - [x] Czarny goblin nie atakuje, stoi w miejscu – naprawione (poprawka 54). Z logu: wrogi (attitude=0), czuje bohatera (sense=5 przy ~1100), ale zostaje w `ZS_MM_RTN_ROAM` bez celu – reakcja na wroga (`B_MM_AssessEnemy`) nie przełącza go na atak; raz pojawia się `ZS_MM_ThreatenEnemy`. `RX_GobboClan` (niezaimplementowane) jest tylko w `AI_OnDead_Gobbo_Black_Clan` – przy śmierci, nie przy ataku. Do zbadania z włączonymi śladami `B_MM_AssessEnemy` (więcej niż 3 na komunikat).

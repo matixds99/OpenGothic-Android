@@ -3199,7 +3199,10 @@ void GameScript::invokeItem(Npc *npc, ScriptFn fn, Item* itm) {
     return;
 
   if(npc->isPlayer() && nbStates.count(this))
-    nbCtx("item of the hero: ",functionSymbol->name(),itm!=nullptr ? " (" : "",itm!=nullptr ? itm->displayName() : "",itm!=nullptr ? ")" : "");
+    nbCtx("item of the hero: ",functionSymbol->name(),itm!=nullptr ? " (" : "",itm!=nullptr ? itm->displayName() : "",itm!=nullptr ? ")" : "",
+          // NB fix 60: the last function of the script that ran - who took the armor off (if a script did it)
+          functionSymbol->name().rfind("UNEQUIP",0)==0 ? " last script: " : "",
+          functionSymbol->name().rfind("UNEQUIP",0)==0 ? nbFunctionAt(vm,nbStates[this],vm.pc()) : std::string());
   ScopeVar self(*vm.global_self(), npc->handlePtr());
   if(itm!=nullptr) {
     ScopeVar item(*vm.global_item(), itm->handlePtr());

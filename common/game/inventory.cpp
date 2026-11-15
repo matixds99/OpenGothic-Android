@@ -1015,6 +1015,14 @@ void Inventory::invalidateCond(Npc &owner) {
 
 void Inventory::invalidateCond(Item *&slot, Npc &owner) {
   if(slot && !slot->checkCond(owner)) {
+    // NB fix 60: why the hero loses an item (the armor after a teleport) - the engine, not a script
+    int32_t atr=0, need=0;
+    if(!slot->checkCondUse(owner,atr,need))
+      Log::i("[ctx] the hero takes off ",slot->displayName(),": attribute ",atr," is ",owner.attribute(Attribute(atr)),
+             ", needed ",need);
+    else
+      Log::i("[ctx] the hero takes off ",slot->displayName(),": the circle of magic ",owner.mageCycle(),
+             ", needed ",slot->handle().mag_circle);
     unequip(slot,owner);
     }
   }
