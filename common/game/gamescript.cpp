@@ -2398,7 +2398,13 @@ void GameScript::initCommon() {
   auto id = vm.find_symbol_by_name("Gil_Values");
   if(id!=nullptr){
     cGuildVal = vm.init_instance<zenkit::IGuildValues>(id);
-    for(size_t i=0;i<Guild::GIL_PUBLIC;++i){
+    // the human guilds move and fight like GIL_HUMAN: every guild below GIL_SEPERATOR_HUM of the scripts. That is 16 in the
+    // original game; New Balance has 21, its guilds 16..20 are humans too (19 is the guild of the hero there - with the
+    // values of a goblin he slid down every slope)
+    const size_t humEnd = std::min(size_t(std::max(guildSeparatorHum(),0)), std::size(cGuildVal->slide_angle));
+    for(size_t i=0;i<humEnd;++i){
+      if(i==Guild::GIL_PUBLIC)
+        continue;   // the portal rooms, not a guild of characters
       cGuildVal->water_depth_knee   [i]=cGuildVal->water_depth_knee   [Guild::GIL_HUMAN];
       cGuildVal->water_depth_chest  [i]=cGuildVal->water_depth_chest  [Guild::GIL_HUMAN];
       cGuildVal->jumpup_height      [i]=cGuildVal->jumpup_height      [Guild::GIL_HUMAN];
