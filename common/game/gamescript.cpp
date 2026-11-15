@@ -165,6 +165,10 @@ struct NbState {
   float                                       wispBest  = 1e9f;    // the closest the wisp came to it (log, fix 61)
   uint64_t                                    nextWispSearch = 0;  // NB fix 61: the search of the plugin, every 500 ms
   uint64_t                                    nextWispLog    = 0;  // the state of the search in the log, every 10 s
+  // NB fix 64: the texts of the wisp as in the plugin (video of the PC): "Szukanie..." / "Coś znaleziono!" on the
+  // right, and the list "Ognik: name xN" of the brought items on the left (the last 7, 10 s each)
+  uint64_t                                    wispSeen       = 0;  // the wisp was near the hero (for the texts)
+  std::vector<std::pair<std::string,uint64_t>> wispLines;          // the brought items: text, until
   std::unordered_map<const zenkit::IItem*,uint64_t> wispSkip;      // the items it did not reach: not again for 60 s
   float                                       wispBestH = 0;
   const World*                                vobWorld = nullptr;
@@ -3887,6 +3891,23 @@ void GameScript::tick(uint64_t dt) {
     st.nextHud = tickCount()+250;
     callNb(st.gamePaused);
     nbBuffPanel(vm);
+    // NB fix 64: the texts of the wisp (positions from the video of the PC: the state at 86% / 36%, the list at
+    // 2% from 57% down)
+    if(!Gothic::inst().isInDialog()) {
+      auto& fnt = Resources::font("FONT_OLD_10_WHITE.TGA",Resources::FontType::Normal,1.f);
+      if(tickCount()<st.wispSeen+1000) {
+        const bool busy = !st.wispItem.expired();
+        const std::string txt = busy ? std::string(NbTexts::get("sWispSearch")) : std::string("Szukanie...");
+        Gothic::inst().onPrintScreen(txt,84,36,1,fnt);
+        }
+      st.wispLines.erase(std::remove_if(st.wispLines.begin(),st.wispLines.end(),
+                         [this](const std::pair<std::string,uint64_t>& l){ return l.second<tickCount(); }),st.wispLines.end());
+      while(st.wispLines.size()>7)
+        st.wispLines.erase(st.wispLines.begin());
+      auto& lst = Resources::font("FONT_OLD_10_WHITE.TGA",Resources::FontType::Yellow,1.f);
+      for(size_t i=0; i<st.wispLines.size(); ++i)
+        Gothic::inst().onPrintScreen(st.wispLines[i].first,2,57+int(i)*3,1,lst);
+      }
     }
 
   // NB fix 61: the search of the wisp. The scripts of NB do not look for the items (B_MM_WispDetect is never called -
@@ -3917,19 +3938,22 @@ void GameScript::tick(uint64_t dt) {
     if(wisp!=nullptr && !Gothic::inst().isInDialog()) {
       const auto  d    = wisp->position()-hero->position();
       const float dist = d.length();
-      if(dist>2500.f) {
+      if(dist>4000.f) {
         const float a = hero->rotation()*3.14159265f/180.f;
         wisp->clearAiQueue();
         wisp->setPosition(hero->position()+Tempest::Vec3(std::sin(a)*120.f,60.f,std::cos(a)*120.f));
         nbCtx("the wisp was ",int(dist)," cm away: next to the hero again");
         }
-      else if(dist>300.f) {
+      else if(dist>800.f) {
+        // NB fix 64: the wisp of the plugin does not stay at the hero, it flies around and searches - back to the
+        // hero only when it has nothing to do and is farther than 8 m
         if(wisp->isAiQueueEmpty()) {
           wisp->aiPush(AiQueue::aiSetWalkMode(WalkBit::WM_Run));
           wisp->aiPush(AiQueue::aiGoToNpc(hero));
           }
         }
-      wispNear = dist<=2000.f;
+      wispNear = dist<=3000.f;
+      st.wispSeen = tickCount();
       }
     if(wisp!=nullptr && wispNear && !Gothic::inst().isInDialog()) {
       const auto katOf = [this](std::string_view name, int32_t def) {
@@ -3949,7 +3973,7 @@ void GameScript::tick(uint64_t dt) {
       const auto wp = wisp->position();
       std::vector<Item*> nearWisp;   // NB fix 61: the items right at the wisp - taken at once, without flying
       int nAll = 0, nOwned = 0, nSkip = 0, nImportant = 0, nKey = 0, nHigh = 0;
-      world().detectItem(hp,1000.f,[&](Item& it) {
+      world().detectItem(hp,2000.f,[&](Item& it) {   // NB fix 64: 20 m around the hero (was 10 m)
         auto& h = it.handle();
         ++nAll;
         if(h.owner!=0 || h.owner_guild!=0) {
@@ -4013,15 +4037,11 @@ void GameScript::tick(uint64_t dt) {
           if(auto ptr = world().takeItem(*itm)) {
             hero->addItem(std::move(ptr));
             nbCtx("the wisp brings: ",name," (at the wisp)");
-            names.push_back(cnt>1 ? name+" x"+std::to_string(cnt) : name);
+            names.push_back(name+" x"+std::to_string(std::max<size_t>(cnt,1)));
             }
           }
-        if(!names.empty()) {
-          std::string msg(NbTexts::get("sAcquired"));
-          for(size_t i=0; i<names.size(); ++i)
-            msg += (i==0 ? "" : ", ")+names[i];
-          Gothic::inst().onPrint(msg.c_str());
-          }
+        for(auto& n:names)
+          st.wispLines.emplace_back(std::string(NbTexts::get("sWispName"))+": "+n,tickCount()+10000);
         st.nextWispSearch = 0;   // the next ones at once
         best = nullptr;          // a flight next time: the list of the world changed
         }
@@ -4042,7 +4062,6 @@ void GameScript::tick(uint64_t dt) {
           if(st.wispFound!=ref.get()) {
             st.wispFound = ref.get();
             nbCtx("the wisp found: ",best->displayName()," at ",int(std::sqrt(bestD))," cm from the wisp");
-            Gothic::inst().onPrint(std::string(NbTexts::get("sWispSearch")).c_str());
             }
           }
         }
@@ -4094,10 +4113,9 @@ void GameScript::tick(uint64_t dt) {
           if(auto ptr = world().takeItem(*itm)) {
             hero->addItem(std::move(ptr));
             nbCtx("the wisp brings: ",name);
-            // "Zdobyto: " of the plugin (sAcquired)
-            const std::string head(NbTexts::get("sAcquired"));
-            const std::string msg  = cnt>1 ? head+name+" x"+std::to_string(cnt) : head+name;
-            Gothic::inst().onPrint(msg.c_str());
+            // "Ognik: name xN" on the left, as the plugin (fix 64)
+            st.wispLines.emplace_back(std::string(NbTexts::get("sWispName"))+": "+name+" x"+
+                                      std::to_string(std::max<size_t>(cnt,1)),tickCount()+10000);
             }
           st.nextWispSearch = 0;   // NB fix 61: the next item at once
           }
@@ -6054,12 +6072,11 @@ void GameScript::ai_gotoitem(std::shared_ptr<zenkit::INpc> npcRef, std::shared_p
       st.wispNpc   = npcRef;
       st.wispItem  = itmRef;
       st.wispSince = tickCount();
-      // NB fix 62: "Coś znaleziono!" of the plugin (sWispSearch), once for an item
+      // NB fix 62: once for an item (the text "Coś znaleziono!" is drawn by the HUD, fix 64)
       if(st.wispFound!=itmRef.get()) {
         st.wispFound = itmRef.get();
         st.wispBest  = 1e9f;
         nbCtx("the wisp found: ",itm->displayName()," at ",int((itm->position()-npc->position()).length())," cm");
-        Gothic::inst().onPrint(std::string(NbTexts::get("sWispSearch")).c_str());
         }
       }
     }

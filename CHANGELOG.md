@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **64**).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **65**).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -287,16 +287,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **59 – teleport:** NB zmienia świat funkcją pluginu `Wld_ChangeLevel_AB(plik ZEN, punkt)` (kamienie i runy teleportacji, przedmioty przeniesienia, runa Galoma, świątynia Azgalora, dolina Adanosa…). Nie było jej, więc teleport zabierał manę i nic się nie działo. Teraz zmiana świata jak przy przejściu między światami. W logu `[ctx] change of the world: … -> …`.
 - **60 – zbroja:** `RX_ApplyHeroHead` ustawia ciało bohatera przez `Mdl_SetVisualBody(…, NO_ARMOR)`. W Gothicu to znaczy „nie zakładaj nowej zbroi”, a w tej wersji OpenGothic (dla Archolos) zdejmowało założoną. W NB zbroja teraz zostaje. Naprawiło to też koniec prologu – bezimienny ma łachmany. Diagnostyka `[ctx] the hero takes off …` zostaje.
 
-### 11, 61, 63. Ognik od Vatrasa – ✅ (podstawa), szybsze zbieranie i crash 🧪 (12. i 15.11.2026)
+### 11, 61, 63, 64. Ognik od Vatrasa – ✅ (podstawa), crash i zachowanie jak na PC 🧪 (12. i 15.11.2026)
 - **Pliki:** 🆕 `mods/nb-wisp/` (`manifest.json`, `index.js`, gotowy `mods/nb-wisp.zip`), `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`
 - **Przyczyna:** w NB całego ognika (`WISP_DETECTOR`) prowadzi plugin (przywołanie pod L-Shift+F5, szukanie i zbieranie – UNION_ABI.DLL 0x102740c0, chodzenie za bohaterem). Skrypty mają tylko postać i `B_MM_WispDetect`, którego NB nigdzie nie wywołuje, a `ZS_MM_Rtn_Summoned` prowadzi do bohatera wszystkie przywołane stwory oprócz ognika.
 - **11 – przywołanie (mod JS):** gdy bohater ma amulet (`ITAM_ADDON_WISPDETECTOR(NEW)`) – **Shift+F5**, przycisk w zakładce **„Ognik”** menu modów albo komenda `ognik`. Po zmianie świata ognik wraca.
 - **61 – szukanie, zbieranie, chodzenie (silnik):**
-  - **chodzenie:** dalej niż 3 m od bohatera – biegnie do niego; dalej niż 25 m – staje od razu obok;
-  - **szukanie:** co 0,1 s, gdy ognik jest do 20 m od bohatera – najbliższy ognikowi przedmiot leżący do 10 m od bohatera (nie wyżej/niżej niż 5 m); pomija klucze (`ITKE_*`, poza wytrychami), a przy wyłączonym w rozmowie z ognikiem „zbieraniu wartościowych przedmiotów” – zbroje i mikstury;
+  - **chodzenie (64):** ognik nie trzyma się bohatera – lata i szuka; do bohatera wraca dopiero bez zajęcia i dalej niż 8 m; dalej niż 40 m – staje od razu obok;
+  - **szukanie:** co 0,1 s, gdy ognik jest do 30 m od bohatera – najbliższy ognikowi przedmiot leżący do 20 m od bohatera (nie wyżej/niżej niż 5 m); pomija klucze (`ITKE_*`, poza wytrychami), a przy wyłączonym w rozmowie z ognikiem „zbieraniu wartościowych przedmiotów” – zbroje i mikstury;
   - **przedmioty z właścicielem:** bierze, gdy w promieniu 20 m nie ma żywego właściciela ani nikogo z jego gildii;
-  - **zbieranie:** wszystko do 3,5 m od ognika od razu do ekwipunku (do 5 naraz, „Zdobyto: a, b, c”); po dalsze leci („Coś znaleziono!”); nie doleci w 15 s – odpuszcza na minutę;
-  - **sprawdzone (21:43):** leci za bohaterem i przynosi przedmioty. **Do sprawdzenia:** szybkość zbierania (zgłoszenie: 10–15 s na kilka broni, na PC natychmiast).
+  - **zbieranie:** wszystko do 3,5 m od ognika od razu do ekwipunku (do 5 naraz); po dalsze leci; nie doleci w 15 s – odpuszcza na minutę;
+  - **napisy jak na PC (64, z nagrania 339895):** po prawej (84% / 36%) „Szukanie...” albo „Coś znaleziono!”, gdy leci po przedmiot; po lewej (od 57% wysokości) lista „Ognik: nazwa xN” – ostatnie 7 przyniesionych, każde przez 10 s (na PC zielone, tu żółte – OpenGothic nie ma zielonej czcionki). Wcześniej „Zdobyto: …” na środku ekranu;
+  - **sprawdzone (21:43):** przynosi przedmioty. **Do sprawdzenia (64):** czy lata i zbiera jak na PC.
 - **63 – crash przy zbieraniu:** `SIGSEGV` w `Item::position` ← `Npc::nextAiAction`. Ognik miał w kolejce nierozpoczęte „leć do przedmiotu”, a przedmiot był już zebrany; silnik czyścił wskaźnik, ale `AI_GotoItem` z niego korzystał. Teraz `AI_GotoItem` bez przedmiotu nic nie robi (dotyczy każdej postaci), a ognik czyści kolejkę przed oddaniem przedmiotu.
 - **Log:** co 10 s `[ctx] wisp search: …`, oraz `the wisp found / brings / takes an item of an owner / did not reach / was … cm away`.
 - **Jeszcze nie ma:** umiejętności ognika z pluginu (rodzaje przedmiotów, obszar, szybkość, łup z przeciwników), „zbieranie w pomieszczeniach”, pokazywanie rzadkich roślin i tabliczek (`RX_ShowWispRare`, `RX_ShowWispStone`, `FindPlates`).

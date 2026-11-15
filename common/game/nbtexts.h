@@ -41,6 +41,7 @@ namespace NbTexts {
       {"sMagicShieldAbsorbeLeft", "Tarcza Magiczna: "},
       {"sNextHitPotion", "Ochrona na nast\xEApny atak"},
       {"sWispSearch", "Co\x9C znaleziono!"},
+      {"sWispName", "Ognik"},
       {"sAcquired", "Zdobyto: "},
       {"sDay", "Dzie\xF1: "},
       };
