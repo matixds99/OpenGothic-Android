@@ -50,6 +50,10 @@ std::string worldStem(std::string s) {
 
 using Records = std::vector<std::shared_ptr<zenkit::VNpc>>;
 
+bool isOrigin(const zenkit::Vec3& p) {
+  return p.x==0.f && p.y==0.f && p.z==0.f;
+  }
+
 Records collect(const zenkit::World& w) {
   Records                        ret;
   std::set<const zenkit::VNpc*>  seen;
@@ -77,8 +81,13 @@ Records collect(const zenkit::World& w) {
     visit(v);
   for(auto& n:w.npcs)
     emit(n);
-  for(auto& sp:w.npc_spawns)
+  for(auto& sp:w.npc_spawns) {
+    // a character of the spawn list that the original game has taken out of the world (the hero was far away) is saved at
+    // 0,0,0 - the harbour of Khorinis. Its place is the one of the spawn (230 characters in a save of New Balance)
+    if(sp.npc!=nullptr && isOrigin(sp.npc->position))
+      sp.npc->position = sp.position;
     emit(sp.npc);
+    }
   return ret;
   }
 
@@ -201,7 +210,8 @@ void applyNpc(World& world, Npc& npc, const zenkit::VNpc& s) {
     npc.setTalentSkill(Talent(t->talent),t->skill);
     }
 
-  npc.setPosition(s.position.x,s.position.y,s.position.z);
+  if(!isOrigin(s.position))
+    npc.setPosition(s.position.x,s.position.y,s.position.z);
   npc.setDirection(float(std::atan2(s.rotation[2][0],s.rotation[2][2])*180.0/3.14159265358979));
   for(auto& o:s.overlays)
     npc.addOverlay(o,0);
@@ -476,6 +486,10 @@ const zenkit::VNpc* applyWorld(World& world, const Records& records, Counters& c
       list.erase(best);
       ++cnt.matched;
       } else {
+      if(isOrigin(r->position)) {
+        ++cnt.unknown;   // out of the world in the original game, without a place: it is not put into the harbour
+        continue;
+        }
       npc = world.addNpc(sym->index(),at);
       if(npc==nullptr) {
         ++cnt.unknown;
