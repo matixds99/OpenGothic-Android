@@ -1,5 +1,7 @@
 #include "sky.h"
 
+#include <algorithm>
+
 #include <Tempest/Application>
 #include <Tempest/CommandBuffer>
 #include <Tempest/Platform>
@@ -80,7 +82,11 @@ float Sky::isNight() const {
   }
 
 void Sky::updateLight(const gtime gameTime) {
-  const int64_t now = gameTime.timeInDay().toInt();
+  int64_t now = gameTime.timeInDay().toInt();
+  // NB fix 53: "the night as bright as the day" (for testing; [NB_OG] bNightAsDay=1, the page "Ustawienia gry"):
+  // only the light and the sky stay between 8:00 and 18:00, the time of the game (routines of the NPC) goes on
+  if(Gothic::settingsGetI("NB_OG","bNightAsDay")!=0)
+    now = std::clamp(now, gtime(8,0).toInt(), gtime(18,0).toInt());
 
   // https://www.suncalc.org/#/52.4561,13.4033,5/2020.06.28/13:09/1/3
   const int64_t rise         = gtime( 4,45).toInt();

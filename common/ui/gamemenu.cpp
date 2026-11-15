@@ -8,17 +8,23 @@
 
 #include <algorithm>
 #include <cctype>
+#include <unordered_map>
 
 #include "utils/string_frm.h"
 #include "world/objects/npc.h"
 #include "world/world.h"
 #include "ui/menuroot.h"
+#ifdef OPENGOTHIC_TOUCH_UI
+#include "ui/touchdraw.h"
+#endif
 #include "utils/gthfont.h"
 #include "utils/fileutil.h"
 #include "utils/keycodec.h"
 #include "game/definitions/musicdefinitions.h"
 #include "game/serialize.h"
 #include "game/savegameheader.h"
+#include "game/nboptions.h"
+#include "game/gamescript.h"
 #include "gothic.h"
 #include "resources.h"
 #include "build.h"
@@ -314,6 +320,8 @@ GameMenu::GameMenu(MenuRoot &owner, KeyCodec& keyCodec, zenkit::DaedalusVm& vm, 
 #endif
 
   initItems();
+  if(statusMenu && menu->items[0]=="MENU_ITEM_STATUS_HEADING" && menu->items[1].empty())
+    initNbStatus();
 #ifdef OPENGOTHIC_TOUCH_UI
   if(savesKind>=0)
     saves.reset(new SaveScreen(savesKind==0 ? SaveScreen::Load : SaveScreen::Save,scanPolish()));
@@ -366,7 +374,18 @@ void GameMenu::resetVm(zenkit::DaedalusVm* inVm) {
   updateValues();
   }
 
+// New Balance redefines the constants of the log: LOG_SUCCESS = 4 (Obsolete for the engine) and uses
+// LOG_FAILED (3) for the bestiary. Its MENU.DAT shows the finished quests in the list "FAILEDMISSIONS"
+// (button "Zakończone zadania") and the bestiary in the list "OLDMISSIONS" (button "Bestiariusz").
+static bool nbLogMenu = false;
+
 GameMenu::QuestStat GameMenu::toStatus(std::string_view str) {
+  if(nbLogMenu) {
+    if(str=="FAILEDMISSIONS")
+      return QuestStat::NbDone;
+    if(str=="OLDMISSIONS")
+      return QuestStat::Failed;
+    }
   if(str=="CURRENTMISSIONS")
     return QuestStat::Current;
   if(str=="OLDMISSIONS")
@@ -381,6 +400,9 @@ GameMenu::QuestStat GameMenu::toStatus(std::string_view str) {
 bool GameMenu::isCompatible(const QuestLog::Quest& q, QuestStat st) {
   if(q.section==QuestLog::Section::Note && st==QuestStat::Log)
     return true;
+  if(st==QuestStat::NbDone)
+    return q.section!=QuestLog::Section::Note &&
+           (q.status==QuestLog::Status::Success || q.status==QuestLog::Status::Obsolete);
   return (uint8_t(q.status)==uint8_t(st) && q.section!=QuestLog::Section::Note);
   }
 
@@ -392,6 +414,376 @@ int32_t GameMenu::numQuests(const QuestLog* ql, QuestStat st) {
     if(isCompatible(ql->quest(i),st))
       ++num;
   return num;
+  }
+
+/// Returning New Balance: a text of GOTHIC.DAT (RX_MENU_TITLE_STR_...) in the language of the game.
+/// In the main menu there are no scripts of the game yet, then they are read once and the texts kept.
+// Returning New Balance: the status screen
+struct NbStatRow { char kind; const char* label; const char* a; const char* b; };
+struct NbStatTab { const char* pl; const char* en; std::vector<NbStatRow> rows; };
+static const std::vector<NbStatTab>& nbStatTabs() {
+  static const std::vector<NbStatTab> tabs = {
+    {"Posta\xE6", "Character", {
+      {'H', "Posta\xE6", nullptr, nullptr},
+      {'E', "Gildia", "guild", nullptr},
+      {'S', "Rozdzia\xB3", "SKAPITEL", nullptr},
+      {'E', "Poziom", "level", nullptr},
+      {'E', "Do\x9Cwiadczenie", "exp", nullptr},
+      {'E', "Nast\xEApny poziom", "next", nullptr},
+      {'E', "Punkty nauki", "lp", nullptr},
+      {'S', "Dzie\xF1", "SALLDAY", nullptr},
+      {'S', "Ranga", "SGRADE", nullptr},
+      {'S', "Punkty rangi", "SRANKPOINTS", nullptr},
+      {'H', "Bogowie i gildie", nullptr, nullptr},
+      {'S', "Karma Innosa", "SINNOSKARMA", nullptr},
+      {'S', "Karma Beliara", "SBELIARKARMA", nullptr},
+      {'S', "Gildia z\xB3odziei", "STHIEFGUILD", nullptr},
+      {'S', "Gildia zab\xF3jc\xF3w", "SKILLERSGUILD", nullptr},
+      {'S', "Gildia kupc\xF3w", "STRADEGUILD", nullptr},
+      {'S', "Zabite potwory", "SMONSTERKILLED", nullptr},
+      {'S', "Zabici ludzie", "SPEOPLEKILLED", nullptr},
+      {'H', "Poziom trudno\x9C""ci", nullptr, nullptr},
+      {'S', "Poziom trudno\x9C""ci", "SHARDLVL", nullptr},
+      {'S', "Tryb SNC", "SHARDSNC", nullptr},
+      {'S', "Trudne AI", "SHARDKSAIMODE", nullptr},
+      {'S', "Punkty nauki na poziom", "SSTATUSLP", nullptr},
+      {'S', "\xAFycie na poziom", "SSTATUSHP", nullptr},
+      {'S', "Do\x9Cwiadczenie z walki", "SSTATUSEXP", nullptr},
+      {'S', "\xAFycie wrog\xF3w", "SSTATUSMONSTER", nullptr},
+      {'S', "Si\xB3""a wrog\xF3w", "SSTATUSMONSTERPOWER", nullptr},
+      {'S', "Ochrona wrog\xF3w", "SSTATUSMONSTERPROT", nullptr},
+      {'S', "Z\xB3oto", "SSTATUSMONEY", nullptr},
+      {'S', "Mikstury lecznicze", "SSTATUSPOTIONS", nullptr},
+      {'S', "Pu\xB3""apki", "SSTATUSTRAPS", nullptr},
+      {'S', "Sen", "SSTATUSSLEEP", nullptr},
+      {'S', "G\xB3\xF3""d / pragnienie / zm\xEA""czenie", "SSTATUSHUNGER", nullptr},
+      }},
+    {"Umiej\xEAtno\x9C""ci", "Skills", {
+      {'H', "Rzemios\xB3o", nullptr, nullptr},
+      {'S', "Kowalstwo", "SSTATUSSMTH", "SMASTERYSMTH"},
+      {'S', "Alchemia", "SSTATUSALKH", "SMASTERYALKH"},
+      {'S', "Tworzenie run", "SSTATUSRUNE", "SMASTERYRUNE"},
+      {'S', "Jubilerstwo", "SSTATUSJEW", nullptr},
+      {'S', "Ostrzenie broni", "SSTATUSSHARP", nullptr},
+      {'S', "Magiczna bro\xF1", "SSTATUSMAGICSMTH", nullptr},
+      {'S', "Kucie rapier\xF3w", "SSTATUSSPAGESMTH", nullptr},
+      {'S', "Bro\xF1 ork\xF3w", "SSTATUSORCWPSMTH", nullptr},
+      {'S', "Wykonywanie pancerzy", "SSTATUSMAKEARMOR", nullptr},
+      {'S', "Ulepszanie pancerzy", "SSTATUSARMORSMTH", nullptr},
+      {'S', "Wykonywanie \xB3uk\xF3w", "SSTATUSMAKEBOW", nullptr},
+      {'H', "G\xF3rnictwo i wytapianie", nullptr, nullptr},
+      {'S', "Wydobywanie rudy", "SMASTERYORE", nullptr},
+      {'S', "Wydobywanie z\xB3ota", "SMASTERYGOLD", nullptr},
+      {'S', "Wytapianie rudy", "SSTATUSPLAVKA", nullptr},
+      {'S', "Wytapianie magicznej rudy", "SSTATUSMAGPLAVKA", nullptr},
+      {'S', "Stal ork\xF3w", "SSTATUSORCPLAVKA", nullptr},
+      {'S', "Wytapianie z\xB3ota", "SSTATUSGOLDSMTH", nullptr},
+      {'H', "Strza\xB3y i be\xB3ty", nullptr, nullptr},
+      {'S', "Strza\xB3y", "SSTATUSARROW", nullptr},
+      {'S', "Ogniste", "SSTATUSFIREARROW", nullptr},
+      {'S', "Magiczne", "SSTATUSMAGICARROW", nullptr},
+      {'S', "Po\x9Cwi\xEA""cone", "SSTATUSBLESSARROW", nullptr},
+      {'S', "Zatrute", "SSTATUSPOISONARROW", nullptr},
+      {'S', "Z rudy", "SSTATUSOREARROW", nullptr},
+      {'S', "Wybuchowe", "ZSTATUSEXPLOSIVEARROW", nullptr},
+      {'H', "My\x9Clistwo", nullptr, nullptr},
+      {'S', "Trofea zwierz\xB9t", "SSTATUSHUNT", nullptr},
+      {'S', "Rze\x9Fnictwo", "SSTATUSMEAT", nullptr},
+      {'S', "Sk\xF3rowanie", "SSTATUSHUNTSKIN", nullptr},
+      {'S', "Sk\xF3rowanie gad\xF3w", "SSTATUSHUNTREPSKIN", nullptr},
+      {'S', "K\xB3y", "SSTATUSHUNTTEETH", nullptr},
+      {'S', "Pazury", "SSTATUSHUNTCLAW", nullptr},
+      {'S', "Pancerze pe\xB3zaczy", "SSTATUSHUNTCRWL", nullptr},
+      {'S', "\xAFuwaczki", "SSTATUSHUNTMNDB", nullptr},
+      {'S', "Skrzyd\xB3""a", "SSTATUSHUNTWING", nullptr},
+      {'S', "\xAF\xB9""d\xB3""a", "SSTATUSHUNTSTING", nullptr},
+      {'S', "Serca", "SSTATUSHUNTHEART", nullptr},
+      {'S', "R\xF3g cieniostwora", "SSTATUSHUNTSHWHORN", nullptr},
+      {'S', "R\xF3g z\xEA""bacza", "SSTATUSHUNTSNAPHORN", nullptr},
+      {'S', "J\xEAzyki ogniste", "SSTATUSHUNTFIRELANG", nullptr},
+      {'S', "\xA3uski smok\xF3w", "SSTATUSHUNTDRAGSCALE", nullptr},
+      {'S', "Krew smok\xF3w", "SSTATUSHUNTDRAGBLOOD", nullptr},
+      {'H', "Gotowanie", nullptr, nullptr},
+      {'S', "Zupy", "SSTATUSHERDSOUP", nullptr},
+      {'S', "Kompoty", "SSTATUSHERDCOMPOT", nullptr},
+      {'S', "Ciasta", "SSTATUSHERDCAKE", nullptr},
+      {'H', "Z\xB3odziejstwo", nullptr, nullptr},
+      {'S', "Kieszonkostwo", "SSTATUSTHFT", "SMASTERYTHFT"},
+      {'S', "Otwieranie zamk\xF3w", "SSTATUSBRK", "SMASTERYBRK"},
+      {'S', "Skradanie", "SSTATUSSTL", nullptr},
+      {'S', "Akrobatyka", "SSTATUSACRO", nullptr},
+      {'H', "Magia", nullptr, nullptr},
+      {'S', "Kr\xB9g magii", "SSTATUSCIRC", nullptr},
+      {'S', "Demonologia", "SSTATUSDMN", nullptr},
+      {'S', "Magiczne zwoje", "SSTATUSMAGSCROLLS", nullptr},
+      {'S', "Sacta Anomen", "SSTATUSSACTANOMEN", nullptr},
+      {'S', "Magiczna tarcza", "SSTATUSMAGICSHIELD", nullptr},
+      {'S', "Moc magii", "SSTATUSMAGICPOWER", nullptr},
+      {'S', "Chwytanie dusz", "SSTATUSCAPSOUL", nullptr},
+      {'H', "Wiedza", nullptr, nullptr},
+      {'S', "Retoryka", "SSTATUSRHETVALUE", "SSTATUSRHET"},
+      {'S', "J\xEAzyk ork\xF3w", "SSTATUSORCL", nullptr},
+      {'S', "J\xEAzyk prastary", "SSTATUSANCL", nullptr},
+      {'S', "J\xEAzyk druid\xF3w", "SSTATUSDRUIDL", nullptr},
+      {'S', "J\xEAzyk demon\xF3w", "SSTATUSDEML", nullptr},
+      {'H', "Regeneracja", nullptr, nullptr},
+      {'S', "Regeneracja \xBFycia", "SSTATUSREGENHP", nullptr},
+      {'S', "Regeneracja many", "SSTATUSREGENMANA", nullptr},
+      {'S', "Regeneracja wytrzyma\xB3o\x9C""ci", "SSTATUSREGENSTAM", nullptr},
+      {'H', "Dary bog\xF3w", nullptr, nullptr},
+      {'S', "Bro\xF1 jednor\xEA""czna", "SSTATUSWARPERC1H", nullptr},
+      {'S', "Bro\xF1 dwur\xEA""czna", "SSTATUSWARPERC2H", nullptr},
+      {'S', "Zwyk\xB3""e dwur\xEA""czne", "SSTATUSWARPERC2HCOMMON", nullptr},
+      {'S', "Tarcza", "SSTATUSWARSHIELDCOMMON", nullptr},
+      {'S', "@RX_STR_STAT_GODGIFTDUAL", "RX_STR_STAT_GODGIFTDUAL_VAL", nullptr},
+      {'S', "@RX_STR_STAT_GODGIFTBOW", "RX_STR_STAT_GODGIFTBOW_VAL", nullptr},
+      {'S', "@RX_STR_STAT_GODGIFTMANA", "RX_STR_STAT_GODGIFTMANA_VAL", nullptr},
+      {'S', "@RX_STR_STAT_GODGIFTSUMMON", "RX_STR_STAT_GODGIFTSUMMON_VAL", nullptr},
+      {'S', "Celny strza\xB3", "SSTATUSTRUESHOT", nullptr},
+      }},
+    {"Atrybuty", "Attributes", {
+      {'H', "Atrybuty", nullptr, nullptr},
+      {'E', "Si\xB3""a", "str", "SREALSTR"},
+      {'E', "Zr\xEA""czno\x9C\xE6", "dex", "SREALDEX"},
+      {'E', "Mana", "mana", "SREALMANA"},
+      {'S', "Inteligencja", "SINTELLECT", nullptr},
+      {'E', "Punkty \xBFycia", "hp", nullptr},
+      {'E', "Wytrzyma\xB3o\x9C\xE6", "stamina", nullptr},
+      {'H', "W\xB3""adanie broni\xB9", nullptr, nullptr},
+      {'E', "Bro\xF1 jednor\xEA""czna", "t1", "SMASTERY1H"},
+      {'E', "Bro\xF1 dwur\xEA""czna", "t2", "SMASTERY2H"},
+      {'E', "\xA3uk", "t3", "SMASTERYBOW"},
+      {'E', "Kusza", "t4", "SMASTERYCBOW"},
+      {'S', "Tarcza", "SSHIELD", "SMASTERYSHLD"},
+      {'S', "Dwie bronie", "SDUALWEAPON", nullptr},
+      {'S', "Styl ork\xF3w", "SORCWEAPON", nullptr},
+      }},
+    {"Ochrona", "Protection", {
+      {'H', "Ochrona pancerza", nullptr, nullptr},
+      {'E', "Bro\xF1 sieczna", "pedge", nullptr},
+      {'E', "Bro\xF1 obuchowa", "pblunt", nullptr},
+      {'E', "Pociski", "ppoint", nullptr},
+      {'E', "Ogie\xF1", "pfire", nullptr},
+      {'E', "Magia", "pmagic", nullptr},
+      {'S', "Przewr\xF3""cenie", "SSTATUSFLY", nullptr},
+      {'H', "Odporno\x9C""ci", nullptr, nullptr},
+      {'S', "Trucizny", "SSTATUSPOISON", nullptr},
+      {'S', "Zimno", "SSTATUSCOLD", nullptr},
+      {'S', "\xAF""ar", "SSTATUSHEAT", nullptr},
+      }},
+    {"Osi\xB9gni\xEA""cia", "Achievements", {
+      {'H', "Pokonani przeciwnicy", nullptr, nullptr},
+      {'A', "", "SSTATUSHEROIC_01", nullptr},
+      {'A', "", "SSTATUSHEROIC_02", nullptr},
+      {'A', "", "SSTATUSHEROIC_03", nullptr},
+      {'A', "", "SSTATUSHEROIC_04", nullptr},
+      {'A', "", "SSTATUSHEROIC_05", nullptr},
+      {'A', "", "SSTATUSHEROIC_06", nullptr},
+      {'A', "", "SSTATUSHEROIC_07", nullptr},
+      {'A', "", "SSTATUSHEROIC_08", nullptr},
+      {'A', "", "SSTATUSHEROIC_09", nullptr},
+      {'A', "", "SSTATUSHEROIC_10", nullptr},
+      {'A', "", "SSTATUSHEROIC_11", nullptr},
+      {'A', "", "SSTATUSHEROIC_12", nullptr},
+      {'A', "", "SSTATUSHEROIC_13", nullptr},
+      {'A', "", "SSTATUSHEROIC_14", nullptr},
+      {'A', "", "SSTATUSHEROIC_15", nullptr},
+      {'A', "", "SSTATUSHEROIC_16", nullptr},
+      {'A', "", "SSTATUSHEROIC_17", nullptr},
+      {'A', "", "SSTATUSHEROIC_18", nullptr},
+      {'A', "", "SSTATUSHEROIC_19", nullptr},
+      {'A', "", "SSTATUSHEROIC_20", nullptr},
+      {'A', "", "SSTATUSHEROIC_21", nullptr},
+      {'A', "", "SSTATUSHEROIC_22", nullptr},
+      {'A', "", "SSTATUSHEROIC_23", nullptr},
+      {'A', "", "SSTATUSHEROIC_24", nullptr},
+      {'A', "", "SSTATUSHEROIC_25", nullptr},
+      {'A', "", "SSTATUSHEROIC_26", nullptr},
+      {'A', "", "SSTATUSHEROIC_27", nullptr},
+      {'A', "", "SSTATUSHEROIC_28", nullptr},
+      {'A', "", "SSTATUSHEROIC_29", nullptr},
+      {'A', "", "SSTATUSHEROIC_30", nullptr},
+      {'A', "", "SSTATUSHEROIC_31", nullptr},
+      {'A', "", "SSTATUSHEROIC_32", nullptr},
+      {'A', "", "SSTATUSHEROIC_33", nullptr},
+      {'A', "", "SSTATUSHEROIC_34", nullptr},
+      {'A', "", "SSTATUSHEROIC_35", nullptr},
+      {'A', "", "SSTATUSHEROIC_36", nullptr},
+      {'A', "", "SSTATUSHEROIC_37", nullptr},
+      {'A', "", "SSTATUSHEROIC_38", nullptr},
+      {'A', "", "SSTATUSHEROIC_39", nullptr},
+      }},
+    };
+  return tabs;
+  }
+
+// what the screen shows: the lines of every tab, filled by setPlayer
+struct NbStatLine { std::string label, value; bool header = false; };
+static std::vector<std::vector<NbStatLine>> nbStatData;
+static int   nbStatTab    = 0;
+static float nbStatScroll = 0;
+static bool  nbStatDrag   = false;
+static float nbStatDragY  = 0, nbStatDragStart = 0;
+
+struct NbStatGeom { Tempest::Rect panel, tabs, content; int rowH = 1; };
+static NbStatGeom nbStatGeom(int W, int H) {
+  NbStatGeom g;
+  g.panel   = Tempest::Rect(int(float(W)*0.04f),int(float(H)*0.05f),int(float(W)*0.92f),int(float(H)*0.90f));
+  const int pad = int(float(g.panel.w)*0.03f);
+  // the pause button of the phone is in the upper left corner: the tabs start after it
+  const int tx  = std::max(g.panel.x+pad,int(float(W)*0.10f));
+  g.tabs    = Tempest::Rect(tx,g.panel.y+int(float(g.panel.h)*0.03f),g.panel.x+g.panel.w-pad-tx,int(float(g.panel.h)*0.11f));
+  const int cy  = g.tabs.y+g.tabs.h+int(float(g.panel.h)*0.03f);
+  // the back button of the phone is in the lower right corner: the values end before it
+  g.content = Tempest::Rect(g.panel.x+pad,cy,int(float(g.panel.w)*0.80f),g.panel.y+g.panel.h-pad-cy);
+  g.rowH    = std::max(1,int(float(H)*0.058f));
+  return g;
+  }
+
+static float nbStatMaxScroll(const NbStatGeom& g) {
+  if(nbStatTab<0 || size_t(nbStatTab)>=nbStatData.size())
+    return 0;
+  const float total = float(nbStatData[size_t(nbStatTab)].size())*float(g.rowH);
+  return std::max(0.f,total-float(g.content.h));
+  }
+
+/// Polish in the code page of the game (windows-1250): the language setting is not always 2 for a Polish game
+static bool nbHasPolishLetters(std::string_view s) {
+  static const unsigned char pl[] = {0xB9,0xE6,0xEA,0xB3,0xF1,0xF3,0x9C,0x9F,0xBF,0xA5,0xC6,0xCA,0xA3,0xD1,0xD3,0x8C,0x8F,0xAF};
+  for(unsigned char c:s)
+    for(auto p:pl)
+      if(c==p)
+        return true;
+  return false;
+  }
+
+static bool nbStatusPolish = false;
+
+bool GameMenu::isNbStatus() const {
+  return hItems[0].name=="NB_STATUS_HDR_CHAR";
+  }
+
+void GameMenu::initNbStatus() {
+  for(auto& i:hItems)
+    i = Item();
+  // the mark of the screen; the lines are in nbStatData
+  hItems[0].name    = "NB_STATUS_HDR_CHAR";
+  hItems[0].handle  = std::make_shared<zenkit::IMenuItem>();
+  hItems[0].visible = false;
+  nbStatTab    = 0;
+  nbStatScroll = 0;
+  nbStatDrag   = false;
+  nbStatData.clear();
+  }
+
+#ifdef OPENGOTHIC_TOUCH_UI
+void GameMenu::paintNbStatus(Painter& p) {
+  using namespace touchdraw;
+  const int W = w();
+  const int H = h();
+  const auto g = nbStatGeom(W,H);
+  const bool pl = Gothic::settingsGetI("GAME","language")==2 || scanPolish() || nbStatusPolish;
+
+  bar(p,0,0,W,H,Dim);
+  frame(p,g.panel,1,PanelLine,PanelFill);
+
+  // the tabs
+  const auto& tabs = nbStatTabs();
+  const int   n    = int(tabs.size());
+  auto fTab   = fontOf(true,int(float(H)*0.040f),Cream);
+  auto fTabHi = fontOf(true,int(float(H)*0.040f),Gold);
+  for(int i=0; i<n; ++i) {
+    const int x0 = g.tabs.x+g.tabs.w*i/n;
+    const int x1 = g.tabs.x+g.tabs.w*(i+1)/n;
+    const bool active = i==nbStatTab;
+    if(active) {
+      bar(p,x0+2,g.tabs.y,x1-x0-4,g.tabs.h,RowSel);
+      bar(p,x0+2,g.tabs.y+g.tabs.h-std::max(2,int(float(H)*0.004f)),x1-x0-4,std::max(2,int(float(H)*0.004f)),Gold);
+      }
+    auto& f = active ? fTabHi : fTab;
+    const std::string label = fit(f,pl ? tabs[size_t(i)].pl : tabs[size_t(i)].en,x1-x0-8);
+    f.drawText(p,(x0+x1-f.textSize(label).w)/2,g.tabs.y+g.tabs.h/2+f.pixelSize()/2,label);
+    }
+  bar(p,g.panel.x+1,g.tabs.y+g.tabs.h+1,g.panel.w-2,1,Hairline);
+
+  if(nbStatTab<0 || size_t(nbStatTab)>=nbStatData.size())
+    return;
+  const auto& lines = nbStatData[size_t(nbStatTab)];
+  nbStatScroll = std::clamp(nbStatScroll,0.f,nbStatMaxScroll(g));
+
+  auto fHead  = fontOf(false,int(float(H)*0.030f),Gold);
+  auto fLabel = fontOf(true, int(float(H)*0.036f),Cream);
+  auto fValue = fontOf(true, int(float(H)*0.036f),Gold);
+  p.setScissor(g.content.x,g.content.y,g.content.w,g.content.h);
+  int yy = g.content.y-int(nbStatScroll);
+  for(auto& l:lines) {
+    if(yy+g.rowH>=g.content.y && yy<=g.content.y+g.content.h) {
+      if(l.header) {
+        drawSpaced(p,fHead,g.content.x,yy+g.rowH/2+fHead.pixelSize()/2,l.label,std::max(1,int(float(H)*0.003f)));
+        bar(p,g.content.x,yy+g.rowH-2,g.content.w,1,Hairline);
+        } else {
+        const int vw = fValue.textSize(l.value).w;
+        fLabel.drawText(p,g.content.x,yy+g.rowH/2+fLabel.pixelSize()/2,fit(fLabel,l.label,g.content.w-vw-int(float(W)*0.02f)));
+        fValue.drawText(p,g.content.x+g.content.w-vw,yy+g.rowH/2+fValue.pixelSize()/2,l.value);
+        }
+      }
+    yy += g.rowH;
+    }
+  p.setScissor(-x(),-y(),owner.w(),owner.h());
+
+  // the scroll bar
+  const float maxS = nbStatMaxScroll(g);
+  if(maxS>0) {
+    const int bw = std::max(3,int(float(W)*0.004f));
+    const int bh = std::max(bw*4,int(float(g.content.h)*float(g.content.h)/(float(g.content.h)+maxS)));
+    const int by = g.content.y+int(float(g.content.h-bh)*nbStatScroll/maxS);
+    bar(p,g.content.x+g.content.w+int(float(W)*0.015f),by,bw,bh,Gold);
+    }
+  }
+#endif
+
+
+static std::string nbScriptText(std::string_view name, std::string_view fallback) {
+  static std::unordered_map<std::string,std::string> cache;
+  static int32_t cacheLang = -1;
+
+  auto lang = Gothic::inst().settingsGetI("GAME","language");
+  if(lang!=cacheLang) {
+    cache.clear();
+    cacheLang = lang;
+    }
+  std::string key(name);
+  if(auto it = cache.find(key); it!=cache.end())
+    return it->second.empty() ? std::string(fallback) : it->second;
+
+  if(auto* w = Gothic::inst().world()) {
+    if(auto* sym = w->script().findSymbol(name); sym!=nullptr && sym->type()==zenkit::DaedalusDataType::STRING) {
+      cache[key] = sym->get_string();
+      return cache[key].empty() ? std::string(fallback) : cache[key];
+      }
+    }
+
+  // the whole list at once: the scripts of the game are big
+  try {
+    auto sc = Gothic::inst().loadScript(Gothic::inst().defaultGameDatFile(), ScriptLang(lang));
+    auto take = [&](const std::string& n) {
+      auto* sym = sc.find_symbol_by_name(n);
+      cache[n] = (sym!=nullptr && sym->type()==zenkit::DaedalusDataType::STRING) ? sym->get_string() : std::string();
+      };
+    for(auto& o:NbOptions::shown)
+      take(std::string("RX_MENU_TITLE_STR_")+o.name);
+    for(int i=0; i<5; ++i)
+      take("RX_MENU_CAT_TITLE_"+std::to_string(i));
+    take("RX_MENU_TOGGLE_ON");
+    take("RX_MENU_TOGGLE_OFF");
+    take("RX_MENU_SETTINGS_TITLE");
+    }
+  catch(...) {
+    Tempest::Log::e("NB menu: cannot read the texts of the game scripts");
+    }
+  if(cache.find(key)==cache.end())
+    cache[key] = std::string();
+  return cache[key].empty() ? std::string(fallback) : cache[key];
   }
 
 void GameMenu::initItems() {
@@ -415,6 +807,44 @@ void GameMenu::initItems() {
       hItems[i].visible = false;
       }
     updateItem(hItems[i]);
+    }
+
+  nbLogMenu = vm->find_symbol_by_name("MENU_OPT_CONTROLS_NEWOPTIONS")!=nullptr;
+
+  // Returning New Balance: "Ustawienia gry" (MENU_OPT_CONTROLS_NEWOPTIONS) is an empty page in MENU.DAT,
+  // its Union plugin fills it. Here: the switches of the plugin that the scripts read (Menu_ReadInt).
+  if(vm->find_symbol_by_name("MENU_OPT_CONTROLS_NEWOPTIONS")!=nullptr &&
+     menu->items[0]=="MENU_ITEM_CHG_EXTKEYS_HEADLINE" && menu->items[1]=="MENU_ITEM_KEY_STAMINA") {
+    NbOptions::ensureDefaults();
+    for(auto& i:hItems)
+      i = Item();
+
+    const std::string off = nbScriptText("RX_MENU_TOGGLE_OFF","nie");
+    const std::string on  = nbScriptText("RX_MENU_TOGGLE_ON", "tak");
+    int n = 0;
+    for(auto& o:NbOptions::shown) {
+      if(n>=int(zenkit::IMenu::item_count))
+        break;
+      auto h = std::make_shared<zenkit::IMenuItem>();
+      h->type    = zenkit::MenuItemType::CHOICEBOX;
+      h->text[0] = off + "|" + on;
+      h->text[1] = nbScriptText(std::string("RX_MENU_TITLE_STR_")+o.name, o.label!=nullptr ? o.label : o.key);
+      h->on_chg_set_option_section = o.section;
+      h->on_chg_set_option         = o.key;
+      h->flags   = zenkit::MenuItemFlag::SELECTABLE;
+      h->pos_x   = 500;
+      h->pos_y   = 1000 + n*350;
+      h->dim_x   = 7000;
+      h->dim_y   = 300;
+      h->fontname = "FONT_OLD_10_WHITE.TGA";
+
+      auto& it  = hItems[n];
+      it.name   = std::string("NB_OPTION_")+o.name;
+      it.handle = std::move(h);
+      it.visible = true;
+      updateItem(it);
+      ++n;
+      }
     }
   }
 
@@ -571,6 +1001,22 @@ void GameMenu::finishSaves() {
 
 /// phase: 0 - down, 1 - move, 2 - up, 3 - cancel
 void GameMenu::mobileTouch(float px, float py, int phase) {
+  if(isNbStatus()) {
+    const auto g = nbStatGeom(w(),h());
+    if(phase==0) {
+      nbStatDrag      = g.content.contains(int(px),int(py));
+      nbStatDragY     = py;
+      nbStatDragStart = nbStatScroll;
+      } else
+    if(nbStatDrag && phase==1) {
+      nbStatScroll = std::clamp(nbStatDragStart+(nbStatDragY-py),0.f,nbStatMaxScroll(g));
+      update();
+      } else
+    if(phase>=2) {
+      nbStatDrag = false;
+      }
+    return;
+    }
   if(optView.host) {
     optionsTouch(px,py,phase);
     return;
@@ -664,6 +1110,20 @@ void GameMenu::mobileScroll(float dy) {
   }
 
 void GameMenu::mobileTap(float px, float py) {
+  if(isNbStatus()) {
+    const auto g = nbStatGeom(w(),h());
+    const int  n = int(nbStatTabs().size());
+    if(g.tabs.contains(int(px),int(py)) && n>0) {
+      const int t = std::clamp(int((px-float(g.tabs.x))*float(n)/float(std::max(1,g.tabs.w))),0,n-1);
+      if(t!=nbStatTab) {
+        nbStatTab    = t;
+        nbStatScroll = 0;
+        Gothic::inst().emitGlobalSound(Gothic::inst().loadSoundFx("MENU_BROWSE"));
+        update();
+        }
+      }
+    return;
+    }
   if(optView.host) {
     optionsTap(px,py);
     return;
@@ -961,13 +1421,55 @@ GameMenu::LogView GameMenu::touchLogView() const {
   }
 
 std::vector<const QuestLog::Quest*> GameMenu::touchLogQuests() const {
-  static const QuestStat tabs[4] = {QuestStat::Current, QuestStat::Old, QuestStat::Failed, QuestStat::Log};
+  const auto tabs = touchLogTabStatus();
   std::vector<const QuestLog::Quest*> ret;
   if(auto ql = Gothic::inst().questLog()) {
     for(size_t i=0; i<ql->questCount(); ++i) {
       auto& quest = ql->quest(ql->questCount()-i-1); // the newest is the first
-      if(isCompatible(quest,tabs[std::clamp(touchLog.tab,0,3)]))
+      if(isCompatible(quest,tabs[size_t(std::clamp(touchLog.tab,0,3))]))
         ret.push_back(&quest);
+      }
+    }
+  return ret;
+  }
+
+/// What each section shows is taken from its button too: "EFFECTS MENU_ITEM_LIST_..." opens a list,
+/// whose USERSTRING says the status (CURRENTMISSIONS...). Mods put the buttons in another order
+/// (New Balance: Current, Finished, Trade and craft = LOG, Bestiary), so a fixed order is wrong.
+std::array<GameMenu::QuestStat,4> GameMenu::touchLogTabStatus() const {
+  std::array<QuestStat,4> ret = {QuestStat::Current, QuestStat::Old, QuestStat::Failed, QuestStat::Log};
+
+  std::vector<const Item*> found;
+  for(const auto& it:hItems) {
+    if(!it.handle || !it.visible || isHidden(it.handle) || it.handle->text[0].empty())
+      continue;
+    if(it.handle->type==zenkit::MenuItemType::LISTBOX || it.handle->type==zenkit::MenuItemType::SLIDER)
+      continue;
+    if(it.handle->pos_x>3600 || it.handle->pos_y<600 || it.handle->pos_y>5600)
+      continue;
+    if(!isSelectable(it.handle))
+      continue;
+    found.push_back(&it);
+    }
+  std::sort(found.begin(),found.end(),[](const Item* a, const Item* b){
+    return a->handle->pos_y<b->handle->pos_y;
+    });
+  if(found.size()<4)
+    return ret;
+
+  for(size_t i=0; i<4; ++i) {
+    for(auto& act:found[i]->handle->on_sel_action_s) {
+      std::string_view a = act;
+      if(a.rfind("EFFECTS ",0)!=0)
+        continue;
+      a.remove_prefix(8);
+      for(const auto& it:hItems) {
+        if(it.handle && it.handle->type==zenkit::MenuItemType::LISTBOX && it.name==a) {
+          ret[i] = toStatus(it.handle->user_string[0]);
+          break;
+          }
+        }
+      break;
       }
     }
   return ret;
@@ -1225,6 +1727,10 @@ void GameMenu::paintEvent(PaintEvent &e) {
     }
   if(embedded) {
     paintPanel(p);
+    return;
+    }
+  if(isNbStatus()) {
+    paintNbStatus(p);
     return;
     }
   if(touch.log) {
@@ -1590,7 +2096,7 @@ void GameMenu::onTick() {
     optionsUpdate();
     return;
     }
-  if(touch.list || touch.log || saves!=nullptr) {
+  if(touch.list || touch.log || saves!=nullptr || isNbStatus()) {
     resize(owner.size());
     setPosition(0,0);
     return;
@@ -2290,6 +2796,115 @@ void GameMenu::setPlayer(const Npc &pl) {
     set(string_frm("MENU_ITEM_TALENT_",i,"_TITLE"), str);
     set(string_frm("MENU_ITEM_TALENT_",i,"_SKILL"), strEnum(talV->get_string(i),sk,textBuf));
     set(string_frm("MENU_ITEM_TALENT_",i),          string_frm(val,"%"));
+    }
+
+  if(isNbStatus()) {
+    // the values: the scripts of NB fill them for the window of the plugin (RefreshStatusMenuData)
+    auto* halt = sc.findSymbol("BHALTHERO");
+    const int32_t haltPrev = (halt!=nullptr && halt->type()==zenkit::DaedalusDataType::INT) ? halt->get_int() : 0;
+    const size_t refresh = sc.findSymbolIndex("REFRESHSTATUSMENUDATA");
+    if(refresh!=size_t(-1)) {
+      try {
+        sc.invokeState(const_cast<Npc*>(&pl),nullptr,nullptr,ScriptFn(refresh));
+        }
+      catch(const std::exception& e) {
+        Tempest::Log::e("NB status: ",e.what());
+        }
+      }
+    if(halt!=nullptr && halt->type()==zenkit::DaedalusDataType::INT)
+      halt->set_int(haltPrev);  // the plugin lets the hero go when the window is closed
+
+    auto str = [&](const char* name) -> std::string {
+      if(name==nullptr)
+        return std::string();
+      auto* v = sc.findSymbol(name);
+      if(v==nullptr || v->type()!=zenkit::DaedalusDataType::STRING)
+        return std::string();
+      return v->get_string();
+      };
+    auto intVal = [&](std::string_view name) -> int32_t {
+      auto* v = sc.findSymbol(name);
+      return (v!=nullptr && v->type()==zenkit::DaedalusDataType::INT) ? v->get_int() : 0;
+      };
+    auto engine = [&](std::string_view k) -> std::string {
+      if(k=="guild")   return gilds->get_string(uint16_t(pl.guild()));
+      if(k=="level")   return std::to_string(pl.level());
+      if(k=="exp")     return std::to_string(pl.experience());
+      if(k=="next")    return std::to_string(pl.experienceNext());
+      if(k=="lp")      return std::to_string(pl.learningPoints());
+      if(k=="str")     return std::to_string(pl.attribute(ATR_STRENGTH));
+      if(k=="dex")     return std::to_string(pl.attribute(ATR_DEXTERITY));
+      if(k=="mana")    return std::to_string(pl.attribute(ATR_MANA))+"/"+std::to_string(pl.attribute(ATR_MANAMAX));
+      if(k=="hp")      return std::to_string(pl.attribute(ATR_HITPOINTS))+"/"+std::to_string(pl.attribute(ATR_HITPOINTSMAX));
+      if(k=="stamina") return std::to_string(intVal("ATR_STAMINA"))+"/"+std::to_string(intVal("ATR_STAMINA_MAX")*10); // NB keeps it x10
+      if(k.size()==2 && k[0]=='t')
+        return std::to_string(pl.hitChance(Talent(k[1]-'0')))+"%";
+      if(k=="pedge")   return std::to_string(pl.protection(PROT_EDGE));
+      if(k=="pblunt")  return std::to_string(pl.protection(PROT_BLUNT));
+      if(k=="ppoint")  return std::to_string(pl.protection(PROT_POINT));
+      if(k=="pfire")   return std::to_string(pl.protection(PROT_FIRE));
+      if(k=="pmagic")  return std::to_string(pl.protection(PROT_MAGIC));
+      return std::string();
+      };
+    auto meaningful = [](const std::string& v) {
+      return !v.empty() && v!=" " && v!="-";
+      };
+
+    // the language from the texts of the game itself (the names of the talents, the guilds)
+    if(!nbStatusPolish && (nbHasPolishLetters(tal->get_string(1)) || nbHasPolishLetters(tal->get_string(2)) ||
+                           nbHasPolishLetters(str("SSTATUSPOTIONS")) || nbHasPolishLetters(str("SSTATUSTRAPS"))))
+      nbStatusPolish = true;
+
+    nbStatData.clear();
+    for(auto& tab:nbStatTabs()) {
+      std::vector<NbStatLine> lines;
+      bool any = false;
+      for(auto& r:tab.rows) {
+        NbStatLine l;
+        if(r.kind=='H') {
+          l.header = true;
+          l.label  = r.label;
+          lines.push_back(std::move(l));
+          continue;
+          }
+        if(r.kind=='A') {
+          // an achievement: the scripts write "- Name" when it is done
+          std::string v = str(r.a);
+          if(v.rfind("- ",0)==0)
+            v = v.substr(2);
+          if(v.empty())
+            continue;
+          l.label = v;
+          lines.push_back(std::move(l));
+          any = true;
+          continue;
+          }
+        l.label = r.label;
+        if(l.label.size()>1 && l.label[0]=='@')
+          l.label = str(l.label.c_str()+1);   // the label is a text of the scripts
+        std::string v = r.kind=='E' ? engine(r.a) : str(r.a);
+        std::string b = str(r.b);
+        if(r.kind=='E' && r.b!=nullptr && std::string_view(r.b).rfind("SREAL",0)==0) {
+          if(meaningful(b))
+            v += std::string(" (") + (nbStatusPolish ? "baza " : "base ") + b + ")";
+          } else
+        if(meaningful(b)) {
+          if(!meaningful(v))
+            v = b; else
+            v += " ("+b+")";
+          }
+        if(v.empty())
+          v = "-";
+        l.value = std::move(v);
+        lines.push_back(std::move(l));
+        }
+      if(!tab.rows.empty() && tab.rows.back().kind=='A' && !any) {
+        NbStatLine l;
+        l.label = nbStatusPolish ? "Brak" : "None";
+        lines.push_back(std::move(l));
+        }
+      nbStatData.push_back(std::move(lines));
+      }
     }
 
   if(statusMenu) {

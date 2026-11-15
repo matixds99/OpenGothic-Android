@@ -30,7 +30,7 @@ constexpr float    HudGap = 3.f;   // layout units, multiplied by Controls::unit
 
 /// A button of the HUD (not the DONE and RESET, not the hotbar) that blocks the way of the others
 bool isHudIcon(const Button& b) {
-  return !b.id.empty() && b.visible;
+  return !b.id.empty() && b.visible && !b.bar;
   }
 
 /// true when a round button of the HUD with the center (px,py) and the radius r touches another one
@@ -111,23 +111,6 @@ void Controls::physical(Key key, bool on) {
     release(key);
   }
 
-void Controls::padKey(Key key, bool on) {
-  if(padHeld_[size_t(key)]==on)
-    return;
-  padHeld_[size_t(key)] = on;
-  if(on)
-    acquire(key); else
-    release(key);
-  }
-
-void Controls::padLook(float yaw, float pitch) {
-  events.push_back({Event::Look,Key::Enter,yaw,pitch});
-  }
-
-void Controls::padSpecial(int id) {
-  events.push_back({Event::Special,Key::Enter,0,0,uint32_t(id)});
-  }
-
 void Controls::resetPointers() {
   cancel();
   fingers.clear();
@@ -174,6 +157,24 @@ void Controls::features(bool speed, bool strafe) {
   cancel();
   featureSpeed  = speed;
   featureStrafe = strafe;
+  rebuild();
+  }
+
+void Controls::stamina(bool available) {
+  if(featureStamina==available)
+    return;
+  featureStamina = available;
+  if(editing) {
+    cancel();
+    rebuild();
+    }
+  }
+
+void Controls::sprint(bool available) {
+  if(featureSprint==available)
+    return;
+  cancel();
+  featureSprint = available;
   rebuild();
   }
 
@@ -325,7 +326,7 @@ void Controls::buildSettings(const Anchor& a) {
   static const char* labels[SettingCount] = {
     "Button size", "3D resolution", "Shadow quality", "SSAO effects",
     "FPS limit", "Joystick deadzone", "Camera sensitivity", "Vibration", "GUI scale",
-    "Fast forward", "HP/Mana numbers", "XP counter", "Step buttons", "Auto lock"
+    "Fast forward", "HP/Mana numbers", "XP counter", "Side step buttons"
     };
   // The speed is not a part of the vanilla game: its row is there only when a mod has asked for it
   std::vector<int> rows;
@@ -422,8 +423,7 @@ void Controls::buildGame(const Anchor&) {
   // Diameter d is given for the default button size. A button that the player has moved stands where it was put (the
   // place is a part of the screen, so it is the same in another resolution), a hidden one is not there at all, but
   // in the editor, where it is dimmed. The menu cannot be hidden: it leads to the editor.
-  auto icon = [&](const char* id, float x, float y, float d, const char* label, Key key,
-                  bool hold=false, int special=0) {
+  auto icon = [&](const char* id, float x, float y, float d, const char* label, Key key, bool hold=false, int special=0) {
     HudPlace place;
     const auto it = places.find(id);
     if(it!=places.end())
@@ -447,7 +447,7 @@ void Controls::buildGame(const Anchor&) {
   // quick save: next to the speed button; not when the player is dead
   if(!dead)
     icon("quicksave", left(183), top(36), 50, "SAVE",    Key::Enter, false, Special::QuickSave);
-  // fast forward is not in the vanilla game, a mod switches it on (touch.fastForward); not when the player is dead
+  // fast forward is not in the vanilla game, a mod switches it on (touch.fastForward); it is hidden when the player is dead
   if(featureSpeed && !dead)
     icon("speed",   left(244),  top(36), 50, "SPEED",     Key::Enter, false, Special::Speed);
   icon("log",       right(124), top(36), 50, "LOG",       Key::Log);
@@ -463,14 +463,13 @@ void Controls::buildGame(const Anchor&) {
   stick = {left(153.5f)-stickSize/2,bottom(166.5f)-stickSize/2,stickSize,stickSize};
   icon("sneak",     left(61),  bottom(36.5f), 50, "SNEAK", Key::Sneak);
   icon("walk",      left(123), bottom(36.5f), 50, "WALK",  Key::Walk);
-  // step buttons, right next to the floating stick: an option of the settings. The side steps, and the arrows forward and back
-  // (the back one is the jump back of the fight) over and under them: smaller, to stand between the bars of the status and the
-  // upper buttons, and to leave no overlap.
+  // NB fix 40: the sprint of New Balance, next to the walk (the key ~ in the original)
+  if(featureSprint && !dead)
+    icon("sprint",  left(185), bottom(36.5f), 50, "SPRINT", Key::Enter, false, Special::Sprint);
+  // side steps, right next to the floating stick: an option of the settings
   if(featureStrafe) {
-    icon("stepleft",    left(284), bottom(166.5f), 56, "< STEP",   Key::StrafeLeft,  true);
-    icon("stepright",   left(350), bottom(166.5f), 56, "STEP >",   Key::StrafeRight, true);
-    icon("stepforward", left(317), bottom(219),    44, "FORWARD",  Key::Up,          true);
-    icon("stepback",    left(317), bottom(114),    44, "BACK STEP",Key::Down,        true);
+    icon("stepleft",  left(284), bottom(166.5f), 56, "< STEP", Key::StrafeLeft,  true);
+    icon("stepright", left(350), bottom(166.5f), 56, "STEP >", Key::StrafeRight, true);
     }
 
   icon("action",    right(198),   bottom(221.5f), 88, "ACTION", Key::Action, true);
@@ -482,8 +481,22 @@ void Controls::buildGame(const Anchor&) {
   icon("target",    right(372),   bottom(230),    56, "TARGET", Key::Enter, false, Special::Target);
   icon("spells",    right(372),   bottom(150),    56, "SPELLS", Key::Enter, false, Special::Spell);
   icon("weapon",    right(300),   bottom(276),    52, "WEAPON", Key::Weapon);
-  // shown only while a transformation spell is on (see MainWindow::updateMobileAvailability): turns the character back (icon human.png)
-  icon("human",     right(300),   bottom(340),    52, "HUMAN",  Key::Enter);
+
+  // NB fix 42: the status bars in the editor: their frames are dragged (the bars are drawn by the window)
+  if(editing) {
+    for(int i=0; i<HudBarCount; ++i) {
+      if(i==1 && !featureStamina)
+        continue;
+      HudPlace place;
+      if(auto it = places.find(HudBarIds[i]); it!=places.end())
+        place = it->second;
+      auto& b  = add(0,0,0,0,"",Key::Enter);
+      b.rect   = hudBarRect(i,width,height,buttonScale,place);
+      b.id     = HudBarIds[i];
+      b.bar    = true;
+      b.dimmed = place.hidden;
+      }
+    }
 
   // The hotbar is centered below the status bars. Its slots are of the size of the buttons.
   const float slot = HotbarSlot*k;
@@ -864,10 +877,8 @@ void Controls::cancel() {
     }
   refs.fill(0);
   physicalHeld.fill(false);
-  padHeld_.fill(false);
   joyHeld.fill(false);
   joyX = joyY = 0;
-  padYaw = padSide = 0;
   joyActive = false;
   for(auto& p:fingers)
     p.second.blocked = true;
@@ -935,7 +946,9 @@ void Controls::applyAvailability() {
     if(b.special==Special::Spell)
       usable = availableSpells; else
     if(b.special==Special::Speed || b.special==Special::LoadSave || b.special==Special::QuickSave)
-      usable = true;
+      usable = true; else
+    if(b.special==Special::Sprint)
+      usable = availableMovement;
 
     // The hotbar stays visible while the player can move, other controls hide when unusable
     // Inventory actions disappear when there is no item to act on, the tabs and the close button stay.
@@ -998,6 +1011,11 @@ void Controls::moveEditor(Finger& f, float x, float y) {
   auto&       b  = layout[size_t(f.button)];
   float       cx = x-f.grabX;
   float       cy = y-f.grabY;
+  if(b.bar) {
+    // a status bar is not solid: it only stays on the screen
+    cx = std::clamp(cx,b.rect.w/2,width -b.rect.w/2);
+    cy = std::clamp(cy,b.rect.h/2,height-b.rect.h/2);
+    } else
   if(!hudResolve(layout,size_t(f.button),width,height,HudGap*scale,cx,cy))
     return;
   b.rect.x = cx-b.rect.w/2;
@@ -1020,6 +1038,18 @@ void Controls::upEditor(const Finger& f) {
     } else {
     // a tap: the next size of the button (5 steps, after the biggest the smallest). A size at which the button would
     // lie on another one is skipped; a smaller one always fits.
+    if(b.bar) {
+      // a status bar: the next of the 5 sizes, it lies over the others anyway
+      if(!p.placed) {
+        p.placed = true;
+        p.x      = (b.rect.x+b.rect.w/2)/width;
+        p.y      = (b.rect.y+b.rect.h/2)/height;
+        }
+      p.size     = (p.size+1)%HudSizeSteps;
+      hudChanged = true;
+      rebuild();
+      return;
+      }
     const size_t self   = size_t(f.button);
     const float  base   = b.rect.w/hudSizeFactor(p.size);   // the diameter of the normal size
     const float  px     = b.rect.x+b.rect.w/2;

@@ -7,6 +7,9 @@
 #include <cstring>
 #include <cctype>
 #include <cassert>
+#include <random>
+#include <algorithm>
+#include <functional>
 
 #include <zenkit/addon/daedalus.hh>
 
@@ -18,12 +21,10 @@
 #include "game/definitions/particlesdefinitions.h"
 
 #include "world/objects/npc.h"
-#include "game/savestore.h"
 
 #include "utils/fileutil.h"
 #include "utils/androidinput.h"
 #include "utils/inifile.h"
-#include "utils/crashlog.h"
 #include "graphics/renderdistance.h"
 
 #include "commandline.h"
@@ -523,28 +524,90 @@ void Gothic::startSave(Tempest::Texture2d&& tex,
   implStartLoadSave("",false,f);
   }
 
-std::string Gothic::loadingBannerName(GameScript* script, std::string_view fallback) {
-  std::string alt = script==nullptr ? std::string() : script->dmaLoadingTexture();
-  for(auto& c:alt)
-    c = char(std::toupper(static_cast<unsigned char>(c)));
-  if(alt.size()>4 && alt.compare(alt.size()-4,4,".TGA")==0) {
-    // the pictures of the mods are compiled textures
-    const std::string tex = alt.substr(0,alt.size()-4)+"-C.TEX";
-    if(Resources::hasFile(tex) || Resources::hasFile(alt))
-      return alt;
-    }
-  return std::string(fallback);
-  }
-
 void Gothic::startLoad(std::string_view banner,
                        const std::function<std::unique_ptr<GameSession>(std::unique_ptr<GameSession>&&)> f) {
   implStartLoadSave(banner,true,f);
   }
 
+/// Mods on Union (New Balance) show a random LOADING_<WORLD>_<number>.TGA (the files of /_work/data/textures/_compiled/),
+/// their LOADING.TGA is only a tiny white placeholder.
+/// world: the world of the banner (LOADING_NEWWORLD.TGA -> NEWWORLD), empty for LOADING.TGA - then any world
+static std::string randomLoadingBanner(std::string_view world) {
+  std::vector<std::string> list;
+  std::function<void(const zenkit::VfsNode&)> walk = [&](const zenkit::VfsNode& n) {
+    if(n.type()==zenkit::VfsNodeType::DIRECTORY) {
+      for(auto& c:n.children())
+        walk(c);
+      return;
+      }
+    std::string name = n.name();
+    for(auto& c:name)
+      c = char(std::toupper(static_cast<unsigned char>(c)));
+    static const std::string_view prefix = "LOADING_";
+    if(name.rfind(prefix,0)!=0)
+      return;
+    std::string base;
+    if(name.size()>6 && name.compare(name.size()-6,6,"-C.TEX")==0)
+      base = name.substr(0,name.size()-6);
+    else if(name.size()>4 && name.compare(name.size()-4,4,".TGA")==0)
+      base = name.substr(0,name.size()-4);
+    else
+      return;
+    // LOADING_<WORLD>_<number>
+    const size_t us = base.rfind('_');
+    if(us==std::string::npos || us+1>=base.size() || us<prefix.size())
+      return;
+    for(size_t i=us+1; i<base.size(); ++i)
+      if(!std::isdigit(static_cast<unsigned char>(base[i])))
+        return;
+    const std::string_view w = std::string_view(base).substr(prefix.size(), us>prefix.size() ? us-prefix.size() : 0);
+    if(!world.empty() && w!=world)
+      return;
+    base += ".TGA";
+    if(std::find(list.begin(),list.end(),base)==list.end())
+      list.push_back(std::move(base));
+    };
+  walk(Resources::vdfsIndex().root());
+  if(list.empty())
+    return std::string();
+  static std::mt19937 rng{std::random_device{}()};
+  return list[std::uniform_int_distribution<size_t>(0,list.size()-1)(rng)];
+  }
+
+static bool isUsableBanner(const Tempest::Texture2d& t) {
+  // the placeholders of Union mods are a few pixels of white
+  return !t.isEmpty() && t.w()>=64 && t.h()>=64;
+  }
+
 void Gothic::implStartLoadSave(std::string_view banner,
                                bool load,
                                const std::function<std::unique_ptr<GameSession>(std::unique_ptr<GameSession>&&)> f) {
-  loadTex = banner.empty() ? Texture2d() : Resources::loadTextureUncached(banner);
+  loadTex = Texture2d();
+  if(load && !banner.empty()) {
+    std::string world(banner);
+    for(auto& c:world)
+      c = char(std::toupper(static_cast<unsigned char>(c)));
+    if(world.size()>4 && world.compare(world.size()-4,4,".TGA")==0)
+      world.resize(world.size()-4);
+    world = world.rfind("LOADING_",0)==0 ? world.substr(8) : std::string();
+
+    // 1. a random picture of this world; 2. the picture of the world itself; 3. a random one of any world
+    auto alt = randomLoadingBanner(world);
+    if(!alt.empty())
+      loadTex = Resources::loadTextureUncached(alt);
+    if(!isUsableBanner(loadTex))
+      loadTex = Resources::loadTextureUncached(banner);
+    if(!isUsableBanner(loadTex) && !world.empty()) {
+      alt = randomLoadingBanner("");
+      if(!alt.empty())
+        loadTex = Resources::loadTextureUncached(alt);
+      }
+    Log::i("loading screen: \"",banner,"\" world=\"",world,"\" -> \"",alt.empty() ? std::string(banner) : alt,"\"");
+    }
+  if(!isUsableBanner(loadTex) && !banner.empty())
+    loadTex = Resources::loadTextureUncached(banner);
+  if(!isUsableBanner(loadTex))
+    loadTex = Texture2d();
   loadProgress.store(0);
 
   auto zero=LoadState::Idle;
@@ -575,8 +638,6 @@ void Gothic::implStartLoadSave(std::string_view banner,
         loadingFlag.compare_exchange_strong(curState,LoadState::Finalize);
         }
       catch(std::bad_alloc&){
-        // how much the process and the system have at this moment: the log of the player says where the memory has gone
-        Tempest::Log::e("memory: ", CrashLog::memoryInfo());
         fail("out of memory");
         }
       catch(std::system_error& e){
@@ -633,20 +694,12 @@ void Gothic::updateAnimation(uint64_t dt) {
     game->updateAnimation(dt);
   }
 
-int Gothic::quickSave() {
-  std::string file;
-  const size_t n = SaveStore::nextQuick(file);
-  save(file,"Quick save "+std::to_string(n));
-  return int(n);
+void Gothic::quickSave() {
+  save(saveFileName(0),"Quick save");
   }
 
 void Gothic::quickLoad() {
-  SaveStore::Entry e;
-  if(!SaveStore::newestQuick(e)) {
-    onPrint("No quick save");
-    return;
-    }
-  load(e.file);
+  load(saveFileName(0));
   }
 
 void Gothic::save(std::string_view slot, std::string_view name) {

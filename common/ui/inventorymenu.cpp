@@ -3,6 +3,7 @@
 
 #include <Tempest/Painter>
 #include <Tempest/SoundEffect>
+#include <cmath>
 
 #include "utils/string_frm.h"
 #include "world/objects/npc.h"
@@ -370,10 +371,6 @@ void InventoryMenu::keyDownEvent(KeyEvent &e) {
     return;
     }
 
-  // A tap of the touch screen is a press that is released at once: it moves one stack of items once. Only a key that is
-  // really held (a keyboard, a gamepad) repeats the transfer.
-  keyFromTouch = e.code>=0x110000u;
-
 #ifndef OPENGOTHIC_TOUCH_UI
   if(int dir = categoryKeyDir(e)) {
     shiftCategory(dir);
@@ -387,7 +384,7 @@ void InventoryMenu::keyDownEvent(KeyEvent &e) {
 
   if(keycodec.tr(e)==KeyCodec::Jump) {
     lootMode = LootMode::Stack;
-    startTakeTimer();
+    takeTimer.start(200);
     onTakeStuff();
     }
   else if (keycodec.tr(e)==KeyCodec::ActionGeneric || e.key==KeyEvent::K_Return) {
@@ -404,17 +401,17 @@ void InventoryMenu::keyDownEvent(KeyEvent &e) {
     }
   else if(e.key==KeyEvent::K_Space) {
     lootMode = LootMode::Normal;
-    startTakeTimer();
+    takeTimer.start(200);
     onTakeStuff();
     }
   else if(e.key==KeyEvent::K_Z) {
     lootMode = LootMode::Ten;
-    startTakeTimer();
+    takeTimer.start(200);
     onTakeStuff();
     }
   else if(e.key==KeyEvent::K_X) {
     lootMode = LootMode::Hundred;
-    startTakeTimer();
+    takeTimer.start(200);
     onTakeStuff();
     }
 
@@ -454,7 +451,6 @@ void InventoryMenu::mouseDownEvent(MouseEvent &e) {
   if(state==State::LockPicking)
     return;
 
-  keyFromTouch = false;
   if (e.button==MouseEvent::ButtonLeft)
     onItemAction(Item::NSLOT);
   else if (e.button==MouseEvent::ButtonRight)
@@ -568,14 +564,6 @@ InventoryMenu::PageLocal &InventoryMenu::activePageSel() {
   return pageLocal[1];
   }
   
-void InventoryMenu::startTakeTimer() {
-  if(keyFromTouch) {
-    takeTimer.stop();
-    return;
-    }
-  takeTimer.start(200);
-  }
-
 void InventoryMenu::onItemAction(uint8_t slotHint) {
   infoItem.reset();
   auto& page = activePage();
@@ -598,7 +586,7 @@ void InventoryMenu::onItemAction(uint8_t slotHint) {
     }
   else if(state==State::Chest || state==State::Trade || state==State::Ransack) {
     lootMode = LootMode::Normal;
-    startTakeTimer();
+    takeTimer.start(200);
     onTakeStuff();
     }
   }
@@ -1144,43 +1132,12 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
   p.setBrush(Brush(Color(0.01f,0.015f,0.02f,0.62f)));
   p.drawRect(x,y,dw,dh);
 
-  auto desc = item.description();
-
-  // The panel is as wide as the space between the two lists: on a screen of another proportion (a tablet, a phone with
-  // a big font) the text of the item did not fit and ran over the lists. The scale goes down in steps (the fonts are
-  // cached by the scale, so there are only a few of them) until the widest line fits.
-  float textScale = touchTextScale();
-  {
-    const int avail = std::max(1,dw-2*in);
-    for(int n=0; n<12; ++n) {
-      auto& f = Resources::font(textScale);
-      auto& t = Resources::font(textScale*1.05f);
-      bool  fits = t.textSize(desc).w<=avail;
-      for(size_t i=0; i<Item::MAX_UI_ROWS && fits; ++i) {
-        auto txt = item.uiText(i);
-        if(txt.empty())
-          continue;
-        int32_t val = item.uiValue(i);
-        if(i+1==Item::MAX_UI_ROWS && state==State::Trade && player!=nullptr && pg.is(&player->inventory()))
-          val = item.sellCost();
-        int need = f.textSize(txt).w;
-        if(val!=0) {
-          string_frm vint(val);
-          need += f.textSize(vint).w+in;
-          }
-        fits = need<=avail;
-        }
-      if(fits)
-        break;
-      textScale *= 0.9f;
-      }
-    }
-
-  auto& fnt = Resources::font(textScale);
+  auto& fnt = Resources::font(touchTextScale());
   const int pix = fnt.pixelSize();
 
   // title in the center
-  auto& title = Resources::font(textScale*1.05f);
+  auto  desc  = item.description();
+  auto& title = Resources::font(touchTextScale()*1.05f);
   title.drawText(p,x+(dw-title.textSize(desc).w)/2,y+int(H*0.05f)+title.pixelSize()/2,desc);
 
   // The separator of the actions. Properties are packed above it.
@@ -1193,8 +1150,24 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
     if(!item.uiText(i).empty())
       ++rows;
     }
-  const int rowH = pix+pix/3;
-  int       ry   = sepY-int(H*0.016f)-(rows-1)*rowH;
+
+  // NB: the descriptions have up to 6 rows and long ones - they are fitted into the panel:
+  // the rows get smaller, when they do not fit under the title, and a long row is shrunk to the width.
+  // A smaller font scale is rounded down to 0.05 (Resources keeps a font per scale).
+  auto fontFor = [&](float sc) -> const GthFont& {
+    sc = std::max(0.5f,std::floor(sc*20.f)/20.f);
+    return Resources::font(sc);
+    };
+  const float baseSc   = touchTextScale();
+  const int   titleBot = y+int(H*0.05f)+title.pixelSize()/2+title.pixelSize()/3;
+  const int   bottom   = sepY-int(H*0.016f);
+  int         rowH     = pix+pix/3;
+  float       rowSc    = baseSc;
+  if(rows>0 && rows*rowH>bottom-titleBot) {
+    rowH  = std::max(1,(bottom-titleBot)/rows);
+    rowSc = baseSc*float(rowH)/float(pix+pix/3);
+    }
+  int       ry       = bottom-(rows-1)*rowH;
   const int propsTop = ry-rowH;
   for(size_t i=0; i<Item::MAX_UI_ROWS; ++i) {
     auto    txt = item.uiText(i);
@@ -1204,11 +1177,15 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
     if(i+1==Item::MAX_UI_ROWS && state==State::Trade && player!=nullptr && pg.is(&player->inventory()))
       val = item.sellCost();
 
-    fnt.drawText(p,x+in,ry,txt);
-    if(val!=0) {
-      string_frm vint(val);
-      fnt.drawText(p,x+dw-in-fnt.textSize(vint).w,ry,vint);
-      }
+    string_frm vint(val);
+    const GthFont* f    = rowSc<baseSc ? &fontFor(rowSc) : &fnt;
+    const int      maxW = dw-2*in;
+    const int      need = f->textSize(txt).w + (val!=0 ? f->textSize(vint).w+in : 0);
+    if(need>maxW)
+      f = &fontFor(rowSc*float(maxW)/float(need));
+    f->drawText(p,x+in,ry,txt);
+    if(val!=0)
+      f->drawText(p,x+dw-in-f->textSize(vint).w,ry,vint);
     ry += rowH;
     }
 
