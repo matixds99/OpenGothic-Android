@@ -460,13 +460,23 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Diagnostyka zostaje:** `[ctx] the hero takes off …: attribute X is Y, needed Z` (zdjęcie przez silnik, gdy brakuje atrybutu) i `last script: …` przy zdejmowaniu przez skrypt.
 - **Przy okazji z logu:** broń i łuk znikały z rąk w świątyni Ashtara, bo bohater zginął (ognisty jaszczur) – to normalne.
 
-### 61. Ognik od Vatrasa nie podnosi przedmiotów – 🧪 (15.11.2026)
-- **Plik:** `common/game/gamescript.cpp`
-- **Zgłoszenie (Discord):** ognik leci do przedmiotów, ale ich nie podnosi i nic nie trafia do ekwipunku.
-- **Przyczyna:** skrypty NB tylko szukają przedmiotu i wysyłają do niego ognika (`B_MM_WispDetect` → `B_WispDetectedItem` → `Wld_DetectItem` + `AI_GotoItem`), według wyuczonych umiejętności ognika (broń, amunicja, klucze, runy, magia, jedzenie, mikstury…). Samo przyniesienie przedmiotu robił plugin Union, którego tu nie ma.
-- **Poprawka:** gdy ognik (`WISP_DETECTOR`) doleci do przedmiotu, do którego go wysłano (do 1,6 m), przedmiot trafia do ekwipunku bohatera i jest komunikat „Ognik przyniósł: …”. Przedmiotów z właścicielem nie bierze (to byłaby kradzież) – po te bohater musi sięgnąć sam. Jeśli ognik nie doleci w 20 s, odpuszcza i skrypt znajdzie mu następny. W logu: `[ctx] the wisp brings: …`.
+### 61. Ognik od Vatrasa: szukanie, zbieranie przedmiotów i chodzenie za bohaterem – ✅ (15.11.2026)
+- **Plik:** `common/game/gamescript.cpp` (+ komentarz w `mods/nb-wisp/index.js`; napisy „Coś znaleziono!” / „Zdobyto: …” z poprawki 62). Połączone poprawki 61, 63, 64, 65, 66.
+- **Sprawdzone (15.11.2026, 21:43):** ognik leci za bohaterem, znajduje przedmioty i przynosi je do ekwipunku.
+- **Zgłoszenia (Discord i testy):** ognik nie podnosił przedmiotów, nic nie trafiało do ekwipunku, a potem okazało się, że w ogóle nie leci za bohaterem.
+- **Przyczyna:** w NB całego ognika (`WISP_DETECTOR`) prowadzi plugin Union (UNION_ABI.DLL 0x102740c0), a nie skrypty:
+  - skrypty mają `B_MM_WispDetect` → `Wld_DetectItem` + `AI_GotoItem`, ale NB nigdzie tego nie wywołuje – szukanie i zbieranie robi plugin;
+  - `ZS_MM_Rtn_Summoned` prowadzi do bohatera wszystkie przywołane stwory oprócz ognika – za bohaterem prowadzi go plugin.
+  Kolejne próby (najpierw podpięcie pod `AI_GotoItem` skryptów, potem sama odległość) nic nie dały – dopiero log z wpisami `[ctx] wisp search` pokazał, że ognik nigdy nie dostaje przedmiotu i stoi 12–25 m od bohatera.
+- **Poprawka – silnik robi to, co plugin:**
+  - **Chodzenie za bohaterem:** gdy ognik nie leci po przedmiot i jest dalej niż 3 m, biegnie do bohatera; dalej niż 25 m (teleport, zmiana poziomu) – od razu staje obok bohatera.
+  - **Szukanie (co 0,5 s):** gdy ognik jest do 20 m od bohatera – najbliższy przedmiot leżący do 10 m od bohatera, nie wyżej/niżej niż 5 m. Pomija klucze (`ITKE_*`, poza wytrychami – jak plugin) i, gdy w rozmowie z ognikiem wyłączono zbieranie wartościowych przedmiotów (`RX_Wisp_DontTakeImportantItems`), zbroje i mikstury.
+  - **Przedmioty z właścicielem:** bierze je, gdy w promieniu 20 m od przedmiotu nie ma żywego właściciela ani nikogo z jego gildii (kradzieży nikt nie widzi) – w NB sporo przedmiotów na odludziu ma właściciela. Przy właścicielu nie bierze.
+  - **Zbieranie:** ognik leci do przedmiotu („Coś znaleziono!”); gdy jest nad nim (do 2,5 m po ziemi i do 4 m w pionie – ognik lata nad ziemią), przedmiot idzie do ekwipunku („Zdobyto: …”). Nie doleci w 15 s – odpuszcza ten przedmiot na minutę i bierze następny.
+- **Log:** co 10 s `[ctx] wisp search: the wisp at … cm, items in 10 m: N (owner near …, skipped …, important …, keys …, height …) -> nazwa`, oraz `the wisp found: …`, `the wisp brings: …`, `the wisp takes an item of an owner (…)`, `the wisp did not reach the item: closest …`, `the wisp was … cm away: next to the hero again`.
+- **Czego jeszcze nie ma:** umiejętności ognika z pluginu (1–10: rodzaje przedmiotów, większy obszar, szybkość, łup z przeciwników – plugin trzyma je u siebie, tu ognik zbiera wszystkie rodzaje), opcja „zbieranie w pomieszczeniach”, pokazywanie rzadkich roślin i tabliczek (`RX_ShowWispRare`, `RX_ShowWispStone`, `FindPlates`…).
 
-### 62. Napisy NB na ekranie: liczniki efektów, karma bogów, ognik – 🧪 (15.11.2026)
+### 62. Napisy NB na ekranie: liczniki efektów, karma bogów, ognik – ✅ (15.11.2026)
 - **Sprawdzone (15.11.2026, zrzut):** liczniki działają („(02:10) Napój wytrzymałości”, „Ochrona na następny atak”), są też ikonki karmy (3 i czerwone 1 8) i „Strzały: 1113”.
 - **Pliki:** `common/game/gamescript.cpp`, 🆕 `common/game/nbtexts.h`, `common/game/nboptions.h`
 - **Zgłoszenie:** brakowało napisów z wersji PC: w prawym górnym rogu liczników mikstur i błogosławieństw (np. „(13:03) Błogosławieństwo - regeneracja many”), ikonek karmy Innosa i Beliara oraz komunikatu ognika „Coś znaleziono!”.
@@ -480,41 +490,6 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
   - Ognik: „Coś znaleziono!” raz na każdy znaleziony przedmiot, a po przyniesieniu „Zdobyto: …” (teksty pluginu zamiast mojego „Ognik przyniósł”).
   - `RX_PrintCutscene` wyłączone: pisało „Pomiń, wciśnij G lub R” na scenach, a pominięcie idzie przez `RX_KeyPressed`, którego tu nie ma.
 - **Bez tego (na razie):** liczniki wampira, Full SnC+, umiejętności karmy i spowolnienia czasu (plugin trzyma je u siebie) oraz „Dzień: …” w lewym górnym rogu.
-
-### 63. Ognik nadal nie zbiera przedmiotów (poprawka 61) – 🧪 (15.11.2026, nie wystarczyło – zob. 64)
-- **Plik:** `common/game/gamescript.cpp`
-- **Zgłoszenie:** po poprawce 62 liczniki działają, ale ognik dalej nie zbiera (przedmiot „Pierścień gwiezdnej mocy” został na ziemi).
-- **Przyczyna (najpewniej):** poprawka 61 brała przedmiot, gdy ognik był bliżej niż 1,6 m w linii prostej. Ognik lata nad ziemią i zatrzymuje się nad przedmiotem, więc ten warunek mógł nigdy nie zajść.
-- **Poprawka:** odległość liczona po ziemi (do 2,5 m), a wysokość osobno (do 4 m).
-- **Log do sprawdzenia, jeśli dalej nie działa:** `[ctx] the wisp found: … at … cm` (ognik ruszył do przedmiotu), `the wisp did not reach the item: closest … cm (height … cm)` (nie doleciał przez 20 s), `the wisp is at the item, but it has an owner` (przedmiot z właścicielem – nie bierze, to byłaby kradzież), `the wisp brings: …` (zebrał).
-
-### 64. Ognik w ogóle nie szukał przedmiotów – 🧪 (15.11.2026)
-- **Pliki:** `common/game/gamescript.cpp`, `mods/nb-wisp/index.js` (tylko komentarz)
-- **Z logu (15.11, 21:10):** ani jednego `[ctx] the wisp found` – ognik nigdy nie dostał przedmiotu. W logu jest tylko w stanie `ZS_MM_RTN_SUMMONED`.
-- **Przyczyna:** poprawki 61 i 63 zakładały, że przedmioty znajdują skrypty (`B_MM_WispDetect` → `AI_GotoItem`). Okazało się, że w NB `B_MM_WispDetect` nie jest nigdzie wywoływane – szukanie i zbieranie robi sam plugin (UNION_ABI.DLL 0x102740c0). Silnik czekał więc na coś, co nigdy nie przychodziło.
-- **Poprawka:** szukanie jak w pluginie, w silniku:
-  - co 0,5 s, gdy ognik (`WISP_DETECTOR`) jest do 20 m od bohatera i nie leci już po coś: najbliższy przedmiot leżący do 10 m od bohatera, nie wyżej/niżej niż 5 m;
-  - bez przedmiotów z właścicielem (kradzież) i bez kluczy (`ITKE_*`, poza wytrychami) – w pluginie klucze są wyjęte;
-  - opcja z rozmowy z ognikiem „Wyłącz zbieranie wartościowych przedmiotów” (`RX_Wisp_DontTakeImportantItems`) – pomija zbroje i mikstury;
-  - ognik leci do przedmiotu („Coś znaleziono!”), po dolocie przedmiot idzie do ekwipunku („Zdobyto: …”, kod z poprawek 61/63);
-  - nie doleci w 15 s → odpuszcza ten przedmiot na minutę i bierze następny.
-- **Log (co 10 s):** `[ctx] wisp search: the wisp at … cm, items in 10 m: N (owned …, skipped …, important …, keys …, height …) -> nazwa` albo `WISP_DETECTOR is in the world, but not in 20 m of the hero`. Pierwszy test (21:18): nadal nie zbiera. Log z 21:26: szukanie działa (`the wisp found: Eliksir many` → `the wisp brings: Eliksir many`), ale ognik prawie zawsze był 12–25 m od bohatera, bo za nim nie leciał – poprawka 65.
-- **Czego jeszcze nie ma:** umiejętności ognika z pluginu (1–10: rodzaje przedmiotów, większy obszar, szybkość, łup z przeciwników) – plugin trzyma je u siebie; tu ognik zbiera wszystkie rodzaje. Ani opcji „zbieranie w pomieszczeniach”.
-
-### 65. Ognik nie leci za bohaterem – ✅ (15.11.2026, w logu z 21:33 ognik 0,5–3,7 m od bohatera)
-- **Plik:** `common/game/gamescript.cpp`
-- **Zgłoszenie + log (21:26):** ognik zostaje w miejscu. W logu co 10 s: „ognik 12–16 m od bohatera” albo „dalej niż 20 m”, więc szukanie z poprawki 64 prawie nigdy nie ruszało (raz ruszyło i przyniosło eliksir many).
-- **Przyczyna:** `ZS_MM_Rtn_Summoned` prowadzi do bohatera wszystkie przywołane stwory oprócz `WISP_DETECTOR` – ognika prowadził plugin.
-- **Poprawka:**
-  - gdy ognik nie leci po przedmiot i jest dalej niż 3 m, biegnie do bohatera;
-  - dalej niż 25 m (teleport, zmiana poziomu) – staje od razu obok bohatera (`[ctx] the wisp was … cm away`);
-  - szuka przedmiotów, gdy jest do 20 m od bohatera (bohater widziany do 60 m).
-- **Z logu przy okazji:** jedyny przedmiot obok w czasie rozmowy z ognikiem miał właściciela („owned 1”), więc ognik go nie brał – tak ma być.
-
-### 66. Ognik pomijał przedmioty z właścicielem – 🧪 (15.11.2026)
-- **Plik:** `common/game/gamescript.cpp`
-- **Z logu (21:33):** ognik już leci za bohaterem, ale jedyny przedmiot obok ma właściciela (`owned 1`), więc go nie brał – w NB wiele przedmiotów leżących na odludziu ma właściciela.
-- **Poprawka:** przedmiot z właścicielem ognik bierze, gdy w promieniu 20 m od przedmiotu nie ma żywego właściciela ani nikogo z jego gildii – kradzieży nikt nie widzi. Przy właścicielu dalej nie bierze. W logu: `owner near N` (pominięte, bo właściciel blisko) i `the wisp takes an item of an owner (…)`.
 
 ## Do zrobienia
 

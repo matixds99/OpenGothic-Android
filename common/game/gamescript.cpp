@@ -162,8 +162,8 @@ struct NbState {
   std::weak_ptr<zenkit::IItem>                wispItem;
   uint64_t                                    wispSince = 0;
   const zenkit::IItem*                        wispFound = nullptr; // "Coś znaleziono!" once for an item (fix 62)
-  float                                       wispBest  = 1e9f;    // the closest the wisp came to it (log, fix 63)
-  uint64_t                                    nextWispSearch = 0;  // NB fix 64: the search of the plugin, every 500 ms
+  float                                       wispBest  = 1e9f;    // the closest the wisp came to it (log, fix 61)
+  uint64_t                                    nextWispSearch = 0;  // NB fix 61: the search of the plugin, every 500 ms
   uint64_t                                    nextWispLog    = 0;  // the state of the search in the log, every 10 s
   std::unordered_map<const zenkit::IItem*,uint64_t> wispSkip;      // the items it did not reach: not again for 60 s
   float                                       wispBestH = 0;
@@ -3889,7 +3889,7 @@ void GameScript::tick(uint64_t dt) {
     nbBuffPanel(vm);
     }
 
-  // NB fix 64: the search of the wisp. The scripts of NB do not look for the items (B_MM_WispDetect is never called -
+  // NB fix 61: the search of the wisp. The scripts of NB do not look for the items (B_MM_WispDetect is never called -
   // the plugin does it in itself, UNION_ABI.DLL 0x102740c0): every 500 ms, when the wisp (WISP_DETECTOR) is near the
   // hero and has no item, the nearest item lying around the hero (10 m, without an owner, not higher than 5 m) - the
   // wisp flies to it, "Coś znaleziono!", and the code of fix 61 below gives it to the hero
@@ -3911,7 +3911,7 @@ void GameScript::tick(uint64_t dt) {
       if(auto* ws = vm.find_symbol_by_name("WISP_DETECTOR"); ws!=nullptr && findNpc(ws)!=nullptr)
         nbCtx("wisp search: WISP_DETECTOR is in the world, but not in 60 m of the hero");
       }
-    // NB fix 65: the wisp follows the hero (the plugin moves it: ZS_MM_Rtn_Summoned leaves WISP_DETECTOR out of its
+    // NB fix 61: the wisp follows the hero (the plugin moves it: ZS_MM_Rtn_Summoned leaves WISP_DETECTOR out of its
     // AI_GotoNpc). Farther than 3 m and nothing to do: to the hero, running; farther than 25 m: next to the hero
     bool wispNear = false;
     if(wisp!=nullptr && !Gothic::inst().isInDialog()) {
@@ -3951,7 +3951,7 @@ void GameScript::tick(uint64_t dt) {
         auto& h = it.handle();
         ++nAll;
         if(h.owner!=0 || h.owner_guild!=0) {
-          // NB fix 66: an item with an owner, as the plugin outside of the houses: taken when the owner (or one of
+          // NB fix 61: an item with an owner, as the plugin outside of the houses: taken when the owner (or one of
           // the guild of the owner) is not within 20 m - no one sees the theft. In the wild NB has many such items
           bool witness = false;
           world().detectNpc(it.position(),2000.f,[&](Npc& n) {
@@ -4032,7 +4032,7 @@ void GameScript::tick(uint64_t dt) {
       st.wispItem.reset();
       }
     else if(auto* itm = findItem(wItm.get())) {
-      // NB fix 63: the distance on the ground and the height apart - the wisp flies above the item (the 3D distance
+      // NB fix 61: the distance on the ground and the height apart - the wisp flies above the item (the 3D distance
       // of 160 cm of fix 61 was never reached: it stopped above the item and the item stayed)
       const auto  d  = itm->position()-wisp->position();
       const float dh = std::sqrt(d.x*d.x+d.z*d.z);
@@ -4050,7 +4050,7 @@ void GameScript::tick(uint64_t dt) {
             }
         st.wispItem.reset();
         st.wispBest = 1e9f;
-        // the owner: checked by the search (fix 66 - no owner within 20 m)
+        // the owner: checked by the search (fix 61 - no owner within 20 m)
         if(!inWorld)
           nbCtx("the wisp is at the item, but it is not in the world any more");
         if(inWorld) {

@@ -1,7 +1,7 @@
 // Gothic II: New Balance - the wisp of Vatras.
 // In NB the Union plugin (UNION_ABI.DLL) calls the wisp (WISP_DETECTOR) with L-Shift+F5 when the hero has the amulet
 // of the wisp; the scripts have only the character and its AI (ZS_MM_Rtn_Summoned). The mod calls the wisp; the search
-// for the items and bringing them (the plugin in NB) is in the engine (NB fixes 61, 63, 64, common/game/gamescript.cpp).
+// for the items and bringing them (the plugin in NB) is in the engine (NB fix 61, common/game/gamescript.cpp).
 
 const WISP     = "WISP_DETECTOR";
 const AMULETS  = ["ITAM_ADDON_WISPDETECTORNEW", "ITAM_ADDON_WISPDETECTOR"];
