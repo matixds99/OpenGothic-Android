@@ -481,12 +481,24 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
   - `RX_PrintCutscene` wyłączone: pisało „Pomiń, wciśnij G lub R” na scenach, a pominięcie idzie przez `RX_KeyPressed`, którego tu nie ma.
 - **Bez tego (na razie):** liczniki wampira, Full SnC+, umiejętności karmy i spowolnienia czasu (plugin trzyma je u siebie) oraz „Dzień: …” w lewym górnym rogu.
 
-### 63. Ognik nadal nie zbiera przedmiotów (poprawka 61) – 🧪 (15.11.2026)
+### 63. Ognik nadal nie zbiera przedmiotów (poprawka 61) – 🧪 (15.11.2026, nie wystarczyło – zob. 64)
 - **Plik:** `common/game/gamescript.cpp`
 - **Zgłoszenie:** po poprawce 62 liczniki działają, ale ognik dalej nie zbiera (przedmiot „Pierścień gwiezdnej mocy” został na ziemi).
 - **Przyczyna (najpewniej):** poprawka 61 brała przedmiot, gdy ognik był bliżej niż 1,6 m w linii prostej. Ognik lata nad ziemią i zatrzymuje się nad przedmiotem, więc ten warunek mógł nigdy nie zajść.
 - **Poprawka:** odległość liczona po ziemi (do 2,5 m), a wysokość osobno (do 4 m).
 - **Log do sprawdzenia, jeśli dalej nie działa:** `[ctx] the wisp found: … at … cm` (ognik ruszył do przedmiotu), `the wisp did not reach the item: closest … cm (height … cm)` (nie doleciał przez 20 s), `the wisp is at the item, but it has an owner` (przedmiot z właścicielem – nie bierze, to byłaby kradzież), `the wisp brings: …` (zebrał).
+
+### 64. Ognik w ogóle nie szukał przedmiotów – 🧪 (15.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `mods/nb-wisp/index.js` (tylko komentarz)
+- **Z logu (15.11, 21:10):** ani jednego `[ctx] the wisp found` – ognik nigdy nie dostał przedmiotu. W logu jest tylko w stanie `ZS_MM_RTN_SUMMONED`.
+- **Przyczyna:** poprawki 61 i 63 zakładały, że przedmioty znajdują skrypty (`B_MM_WispDetect` → `AI_GotoItem`). Okazało się, że w NB `B_MM_WispDetect` nie jest nigdzie wywoływane – szukanie i zbieranie robi sam plugin (UNION_ABI.DLL 0x102740c0). Silnik czekał więc na coś, co nigdy nie przychodziło.
+- **Poprawka:** szukanie jak w pluginie, w silniku:
+  - co 0,5 s, gdy ognik (`WISP_DETECTOR`) jest do 20 m od bohatera i nie leci już po coś: najbliższy przedmiot leżący do 10 m od bohatera, nie wyżej/niżej niż 5 m;
+  - bez przedmiotów z właścicielem (kradzież) i bez kluczy (`ITKE_*`, poza wytrychami) – w pluginie klucze są wyjęte;
+  - opcja z rozmowy z ognikiem „Wyłącz zbieranie wartościowych przedmiotów” (`RX_Wisp_DontTakeImportantItems`) – pomija zbroje i mikstury;
+  - ognik leci do przedmiotu („Coś znaleziono!”), po dolocie przedmiot idzie do ekwipunku („Zdobyto: …”, kod z poprawek 61/63);
+  - nie doleci w 15 s → odpuszcza ten przedmiot na minutę i bierze następny.
+- **Czego jeszcze nie ma:** umiejętności ognika z pluginu (1–10: rodzaje przedmiotów, większy obszar, szybkość, łup z przeciwników) – plugin trzyma je u siebie; tu ognik zbiera wszystkie rodzaje. Ani opcji „zbieranie w pomieszczeniach”.
 
 ## Do zrobienia
 

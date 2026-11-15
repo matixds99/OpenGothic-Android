@@ -163,6 +163,8 @@ struct NbState {
   uint64_t                                    wispSince = 0;
   const zenkit::IItem*                        wispFound = nullptr; // "Coś znaleziono!" once for an item (fix 62)
   float                                       wispBest  = 1e9f;    // the closest the wisp came to it (log, fix 63)
+  uint64_t                                    nextWispSearch = 0;  // NB fix 64: the search of the plugin, every 500 ms
+  std::unordered_map<const zenkit::IItem*,uint64_t> wispSkip;      // the items it did not reach: not again for 60 s
   float                                       wispBestH = 0;
   const World*                                vobWorld = nullptr;
   };
@@ -3886,16 +3888,91 @@ void GameScript::tick(uint64_t dt) {
     nbBuffPanel(vm);
     }
 
+  // NB fix 64: the search of the wisp. The scripts of NB do not look for the items (B_MM_WispDetect is never called -
+  // the plugin does it in itself, UNION_ABI.DLL 0x102740c0): every 500 ms, when the wisp (WISP_DETECTOR) is near the
+  // hero and has no item, the nearest item lying around the hero (10 m, without an owner, not higher than 5 m) - the
+  // wisp flies to it, "Coś znaleziono!", and the code of fix 61 below gives it to the hero
+  if(st.wispItem.expired() && tickCount()>=st.nextWispSearch) {
+    st.nextWispSearch = tickCount()+500;
+    Npc* hero = world().player();
+    Npc* wisp = nullptr;
+    if(hero!=nullptr && !hero->isDead()) {
+      world().detectNpc(hero->position(),2000.f,[&](Npc& n) {
+        if(wisp!=nullptr || n.isDead())
+          return;
+        auto* sym = vm.find_symbol_by_index(n.handle().symbol_index());
+        if(sym!=nullptr && sym->name()=="WISP_DETECTOR")
+          wisp = &n;
+        });
+      }
+    if(wisp!=nullptr && !Gothic::inst().isInDialog()) {
+      const auto katOf = [this](std::string_view name, int32_t def) {
+        auto* k = vm.find_symbol_by_name(name);
+        return k!=nullptr && k->type()==zenkit::DaedalusDataType::INT ? k->get_int() : def;
+        };
+      // RX_Wisp_DontTakeImportantItems (the dialog of the wisp): not the armors and the potions
+      auto* dti = vm.find_symbol_by_name("RX_WISP_DONTTAKEIMPORTANTITEMS");
+      const bool noImportant = dti!=nullptr && dti->type()==zenkit::DaedalusDataType::INT && dti->get_int()!=0;
+      const int32_t important = katOf("ITEM_KAT_ARMOR",16) | katOf("ITEM_KAT_POTIONS",128);
+      for(auto i=st.wispSkip.begin(); i!=st.wispSkip.end();)
+        i = (i->second<tickCount()) ? st.wispSkip.erase(i) : std::next(i);
+
+      Item* best  = nullptr;
+      float bestD = std::numeric_limits<float>::max();
+      const auto hp = hero->position();
+      world().detectItem(hp,1000.f,[&](Item& it) {
+        auto& h = it.handle();
+        if(h.owner!=0 || h.owner_guild!=0)
+          return;   // a theft
+        if(st.wispSkip.count(&h))
+          return;
+        if(noImportant && (h.main_flag & important)!=0)
+          return;
+        if(auto* sym = vm.find_symbol_by_index(uint32_t(it.clsId())); sym!=nullptr) {
+          // the plugin leaves the keys (but the lockpicks) to the hero
+          const std::string_view nm = sym->name();
+          if(nm.size()>=4 && nm.substr(0,4)=="ITKE" && nm!="ITKE_LOCKPICK")
+            return;
+          }
+        const auto d = it.position()-hp;
+        if(std::abs(d.y)>500.f)
+          return;
+        const float q = d.quadLength();
+        if(q<bestD) {
+          bestD = q;
+          best  = &it;
+          }
+        });
+      if(best!=nullptr) {
+        auto ref = best->handlePtr();
+        if(ref!=nullptr) {
+          wisp->aiPush(AiQueue::aiGotoItem(*best));
+          st.wispNpc   = wisp->handlePtr();
+          st.wispItem  = ref;
+          st.wispSince = tickCount();
+          st.wispBest  = 1e9f;
+          if(st.wispFound!=ref.get()) {
+            st.wispFound = ref.get();
+            nbCtx("the wisp found: ",best->displayName()," at ",int(std::sqrt(bestD))," cm from the hero");
+            Gothic::inst().onPrint(std::string(NbTexts::get("sWispSearch")).c_str());
+            }
+          }
+        }
+      }
+    }
+
   // NB fix 61: the wisp of Vatras brings the item it flew to (in NB the Union plugin does it, the scripts only send it
   // to the item): when it is at the item, the item goes to the inventory of the hero. Not the items of others (a theft)
   if(auto wItm = st.wispItem.lock()) {
     auto wNpc = st.wispNpc.lock();
     auto* wisp = wNpc!=nullptr ? findNpc(wNpc.get()) : nullptr;
     auto* hero = world().player();
-    if(wisp==nullptr || wisp->isDead() || hero==nullptr || tickCount()>st.wispSince+20000) {
+    if(wisp==nullptr || wisp->isDead() || hero==nullptr || tickCount()>st.wispSince+15000) {
       // lost, or 20 s without reaching it
       if(st.wispBest<1e9f)
         nbCtx("the wisp did not reach the item: closest ",int(st.wispBest)," cm (height ",int(st.wispBestH)," cm)");
+      if(auto w = st.wispItem.lock())
+        st.wispSkip[w.get()] = tickCount()+60000;
       st.wispItem.reset();
       }
     else if(auto* itm = findItem(wItm.get())) {
