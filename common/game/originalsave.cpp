@@ -156,14 +156,12 @@ void applyNpc(World& world, Npc& npc, const zenkit::VNpc& s) {
           return;
           }
     };
-  slot("ZS_TORSO","");
-  // New Balance (Union): the helmet is an item of its own in the slot of the head, the shield in the left arm
-  slot("ZS_HELMET","");
-  slot("ZS_SHIELD","ZS_LEFTARM");
-  slot("ZS_LONGSWORD","ZS_SWORD");
-  slot("ZS_CROSSBOW","ZS_BOW");
+  // the jewellery that is worn: ITEM_ACTIVE (1<<30) of the item. Not the sign bit: in a save of New Balance it is set for
+  // six amulets that were not worn - each one took the place of the one before, and the scripts of New Balance took the
+  // armour and the bow off on the way
+  constexpr int32_t ItemActive = int32_t(1u<<30);
   for(auto& i:s.items) {
-    if(i==nullptr || i->s_flags>=0)
+    if(i==nullptr || (i->s_flags & ItemActive)==0)
       continue;
     auto name = i->instance;
     for(auto& c:name)
@@ -171,6 +169,13 @@ void applyNpc(World& world, Npc& npc, const zenkit::VNpc& s) {
     if(name.rfind("ITAM_",0)==0 || name.rfind("ITRI_",0)==0 || name.rfind("ITBE_",0)==0)
       equip(i->instance);
     }
+  // armour and weapons after the jewellery: what the scripts of the jewellery do cannot take them off again
+  slot("ZS_TORSO","");
+  // New Balance (Union): the helmet is an item of its own in the slot of the head, the shield in the left arm
+  slot("ZS_HELMET","");
+  slot("ZS_SHIELD","ZS_LEFTARM");
+  slot("ZS_LONGSWORD","ZS_SWORD");
+  slot("ZS_CROSSBOW","ZS_BOW");
 
   // keys 3..0 of the original game are the slots 3..10 here
   for(size_t i=0; i<s.items.size() && i<s.item_short_keys.size(); ++i) {
