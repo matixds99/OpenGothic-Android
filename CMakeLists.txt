@@ -72,7 +72,7 @@ endif()
 ## OpenGothic
 
 # sources
-file(GLOB_RECURSE OPENGOTHIC_SOURCES "common/*.h" "common/*.cpp")
+file(GLOB_RECURSE OPENGOTHIC_SOURCES CONFIGURE_DEPENDS "common/*.h" "common/*.cpp")
 
 # mods that come with the program
 include(cmake/embedmods.cmake)
