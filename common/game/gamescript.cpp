@@ -2064,6 +2064,15 @@ void GameScript::initCommon() {
 
     // the plugin refreshes the texts of its window of the inventory; the summons of the multiplayer
     bindNb("UPDATEITEMSINFOININV", []() {});
+    // NB fix 59: the change of the world by the scripts (teleport stones and runes of NB, the transfer items, the
+    // temple of Azgalor, the valley of Adanos): Wld_ChangeLevel_AB(zen, waypoint) - UNION_ABI.DLL 0x10159E20 calls
+    // oCGame::TriggerChangeLevel, as the triggers of the passes do. Without it the teleport did nothing
+    bindNb("WLD_CHANGELEVEL_AB", [this](std::string_view zen, std::string_view wp) {
+      if(zen.empty())
+        return;
+      nbCtx("change of the world: ",zen," -> ",wp);
+      world().triggerChangeWorld(zen,wp);
+      });
     bindNb("RX_ISREMOTESUMMON",    [](std::shared_ptr<zenkit::INpc>) -> int32_t { return 0; });
     // the items of the scripts by name, equipping, the kind of a weapon
     bindNb("CREATEINVITEMSBYSTRING", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view inst, int32_t count) {

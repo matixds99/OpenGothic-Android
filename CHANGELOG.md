@@ -446,6 +446,11 @@ Pliki: przy każdej poprawce jest lista plików. **🆕 NOWY PLIK** oznacza plik
 - **Postacie ze spawnu:** te, które gra chwilowo wyjęła ze świata, mają w zapisie pozycję 0,0,0, czyli port Khorinis (w zapisie NB było ich 230: krwiopijce, kretoszczury, żółwie…). Teraz wracają na miejsce swojego spawnu – nie ma tłumu w porcie ani lagów.
 - **Sprawdzone (15.11.2026):** zapisy z New Balance z PC wczytują się prawidłowo.
 
+### 59. Teleport między światami (ZEN) nie działa – 🧪 (15.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- **Przyczyna:** NB zmienia świat własną funkcją pluginu `Wld_ChangeLevel_AB(plik ZEN, punkt)` – 17 wywołań: kamienie i runy teleportacji NB (`RX_OnTeleportLocation`), przedmioty przeniesienia (`ItMi_DarkTransfer`, `ItMi_TransferStreamersLoc`), runa powrotu Galoma z klasztoru, świątynia Azgalora, dolina Adanosa, finał zadania z jointami. Nie była zaimplementowana, więc teleport zabierał manę/przedmiot i nic się nie działo. Nie było jej też w liście braków w logu, bo ta pokazywała tylko funkcje `RX_…`.
+- **Poprawka:** jak w pluginie (UNION_ABI.DLL 0x10159E20 → `oCGame::TriggerChangeLevel`): zmiana świata tak samo jak przez przejście między światami (np. przełęcz), bohater pojawia się w podanym punkcie. W logu: `[ctx] change of the world: … -> …`.
+
 ## Do zrobienia
 
 - [x] Czarny goblin nie atakuje, stoi w miejscu – naprawione (poprawka 54). Z logu: wrogi (attitude=0), czuje bohatera (sense=5 przy ~1100), ale zostaje w `ZS_MM_RTN_ROAM` bez celu – reakcja na wroga (`B_MM_AssessEnemy`) nie przełącza go na atak; raz pojawia się `ZS_MM_ThreatenEnemy`. `RX_GobboClan` (niezaimplementowane) jest tylko w `AI_OnDead_Gobbo_Black_Clan` – przy śmierci, nie przy ataku. Do zbadania z włączonymi śladami `B_MM_AssessEnemy` (więcej niż 3 na komunikat).
