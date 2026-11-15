@@ -54,6 +54,9 @@ za każdym razem). Skutki pierwszego startu są już w zapisie.
 - `VNpc::item_short_keys`: skróty przedmiotów (`shortKey<n>`) są czytane i zapisywane, zamiast `0`.
 - `VNpc::packed`: poprawione dzielenie listy przedmiotów po `;`.
 - `SaveState::guild_table_raw`: cała tablica postaw gildii, niezależnie od rozmiaru.
+- Zapisy z Unionem (np. New Balance): postacie i przedmioty są zapisane jako `oCNpcEx` i `oCItemEx`. To klasy oryginału
+  z dodatkowymi polami na końcu, więc są czytane jak `oCNpc` i `oCItem`, a reszta obiektu jest pomijana. Bez tego
+  w zapisie nie było żadnej postaci („the original save has no player in its current world”).
 
 ## Sprawdzanie
 
