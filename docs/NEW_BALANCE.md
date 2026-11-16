@@ -50,6 +50,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `game/main.cpp` | dłuższy bufor dźwięku OpenAL (`alsoft.conf`, 6 × 20 ms) | 37 |
 | `common/game/playercontrol.cpp` | „lepki” focus przeciwnika w walce wręcz (bohater sam się do niego obraca) | 18 |
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |
+| `patches/tempest-opengothic.patch` (+ `patches/README.md`) | Tempest: gra nie zamyka się, gdy idzie w tło (wiadomość, ekran główny) – nowa powierzchnia Vulkana po powrocie | 73 |
 | `common/ui/dialogmenu.cpp` / `.h` | odpowiedzi w dialogach na pergaminie jak na PC (dotyk, przewijanie); menu bohatera bez kamery dialogu | 72 |
 | `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N” | 12, 69 |
 | 🆕 `common/ui/nbsalesmenu.cpp` | okno sprzedaży NB (jak okno pluginu, dotykowe) | 68, 69 |

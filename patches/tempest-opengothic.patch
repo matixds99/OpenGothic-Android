@@ -354,6 +354,69 @@ index f002ef2..dd6ad05 100644
          //NOTE1: use of null-handle is not allowed, unless VK_EXT_robustness2
          //NOTE2: sizeof 1 is rouned up in shader; and sizeof 0 is illegal but harmless(hopefully)
          info.buffer = dev.dummySsbo().impl;
+diff --git a/Engine/gapi/vulkan/vswapchain.cpp b/Engine/gapi/vulkan/vswapchain.cpp
+index 1edfe1a..dc82b31 100644
+--- a/Engine/gapi/vulkan/vswapchain.cpp
++++ b/Engine/gapi/vulkan/vswapchain.cpp
+@@ -7,6 +7,9 @@
+ #include <Tempest/Platform>
+ 
+ #include "vdevice.h"
++#if defined(__ANDROID__)
++#include "system/api/androidapi.h"
++#endif
+ 
+ #if defined(__UNIX__)
+ #include "system/api/x11api.h"
+@@ -264,7 +267,11 @@ VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR
+ #elif defined(__ANDROID__)
+   VkAndroidSurfaceCreateInfoKHR createInfo = {};
+   createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+-  createInfo.window = reinterpret_cast<ANativeWindow*>(hwnd);
++  // the window of Tempest is a tag: the surface is made on the native window of now (it changes after the background)
++  (void)hwnd;
++  createInfo.window = reinterpret_cast<ANativeWindow*>(Tempest::AndroidApi::nativeWindow());
++  if(createInfo.window==nullptr)
++    return VK_ERROR_SURFACE_LOST_KHR;
+   return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
+ #elif defined(__UNIX__)
+   VkXlibSurfaceCreateInfoKHR createInfo = {};
+@@ -309,6 +316,13 @@ void VSwapchain::cleanupSurface() noexcept {
+ 
+ void VSwapchain::reset() {
+   cleanupSwapchain();
++#if defined(__ANDROID__)
++  // after the background Android gives another surface: the old one goes with its swapchain
++  if(surfaceGen!=Tempest::AndroidApi::nativeWindowGeneration()) {
++    cleanupSurface();
++    Tempest::AndroidApi::releaseOldWindows();
++    }
++#endif
+   createSwapchain(device);
+   }
+ 
+@@ -325,6 +339,9 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
+   VkSurfaceKHR ret = VK_NULL_HANDLE;
+   if(createSurface(instance, hwnd, &ret)!=VK_SUCCESS)
+     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
++#if defined(__ANDROID__)
++  surfaceGen = Tempest::AndroidApi::nativeWindowGeneration();
++#endif
+   return ret;
+   }
+ 
+diff --git a/Engine/gapi/vulkan/vswapchain.h b/Engine/gapi/vulkan/vswapchain.h
+index 4c36c4b..f525d37 100644
+--- a/Engine/gapi/vulkan/vswapchain.h
++++ b/Engine/gapi/vulkan/vswapchain.h
+@@ -113,6 +113,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
+     VDevice&                 device;
+     SystemApi::Window*       hwnd      = nullptr;
+     VkSurfaceKHR             surface   = VK_NULL_HANDLE;
++    uint64_t                 surfaceGen    = 0;   // Android: the surface was made on this native window (see AndroidApi)
+     VkSwapchainKHR           swapChain = VK_NULL_HANDLE;
+ 
+     uint32_t                 imgIndex = 0;
 diff --git a/Engine/sound/soundeffect.cpp b/Engine/sound/soundeffect.cpp
 index 2bd16bc..1cfb2b0 100644
 --- a/Engine/sound/soundeffect.cpp
@@ -454,10 +517,10 @@ index 2bd16bc..1cfb2b0 100644
  
  bool SoundEffect::isEmpty() const {
 diff --git a/Engine/system/api/androidapi.cpp b/Engine/system/api/androidapi.cpp
-index 96b7829..7804acc 100644
+index 96b7829..2581c99 100644
 --- a/Engine/system/api/androidapi.cpp
 +++ b/Engine/system/api/androidapi.cpp
-@@ -36,6 +36,8 @@ static Tempest::Point AMotionEvent_getXY(const AInputEvent* event, size_t i) {
+@@ -36,11 +36,18 @@ static Tempest::Point AMotionEvent_getXY(const AInputEvent* event, size_t i) {
  
  static android_app*     app        = nullptr;
  static Tempest::Window* mainWindow = nullptr;
@@ -466,7 +529,67 @@ index 96b7829..7804acc 100644
  static std::atomic_bool isExit     = false;
  static bool             resumed    = false;
  static bool             focused    = false;
-@@ -170,8 +172,17 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
+ static bool             active     = false;
+ static bool             hasWindow  = false;
++// The window of Tempest is this tag, the native window behind it changes (see AndroidApi::nativeWindow)
++static int                windowTag      = 0;
++static ANativeWindow*     currentWindow  = nullptr;
++static uint64_t           windowGen      = 0;
++static std::vector<ANativeWindow*> oldWindows;
+ 
+ // Touches are recorded during polling and dispatched one per event-processing pass.
+ // Modal loops in event handlers poll recursively, so direct dispatch could reorder pointers of one AInputEvent.
+@@ -112,10 +119,31 @@ void AndroidApi::updateFocus() {
+     }
+   }
+ 
++void* AndroidApi::nativeWindow() {
++  return currentWindow;
++  }
++
++uint64_t AndroidApi::nativeWindowGeneration() {
++  return windowGen;
++  }
++
++void AndroidApi::releaseOldWindows() {
++  for(auto w:oldWindows)
++    ANativeWindow_release(w);
++  oldWindows.clear();
++  }
++
+ void AndroidApi::updateWindow() {
+   if(app==nullptr || app->window==nullptr)
+     return;
+ 
++  if(currentWindow!=app->window) {
++    if(currentWindow!=nullptr)
++      oldWindows.push_back(currentWindow);
++    currentWindow = app->window;
++    ANativeWindow_acquire(currentWindow);
++    ++windowGen;
++    }
+   hasWindow = true;
+   if(mainWindow==nullptr)
+     return;
+@@ -157,6 +185,17 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
+       updateFocus();
+       break;
+     case APP_CMD_TERM_WINDOW:
++      // the application goes to the background (another application, a message, the home screen): the surface goes
++      // away, but the game stays. Nothing is drawn until APP_CMD_INIT_WINDOW gives a new surface, then the resize
++      // event makes the swapchain anew on it. Before: the game was closed here (and sometimes crashed while closing)
++      hasWindow = false;
++      if(currentWindow!=nullptr) {
++        oldWindows.push_back(currentWindow);   // still acquired: the swapchain on it is destroyed later
++        currentWindow = nullptr;
++        }
++      ++windowGen;
++      Log::i("android: the window goes away (background)");
++      break;
+     case APP_CMD_DESTROY:
+       hasWindow = false;
+       if(mainWindow!=nullptr) {
+@@ -170,8 +209,17 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
      }
    }
  
@@ -484,8 +607,53 @@ index 96b7829..7804acc 100644
    if(AInputEvent_getType(event)!=AINPUT_EVENT_TYPE_MOTION ||
       (AInputEvent_getSource(event) & AINPUT_SOURCE_TOUCHSCREEN)!=AINPUT_SOURCE_TOUCHSCREEN)
      return 0;
+@@ -258,8 +306,13 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
+   if(isExit.load() || app->destroyRequested!=0)
+     return nullptr;
+   mainWindow = owner;
+-  ANativeWindow_acquire(app->window);
+-  return reinterpret_cast<SystemApi::Window*>(app->window);
++  if(currentWindow!=app->window) {
++    if(currentWindow!=nullptr)
++      oldWindows.push_back(currentWindow);
++    currentWindow = app->window;
++    ANativeWindow_acquire(currentWindow);
++    }
++  return reinterpret_cast<SystemApi::Window*>(&windowTag);
+   }
+ 
+ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
+@@ -270,8 +323,11 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
+   return createAndroidWindow(owner);
+   }
+ 
+-void AndroidApi::implDestroyWindow(SystemApi::Window* w) {
+-  ANativeWindow_release(reinterpret_cast<ANativeWindow*>(w));
++void AndroidApi::implDestroyWindow(SystemApi::Window*) {
++  releaseOldWindows();
++  if(currentWindow!=nullptr)
++    ANativeWindow_release(currentWindow);
++  currentWindow = nullptr;
+   mainWindow = nullptr;
+   touches.clear();
+   }
+@@ -281,9 +337,11 @@ void AndroidApi::implExit() {
+   ALooper_wake(app->looper);
+   }
+ 
+-Rect AndroidApi::implWindowClientRect(SystemApi::Window* w) {
+-  const auto window = reinterpret_cast<ANativeWindow*>(w);
+-  return Rect(0,0,ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
++Rect AndroidApi::implWindowClientRect(SystemApi::Window*) {
++  // in the background there is no surface: an empty rectangle, the swapchain is not made
++  if(currentWindow==nullptr)
++    return Rect();
++  return Rect(0,0,ANativeWindow_getWidth(currentWindow),ANativeWindow_getHeight(currentWindow));
+   }
+ 
+ float AndroidApi::implUiScale(SystemApi::Window*) {
 diff --git a/Engine/system/api/androidapi.h b/Engine/system/api/androidapi.h
-index 54d4ec5..ceac251 100644
+index 54d4ec5..c6b5f19 100644
 --- a/Engine/system/api/androidapi.h
 +++ b/Engine/system/api/androidapi.h
 @@ -1,8 +1,11 @@
@@ -500,7 +668,7 @@ index 54d4ec5..ceac251 100644
  namespace Tempest {
  
  class AndroidApi final : SystemApi {
-@@ -10,6 +13,11 @@ class AndroidApi final : SystemApi {
+@@ -10,6 +13,20 @@ class AndroidApi final : SystemApi {
      static std::filesystem::path internalDataPath();
      static std::filesystem::path externalDataPath();
  
@@ -508,6 +676,15 @@ index 54d4ec5..ceac251 100644
 +    /// Called on the thread of the application; nullptr removes the handler.
 +    using InputHandler = int32_t(*)(AInputEvent* event, void* user);
 +    static void setInputHandler(InputHandler handler, void* user);
++
++    /// The surface of Android changes: it goes away when the application is in the background (another application,
++    /// a message, the home screen) and a new one comes back. The window of Tempest stays the same, this is the native
++    /// window of now (nullptr in the background); the swapchain makes its surface on it.
++    static void* nativeWindow();
++    /// grows each time the surface goes away or comes back: a surface made at another number is stale
++    static uint64_t nativeWindowGeneration();
++    /// the native windows from before the background, kept until the swapchain has left them
++    static void  releaseOldWindows();
 +
    private:
      AndroidApi() = default;

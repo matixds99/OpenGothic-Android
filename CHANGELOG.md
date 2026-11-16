@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **73**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **74**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -138,6 +138,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - Postacie i przedmioty Uniona (`oCNpcEx` / `oCItemEx`) czytane jak `oCNpc` / `oCItem` (łatka ZenKit) – wcześniej import kończył się błędem „no player”.
 - Ludzkie gildie NB (`GIL_SEPERATOR_HUM = 21`, gildie 16–20 też ludzkie) i `Gil_Values` brane ze skryptów – bohater z zapisu nie ślizga się i ma ludzkie animacje.
 - Zakładane tylko przedmioty faktycznie założone (`ITEM_ACTIVE`), zbroja i broń po biżuterii; postacie ze spawnu (pozycja 0,0,0) wracają na swoje miejsce zamiast tłoczyć się w porcie.
+
+### 73. Gra nie zamyka się po wyjściu do ekranu głównego / przy wiadomości – 🧪 (17.11.2026)
+- **Pliki:** `patches/tempest-opengothic.patch` (Tempest: `Engine/system/api/androidapi.cpp/.h`, `Engine/gapi/vulkan/vswapchain.cpp/.h`), `patches/README.md`
+- **Zgłoszenie (film 00:17):** po wyjściu do ekranu głównego (albo gdy przyjdzie wiadomość i trzeba ją otworzyć) gra się zamyka, po powrocie launcher pokazuje „Gra się zamknęła” ze stosem `MainWindow::tick` ← `MainWindow::render` ← `AndroidApi::implProcessEvents`.
+- **Przyczyna:** gdy aplikacja idzie w tło, Android zabiera jej powierzchnię (`APP_CMD_TERM_WINDOW`). Tempest traktował to jak zamknięcie gry: wysyłał „zamknij okno” i kończył pętlę – a gra przy zamykaniu jeszcze rysowała klatkę i padała.
+- **Poprawka:** tło to nie koniec gry. Okno Tempesta zostaje, zmienia się tylko natywne okno za nim: w tle nic nie jest rysowane (gra czeka), po powrocie `APP_CMD_INIT_WINDOW` daje nową powierzchnię, a zdarzenie zmiany rozmiaru robi swapchain od nowa na niej (Vulkan: nowa `VkSurfaceKHR`, gdy powierzchnia się zmieniła). Grę zamyka tylko `APP_CMD_DESTROY` (zamknięcie aplikacji).
+- W logu `android: the window goes away (background)`.
+- **Uwaga:** jeśli w tle zabraknie pamięci, Android i tak może ubić grę (to system, nie błąd gry) – wtedy pomaga zapis przed wyjściem.
+- **Do sprawdzenia:** wyjście do ekranu głównego i powrót, otwarcie wiadomości z powiadomienia, przełączenie na inną aplikację i z powrotem; czy obraz wraca i czy dotyk działa.
 
 ---
 
