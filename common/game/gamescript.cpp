@@ -205,6 +205,25 @@ static bool nbEqualsNoCase(std::string_view a, std::string_view b) {
   return true;
   }
 
+/// NB fix 77: whether the symbol is an instance of an item (C_ITEM through its prototypes). is_instance_of<IItem>() of
+/// ZenKit is true only when the instance was made already (an item that was in the world or in an inventory): the
+/// recipes of new items (the soups, the compotes) were lost by it
+static bool nbIsItemSymbol(zenkit::DaedalusVm& vm, zenkit::DaedalusSymbol* sym) {
+  if(sym==nullptr || sym->type()!=zenkit::DaedalusDataType::INSTANCE)
+    return false;
+  if(sym->is_instance_of<zenkit::IItem>())
+    return true;
+  auto* p = sym;
+  for(int depth=0; depth<8 && p!=nullptr; ++depth) {
+    if(p->type()==zenkit::DaedalusDataType::CLASS)
+      return p->name()=="C_ITEM";
+    if(p->parent()==uint32_t(-1))
+      return false;
+    p = vm.find_symbol_by_index(p->parent());
+    }
+  return false;
+  }
+
 // "[ctx]" in the log: what the player did, so the errors around it have a place in the game (NB fix 52)
 template<class... Args>
 void nbCtx(const Args&... args) {
@@ -2396,7 +2415,7 @@ void GameScript::initCommon() {
       for(auto& c:up)
         c = char(std::toupper(uint8_t(c)));
       auto* sym = vm.find_symbol_by_name(up);
-      if(sym==nullptr || !sym->is_instance_of<zenkit::IItem>()) {
+      if(!nbIsItemSymbol(vm,sym)) {
         Log::e("NB: RX_Craft_PlayerSales_AddToProductList: no item \"",name,"\"");
         return;
         }
@@ -2429,7 +2448,7 @@ void GameScript::initCommon() {
         for(auto& c:up)
           c = char(std::toupper(uint8_t(c)));
         auto* sym = vm.find_symbol_by_name(up);
-        if(sym==nullptr || !sym->is_instance_of<zenkit::IItem>()) {
+        if(!nbIsItemSymbol(vm,sym)) {
           Log::e("NB: ",who," sales: no item \"",fs.name,"\"");
           continue;
           }
@@ -6968,7 +6987,7 @@ std::vector<NbCraft::Item> GameScript::nbCraftList(Npc& hero, int32_t craft) {
     for(auto& c:up)
       c = char(std::toupper(uint8_t(c)));
     auto* sym = vm.find_symbol_by_name(up);
-    return (sym!=nullptr && sym->is_instance_of<zenkit::IItem>()) ? sym : nullptr;
+    return nbIsItemSymbol(vm,sym) ? sym : nullptr;
     };
   for(auto& r:NbCraft::recipes(craft)) {
     // the Eye of Innos: the recipe 5000+i is the i-th heart (the second ingredient)
