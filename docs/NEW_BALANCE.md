@@ -49,10 +49,10 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/game/playercontrol.cpp` | „lepki” focus przeciwnika w walce wręcz (bohater sam się do niego obraca) | 18 |
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |
 | `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N” | 12, 69 |
-| 🆕 `common/ui/nbsalesmenu.cpp` | okno sprzedaży NB (jak okno pluginu, dotykowe) | 68 |
-| 🆕 `common/ui/nbsalesmenu.h` | j.w. | 68 |
+| 🆕 `common/ui/nbsalesmenu.cpp` | okno sprzedaży NB (jak okno pluginu, dotykowe) | 68, 69 |
+| 🆕 `common/ui/nbsalesmenu.h` | j.w. | 68, 69 |
 | `common/mainwindow.h` | okno sprzedaży NB (`nbSales`) | 68 |
-| `common/gothic.h` | sygnał `onOpenPlayerSales` (okno sprzedaży NB) | 68 |
+| `common/gothic.h` | sygnał `onOpenPlayerSales` (okno sprzedaży NB) | 68, 69 |
 
 ---
 

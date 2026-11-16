@@ -185,6 +185,7 @@ class Gothic final {
       size_t      cls   = 0;
       int32_t     price = 0;
       std::string name;
+      std::string group;   // NB fix 69: the category (Constantino, Alfred); empty - one list
       };
     Tempest::Signal<void(Npc&,Npc&,const std::vector<NbSaleItem>&)> onOpenPlayerSales;
     bool                                                                nbSalesOpen = false; // the window is shown (no HUD of NB under it)

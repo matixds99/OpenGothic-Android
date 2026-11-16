@@ -41,6 +41,9 @@ class NbSalesMenu : public Tempest::Widget {
       Tempest::Rect minus, count, plus, max;
       Tempest::Rect sell;
       Tempest::Rect close;
+      // NB fix 69: in the middle - the category with < > and the arrows to scroll the list
+      Tempest::Rect grpPrev, grpName, grpNext;
+      Tempest::Rect up, down;
       };
 
     Layout  layout() const;
@@ -49,11 +52,17 @@ class NbSalesMenu : public Tempest::Widget {
     void    changeCount(int d);
     void    sell();
     void    clampScroll();
+    void    setGroup(size_t g);
+    void    scrollBy(int rows);
+    int     visibleRows() const;
 
     bool                              active = false;
     Npc*                              player = nullptr;
     Npc*                              trader = nullptr;
-    std::vector<Gothic::NbSaleItem>   items;
+    std::vector<Gothic::NbSaleItem>   all;          // the whole list of the script / the plugin
+    std::vector<Gothic::NbSaleItem>   items;        // the items of the chosen category
+    std::vector<std::string>          groups;       // the categories in the order of the list (none - one list)
+    size_t                            group  = 0;
     size_t                            sel    = 0;
     size_t                            count  = 1;
     int                               scroll = 0;   // the first visible row

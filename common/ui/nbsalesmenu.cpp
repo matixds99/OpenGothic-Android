@@ -4,6 +4,7 @@
 #include <Tempest/Log>
 
 #include <algorithm>
+#include <cmath>
 
 #include "world/objects/npc.h"
 #include "world/world.h"
@@ -21,18 +22,37 @@ NbSalesMenu::NbSalesMenu() {
 void NbSalesMenu::open(Npc& pl, Npc& tr, const std::vector<Gothic::NbSaleItem>& list) {
   player  = &pl;
   trader  = &tr;
-  items   = list;
-  sel     = 0;
-  count   = 1;
-  scroll  = 0;
+  all     = list;
   message.clear();
-  active  = !items.empty();
-  // the first item that the player has
-  for(size_t i=0; i<items.size(); ++i)
-    if(owned(i)>0) {
-      sel = i;
+  active  = !all.empty();
+  // the categories (Constantino, Alfred): in the order of the list, only when every item has one
+  groups.clear();
+  bool everyHas = true;
+  for(auto& it:all) {
+    if(it.group.empty()) {
+      everyHas = false;
       break;
       }
+    if(std::find(groups.begin(),groups.end(),it.group)==groups.end())
+      groups.push_back(it.group);
+    }
+  if(!everyHas || groups.size()<2)
+    groups.clear();
+  // the first category with an item that the player has
+  size_t g0 = 0;
+  for(size_t g=0; g<groups.size(); ++g) {
+    bool has = false;
+    for(auto& it:all)
+      if(it.group==groups[g] && pl.inventory().itemCount(it.cls)>0) {
+        has = true;
+        break;
+        }
+    if(has) {
+      g0 = g;
+      break;
+      }
+    }
+  setGroup(g0);
   if(active)
     Gothic::inst().emitGlobalSound("TRADE_OPEN");
   Gothic::inst().nbSalesOpen = active;
@@ -47,6 +67,43 @@ void NbSalesMenu::close() {
   player = nullptr;
   trader = nullptr;
   items.clear();
+  all.clear();
+  groups.clear();
+  update();
+  }
+
+void NbSalesMenu::setGroup(size_t g) {
+  items.clear();
+  if(groups.empty()) {
+    group = 0;
+    items = all;
+    } else {
+    group = std::min(g,groups.size()-1);
+    for(auto& it:all)
+      if(it.group==groups[group])
+        items.push_back(it);
+    }
+  sel    = 0;
+  count  = 1;
+  scroll = 0;
+  // the first item that the player has
+  for(size_t i=0; i<items.size(); ++i)
+    if(owned(i)>0) {
+      sel = i;
+      break;
+      }
+  clampScroll();
+  update();
+  }
+
+int NbSalesMenu::visibleRows() const {
+  const auto l = layout();
+  return std::max(1,l.list.h/std::max(1,l.row));
+  }
+
+void NbSalesMenu::scrollBy(int rows) {
+  scroll += rows;
+  scroll  = std::clamp(scroll,0,std::max(0,int(items.size())-visibleRows()));
   update();
   }
 
@@ -79,6 +136,18 @@ NbSalesMenu::Layout NbSalesMenu::layout() const {
   l.count = Rect(l.minus.x+bw+m/2, cy, l.plus.x-(l.minus.x+bw+m/2)-m/2, bh);
   const int cs = int(40*s);
   l.close = Rect(l.panel.x-cs-m, m, cs, cs);
+
+  // the middle: the category at the top (< name >), the arrows of the list next to it
+  const int midX = pw, midW = l.panel.x-pw;
+  const int gb   = std::max(int(40*s), H/12);
+  l.grpPrev = Rect(midX+m, m, gb, gb);
+  l.grpNext = Rect(l.close.x-m-gb, m, gb, gb);
+  l.grpName = Rect(l.grpPrev.x+gb+m/2, m, l.grpNext.x-(l.grpPrev.x+gb+m/2)-m/2, gb);
+  const int aw = std::max(int(44*s), H/11);
+  const int ah = int(float(aw)*1.6f);
+  const int ax = midX+std::max(m,midW/14);
+  l.up   = Rect(ax, H*35/100-ah/2, aw, ah);
+  l.down = Rect(ax, H*68/100-ah/2, aw, ah);
   return l;
   }
 
@@ -142,6 +211,12 @@ void NbSalesMenu::mobileTap(float x, float y) {
     close();
     return;
     }
+  if(!groups.empty()) {
+    if(l.grpPrev.contains(p)) { setGroup((group+groups.size()-1)%groups.size()); return; }
+    if(l.grpNext.contains(p) || l.grpName.contains(p)) { setGroup((group+1)%groups.size()); return; }
+    }
+  if(l.up  .contains(p)) { scrollBy(-std::max(1,visibleRows()-1)); return; }
+  if(l.down.contains(p)) { scrollBy(+std::max(1,visibleRows()-1)); return; }
   if(l.list.contains(p)) {
     const size_t i = size_t(scroll + (p.y-l.list.y)/std::max(1,l.row));
     select(i);
@@ -157,10 +232,10 @@ void NbSalesMenu::mobileScroll(float dy) {
   if(!active)
     return;
   const auto l = layout();
-  scroll -= int(dy/float(std::max(1,l.row)));
-  const int visible = std::max(1,l.list.h/std::max(1,l.row));
-  scroll = std::clamp(scroll,0,std::max(0,int(items.size())-visible));
-  update();
+  int rows = int(dy/float(std::max(1,l.row)));
+  if(rows==0 && std::abs(dy)>float(l.row)/3.f)
+    rows = dy>0 ? 1 : -1;
+  scrollBy(-rows);
   }
 
 void NbSalesMenu::mouseDownEvent(MouseEvent& e) {
@@ -191,6 +266,7 @@ void NbSalesMenu::keyDownEvent(KeyEvent& e) {
     case KeyEvent::K_Left:   changeCount(-1); break;
     case KeyEvent::K_Right:  changeCount(+1); break;
     case KeyEvent::K_Return: sell(); break;
+    case KeyEvent::K_Tab:    if(!groups.empty()) setGroup((group+1)%groups.size()); break;
     default: break;
     }
   }
@@ -240,8 +316,12 @@ void NbSalesMenu::paintEvent(PaintEvent& e) {
   static const char* const TexMinus  = "AS_BACK_CRAFT_MINUS.TGA";
   static const char* const TexIngr   = "AS_BACK_CRAFT_INGRIDIENT.TGA";
 
-  // the left panel: the title and the list
-  image(tex(TexLeft),Rect(0,0,l.list.x*2+l.list.w,h()),PanelFill);
+  // the left panel: the title and the list; under the textures of the plugin a dark ground (they are half
+  // transparent, in the plugin the screen under the window is darkened)
+  const Rect leftR(0,0,l.list.x*2+l.list.w,h());
+  bar(p,leftR.x,leftR.y,leftR.w,leftR.h,Color(0.02f,0.02f,0.02f,0.85f));
+  bar(p,l.panel.x,l.panel.y,l.panel.w,l.panel.h,Color(0.02f,0.02f,0.02f,0.85f));
+  image(tex(TexLeft),leftR,PanelFill);
   big.drawText(p, l.list.x+int(8*s), l.list.y-int(12*s), "Sprzeda\xBF");   // cp1250: "Sprzedaż"
 
   const auto* recipe = tex(TexRecipe);
@@ -267,10 +347,34 @@ void NbSalesMenu::paintEvent(PaintEvent& e) {
     // the price in the parchment (the plugin has the picture of the item there)
     textMid(have==0 ? dis : yel,slot,string_frm(int(items[i].price)));
     }
-  if(scroll>0)
-    chevron(p,float(l.list.x+l.list.w/2),float(l.list.y-int(4*s)),10*s,2*s,false,Gold);
-  if(scroll+visible<int(items.size()))
-    chevron(p,float(l.list.x+l.list.w/2),float(l.list.y+l.list.h-int(6*s)),10*s,2*s,true,Gold);
+  // the middle: the arrows of the list (dim when there is nothing more there)
+  const auto arrow = [&](const Rect& r, bool down, bool on) {
+    const Color c = on ? Cream : Color(0.5f,0.5f,0.5f,0.6f);
+    frame(p,r,th,on ? PanelLine : Color(0.3f,0.3f,0.3f,0.6f),Color(0.f,0.f,0.f,0.65f));
+    const float cx = float(r.x+r.w/2), t = 3*s;
+    const float y0 = float(r.y+r.h/6), y1 = float(r.y+r.h*5/6), hw = float(r.w)*0.28f;
+    const float tip = down ? y1 : y0, back = down ? y1-hw : y0+hw;
+    stroke(p,cx,y0,cx,y1,t,c);
+    stroke(p,cx,tip,cx-hw,back,t,c);
+    stroke(p,cx,tip,cx+hw,back,t,c);
+    };
+  arrow(l.up,  false,scroll>0);
+  arrow(l.down,true, scroll+visible<int(items.size()));
+
+  // the category: < name >
+  if(!groups.empty()) {
+    const auto side = [&](const Rect& r, bool right) {
+      frame(p,r,th,PanelLine,Color(0.f,0.f,0.f,0.65f));
+      const float cx = float(r.x+r.w/2), cy = float(r.y+r.h/2), hw = float(r.w)*0.2f, t = 3*s;
+      const float tip = right ? cx+hw : cx-hw, back = right ? cx-hw : cx+hw;
+      stroke(p,tip,cy,back,cy-hw*1.4f,t,Cream);
+      stroke(p,tip,cy,back,cy+hw*1.4f,t,Cream);
+      };
+    side(l.grpPrev,false);
+    side(l.grpNext,true);
+    frame(p,l.grpName,th,PanelLine,Color(0.f,0.f,0.f,0.65f));
+    textMid(yel,l.grpName,string_frm(groups[group],"  (",int(group+1),"/",int(groups.size()),")"));
+    }
 
   // the right panel: the chosen item
   image(tex(TexRight),l.panel,PanelFill);
