@@ -121,7 +121,18 @@ NbSalesMenu::Layout NbSalesMenu::layout() const {
   const int W = w(), H = h();
   const int pw = int(float(W)*0.34f);
   const int m  = std::max(6,int(10*s));
-  const int top = m+int(44*s);   // the title (the tabs in the plugin)
+  // the title, or the tabs of the categories as in the plugin: two in a row over the list
+  int top = m+int(44*s);
+  if(!groups.empty()) {
+    const int tabH = std::max(int(34*s), H/18);
+    const int rows = int((groups.size()+1)/2);
+    const int tw   = (pw-2*m-m/2)/2;
+    for(size_t i=0; i<groups.size(); ++i) {
+      const int c = int(i%2), r = int(i/2);
+      l.tabs.emplace_back(m+c*(tw+m/2), m/2+r*(tabH+m/3), tw, tabH);
+      }
+    top = m/2+rows*(tabH+m/3)+m/2;
+    }
   l.list  = Rect(m, top, pw-2*m, H-top-m);
   l.row   = std::max(int(48*s), l.list.h/7);
   l.panel = Rect(W-pw, 0, pw, H);
@@ -137,12 +148,8 @@ NbSalesMenu::Layout NbSalesMenu::layout() const {
   const int cs = int(40*s);
   l.close = Rect(l.panel.x-cs-m, m, cs, cs);
 
-  // the middle: the category at the top (< name >), the arrows of the list next to it
+  // the middle: the arrows of the list
   const int midX = pw, midW = l.panel.x-pw;
-  const int gb   = std::max(int(40*s), H/12);
-  l.grpPrev = Rect(midX+m, m, gb, gb);
-  l.grpNext = Rect(l.close.x-m-gb, m, gb, gb);
-  l.grpName = Rect(l.grpPrev.x+gb+m/2, m, l.grpNext.x-(l.grpPrev.x+gb+m/2)-m/2, gb);
   const int aw = std::max(int(44*s), H/11);
   const int ah = int(float(aw)*1.6f);
   const int ax = midX+std::max(m,midW/14);
@@ -211,10 +218,12 @@ void NbSalesMenu::mobileTap(float x, float y) {
     close();
     return;
     }
-  if(!groups.empty()) {
-    if(l.grpPrev.contains(p)) { setGroup((group+groups.size()-1)%groups.size()); return; }
-    if(l.grpNext.contains(p) || l.grpName.contains(p)) { setGroup((group+1)%groups.size()); return; }
-    }
+  for(size_t i=0; i<l.tabs.size(); ++i)
+    if(l.tabs[i].contains(p)) {
+      if(i!=group)
+        setGroup(i);
+      return;
+      }
   if(l.up  .contains(p)) { scrollBy(-std::max(1,visibleRows()-1)); return; }
   if(l.down.contains(p)) { scrollBy(+std::max(1,visibleRows()-1)); return; }
   if(l.list.contains(p)) {
@@ -322,7 +331,15 @@ void NbSalesMenu::paintEvent(PaintEvent& e) {
   bar(p,leftR.x,leftR.y,leftR.w,leftR.h,Color(0.02f,0.02f,0.02f,0.85f));
   bar(p,l.panel.x,l.panel.y,l.panel.w,l.panel.h,Color(0.02f,0.02f,0.02f,0.85f));
   image(tex(TexLeft),leftR,PanelFill);
-  big.drawText(p, l.list.x+int(8*s), l.list.y-int(12*s), "Sprzeda\xBF");   // cp1250: "Sprzedaż"
+  if(l.tabs.empty())
+    big.drawText(p, l.list.x+int(8*s), l.list.y-int(12*s), "Sprzeda\xBF");   // cp1250: "Sprzedaż"
+  // the tabs: the chosen one light (as in the plugin), the others dark
+  for(size_t i=0; i<l.tabs.size(); ++i) {
+    const Rect& r  = l.tabs[i];
+    const bool  on = (i==group);
+    frame(p,r,th,on ? Gold : PanelLine,on ? Color(0.55f,0.42f,0.18f,0.9f) : Color(0.06f,0.06f,0.06f,0.9f));
+    textMid(on ? yel : fnt,r,groups[i]);
+    }
 
   const auto* recipe = tex(TexRecipe);
   const auto* desc   = tex(TexDesc);
@@ -361,20 +378,6 @@ void NbSalesMenu::paintEvent(PaintEvent& e) {
   arrow(l.up,  false,scroll>0);
   arrow(l.down,true, scroll+visible<int(items.size()));
 
-  // the category: < name >
-  if(!groups.empty()) {
-    const auto side = [&](const Rect& r, bool right) {
-      frame(p,r,th,PanelLine,Color(0.f,0.f,0.f,0.65f));
-      const float cx = float(r.x+r.w/2), cy = float(r.y+r.h/2), hw = float(r.w)*0.2f, t = 3*s;
-      const float tip = right ? cx+hw : cx-hw, back = right ? cx-hw : cx+hw;
-      stroke(p,tip,cy,back,cy-hw*1.4f,t,Cream);
-      stroke(p,tip,cy,back,cy+hw*1.4f,t,Cream);
-      };
-    side(l.grpPrev,false);
-    side(l.grpNext,true);
-    frame(p,l.grpName,th,PanelLine,Color(0.f,0.f,0.f,0.65f));
-    textMid(yel,l.grpName,string_frm(groups[group],"  (",int(group+1),"/",int(groups.size()),")"));
-    }
 
   // the right panel: the chosen item
   image(tex(TexRight),l.panel,PanelFill);

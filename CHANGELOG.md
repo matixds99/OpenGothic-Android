@@ -207,7 +207,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - w logu `[ctx] Constantino sales window: N items` / `Alfred …`.
 - **Złoto:** w NB nagłówek złota w ekwipunku to „Złoto: N” (klucz `itemGold` z AB_Translation.lbr, jak w pluginie).
 - **Po teście 03:35 (okno otwiera się u obu):** wszystko było w jednej liście i okno było przezroczyste. Teraz:
-  - kategorie z tabel pluginu – Constantino: Mikstury, Rzadkie rośliny, Rośliny, Trofea, Serca golemów; Alfred: Skóry, Zęby i pazury, Rogi. Na środku u góry „‹ nazwa (1/5) ›” – strzałki albo dotknięcie nazwy zmieniają kategorię (klawiatura: Tab); okno otwiera się na pierwszej kategorii, w której coś masz;
+  - kategorie z tabel pluginu – Constantino: Mikstury, Rzadkie rośliny, Rośliny, Trofea, Serca golemów; Alfred: Skóry, Zęby i pazury, Rogi. Jak w oryginale są to zakładki nad listą, po dwie w rzędzie (wybrana jasna, reszta ciemna; najpierw był pasek „‹ nazwa ›” na środku – po teście 03:39 przerobione na zakładki). Klawiatura: Tab. Okno otwiera się na pierwszej kategorii, w której coś masz;
   - na środku dwie duże strzałki ↑ ↓ – przewijają listę o stronę (przyciemnione, gdy dalej nic nie ma); zniknął błędny znaczek „>” pod listą;
   - pod lewym i prawym panelem ciemne tło jak w oryginale.
   - Okna ze skryptów (Hanna, Kardif, Halvor…) zostają jedną listą, ale strzałki i tło mają te same.

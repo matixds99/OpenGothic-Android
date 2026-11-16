@@ -41,8 +41,9 @@ class NbSalesMenu : public Tempest::Widget {
       Tempest::Rect minus, count, plus, max;
       Tempest::Rect sell;
       Tempest::Rect close;
-      // NB fix 69: in the middle - the category with < > and the arrows to scroll the list
-      Tempest::Rect grpPrev, grpName, grpNext;
+      // NB fix 69: the categories as the tabs of the plugin over the list (two columns), the arrows of the
+      // list in the middle
+      std::vector<Tempest::Rect> tabs;
       Tempest::Rect up, down;
       };
 
