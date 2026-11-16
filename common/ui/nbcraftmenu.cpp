@@ -454,7 +454,11 @@ void NbCraftMenu::paintEvent(PaintEvent& e) {
 
   // the middle: the skill of the alchemy (as the plugin) and the arrows of the list
   if(!skillTxt.empty() && skill>=0)
-    textMid(big,l.title,string_frm(skillTxt,int(skill)));
+  {
+    // the long "Umiejętność tworzenia run: N" must not go under the X: a smaller font when the big one does not fit
+    const string_frm txt(skillTxt,int(skill));
+    textMid(big.textSize(txt).w<=l.title.w ? big : yel,l.title,txt);
+  }
   const auto arrow = [&](const Rect& r, bool down, bool on) {
     const Color c = on ? Cream : Color(0.5f,0.5f,0.5f,0.6f);
     frame(p,r,th,on ? PanelLine : Color(0.3f,0.3f,0.3f,0.6f),Color(0.f,0.f,0.f,0.65f));

@@ -6894,8 +6894,9 @@ std::vector<NbCraft::Item> GameScript::nbCraftList(Npc& hero, int32_t craft) {
     it.tab   = r.tab;
     it.cls   = res->index();
     it.count = std::max(1,r.count);
+    // the runes are all called "Runa": the plugin shows the description (the spell), as the inventory
     if(auto inst = vm.init_instance<zenkit::IItem>(res); inst!=nullptr)
-      it.name = inst->name;
+      it.name = !inst->description.empty() ? inst->description : inst->name;
     if(it.name.empty())
       it.name = r.result;
     bool ok = true;

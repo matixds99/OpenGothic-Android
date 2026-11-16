@@ -255,7 +255,10 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Tworzenie** jak w pluginie: niektóre przepisy dają kilka sztuk (groty x25, cięciwy x5, strzały ogniste x5…, w oknie „x N” pod „Maksymalnie”); kowadło i zbroje wołają `RX_RaiseSmith(stopień, ilość)`, runy – za pierwszą runę danego rodzaju `PLAYER_MAKE_RUNES[n] = 1` i `TalentCount_Rune += stopień`. Założonej broni/zbroi okno nie bierze jako składnika (jak plugin: `RX_Craft_EquippedItem`).
 - W logu `[ctx] craft window N: … known recipes`, `[ctx] craft N: nazwa xN (recipe …)`.
 - **Nie ma:** ulepszeń przy kowadle (`UPGRADED_*`) i zaklinania przy łukach (`ENCHANTED_*`) – to osobne okna pluginu (wybór przedmiotu z ekwipunku); kilka warunków silnika Gothica (zbroja kruka – wersja z hełmem, ryby z wysp i suszone mięso – gildia 14 lub 16).
-- **Do sprawdzenia:** każdy stół – czy otwiera się okno, czy widać przepisy, które bohater zna, i czy rośnie umiejętność kowalstwa / tworzenia run.
+- **Po teście 23:56:** kowadło działa (umiejętność kowalstwa rośnie), stół runiczny pokazuje przepisy. Poprawione:
+  - wszystkie runy nazywały się „Runa” – teraz nazwa z opisu przedmiotu (zaklęcie), jak w ekwipunku: „Otwieranie zamków”, „Przywołanie kamiennego golema”;
+  - „Umiejętność tworzenia run: N” wchodziło pod X – za długi napis dostaje mniejszą czcionkę.
+- **Do sprawdzenia:** kocioł (zupy, potrawki, kompoty), zbroje i ciasta były puste – czy bohater zna tam jakiś przepis (na PC w tym samym zapisie).
 
 ---
 
