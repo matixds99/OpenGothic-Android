@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **74**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **75**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -147,6 +147,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - W logu `android: the window goes away (background)`.
 - **Uwaga:** jeśli w tle zabraknie pamięci, Android i tak może ubić grę (to system, nie błąd gry) – wtedy pomaga zapis przed wyjściem.
 - **Do sprawdzenia:** wyjście do ekranu głównego i powrót, otwarcie wiadomości z powiadomienia, przełączenie na inną aplikację i z powrotem; czy obraz wraca i czy dotyk działa.
+- **Test (17.11):** gra już się nie zamyka, ale po powrocie był czarny ekran, a ikona w launcherze „świrowała” – poprawione w 74.
+
+### 74. Czarny ekran po powrocie z tła – 🧪 (17.11.2026)
+- **Pliki:** `common/mainwindow.cpp/.h`, `patches/tempest-opengothic.patch` (Tempest: `androidapi.cpp/.h`, `vswapchain.cpp/.h`), `patches/README.md`
+- **Zgłoszenie:** po powrocie do gry czarny ekran, ikona gry w launcherze „świruje” (animacja otwierania się nie kończy). W logu 4× `android: the window goes away (background)` i nic więcej.
+- **Przyczyna:** nowe okno po powrocie ma ten sam rozmiar, więc widżet okna nie wysyłał zdarzenia zmiany rozmiaru – swapchain nie był robiony od nowa i gra rysowała dalej na starej, martwej powierzchni. Do tego stary swapchain zostawał na powierzchni, którą Android już zabrał.
+- **Poprawka:**
+  - przy wyjściu w tło (`APP_CMD_TERM_WINDOW`) gra od razu czeka na GPU i niszczy swapchain z powierzchnią – zanim Android ją zabierze (nowy `AndroidApi::setWindowLostHandler`);
+  - przed każdą klatką `MainWindow::render` sprawdza, czy okno Androida się zmieniło (`nativeWindowGeneration`) albo swapchain jest pusty – wtedy robi swapchain na nowej powierzchni i ustawia kamerę; bez okna nie rysuje nic;
+  - `VK_ERROR_SURFACE_LOST_KHR` przy pobraniu/pokazaniu klatki też robi nową powierzchnię zamiast błędu.
+- W logu: `android: the window comes back` i `android: the swapchain is made anew (szer x wys)`.
+- **Crash z `Item::position` ← `Npc::nextAiAction`** (dołączony crash.log) to stary, naprawiony już błąd 63 – w obecnym kodzie to miejsce ma sprawdzenie; launcher pokazuje ostatni zapisany crash.
 
 ---
 

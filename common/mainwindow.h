@@ -60,6 +60,12 @@ class MainWindow : public Tempest::Window {
   private:
     void paintEvent     (Tempest::PaintEvent& event) override;
     void resizeEvent    (Tempest::SizeEvent & event) override;
+#ifdef __ANDROID__
+    // NB fix 74: the surface of Android goes away in the background and comes back as another one
+    void androidWindowLost();
+    bool androidWindowCheck();
+    uint64_t              androidWindowGen = 0;
+#endif
 
     void mouseDownEvent (Tempest::MouseEvent& event) override;
     void mouseUpEvent   (Tempest::MouseEvent& event) override;

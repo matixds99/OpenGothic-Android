@@ -355,7 +355,7 @@ index f002ef2..dd6ad05 100644
          //NOTE2: sizeof 1 is rouned up in shader; and sizeof 0 is illegal but harmless(hopefully)
          info.buffer = dev.dummySsbo().impl;
 diff --git a/Engine/gapi/vulkan/vswapchain.cpp b/Engine/gapi/vulkan/vswapchain.cpp
-index 1edfe1a..dc82b31 100644
+index 1edfe1a..3ea7893 100644
 --- a/Engine/gapi/vulkan/vswapchain.cpp
 +++ b/Engine/gapi/vulkan/vswapchain.cpp
 @@ -7,6 +7,9 @@
@@ -381,13 +381,14 @@ index 1edfe1a..dc82b31 100644
    return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
  #elif defined(__UNIX__)
    VkXlibSurfaceCreateInfoKHR createInfo = {};
-@@ -309,6 +316,13 @@ void VSwapchain::cleanupSurface() noexcept {
+@@ -309,6 +316,14 @@ void VSwapchain::cleanupSurface() noexcept {
  
  void VSwapchain::reset() {
    cleanupSwapchain();
 +#if defined(__ANDROID__)
 +  // after the background Android gives another surface: the old one goes with its swapchain
-+  if(surfaceGen!=Tempest::AndroidApi::nativeWindowGeneration()) {
++  if(surfaceGen!=Tempest::AndroidApi::nativeWindowGeneration() || surfaceLost) {
++    surfaceLost = false;
 +    cleanupSurface();
 +    Tempest::AndroidApi::releaseOldWindows();
 +    }
@@ -395,7 +396,7 @@ index 1edfe1a..dc82b31 100644
    createSwapchain(device);
    }
  
-@@ -325,6 +339,9 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
+@@ -325,6 +340,9 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
    VkSurfaceKHR ret = VK_NULL_HANDLE;
    if(createSurface(instance, hwnd, &ret)!=VK_SUCCESS)
      throw std::system_error(Tempest::GraphicsErrc::NoDevice);
@@ -405,15 +406,43 @@ index 1edfe1a..dc82b31 100644
    return ret;
    }
  
+@@ -515,6 +533,13 @@ bool VSwapchain::isSwapchainLost(VkResult code) const {
+ 
+ void VSwapchain::acquireNextImage() {
+   VkResult code = implAcquireNextImage();
++#if defined(__ANDROID__)
++  if(code==VK_ERROR_SURFACE_LOST_KHR) {
++    // the surface is gone (the background): the next reset makes a new one
++    surfaceLost = true;
++    throw SwapchainSuboptimal();
++    }
++#endif
+ 
+   if(isSwapchainLost(code))
+     throw SwapchainSuboptimal();
+@@ -604,6 +629,12 @@ void VSwapchain::present() {
+ 
+   auto tx = Application::tickCount();
+   VkResult code = device.presentQueue->present(presentInfo);
++#if defined(__ANDROID__)
++  if(code==VK_ERROR_SURFACE_LOST_KHR) {
++    surfaceLost = true;
++    throw SwapchainSuboptimal();
++    }
++#endif
+   if(isSwapchainLost(code))
+     throw SwapchainSuboptimal();
+   tx = Application::tickCount()-tx;
 diff --git a/Engine/gapi/vulkan/vswapchain.h b/Engine/gapi/vulkan/vswapchain.h
-index 4c36c4b..f525d37 100644
+index 4c36c4b..d23acff 100644
 --- a/Engine/gapi/vulkan/vswapchain.h
 +++ b/Engine/gapi/vulkan/vswapchain.h
-@@ -113,6 +113,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
+@@ -113,6 +113,8 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
      VDevice&                 device;
      SystemApi::Window*       hwnd      = nullptr;
      VkSurfaceKHR             surface   = VK_NULL_HANDLE;
 +    uint64_t                 surfaceGen    = 0;   // Android: the surface was made on this native window (see AndroidApi)
++    bool                     surfaceLost   = false; // Android: VK_ERROR_SURFACE_LOST_KHR, the surface is made anew at reset
      VkSwapchainKHR           swapChain = VK_NULL_HANDLE;
  
      uint32_t                 imgIndex = 0;
@@ -517,10 +546,10 @@ index 2bd16bc..1cfb2b0 100644
  
  bool SoundEffect::isEmpty() const {
 diff --git a/Engine/system/api/androidapi.cpp b/Engine/system/api/androidapi.cpp
-index 96b7829..2581c99 100644
+index 96b7829..42ea2e0 100644
 --- a/Engine/system/api/androidapi.cpp
 +++ b/Engine/system/api/androidapi.cpp
-@@ -36,11 +36,18 @@ static Tempest::Point AMotionEvent_getXY(const AInputEvent* event, size_t i) {
+@@ -36,11 +36,20 @@ static Tempest::Point AMotionEvent_getXY(const AInputEvent* event, size_t i) {
  
  static android_app*     app        = nullptr;
  static Tempest::Window* mainWindow = nullptr;
@@ -536,10 +565,12 @@ index 96b7829..2581c99 100644
 +static ANativeWindow*     currentWindow  = nullptr;
 +static uint64_t           windowGen      = 0;
 +static std::vector<ANativeWindow*> oldWindows;
++static AndroidApi::WindowLostHandler windowLostHandler = nullptr;
++static void*                         windowLostUser    = nullptr;
  
  // Touches are recorded during polling and dispatched one per event-processing pass.
  // Modal loops in event handlers poll recursively, so direct dispatch could reorder pointers of one AInputEvent.
-@@ -112,10 +119,31 @@ void AndroidApi::updateFocus() {
+@@ -112,10 +121,37 @@ void AndroidApi::updateFocus() {
      }
    }
  
@@ -557,6 +588,11 @@ index 96b7829..2581c99 100644
 +  oldWindows.clear();
 +  }
 +
++void AndroidApi::setWindowLostHandler(WindowLostHandler handler, void* user) {
++  windowLostUser    = user;
++  windowLostHandler = handler;
++  }
++
  void AndroidApi::updateWindow() {
    if(app==nullptr || app->window==nullptr)
      return;
@@ -567,11 +603,12 @@ index 96b7829..2581c99 100644
 +    currentWindow = app->window;
 +    ANativeWindow_acquire(currentWindow);
 +    ++windowGen;
++    Log::i("android: the window comes back");
 +    }
    hasWindow = true;
    if(mainWindow==nullptr)
      return;
-@@ -157,6 +185,17 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
+@@ -157,6 +193,20 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
        updateFocus();
        break;
      case APP_CMD_TERM_WINDOW:
@@ -585,11 +622,14 @@ index 96b7829..2581c99 100644
 +        }
 +      ++windowGen;
 +      Log::i("android: the window goes away (background)");
++      // Android takes the surface once this command returns: the swapchain leaves it now
++      if(windowLostHandler!=nullptr)
++        windowLostHandler(windowLostUser);
 +      break;
      case APP_CMD_DESTROY:
        hasWindow = false;
        if(mainWindow!=nullptr) {
-@@ -170,8 +209,17 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
+@@ -170,8 +220,17 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
      }
    }
  
@@ -607,7 +647,7 @@ index 96b7829..2581c99 100644
    if(AInputEvent_getType(event)!=AINPUT_EVENT_TYPE_MOTION ||
       (AInputEvent_getSource(event) & AINPUT_SOURCE_TOUCHSCREEN)!=AINPUT_SOURCE_TOUCHSCREEN)
      return 0;
-@@ -258,8 +306,13 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
+@@ -258,8 +317,13 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
    if(isExit.load() || app->destroyRequested!=0)
      return nullptr;
    mainWindow = owner;
@@ -623,7 +663,7 @@ index 96b7829..2581c99 100644
    }
  
  SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
-@@ -270,8 +323,11 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
+@@ -270,8 +334,11 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
    return createAndroidWindow(owner);
    }
  
@@ -637,7 +677,7 @@ index 96b7829..2581c99 100644
    mainWindow = nullptr;
    touches.clear();
    }
-@@ -281,9 +337,11 @@ void AndroidApi::implExit() {
+@@ -281,9 +348,11 @@ void AndroidApi::implExit() {
    ALooper_wake(app->looper);
    }
  
@@ -653,7 +693,7 @@ index 96b7829..2581c99 100644
  
  float AndroidApi::implUiScale(SystemApi::Window*) {
 diff --git a/Engine/system/api/androidapi.h b/Engine/system/api/androidapi.h
-index 54d4ec5..c6b5f19 100644
+index 54d4ec5..ed0294a 100644
 --- a/Engine/system/api/androidapi.h
 +++ b/Engine/system/api/androidapi.h
 @@ -1,8 +1,11 @@
@@ -668,7 +708,7 @@ index 54d4ec5..c6b5f19 100644
  namespace Tempest {
  
  class AndroidApi final : SystemApi {
-@@ -10,6 +13,20 @@ class AndroidApi final : SystemApi {
+@@ -10,6 +13,24 @@ class AndroidApi final : SystemApi {
      static std::filesystem::path internalDataPath();
      static std::filesystem::path externalDataPath();
  
@@ -685,6 +725,10 @@ index 54d4ec5..c6b5f19 100644
 +    static uint64_t nativeWindowGeneration();
 +    /// the native windows from before the background, kept until the swapchain has left them
 +    static void  releaseOldWindows();
++    /// Called on the thread of the application when the surface goes away, before Android takes it: the application
++    /// leaves the surface here (waits for the GPU, destroys the swapchain). nullptr removes the handler.
++    using WindowLostHandler = void(*)(void* user);
++    static void setWindowLostHandler(WindowLostHandler handler, void* user);
 +
    private:
      AndroidApi() = default;

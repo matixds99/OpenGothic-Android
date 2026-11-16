@@ -39,6 +39,10 @@
 #include "commandline.h"
 #include "gothic.h"
 
+#ifdef __ANDROID__
+#include <Tempest/AndroidApi>
+#endif
+
 using namespace Tempest;
 
 // PROGRESS.TGA of Gothic II is 512 px wide; mods (New Balance) have HD textures 2x/4x bigger
@@ -185,10 +189,19 @@ MainWindow::MainWindow(Device& device)
 #ifdef OPENGOTHIC_TOUCH_UI
   setupMobileControls();
 #endif
+#ifdef __ANDROID__
+  androidWindowGen = AndroidApi::nativeWindowGeneration();
+  AndroidApi::setWindowLostHandler([](void* self) {
+    reinterpret_cast<MainWindow*>(self)->androidWindowLost();
+    }, this);
+#endif
   Scripting::game::setup();
   }
 
 MainWindow::~MainWindow() {
+#ifdef __ANDROID__
+  AndroidApi::setWindowLostHandler(nullptr,nullptr);
+#endif
 #ifdef OPENGOTHIC_TOUCH_UI
   androidControls.unbind();
 #endif
@@ -438,6 +451,37 @@ void MainWindow::paintEvent(PaintEvent& event) {
     wx->dbgClusters(p, Vec2(float(w()), float(h())));
     }
   }
+
+#ifdef __ANDROID__
+void MainWindow::androidWindowLost() {
+  // NB fix 74: Android takes the surface when the game goes to the background - the swapchain leaves it now
+  // (before: the old swapchain stayed and after the return the frames went to the dead surface - a black screen)
+  for(auto& i:fence)
+    i.wait();
+  device.waitIdle();
+  swapchain.reset();   // no native window: the swapchain and its surface are destroyed, nothing new is made
+  androidWindowGen = AndroidApi::nativeWindowGeneration();
+  }
+
+bool MainWindow::androidWindowCheck() {
+  // NB fix 74: after the background the window has the same size, so no resize event comes - the swapchain is made
+  // here on the new surface. false: nothing to draw on
+  const auto gen = AndroidApi::nativeWindowGeneration();
+  if(gen!=androidWindowGen || swapchain.imageCount()==0) {
+    for(auto& i:fence)
+      i.wait();
+    device.waitIdle();
+    swapchain.reset();
+    androidWindowGen = gen;
+    if(swapchain.imageCount()==0)
+      return false;
+    Log::i("android: the swapchain is made anew (",swapchain.w(),"x",swapchain.h(),")");
+    if(auto camera = Gothic::inst().camera())
+      camera->setViewport(swapchain.w(),swapchain.h());
+    }
+  return true;
+  }
+#endif
 
 void MainWindow::resizeEvent(SizeEvent&) {
   for(auto& i:fence)
@@ -1857,6 +1901,10 @@ void MainWindow::setFullscreen(bool fs) {
 
 void MainWindow::render(){
   try {
+#ifdef __ANDROID__
+    if(!androidWindowCheck())
+      return;
+#endif
     static uint64_t time=Application::tickCount();
 
     static bool once=true;
