@@ -7,6 +7,8 @@
 #include <cmath>
 
 #include "world/objects/npc.h"
+#include "world/objects/item.h"
+#include "graphics/inventoryrenderer.h"
 #include "world/world.h"
 #include "game/gamescript.h"
 #include "ui/touchdraw.h"
@@ -17,6 +19,20 @@ using namespace Tempest;
 
 NbSalesMenu::NbSalesMenu() {
   setFocusPolicy(NoFocus);
+  }
+
+NbSalesMenu::~NbSalesMenu() {
+  }
+
+const Item* NbSalesMenu::icon(size_t cls) {
+  if(player==nullptr)
+    return nullptr;
+  if(auto i = icons.find(cls); i!=icons.end())
+    return i->second.get();
+  auto  itm = std::make_unique<Item>(player->world(),cls,Item::T_Inventory);
+  auto* ret = itm.get();
+  icons[cls] = std::move(itm);
+  return ret;
   }
 
 void NbSalesMenu::open(Npc& pl, Npc& tr, const std::vector<Gothic::NbSaleItem>& list) {
@@ -69,6 +85,7 @@ void NbSalesMenu::close() {
   items.clear();
   all.clear();
   groups.clear();
+  icons.clear();
   update();
   }
 
@@ -361,8 +378,17 @@ void NbSalesMenu::paintEvent(PaintEvent& e) {
     const size_t have = owned(i);
     const GthFont& f = have==0 ? dis : (i==sel ? yel : fnt);
     textMid(f,box,string_frm(items[i].name," (x",int(have),")"));
-    // the price in the parchment (the plugin has the picture of the item there)
-    textMid(have==0 ? dis : yel,slot,string_frm(int(items[i].price)));
+    // the picture of the item in the parchment (as the plugin), the price small at the bottom of it
+    if(models!=nullptr) {
+      if(auto* itm = icon(items[i].cls))
+        models->drawItem(slot.x+slot.w/8, slot.y+slot.h/10, slot.w*3/4, slot.h*3/4, *itm);
+      }
+    {
+      const GthFont& pf = have==0 ? dis : yel;
+      const string_frm pt(int(items[i].price));
+      const auto     sz = pf.textSize(pt);
+      pf.drawText(p, slot.x+slot.w-sz.w-int(10*s), slot.y+slot.h-int(10*s), pt);
+    }
     }
   // the middle: the arrows of the list (dim when there is nothing more there)
   const auto arrow = [&](const Rect& r, bool down, bool on) {
@@ -392,7 +418,12 @@ void NbSalesMenu::paintEvent(PaintEvent& e) {
     const int    card = std::min(l.panel.w/2,int(float(h())*0.24f));
     const Rect   cr(l.panel.x+(l.panel.w-card)/2, int(44*s), card, card);
     image(recipe,cr,RowSel);
-    textMid(big,cr,string_frm(int(it.price)));
+    if(models!=nullptr) {
+      if(auto* itm = icon(it.cls))
+        models->drawItem(cr.x+cr.w/8, cr.y+cr.h/8, cr.w*3/4, cr.h*3/4, *itm);
+      } else {
+      textMid(big,cr,string_frm(int(it.price)));
+      }
     const int lh = int(float(fnt.pixelSize())*1.6f);
     int y = cr.y+cr.h+int(6*s);
     textMid(yel,Rect(l.panel.x,y,l.panel.w,lh),it.name);                          y += lh;

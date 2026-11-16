@@ -211,7 +211,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - na środku dwie duże strzałki ↑ ↓ – przewijają listę o stronę (przyciemnione, gdy dalej nic nie ma); zniknął błędny znaczek „>” pod listą;
   - pod lewym i prawym panelem ciemne tło jak w oryginale.
   - Okna ze skryptów (Hanna, Kardif, Halvor…) zostają jedną listą, ale strzałki i tło mają te same.
-- **Pliki (dodatkowo):** `common/ui/nbsalesmenu.cpp/.h`, `common/gothic.h`
+  - **po teście 03:47 (zakładki, strzałki, tło – OK):** w pergaminach są obrazki przedmiotów 3D jak w ekwipunku (ten sam renderer co ekwipunek – `InventoryRenderer`), cena mała w rogu pergaminu; duży pergamin po prawej też pokazuje przedmiot.
+- **Pliki (dodatkowo):** `common/ui/nbsalesmenu.cpp/.h`, `common/gothic.h`, `common/mainwindow.cpp`
 
 ---
 

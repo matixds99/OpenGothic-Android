@@ -2,12 +2,16 @@
 
 #include <Tempest/Widget>
 
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "gothic.h"
 
 class Npc;
+class Item;
+class InventoryRenderer;
 
 /// NB fix 68: the window of the plugin of New Balance to sell given items for given prices (RX_OpenCraft_PlayerSales:
 /// Hanna - jewels and caskets, Kardif - raw meat, Halvor - pearls and valuables, Kreol, Xardas as a necromancer…).
@@ -17,6 +21,10 @@ class Npc;
 class NbSalesMenu : public Tempest::Widget {
   public:
     NbSalesMenu();
+    ~NbSalesMenu() override;
+
+    /// NB fix 69: the 3D pictures of the items (as in the inventory) go to this renderer of the frame
+    void setModels(InventoryRenderer* r) { models = r; }
 
     void open(Npc& pl, Npc& trader, const std::vector<Gothic::NbSaleItem>& items);
     void close();
@@ -68,4 +76,8 @@ class NbSalesMenu : public Tempest::Widget {
     size_t                            count  = 1;
     int                               scroll = 0;   // the first visible row
     std::string                       message;      // after a sale: "Sprzedano: …"
+    InventoryRenderer*                models = nullptr;
+    std::unordered_map<size_t,std::unique_ptr<Item>> icons; // the items only for the pictures (not in the world)
+
+    const Item*                       icon(size_t cls);
   };

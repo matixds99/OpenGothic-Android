@@ -268,6 +268,7 @@ void MainWindow::paintEvent(PaintEvent& event) {
   // This frame's fence was waited before dispatchPaintEvent. Each in-flight
   // frame owns its preview meshes so resetting cannot free GPU-used buffers.
   dmaModels[cmdId].reset();
+  nbSales.setModels(&dmaModels[cmdId]);   // NB fix 69: the pictures of the items of the sales window
   Painter p(event);
   auto world = Gothic::inst().world();
   auto st    = Gothic::inst().checkLoading();

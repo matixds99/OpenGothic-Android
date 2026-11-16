@@ -36,7 +36,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/graphics/sky/sky.cpp` | jasna noc do testów: światło i niebo między 8:00 a 18:00 (`[NB_OG] bNightAsDay`) | 53 |
 | `common/game/inventory.cpp` | osobne miejsce na hełm (zbroja z `WEAR_HEAD`), stare zapisy: hełm z miejsca zbroi na swoje | 39 |
 | `common/game/inventory.h` | j.w. (`currentHelmet`, `isHelmet`) | 39 |
-| `common/mainwindow.cpp` | sprint NB: klawisz `~` i przycisk na nakładce wywołują `B_Hotkey_Sprint`; pasek wytrzymałości NB, paski w miejscach i rozmiarach z edytora HUD, okno sprzedaży NB (widżet, tryb menu nakładki, dotyk i klawisze) | 40, 41, 42, 45, 49, 68 |
+| `common/mainwindow.cpp` | sprint NB: klawisz `~` i przycisk na nakładce wywołują `B_Hotkey_Sprint`; pasek wytrzymałości NB, paski w miejscach i rozmiarach z edytora HUD, okno sprzedaży NB (widżet, tryb menu nakładki, dotyk i klawisze) | 40, 41, 42, 45, 49, 68, 69 |
 | `common/ui/mobilecontrolsmodel.cpp` | przycisk sprintu na nakładce (obok chodu), da się go przesuwać i ukryć w edytorze HUD; paski życia/wytrzymałości/many w edytorze HUD | 40, 42 |
 | `common/ui/mobilecontrolsmodel.h` | j.w. (`Special::Sprint`, `sprint()`, id `sprint`, `hudBarRect`, id `bar_*`) | 40, 42 |
 | `common/utils/androidinput.cpp` | ikona sprintu, podświetlenie, gdy sprint włączony; ramki pasków w edytorze HUD | 40, 42 |
