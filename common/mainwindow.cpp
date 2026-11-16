@@ -1506,7 +1506,7 @@ void MainWindow::tickCamera(uint64_t dt) {
   if(dialogCameraReset && !camera.isCutscene()) {
     dialogCameraReset = false;
     auto* world = Gothic::inst().world();
-    if(dialogs.isActive() && !camera.isFree() && world!=nullptr && !world->script().dmaDialogCameraOff()) {
+    if(dialogs.isActive() && !dialogs.isSelfDialog() && !camera.isFree() && world!=nullptr && !world->script().dmaDialogCameraOff()) {
       camera.setMode(Camera::Dialog);
       dialogs.dialogCamera(camera);
       }
@@ -1523,7 +1523,7 @@ void MainWindow::tickCamera(uint64_t dt) {
       camera.setSpin(camera.spin());
       camera.setTarget(pos);
       }
-    else if(dialogs.isActive() && !dialogs.isMobsiDialog()) {
+    else if(dialogs.isActive() && !dialogs.isMobsiDialog() && !dialogs.isSelfDialog()) {
       dialogs.dialogCamera(camera);
       }
     else if(inventory.isActive()) {
@@ -1558,7 +1558,9 @@ Camera::Mode MainWindow::solveCameraMode() const {
   if(camera!=nullptr && camera->isFree())
     return Camera::Normal;
 
-  if(dialogs.isActive()) {
+  // NB fix 72: a menu of the hero with himself (the teleport rune of NB: "...do wieży Xardasa") has no one to look at: the
+  // dialog camera looked from above on his head. As on the PC the camera stays behind the hero
+  if(dialogs.isActive() && !dialogs.isSelfDialog()) {
     // CoM turns the camera of the dialog off in the scenes with cameras of their own
     auto* w = Gothic::inst().world();
     if(w==nullptr || !w->script().dmaDialogCameraOff())

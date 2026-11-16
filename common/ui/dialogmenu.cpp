@@ -197,6 +197,10 @@ bool DialogMenu::isMobsiDialog() const {
   return pl!=nullptr && other==pl && pl->interactive()!=nullptr;
   }
 
+bool DialogMenu::isSelfDialog() const {
+  return pl!=nullptr && other==pl && pl->interactive()==nullptr;
+  }
+
 void DialogMenu::dialogCamera(Camera& camera) {
   if(pl && other){
     // in a trialog the camera follows who speaks
@@ -591,7 +595,9 @@ void DialogMenu::paintEvent(Tempest::PaintEvent &e) {
   }
 
 #ifdef OPENGOTHIC_TOUCH_UI
-/// Answers are small cards at the bottom of the screen. When there are many of them, the list is scrolled with a finger.
+/// NB fix 72: the answers as on the PC - one parchment (DLG_CHOICE.TGA) at the bottom of the screen with the lines of
+/// the answers one under another (before: big cards on half of the screen). Each line is a little higher than the text,
+/// so it can be hit with a finger; when there are many of them, the list is scrolled with a finger.
 DialogMenu::TouchGeometry DialogMenu::touchGeometry() const {
   TouchGeometry g;
   if(choice.empty())
@@ -599,24 +605,26 @@ DialogMenu::TouchGeometry DialogMenu::touchGeometry() const {
 
   const float scale = Gothic::interfaceScale(this)*std::max(1.f,float(h())/700.f);
   auto        fnt   = Resources::dialogFont(scale);
-  const int   padd  = std::max(6,int(float(fnt.pixelSize())*0.35f));
-  const int   gap   = std::max(4,int(float(h())*0.008f));
-  const int   cw    = int(float(w())*0.5f);
-  const int   minH  = int(float(fnt.pixelSize())*1.9f);
+  const int   padd  = std::max(8,int(float(fnt.pixelSize())*0.9f));    // the edge of the parchment
+  const int   rowP  = std::max(2,int(float(fnt.pixelSize())*0.18f));   // above and under a line
+  const int   cw    = std::min(w()-2*padd,int(float(w())*0.62f))-2*padd;
+  const int   minH  = int(float(fnt.pixelSize())*1.45f);
 
   int y = 0;
   for(auto& c:choice) {
-    const int th = fnt.textSize(cw-2*padd,c.title).h;
-    const int ch = std::max(minH,th+2*padd);
+    const int th = fnt.textSize(cw,c.title).h;
+    const int ch = std::max(minH,th+2*rowP);
     g.cards.push_back(Rect(0,y,cw,ch));
-    y += ch+gap;
+    y += ch;
     }
-  g.content = std::max(0,y-gap);
+  g.content = y;
 
-  const int viewH = std::min(g.content,int(float(h())*0.36f));
-  g.view      = Rect((w()-cw)/2,h()-int(float(h())*0.04f)-viewH,cw,viewH);
+  const int viewH = std::min(g.content,int(float(h())*0.34f));
+  const int boxW  = cw+2*padd, boxH = viewH+2*padd;
+  g.box       = Rect((w()-boxW)/2,h()-int(float(h())*0.03f)-boxH,boxW,boxH);
+  g.view      = Rect(g.box.x+padd,g.box.y+padd,cw,viewH);
   g.maxScroll = g.content-viewH;
-  g.padd      = padd;
+  g.padd      = rowP;
   g.scale     = scale;
   return g;
   }
@@ -646,6 +654,15 @@ void DialogMenu::paintTouchChoice(PaintEvent& e) {
   touchScroll = std::clamp(touchScroll,0.f,float(geo.maxScroll));
 
   Painter p(e);
+  // the parchment of the PC (without it a dark panel)
+  if(tex!=nullptr) {
+    p.setBrush(*tex);
+    p.drawRect(geo.box.x,geo.box.y,geo.box.w,geo.box.h,0,0,tex->w(),tex->h());
+    } else {
+    p.setBrush(Brush(Color(0.02f,0.025f,0.035f,0.85f)));
+    p.drawRect(geo.box.x,geo.box.y,geo.box.w,geo.box.h);
+    }
+
   p.setScissor(geo.view.x,geo.view.y,geo.view.w,geo.view.h);
   for(size_t i=0; i<choice.size() && i<geo.cards.size(); ++i) {
     const int  x        = geo.view.x;
@@ -655,29 +672,28 @@ void DialogMenu::paintTouchChoice(PaintEvent& e) {
     if(y+ch<geo.view.y || y>geo.view.y+geo.view.h)
       continue;
     const bool selected = i==dlgSel;
-    const int  border   = selected ? 2 : 1;
-
-    p.setBrush(Brush(selected ? Color(0.86f,0.68f,0.30f,0.95f) : Color(0.48f,0.44f,0.38f,0.70f)));
-    p.drawRect(x,y,cw,ch);
-    p.setBrush(Brush(selected ? Color(0.11f,0.085f,0.04f,0.92f) : Color(0.02f,0.025f,0.035f,0.80f)));
-    p.drawRect(x+border,y+border,cw-2*border,ch-2*border);
+    if(selected) {
+      // a light stripe under the chosen line, so the finger sees what it hit
+      p.setBrush(Brush(Color(0.86f,0.68f,0.30f,0.16f)));
+      p.drawRect(x,y,cw,ch);
+      }
 
     GthFont fnt = selected ? Resources::font(Resources::FontType::Hi,geo.scale) : Resources::dialogFont(geo.scale);
-    const int tw = cw-2*geo.padd;
-    const int th = fnt.textSize(tw,choice[i].title).h;
-    fnt.drawText(p,x+geo.padd,y+(ch-th)/2+fnt.pixelSize(),tw,0,choice[i].title,AlignLeft);
+    const int th = fnt.textSize(cw,choice[i].title).h;
+    fnt.drawText(p,x,y+(ch-th)/2+fnt.pixelSize(),cw,0,choice[i].title,AlignLeft);
     }
 
-  // the list can be scrolled
+  p.setScissor(0,0,w(),h());
+
+  // the list can be scrolled: a bar on the right edge of the parchment
   if(geo.maxScroll>0) {
     const int   bw     = std::max(3,int(geo.scale*3));
     const float k      = float(geo.view.h)/float(geo.content);
     const int   th     = std::max(bw*4,int(float(geo.view.h)*k));
     const int   ty     = geo.view.y+int(float(geo.view.h-th)*touchScroll/float(geo.maxScroll));
     p.setBrush(Brush(Color(0.86f,0.68f,0.30f,0.75f)));
-    p.drawRect(geo.view.x+geo.view.w-bw-1,ty,bw,th);
+    p.drawRect(geo.view.x+geo.view.w+(geo.box.x+geo.box.w-geo.view.x-geo.view.w-bw)/2,ty,bw,th);
     }
-  p.setScissor(0,0,w(),h());
   }
 
 void DialogMenu::mobileTouch(float x, float y, int phase) {

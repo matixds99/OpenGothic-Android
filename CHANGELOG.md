@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **72**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **73**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -259,6 +259,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - wszystkie runy nazywały się „Runa” – teraz nazwa z opisu przedmiotu (zaklęcie), jak w ekwipunku: „Otwieranie zamków”, „Przywołanie kamiennego golema”;
   - „Umiejętność tworzenia run: N” wchodziło pod X – za długi napis dostaje mniejszą czcionkę.
 - Kocioł, zbroje i ciasta były puste, bo bohater nie zna jeszcze tych przepisów (potwierdzone 23:59). **Do sprawdzenia później**, gdy się ich nauczy.
+
+### 72. Odpowiedzi w dialogach jak na PC, kamera przy menu bohatera (runa teleportu) – 🧪 (17.11.2026)
+- **Pliki:** `common/ui/dialogmenu.cpp`, `common/ui/dialogmenu.h`, `common/mainwindow.cpp`
+- **Zgłoszenie (film z PC + zrzut 00:07):** na PC wybór (np. runa teleportu: „...do wieży Xardasa.”, „...do portu Khorinis.”) to mały pergamin na dole ekranu, a kamera zostaje za bohaterem. Na telefonie były duże karty na pół ekranu, a kamera patrzyła z góry na głowę bohatera.
+- **Odpowiedzi:** we wszystkich dialogach jeden pergamin `DLG_CHOICE.TGA` jak na PC (ok. 60% szerokości ekranu, na dole), odpowiedzi linijka pod linijką. Linijka jest trochę wyższa od tekstu, żeby trafić palcem; wybrana ma czcionkę wyróżnienia i jasny pasek pod spodem. Przy wielu odpowiedziach lista przewija się palcem (pasek przewijania przy prawej krawędzi pergaminu).
+- **Kamera:** menu bohatera „z samym sobą” (bez rozmówcy i nie przy stole – runa teleportu i podobne) nie włącza kamery dialogu. Kamera dialogu celowała w bohatera z obu stron naraz, z odległości ~0, więc silnik podnosił ją nad głowę. Teraz zostaje zwykła kamera za bohaterem, jak na PC.
+- **Do sprawdzenia:** czy pergamin nie jest za mały do trafiania palcem; kamera przy runie teleportu.
 
 ---
 

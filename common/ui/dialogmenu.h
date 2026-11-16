@@ -27,6 +27,7 @@ class DialogMenu : public Tempest::Widget {
     void onWorldChanged();
 
     bool isMobsiDialog() const;
+    bool isSelfDialog() const;   // NB fix 72: a menu of the hero with himself (teleport rune...), not at a table
     void dialogCamera(Camera& camera);
 
     void openPipe(Npc &player, Npc& npc, AiOuputPipe*& out);
@@ -69,6 +70,7 @@ class DialogMenu : public Tempest::Widget {
     struct TouchGeometry {
       std::vector<Tempest::Rect> cards;     // relative to the list
       Tempest::Rect              view;      // visible part of the list
+      Tempest::Rect              box;       // NB fix 72: the parchment around it (DLG_CHOICE.TGA, as on the PC)
       int                        content   = 0;
       int                        maxScroll = 0;
       int                        padd      = 0;
