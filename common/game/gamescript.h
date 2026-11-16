@@ -19,6 +19,7 @@
 #include "game/aistate.h"
 #include "game/questlog.h"
 #include "game/damagecalculator.h"
+#include "game/nbcraft.h"
 
 namespace zenkit { struct SaveState; }
 
@@ -192,6 +193,15 @@ class GameScript final {
 
     AiOuputPipe* openAiOuput();
     AiOuputPipe* openDlgOuput(Npc &player, Npc &npc);
+
+    // NB fix 70: the crafting window of New Balance (the alchemy): the recipes that the hero knows, as the plugin
+    // shows them, the crafting (as the plugin: the ingredients, CRAFT_* variables, RX_RaiseAlchemy, RX_CraftCallBack),
+    // the end (RX_EndCraft, the hero leaves the table), the skill and the texts of the window
+    auto             nbCraftList(Npc& hero, int32_t craft) -> std::vector<NbCraft::Item>;
+    std::string      nbCraftCreate(Npc& hero, const NbCraft::Item& rec, size_t count);
+    void             nbCraftEnd(Npc& hero);
+    int32_t          nbCraftSkill();
+    std::string      nbCraftText(std::string_view symbol, std::string_view fallback);
 
     auto*            goldId() const { return itMi_Gold; }
     ScriptFn         playerPercAssessMagic();

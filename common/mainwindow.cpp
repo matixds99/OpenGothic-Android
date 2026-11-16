@@ -202,6 +202,7 @@ MainWindow::~MainWindow() {
   takeWidget(&document);
   takeWidget(&video);
   takeWidget(&nbSales);
+  takeWidget(&nbCraft);
   takeWidget(&rootMenu);
   takeWidget(&modMenu);
   // every child added by setupUi() is a member: removeAllWidgets() calls `delete` on whatever is left in the list
@@ -231,6 +232,7 @@ void MainWindow::setupUi() {
   addWidget(&chapter);
   addWidget(&video);
   addWidget(&nbSales);
+  addWidget(&nbCraft);
 #if defined(__MOBILE_PLATFORM__) && !defined(OPENGOTHIC_TOUCH_UI)
   addWidget(&mobileUi);
 #endif
@@ -246,6 +248,7 @@ void MainWindow::setupUi() {
   Gothic::inst().onStopAllSounds.bind(&dialogs,&DialogMenu::stopSounds);
   Gothic::inst().onOpenTrade   .bind(&inventory,&InventoryMenu::trade);
   Gothic::inst().onOpenPlayerSales.bind(&nbSales,&NbSalesMenu::open);
+  Gothic::inst().onOpenCraft      .bind(&nbCraft,&NbCraftMenu::open);   // NB fix 70
   Gothic::inst().isNpcInDialogFn = std::bind(&DialogMenu::isNpcInDialog, &dialogs, std::placeholders::_1);
 
   Gothic::inst().onPrintScreen .bind(&dialogs,&DialogMenu::printScreen);
@@ -269,6 +272,7 @@ void MainWindow::paintEvent(PaintEvent& event) {
   // frame owns its preview meshes so resetting cannot free GPU-used buffers.
   dmaModels[cmdId].reset();
   nbSales.setModels(&dmaModels[cmdId]);   // NB fix 69: the pictures of the items of the sales window
+  nbCraft.setModels(&dmaModels[cmdId]);   // NB fix 70: and of the crafting window
   Painter p(event);
   auto world = Gothic::inst().world();
   auto st    = Gothic::inst().checkLoading();
@@ -335,7 +339,7 @@ void MainWindow::paintEvent(PaintEvent& event) {
       if(auto* pl = Gothic::inst().player())
         world->script().dmaFocus(*pl,focus);
       // CoM hides the status of the player in a camera of a cutscene (OCGAME__UPDATEPLAYERSTATUS_REPLACECHECKINGGLOBALCUTSCENE)
-      const bool inCamera = world->script().dmaCutsceneStatusHidden() || nbSales.isActive();   // NB fix 68: hidden under the window
+      const bool inCamera = world->script().dmaCutsceneStatusHidden() || nbSales.isActive() || nbCraft.isActive();   // NB fix 68: hidden under the window
       if(!inCamera) {
         paintFocus(p,focus,vp);
         CombatFx::inst().paint(p,vp,w(),h(),Gothic::interfaceScale(this));
@@ -642,6 +646,12 @@ void MainWindow::keyDownEvent(KeyEvent &event) {
     uiKeyUp = &nbSales;   // its key up must not reach the game (Escape would open the menu)
     return;
     }
+  if(nbCraft.isActive()) {   // NB fix 70
+    event.accept();
+    nbCraft.keyDownEvent(event);
+    uiKeyUp = &nbCraft;
+    return;
+    }
 
   if(document.isActive()){
     event.accept();
@@ -745,7 +755,7 @@ void MainWindow::keyUpEvent(KeyEvent &event) {
     modMenu.keyUpEvent(event);
     return;
     }
-  if(uiKeyUp==&nbSales) {   // NB fix 68
+  if(uiKeyUp==&nbSales || uiKeyUp==&nbCraft) {   // NB fix 68, 70
     uiKeyUp = nullptr;
     event.accept();
     return;
@@ -1248,7 +1258,7 @@ void MainWindow::drawSaving(Painter& p, const Tempest::Texture2d& back, int sw, 
   }
 
 void MainWindow::isDialogClosed(bool& ret) {
-  ret = !(dialogs.isActive() || document.isActive() || nbSales.isActive());
+  ret = !(dialogs.isActive() || document.isActive() || nbSales.isActive() || nbCraft.isActive());
   }
 
 template<Tempest::KeyEvent::KeyType k>
@@ -1360,7 +1370,7 @@ uint64_t MainWindow::tick() {
     static bool typing = false;
     const bool  wants  = modMenu.wantsText() || dialogs.wantsText() || rootMenu.wantsText();
     androidControls.modMenu(modMenu.isActive());
-    androidControls.bareMenu(nbSales.isActive());   // NB fix 68: no buttons of the overlay over the sales window
+    androidControls.bareMenu(nbSales.isActive() || nbCraft.isActive());   // NB fix 68: no buttons of the overlay over the sales window
     if(dialogs.takeKeyboardRequest()) {
       typing = true;
       androidControls.keyboard(true);
@@ -2025,7 +2035,7 @@ Mobile::Mode MainWindow::mobileContext() const {
     return Mobile::Mode::Loading;
   if(video.isActive() || chapter.isActive() || document.isActive())
     return Mobile::Mode::Video;
-  if(nbSales.isActive())
+  if(nbSales.isActive() || nbCraft.isActive())
     return Mobile::Mode::Menu;   // NB fix 68: the sales window - the controls of the game are hidden
   if(rootMenu.isActive())
     return rootMenu.isTouchMenu() ? Mobile::Mode::Menu : Mobile::Mode::Dialog;
@@ -2070,6 +2080,8 @@ void MainWindow::setupMobileControls() {
       rootMenu.mobileTap(x,y); else
     if(nbSales.isActive())
       nbSales.mobileTap(x,y); else
+    if(nbCraft.isActive())
+      nbCraft.mobileTap(x,y); else
     if(inventory.isActive())
       inventory.mobileTap(x,y); else
     if(dialogs.isActive())
@@ -2082,6 +2094,8 @@ void MainWindow::setupMobileControls() {
       rootMenu.mobileScroll(dy); else
     if(nbSales.isActive())
       nbSales.mobileScroll(dy); else
+    if(nbCraft.isActive())
+      nbCraft.mobileScroll(dy); else
     if(inventory.isActive())
       inventory.mobileScroll(dy);
     };

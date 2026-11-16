@@ -174,6 +174,8 @@ struct NbState {
   std::vector<Gothic::NbSaleItem>             salesList;
   std::weak_ptr<zenkit::INpc>                 salesNpc;
   bool                                        salesPending = false;
+  // NB fix 70: the crafting window of the plugin (RX_OpenCraft), opened at the next tick out of the dialog
+  int32_t                                     craftPending = -1;
   // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
   std::weak_ptr<zenkit::INpc>                 wispBody;
   std::unordered_map<const zenkit::INpc*,uint64_t> wispBodySkip;
@@ -1874,7 +1876,14 @@ void GameScript::initCommon() {
       auto sk = Resources::loadSkeleton(name);
       return sk!=nullptr && npc->hasOverlay(sk) ? 1 : 0;
       });
-    bindNb("RX_OPENCRAFT", [this](int32_t /*craftType*/) {
+    bindNb("RX_OPENCRAFT", [this](int32_t craftType) {
+      // NB fix 70: the alchemy in the window of the plugin (the recipes from UNION_ABI.DLL); the other crafts - the old
+      // menus of the scripts (fix 2)
+      if(craftType==0 && owner.player()!=nullptr) {
+        nbStates[this].craftPending = craftType;
+        nbCtx("craft window: ",craftType);
+        return;
+        }
       if(auto pl = owner.player()) {
         aiOutOrderId = 0;
         pl->aiPush(AiQueue::aiProcessInfo(*pl));
@@ -3995,6 +4004,13 @@ void GameScript::tick(uint64_t dt) {
     auto* hero = world().player();
     if(npc!=nullptr && hero!=nullptr && !st.salesList.empty())
       Gothic::inst().onOpenPlayerSales(*hero,*npc,st.salesList);
+    }
+  // NB fix 70: the crafting window, when the hero is at the table and no dialog is open
+  if(st.craftPending>=0 && !Gothic::inst().isInDialog()) {
+    const int32_t craft = st.craftPending;
+    st.craftPending = -1;
+    if(auto* hero = world().player())
+      Gothic::inst().onOpenCraft(*hero,craft);
     }
   const auto callNb = [this](zenkit::DaedalusSymbol* fn) {
     if(fn==nullptr)
@@ -6584,4 +6600,233 @@ DialogTest& GameScript::dialogTest() {
 bool GameScript::doesNpcKnowInfo(const zenkit::INpc& npc, size_t infoInstance) const {
   auto id = std::make_pair(vm.find_symbol_by_instance(npc)->index(),infoInstance);
   return dlgKnownInfos.find(id)!=dlgKnownInfos.end();
+  }
+
+// NB fix 70: the crafting window of New Balance (the alchemy). The plugin keeps the recipes in its code (nbcraft.h)
+// and shows only those that the hero knows: the test of UNION_ABI.DLL at 0x101a5940, written here by the number "kind"
+// of the recipe
+namespace {
+int32_t nbScriptInt(zenkit::DaedalusVm& vm, std::string_view name, uint16_t index = 0, int32_t missing = 0) {
+  std::string up(name);
+  for(auto& c:up)
+    c = char(std::toupper(uint8_t(c)));
+  auto* s = vm.find_symbol_by_name(up);
+  if(s==nullptr || s->type()!=zenkit::DaedalusDataType::INT || s->is_member() || index>=s->count())
+    return missing;
+  return s->get_int(index);
+  }
+
+void nbScriptSetInt(zenkit::DaedalusVm& vm, std::string_view name, int32_t v) {
+  auto* s = vm.find_symbol_by_name(name);
+  if(s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member())
+    s->set_int(v);
+  }
+
+const NbCraft::Recipe* nbRecipe(int32_t id) {
+  for(auto& r:NbCraft::alchemy())
+    if(r.id==id)
+      return &r;
+  return nullptr;
+  }
+}
+
+static bool nbCraftKnown(zenkit::DaedalusVm& vm, Npc& hero, const NbCraft::Recipe& r, size_t heartCls) {
+  const auto v = [&vm](std::string_view name) { return nbScriptInt(vm,name); };
+  const int32_t k = r.kind;
+  // the potions of the talents (Health_01..perm_stamina): PLAYER_TALENT_ALCHEMY[kind]
+  if(k<19 && k!=12)
+    return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",uint16_t(k))>0;
+  switch(k) {
+    case 12: // the Eye of Innos: the recipe with the heart that the hero has
+      return heartCls!=size_t(-1) && hero.inventory().itemCount(heartCls)>0;
+    // these the plugin reads by the symbol: without the variable the recipe is shown
+    case 19: return nbScriptInt(vm,"KNOWFULLHEALTH2",0,1)!=0;
+    case 20: return nbScriptInt(vm,"RX_FULLPOTIONKNOWS",0,1)!=0;
+    case 21: return v("KNOWSPEED3")!=0;
+    case 22: return v("KNOWPERMINT")!=0;
+    case 23: return v("KNOWPROTFALL")!=0;
+    case 24: return v("KNOWFIREDEF")!=0;
+    case 25: return v("KNOWMAGDEF")!=0;
+    case 26: return v("KNOWFAKERECEPT")==0 && v("MIS_MYBREW")==1 && v("FTCONSPOTION")==0;
+    case 27: return v("SOULRIVER")==1;   // the plugin checks also something of the engine (0x1004d580)
+    case 28: return v("KNOWS_MCELIXIER")!=0 && v("KNOWS_BLOODFLY")==0;
+    case 29: return v("KNOWS_MCELIXIER")!=0 && v("KNOWS_BLOODFLY")==1;
+    case 30: return v("READ_AZGOLOR")!=0 && v("RX_EYEAWAKEN")==0;
+    case 31: return v("KNOW_NIMROD_MAKE")!=0 && v("RX_PUMAJIRCRAFTED")==0;
+    // the plugin asks also "MIS_TiamantMuritan " (with a space - no such variable, so it always passes)
+    case 32: return v("MAKEMURITANSWEET")!=0 && v("RX_MURITANCRAFT")==0;
+    case 33: return v("READBOOKSDONE_09")!=0;
+    case 34: return v("READBOOKSDONE_08")!=0;
+    case 35: return v("KNOWS_SCHLAFHAMMER")!=0;
+    case 36: return v("KNOWS_LOUSHAMMER")!=0;
+    case 37: return v("KNOWS_SCHNELLERHERING")!=0;
+    case 38: return v("READBOOKSDONE_99")!=0;
+    case 39: return v("MAKEPUREALCOHOLBOOZE")!=0;
+    case 40: return v("MAKEPUREALCOHOLGROG")!=0;
+    case 41:
+    case 42: return v("MAKEPUREALCOHOLROM")!=0;
+    case 43: return v("ANPOISONKNOW")!=0;
+    case 44:
+    case 45: return v("MAKEPOISONKNOW")!=0;
+    case 46: case 47: case 48: case 49: case 50:
+      return v("RX_POISONKNOWLEVEL")>=k-45;
+    case 51: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEANIMAL")!=0;
+    case 52: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEORC")!=0;
+    case 53: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEUNDEAD")!=0;
+    case 54: case 55: case 56: case 57:   // the tobaccos, the joint
+      return true;
+    case 58: return v("GREEN_EXTREM")==1;
+    case 59:
+    case 60: return v("KNOW_JOINTRECIPE")==1;
+    case 61: case 62: case 63: case 64: case 65:   // the permanent potions from ItMi_PotionPermBlank
+      return true;
+    case 66: case 67: case 68:
+      return v("RX_POISONUNIVERSAL")==1;
+    case 69:
+    case 70: return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",13)>0;
+    case 71:
+    case 72: return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",14)>0;
+    case 73: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_FIRE",     0,1)!=0;
+    case 74: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_SMOKE",    0,1)!=0;
+    case 75: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_EXPLOSION",0,1)!=0;
+    case 76: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_ACID",     0,1)!=0;
+    case 77: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_MAGIC",    0,1)!=0;
+    case 78: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_UNDEAD",   0,1)!=0;
+    }
+  return false;
+  }
+
+std::vector<NbCraft::Item> GameScript::nbCraftList(Npc& hero, int32_t craft) {
+  std::vector<NbCraft::Item> ret;
+  if(craft!=0)
+    return ret;
+  const auto itemSym = [this](std::string_view name) -> zenkit::DaedalusSymbol* {
+    std::string up(name);
+    for(auto& c:up)
+      c = char(std::toupper(uint8_t(c)));
+    auto* sym = vm.find_symbol_by_name(up);
+    return (sym!=nullptr && sym->is_instance_of<zenkit::IItem>()) ? sym : nullptr;
+    };
+  for(auto& r:NbCraft::alchemy()) {
+    // the Eye of Innos: the recipe 5000+i is the i-th heart (the second ingredient)
+    size_t heart = size_t(-1);
+    if(r.kind==12 && r.ingredients.size()>1)
+      if(auto* h = itemSym(r.ingredients[1].item))
+        heart = h->index();
+    if(!nbCraftKnown(vm,hero,r,heart))
+      continue;
+    auto* res = itemSym(r.result);
+    if(res==nullptr) {
+      Log::e("NB: craft: no item \"",r.result,"\"");
+      continue;
+      }
+    NbCraft::Item it;
+    it.id  = r.id;
+    it.tab = r.tab;
+    it.cls = res->index();
+    if(auto inst = vm.init_instance<zenkit::IItem>(res); inst!=nullptr)
+      it.name = inst->name;
+    if(it.name.empty())
+      it.name = r.result;
+    bool ok = true;
+    for(auto& in:r.ingredients) {
+      auto* sym = itemSym(in.item);
+      if(sym==nullptr) {
+        Log::e("NB: craft: no item \"",in.item,"\" (recipe ",r.id,")");
+        ok = false;
+        break;
+        }
+      // the same item twice in a recipe: one count
+      auto same = std::find_if(it.ingredients.begin(),it.ingredients.end(),[&](auto& p){ return p.first==sym->index(); });
+      if(same!=it.ingredients.end())
+        same->second += in.count; else
+        it.ingredients.emplace_back(sym->index(),in.count);
+      }
+    if(ok)
+      ret.push_back(std::move(it));
+    }
+  nbCtx("craft window: ",ret.size()," known recipes");
+  return ret;
+  }
+
+std::string GameScript::nbCraftCreate(Npc& hero, const NbCraft::Item& item, size_t count) {
+  auto* rec = nbRecipe(item.id);
+  if(rec==nullptr || count==0)
+    return std::string();
+  for(auto& [cls,need]:item.ingredients)
+    if(hero.inventory().itemCount(cls)<size_t(need)*count)
+      return std::string();
+  // as the plugin (0x101b6400 and 0x101b4b30): the ingredients go, the CRAFT_* variables, the items, the message,
+  // RX_RaiseAlchemy(grade, count) and RX_CraftCallBack
+  for(auto& [cls,need]:item.ingredients)
+    hero.delItem(cls,uint32_t(size_t(need)*count));
+  const int32_t n = int32_t(count);
+  nbScriptSetInt(vm,"CRAFT_COUNT_TRUE",n);
+  nbScriptSetInt(vm,"CRAFT_EXP",       rec->exp*n);
+  hero.addItem(item.cls,count);
+  nbScriptSetInt(vm,"CRAFT_ITEM",      int32_t(item.cls));
+  nbScriptSetInt(vm,"CRAFT_CAT",       0);
+  nbScriptSetInt(vm,"CRAFT_COUNT",     n);
+  nbScriptSetInt(vm,"CRAFT_TAB",       rec->tab);
+  nbScriptSetInt(vm,"CRAFT_SKILL",     rec->grade);
+  nbCtx("craft: ",item.name," x",n," (recipe ",item.id,")");
+
+  ScopeVar self(*vm.global_self(), hero.handlePtr());
+  if(auto* fn = vm.find_symbol_by_name("RX_RAISEALCHEMY"); fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION) {
+    try {
+      vm.call_function<void>(fn,rec->grade,n);
+      }
+    catch(const std::exception& e) {
+      Log::e("NB: RX_RaiseAlchemy failed: ",e.what());
+      }
+    }
+  if(auto* fn = vm.find_symbol_by_name("RX_CRAFTCALLBACK"); fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION) {
+    try {
+      vm.call_function<void>(fn);
+      }
+    catch(const std::exception& e) {
+      Log::e("NB: RX_CraftCallBack failed: ",e.what());
+      }
+    }
+  return nbCraftText("RX_CRAFT_CREATED","Stworzono: ")+item.name+" x"+std::to_string(n);
+  }
+
+void GameScript::nbCraftEnd(Npc& hero) {
+  // as the plugin when the window is closed: RX_EndCraft (SELF is the hero: AIV_INVINCIBLE, PLAYER_MOBSI_PRODUCTION),
+  // then the hero leaves the table
+  if(auto* fn = vm.find_symbol_by_name("RX_ENDCRAFT"); fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION) {
+    ScopeVar self(*vm.global_self(), hero.handlePtr());
+    try {
+      vm.call_function<void>(fn);
+      }
+    catch(const std::exception& e) {
+      Log::e("NB: RX_EndCraft failed: ",e.what());
+      }
+    }
+  hero.setInteraction(nullptr);
+  nbCtx("craft window closed");
+  }
+
+int32_t GameScript::nbCraftSkill() {
+  return nbScriptInt(vm,"TALENTCOUNT_ALCHEMY");
+  }
+
+std::string GameScript::nbCraftText(std::string_view symbol, std::string_view fallback) {
+  // the strings of the scripts (as the plugin), but the Russian ones (cp1251) of the original scripts are replaced by
+  // the Polish text: most of their letters are above 0xC0
+  auto* s = vm.find_symbol_by_name(symbol);
+  if(s==nullptr || s->type()!=zenkit::DaedalusDataType::STRING || s->is_member())
+    return std::string(fallback);
+  std::string txt(s->get_string());
+  size_t letters = 0, high = 0;
+  for(auto c:txt) {
+    const uint8_t u = uint8_t(c);
+    if(std::isalpha(u) || u>=0xC0)
+      ++letters;
+    if(u>=0xC0)
+      ++high;
+    }
+  if(txt.empty() || letters==0 || high*2>letters)
+    return std::string(fallback);
+  return txt;
   }

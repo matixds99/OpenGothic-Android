@@ -34,6 +34,7 @@
 #include "ui/chapterscreen.h"
 #include "ui/documentmenu.h"
 #include "ui/nbsalesmenu.h"
+#include "ui/nbcraftmenu.h"
 #include "ui/errorscreen.h"
 #include "ui/videowidget.h"
 #include "ui/menuroot.h"
@@ -190,6 +191,7 @@ class MainWindow : public Tempest::Window {
     DialogMenu                dialogs;
     DocumentMenu              document;
     NbSalesMenu               nbSales;   // NB fix 68: the sales window of New Balance
+    NbCraftMenu               nbCraft;   // NB fix 70: the crafting window of New Balance (alchemy)
     ChapterScreen             chapter;
     ConsoleWidget             console;
     ModMenu                   modMenu;

@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **70**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **71**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -214,6 +214,25 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - **po teście 03:47 (zakładki, strzałki, tło – OK):** w pergaminach są obrazki przedmiotów 3D jak w ekwipunku (ten sam renderer co ekwipunek – `InventoryRenderer`), cena mała w rogu pergaminu; duży pergamin po prawej też pokazuje przedmiot.
 - **Pliki (dodatkowo):** `common/ui/nbsalesmenu.cpp/.h`, `common/gothic.h`, `common/mainwindow.cpp`
 
+### 70. Okno alchemii NB (stół alchemiczny jak na PC) – 🧪 (16.11.2026)
+- **Pliki:** 🆕 `common/game/nbcraft.h`, 🆕 `common/ui/nbcraftmenu.cpp`, 🆕 `common/ui/nbcraftmenu.h`, `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/gothic.h`, `common/mainwindow.cpp`, `common/mainwindow.h`
+- **Zgłoszenie:** przy stole alchemicznym otwierało się stare menu dialogowe skryptów (poprawka 2), a na PC jest okno pluginu: zakładki, lista mikstur, „Umiejętność alchemii: N”, składniki i „Stwórz” (zrzut z PC).
+- **Skąd dane:** przepisy są zaszyte w UNION_ABI.DLL (nie w skryptach). Wyciągnięte z kodu pluginu:
+  - lista przepisów (0x101b98c0 → lista 0x10568f90): 87 przepisów alchemii – numer, zakładka, wynik, składniki z ilościami, „stopień” dla `RX_RaiseAlchemy` i doświadczenie (`CRAFT_EXP`, skręty);
+  - test, które przepisy bohater zna (0x101a5940): mikstury z talentów – `PLAYER_TALENT_ALCHEMY[n]`, reszta – zmienne skryptów jak w pluginie (np. `KNOWSPEED3`, `KNOWPERMINT`, `MakePoisonKnow`, `RX_PoisonKnowLevel` 1–5, `KNOW_JOINTRECIPE`, proszki zwiadowcy `RX_Scout_Skill_Powder_Type_*`), Oko Innosa – przepis z sercem smoka, które bohater ma;
+  - tworzenie (0x101b6400, 0x101b4b30): zabiera składniki × ilość, ustawia `CRAFT_COUNT_TRUE`, `CRAFT_EXP`, `CRAFT_ITEM`, `CRAFT_CAT`, `CRAFT_COUNT`, `CRAFT_TAB`, `CRAFT_SKILL`, daje mikstury, woła `RX_RaiseAlchemy(stopień, ilość)` i `RX_CraftCallBack`;
+  - zamknięcie: `RX_EndCraft` (koniec `PLAYER_MOBSI_PRODUCTION`), bohater odchodzi od stołu.
+- **Poprawka:** `RX_OpenCraft(CRAFT_ALCHEMY)` otwiera nowe okno (po zamknięciu dialogu, jak okno sprzedaży). Wygląd i sterowanie jak okno sprzedaży (68–69):
+  - po lewej 6 zakładek po dwie w rzędzie: Regeneracja, Wytrzymałość, Permanentne, Specjalne, Alkohole, Trucizny – przy nazwie „(ile można zrobić / ile znanych)” jak w oryginale; pod nimi przepisy, które bohater zna: obrazek 3D w pergaminie i „nazwa (xN)”, N – ile może zrobić (0 – wyszarzone);
+  - na środku u góry „Umiejętność alchemii: N” (`TalentCount_Alchemy`), strzałki ↑ ↓, X zamyka;
+  - po prawej: duży pergamin z miksturą, nazwa, „Maksymalnie: N”, kafelki składników po cztery w rzędzie z obrazkiem i „masz/potrzeba”, **−**, ilość, **+**, **Max**, **Stwórz**; pod składnikami komunikat „Stworzono: … xN”. Po stworzeniu lista się odświeża (np. mięśnie pumy Jiry robi się raz).
+  - teksty: ze skryptów (`RX_Craft_TabAlc*`, `RX_Craft_Max`, `RX_Craft_Create`, `RX_Craft_Created`), a gdy są po rosyjsku – polskie z zrzutu.
+  - klawiatura: strzałki, Enter – stwórz, Tab – następna zakładka, Escape – zamknij.
+  - w logu `[ctx] craft window: N known recipes`, `[ctx] craft: nazwa xN (recipe id)`, `[ctx] craft window closed`.
+- **Inne stoły** (kowadło, runy, łuki, kuchnia…) – na razie stare menu z poprawki 2; mają swoje listy w DLL (0x10568f9c i dalej), do zrobienia tym samym oknem.
+- **Nie ma:** mikstur `ItPo_ASNC_POTION_*` (w skryptach NB nie ma takich przedmiotów); przy „rzece dusz” i proszkach plugin sprawdza jeszcze coś w silniku Gothica – tu tylko zmienne skryptów.
+- **Do sprawdzenia:** czy otwiera się przy stole, czy po „Stwórz” rośnie umiejętność alchemii i czy bohater po X wstaje od stołu.
+
 ---
 
 ## 5. Bohater: sprint, wytrzymałość, paski, animacje broni
@@ -299,6 +318,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 ### 2. Stoły rzemieślnicze nic nie robiły – ✅ (12.11.2026)
 - **Plik:** `common/game/gamescript.cpp` (`RX_OpenCraft`)
 - NB otwiera stoły graficznym oknem pluginu. Teraz `RX_OpenCraft` otwiera stare menu dialogowe, które nadal jest w skryptach NB (przepisy i składniki ze skryptów).
+- **Od poprawki 70** stół alchemiczny ma okno jak na PC; pozostałe stoły dalej to menu.
 - **Sprawdzone:** stół alchemiczny, runiczny, demonologiczny, stół z tabliczkami, pulpity z księgami (inteligencja 5 → 6). **Do sprawdzenia:** zwoje, kowadło, piec; kuchnia, łuki, biżuteria i runy demoniczne mogą nie mieć starego menu.
 
 ### 7. Łóżko: po przespaniu bohater nagle stał, a potem wstawał z łóżka – ✅ (12.11.2026)
@@ -354,6 +374,6 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - [ ] Funkcje bossów wołane przez plugin: `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…`, razem z obrażeniami w czasie i truciznami (`RX_ApplyDotDamage`, `RX_ApplyPoison`).
 - [ ] System karmy pluginu (`UpdateKarma`, 130 wywołań – wydarzenia, znaki, osiągnięcia); samo wyświetlanie karmy działa (poprawka 62).
 - [ ] Klawisze skrótów NB (`RX_KeyPressed`, 100 wywołań – mikstury, strzały, pochodnia, pomijanie scenek).
-- [ ] Przywołania (`RX_SummonNpcToTarget`, `RX_ResetSummons`) i okna pluginu (handel, rzemiosło z listą, poker).
+- [ ] Przywołania (`RX_SummonNpcToTarget`, `RX_ResetSummons`) i okna pluginu (rzemiosło z listą poza alchemią – poprawka 70, poker).
 - [ ] Ognik: pokazywanie rzadkich roślin/tabliczek, „zbieranie w pomieszczeniach” (poprawka 11).
 - [ ] Napisy: „Dzień: …” w lewym górnym rogu, liczniki wampira i Full SnC+ (poprawka 62).

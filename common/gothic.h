@@ -188,6 +188,8 @@ class Gothic final {
       std::string group;   // NB fix 69: the category (Constantino, Alfred); empty - one list
       };
     Tempest::Signal<void(Npc&,Npc&,const std::vector<NbSaleItem>&)> onOpenPlayerSales;
+    // NB fix 70: the crafting window of the plugin (RX_OpenCraft) - for now the alchemy
+    Tempest::Signal<void(Npc&,int32_t)>                                 onOpenCraft;   // the player, CRAFT_*
     bool                                                                nbSalesOpen = false; // the window is shown (no HUD of NB under it)
     std::function<bool(const Npc*)>                                     isNpcInDialogFn;
 
