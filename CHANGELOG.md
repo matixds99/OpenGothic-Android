@@ -258,7 +258,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Po teście 23:56:** kowadło działa (umiejętność kowalstwa rośnie), stół runiczny pokazuje przepisy. Poprawione:
   - wszystkie runy nazywały się „Runa” – teraz nazwa z opisu przedmiotu (zaklęcie), jak w ekwipunku: „Otwieranie zamków”, „Przywołanie kamiennego golema”;
   - „Umiejętność tworzenia run: N” wchodziło pod X – za długi napis dostaje mniejszą czcionkę.
-- **Do sprawdzenia:** kocioł (zupy, potrawki, kompoty), zbroje i ciasta były puste – czy bohater zna tam jakiś przepis (na PC w tym samym zapisie).
+- Kocioł, zbroje i ciasta były puste, bo bohater nie zna jeszcze tych przepisów (potwierdzone 23:59). **Do sprawdzenia później**, gdy się ich nauczy.
 
 ---
 
