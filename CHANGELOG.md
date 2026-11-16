@@ -214,7 +214,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - **po teście 03:47 (zakładki, strzałki, tło – OK):** w pergaminach są obrazki przedmiotów 3D jak w ekwipunku (ten sam renderer co ekwipunek – `InventoryRenderer`), cena mała w rogu pergaminu; duży pergamin po prawej też pokazuje przedmiot.
 - **Pliki (dodatkowo):** `common/ui/nbsalesmenu.cpp/.h`, `common/gothic.h`, `common/mainwindow.cpp`
 
-### 70. Okno alchemii NB (stół alchemiczny jak na PC) – 🧪 (16.11.2026)
+### 70. Okno alchemii NB (stół alchemiczny jak na PC) – ✅ (16.11.2026)
+- **Sprawdzone (zrzut 23:29):** okno otwiera się przy stole, „Stwórz” robi esencję many, umiejętność alchemii rośnie (77 → 78), skrypty dają doświadczenie i inteligencję.
 - **Pliki:** 🆕 `common/game/nbcraft.h`, 🆕 `common/ui/nbcraftmenu.cpp`, 🆕 `common/ui/nbcraftmenu.h`, `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/gothic.h`, `common/mainwindow.cpp`, `common/mainwindow.h`
 - **Zgłoszenie:** przy stole alchemicznym otwierało się stare menu dialogowe skryptów (poprawka 2), a na PC jest okno pluginu: zakładki, lista mikstur, „Umiejętność alchemii: N”, składniki i „Stwórz” (zrzut z PC).
 - **Skąd dane:** przepisy są zaszyte w UNION_ABI.DLL (nie w skryptach). Wyciągnięte z kodu pluginu:
@@ -231,7 +232,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - w logu `[ctx] craft window: N known recipes`, `[ctx] craft: nazwa xN (recipe id)`, `[ctx] craft window closed`.
 - **Inne stoły** (kowadło, runy, łuki, kuchnia…) – na razie stare menu z poprawki 2; mają swoje listy w DLL (0x10568f9c i dalej), do zrobienia tym samym oknem.
 - **Nie ma:** mikstur `ItPo_ASNC_POTION_*` (w skryptach NB nie ma takich przedmiotów); przy „rzece dusz” i proszkach plugin sprawdza jeszcze coś w silniku Gothica – tu tylko zmienne skryptów.
-- **Do sprawdzenia:** czy otwiera się przy stole, czy po „Stwórz” rośnie umiejętność alchemii i czy bohater po X wstaje od stołu.
+- **Do sprawdzenia:** czy bohater po X wstaje od stołu; przepisy z innych zakładek (trucizny, permanentne).
 
 ---
 
