@@ -1,4 +1,6 @@
 #include "gamescript.h"
+
+#include <cmath>
 #include "nboptions.h"
 #include "nbiteminfo.h"
 #include "nbbars.h"
@@ -183,7 +185,25 @@ struct NbState {
   std::unordered_map<const zenkit::IItem*,uint64_t> wispSkip;      // the items it did not reach: not again for 60 s
   float                                       wispBestH = 0;
   const World*                                vobWorld = nullptr;
+  // NB fix 76: AST_GetManaBonus - the parts of a point of mana that are left from the last call (as the plugin)
+  float                                       manaBonusRest = 0;
+  // NB fix 76: RX_ContainsRoutine - the routine of each character from Npc_ExchangeRoutine ("RTN_NAME_ID", upper case).
+  // Not in the save: after a load the start routine of the character (daily_routine) counts
+  struct Routine {
+    const zenkit::INpc* handle = nullptr;
+    std::string         name;
+    };
+  std::unordered_map<const Npc*,Routine>      routines;
   };
+
+static bool nbEqualsNoCase(std::string_view a, std::string_view b) {
+  if(a.size()!=b.size())
+    return false;
+  for(size_t i=0; i<a.size(); ++i)
+    if(std::toupper(static_cast<unsigned char>(a[i]))!=std::toupper(static_cast<unsigned char>(b[i])))
+      return false;
+  return true;
+  }
 
 // "[ctx]" in the log: what the player did, so the errors around it have a place in the game (NB fix 52)
 template<class... Args>
@@ -2073,6 +2093,77 @@ void GameScript::initCommon() {
     bindNb("RX_ISMULTACTIVE",         []() -> int32_t { return 0; });
     bindNb("RX_ROADOFTRIALSACTIVE",   []() -> int32_t { return 0; });
     bindNb("RX_ISHEROINSIDEOTHERNPC", []() -> int32_t { return 0; });
+    // NB fix 76: the externals of UNION_ABI.DLL that the scripts call all the time (log of 17.11: "NB missing")
+    // Hlp_GetSlotItem / Hlp_HasInSlot (oCNpc::GetSlotItem): the item in a slot of the model - HERO_POISONED looks
+    // every tick for the burning torch in the left hand (FAKELISON)
+    const auto slotItem = [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view slot) -> std::shared_ptr<zenkit::IItem> {
+      auto* npc = findNpc(npcRef);
+      if(npc==nullptr)
+        return nullptr;
+      if(nbEqualsNoCase(slot,"ZS_LEFTHAND") && npc->isUsingTorch())
+        return npc->torchItem();
+      if(auto* it = npc->itemInSlot(slot))
+        return it->handlePtr();
+      return nullptr;
+      };
+    bindNb("HLP_GETSLOTITEM", slotItem);
+    bindNb("HLP_HASINSLOT", [slotItem](std::shared_ptr<zenkit::INpc> npcRef, std::string_view slot) -> int32_t {
+      return slotItem(std::move(npcRef),slot)!=nullptr ? 1 : 0;
+      });
+    // Ext_RemoveFromSlot (oCNpc::RemoveFromSlot, without a drop): the burning torch goes out (the scripts give the hero
+    // the unlit torch themselves, HERO_POISONED in the water); the decorations of the bones go away
+    bindNb("EXT_REMOVEFROMSLOT", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view slot) {
+      auto* npc = findNpc(npcRef);
+      if(npc==nullptr)
+        return;
+      if(nbEqualsNoCase(slot,"ZS_LEFTHAND") && npc->isUsingTorch()) {
+        npc->setTorch(false);
+        return;
+        }
+      if(!nbEqualsNoCase(slot,"ZS_LEFTHAND") && !nbEqualsNoCase(slot,"ZS_RIGHTHAND"))
+        npc->clearDecor(slot);
+      });
+    // AST_GetManaBonus (0x1016a920): the regeneration of mana of the hero (RX_RegenCommonFunc) - the maximal mana / 105
+    // per call (/ 210 with the rage of Beliar), the parts of a point add up. Before: 0, the mana came back too slowly
+    bindNb("AST_GETMANABONUS", [this]() -> int32_t {
+      auto* pl = owner.player();
+      if(pl==nullptr)
+        return 0;
+      auto& st      = nbStates[this];
+      auto*         rage = vm.find_symbol_by_name("RX_BELIARRAGEACTIVEVALUE");
+      const bool    rageOn = rage!=nullptr && rage->type()==zenkit::DaedalusDataType::INT && !rage->is_member() &&
+                             rage->get_int()==0xd4a7a;
+      const int32_t div  = rageOn ? 210 : 105;
+      const float   v   = float(pl->attribute(ATR_MANAMAX))/float(div) + st.manaBonusRest;
+      const float   n   = std::floor(v);
+      st.manaBonusRest = v-n;
+      return int32_t(n);
+      });
+    // RX_ContainsRoutine(npc, text) (0x101837e0): whether the name of the routine of the character has the text
+    // (Pablo with Bartok on "GuideMitte", the arena fighters on "ArenaPlace")
+    bindNb("RX_CONTAINSROUTINE", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view text) -> int32_t {
+      auto* npc = findNpc(npcRef);
+      if(npc==nullptr || text.empty())
+        return 0;
+      std::string name;
+      auto& rt = nbStates[this].routines;
+      if(auto it = rt.find(npc); it!=rt.end() && it->second.handle==npcRef.get()) {
+        name = it->second.name;
+        } else {
+        if(auto* d = vm.find_symbol_by_index(uint32_t(npcRef->daily_routine)); d!=nullptr && npcRef->daily_routine!=0)
+          name = d->name();
+        }
+      std::string up(text);
+      for(auto& c:up)
+        c = char(std::toupper(static_cast<unsigned char>(c)));
+      for(auto& c:name)
+        c = char(std::toupper(static_cast<unsigned char>(c)));
+      return name.find(up)!=std::string::npos ? 1 : 0;
+      });
+    // RX_TerminateDialog (oCInformationManager::Exit) and RX_ClearInput (zCInput::ClearKeyBuffer) after the teleport
+    // of the rune: the scripts call AI_StopProcessInfos before, the dialog closes by it - nothing more here
+    bindNb("RX_TERMINATEDIALOG", []() {});
+    bindNb("RX_CLEARINPUT",      []() {});
     bindNb("RX_MULT_SETPARTYNPC",     [](std::shared_ptr<zenkit::INpc>) {});
     bindNb("MDL_SETHEROANIFPS",       [](std::shared_ptr<zenkit::INpc>, std::string_view, float) {});
     bindNb("INFOSTATADD",             [](std::shared_ptr<zenkit::INpc>, int32_t, int32_t) {});
@@ -5085,8 +5176,12 @@ void GameScript::npc_exchangeroutine(std::shared_ptr<zenkit::INpc> npcRef, std::
     size_t d = sym != nullptr ? sym->index() : 0;
     if(hasDma())
       Log::d("Npc_ExchangeRoutine: ",npc->displayName()," -> ",rname,d==0 ? " (no such routine)" : "");
-    if(d>0)
+    if(d>0) {
+      // NB fix 76: the name for RX_ContainsRoutine
+      if(auto it = nbStates.find(this); it!=nbStates.end())
+        it->second.routines[npc] = NbState::Routine{npcRef.get(),std::string(std::string_view(name))};
       npc->excRoutine(d);
+      }
     }
   }
 

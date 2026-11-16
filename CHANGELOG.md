@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **75**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **77**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -139,7 +139,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - Ludzkie gildie NB (`GIL_SEPERATOR_HUM = 21`, gildie 16–20 też ludzkie) i `Gil_Values` brane ze skryptów – bohater z zapisu nie ślizga się i ma ludzkie animacje.
 - Zakładane tylko przedmioty faktycznie założone (`ITEM_ACTIVE`), zbroja i broń po biżuterii; postacie ze spawnu (pozycja 0,0,0) wracają na swoje miejsce zamiast tłoczyć się w porcie.
 
-### 73. Gra nie zamyka się po wyjściu do ekranu głównego / przy wiadomości – 🧪 (17.11.2026)
+### 73. Gra nie zamyka się po wyjściu do ekranu głównego / przy wiadomości – ✅ (17.11.2026)
 - **Pliki:** `patches/tempest-opengothic.patch` (Tempest: `Engine/system/api/androidapi.cpp/.h`, `Engine/gapi/vulkan/vswapchain.cpp/.h`), `patches/README.md`
 - **Zgłoszenie (film 00:17):** po wyjściu do ekranu głównego (albo gdy przyjdzie wiadomość i trzeba ją otworzyć) gra się zamyka, po powrocie launcher pokazuje „Gra się zamknęła” ze stosem `MainWindow::tick` ← `MainWindow::render` ← `AndroidApi::implProcessEvents`.
 - **Przyczyna:** gdy aplikacja idzie w tło, Android zabiera jej powierzchnię (`APP_CMD_TERM_WINDOW`). Tempest traktował to jak zamknięcie gry: wysyłał „zamknij okno” i kończył pętlę – a gra przy zamykaniu jeszcze rysowała klatkę i padała.
@@ -149,7 +149,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** wyjście do ekranu głównego i powrót, otwarcie wiadomości z powiadomienia, przełączenie na inną aplikację i z powrotem; czy obraz wraca i czy dotyk działa.
 - **Test (17.11):** gra już się nie zamyka, ale po powrocie był czarny ekran, a ikona w launcherze „świrowała” – poprawione w 74.
 
-### 74. Czarny ekran po powrocie z tła – 🧪 (17.11.2026)
+### 74. Czarny ekran po powrocie z tła – ✅ (17.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `patches/tempest-opengothic.patch` (Tempest: `androidapi.cpp/.h`, `vswapchain.cpp/.h`), `patches/README.md`
 - **Zgłoszenie:** po powrocie do gry czarny ekran, ikona gry w launcherze „świruje” (animacja otwierania się nie kończy). W logu 4× `android: the window goes away (background)` i nic więcej.
 - **Przyczyna:** nowe okno po powrocie ma ten sam rozmiar, więc widżet okna nie wysyłał zdarzenia zmiany rozmiaru – swapchain nie był robiony od nowa i gra rysowała dalej na starej, martwej powierzchni. Do tego stary swapchain zostawał na powierzchni, którą Android już zabrał.
@@ -159,6 +159,24 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `VK_ERROR_SURFACE_LOST_KHR` przy pobraniu/pokazaniu klatki też robi nową powierzchnię zamiast błędu.
 - W logu: `android: the window comes back` i `android: the swapchain is made anew (szer x wys)`.
 - **Crash z `Item::position` ← `Npc::nextAiAction`** (dołączony crash.log) to stary, naprawiony już błąd 63 – w obecnym kodzie to miejsce ma sprawdzenie; launcher pokazuje ostatni zapisany crash.
+- **Test (17.11):** działa – gra wraca z tła z obrazem (w logu `the window comes back` i `the swapchain is made anew (2608x1200)`).
+
+### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
+- **Pliki:** `game/main.cpp`
+- **Zgłoszenie (log 17.11):** 528 linii `[zenkit] Accessing member "C_NPC.AIVAR" without an instance set (in C_PLAYERISFAKEBANDIT)` w jednej sesji (do tego `ZS_DEAD`, `RX_ISSUMMONNPC`).
+- **Przyczyna:** to nie błąd gry – `C_PlayerIsFakeBandit` (skrypt z oryginału) czyta `aivar` Ramona (`BDT_1071_Addon_Ramon`), którego nie ma w Khorinis. Odczyt daje 0, tak jak w oryginale; ZenKit tylko za każdym razem to logował (każda percepcja postaci).
+- **Poprawka:** taka sama linia „Accessing member…” trafia do logu raz, potem tylko licznik przy 10, 100, 1000… (`(xN so far)`). Inne błędy ZenKita (wyjątki ze stosem wywołań dla ekranu błędu) bez zmian.
+
+### 76. Brakujące funkcje pluginu: regeneracja many, pochodnia w ręce, rutyny – 🧪 (17.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`
+- **Zgłoszenie (log 17.11, `NB missing`):** `HLP_HASINSLOT` ×186, `AST_GETMANABONUS` ×168, `EXT_REMOVEFROMSLOT`, `RX_CLEARINPUT`, `RX_TERMINATEDIALOG`, `RX_CONTAINSROUTINE`.
+- **Napisane według `UNION_ABI.DLL`:**
+  - `AST_GetManaBonus` (0x1016a920) – regeneracja many bohatera w `RX_RegenCommonFunc`: maks. mana / 105 na wywołanie (/ 210 z gniewem Beliara), ułamki się sumują. Wcześniej 0 – **mana wracała wolniej niż na PC**;
+  - `Hlp_HasInSlot` / `Hlp_GetSlotItem` – przedmiot w slocie modelu (`HERO_POISONED` co chwilę sprawdza płonącą pochodnię w lewej ręce, `FAKELISON`);
+  - `Ext_RemoveFromSlot` (oCNpc::RemoveFromSlot bez upuszczania) – gaśnie płonąca pochodnia (skrypt sam daje zgaszoną), ozdoby na kościach znikają;
+  - `RX_ContainsRoutine` (0x101837e0) – czy nazwa rutyny postaci zawiera tekst (Pablo i Bartok „GuideMitte”, walczący na arenie „ArenaPlace” nie reagują na broń). Rutyna z `Npc_ExchangeRoutine`, po wczytaniu zapisu – rutyna startowa;
+  - `RX_TerminateDialog`, `RX_ClearInput` (po teleporcie runą) – nic więcej nie trzeba, dialog zamyka `AI_StopProcessInfos` przed nimi; teraz bez wpisu w logu.
+- **Do sprawdzenia:** czy mana odnawia się szybciej (z czasem, jak na PC); w logu przy zapisie `NB missing` bez tych nazw.
 
 ---
 

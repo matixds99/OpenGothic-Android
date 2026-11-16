@@ -2,6 +2,9 @@
 #include <Tempest/Application>
 #include <Tempest/Log>
 #include <zenkit/Logger.hh>
+#include <string>
+#include <unordered_map>
+#include <mutex>
 
 #include <Tempest/VulkanApi>
 
@@ -175,12 +178,28 @@ int main(int argc, const char** argv) {
 
         switch(lvl) {
           case zenkit::LogLevel::ERROR:
-            Tempest::Log::e("[zenkit] ", message);
+          case zenkit::LogLevel::WARNING: {
+            // NB fix 75: the same error again and again (the scripts read a member of a character who is not in this
+            // world: 500 lines a session) - the first one, then the count at 10, 100, 1000... Only "Accessing member":
+            // the lines of an exception (the call stack, the stack) stay whole for the error screen
+            if(std::string_view(message).rfind("Accessing member ",0)!=0) {
+              Tempest::Log::e("[zenkit] ", message);
+              break;
+              }
+            static std::mutex                                sync;
+            static std::unordered_map<std::string,uint64_t> seen;
+            uint64_t n = 1;
+            {
+              std::lock_guard<std::mutex> guard(sync);
+              if(seen.size()<4096 || seen.find(message)!=seen.end())
+                n = ++seen[message];
+            }
+            if(n==1)
+              Tempest::Log::e("[zenkit] ", message); else
+            if(n==10 || n==100 || n==1000 || n==10000 || n==100000)
+              Tempest::Log::e("[zenkit] ", message, " (x", n, " so far)");
             break;
-
-          case zenkit::LogLevel::WARNING:
-            Tempest::Log::e("[zenkit] ", message);
-            break;
+            }
 
           case zenkit::LogLevel::INFO:
             Tempest::Log::i("[zenkit] ", message);
