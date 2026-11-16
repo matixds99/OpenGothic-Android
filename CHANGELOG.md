@@ -197,7 +197,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - W logu `[ctx] sales window: N items`.
 - **To samo okno w pluginie robi rzemiosło** (`RX_OpenCraft` z `CRAFT_ALCHEMY`, `CRAFT_SMITH`, `CRAFT_RUNE`, `CRAFT_FORCEARMOR`, `CRAFT_BOWS`, `CRAFT_JEWELRY`, `CRAFT_FOOD`, `CRAFT_PIE`, `CRAFT_SOUP_COMPOTE`, `CRAFT_SCROLLS`, `CRAFT_ORE_SMELTING`, `CRAFT_SKINS_ARMOR`, `CRAFT_DEMONRUNE`). Przepisy są tam zaszyte w kodzie pluginu (nie w skryptach) – na razie zostają stare menu dialogowe z poprawki 2; to okno jest pod nie przygotowane.
 
-### 69. Okno sprzedaży u Constantino i Alfreda, napis „Złoto” w ekwipunku – 🧪 (16.11.2026)
+### 69. Okno sprzedaży u Constantino i Alfreda, napis „Złoto” w ekwipunku – ✅ (16.11.2026, sprawdzone 17.11)
 - **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`, `common/game/nbtexts.h`
 - **Zgłoszenie:** okno sprzedaży z poprawki 68 nie otwiera się u Constantino (trofea) ani w obozie myśliwych; w ekwipunku jest „Złota moneta : N” zamiast „Złoto”.
 - **Przyczyna:** „Przekaż zebrane rośliny i składniki...” (Constantino, czeladnik) i „(Sprzedaj trofea zwierzęce)” (Alfred) nie wołają `RX_OpenCraft_PlayerSales`, tylko `RX_Form_Const_SellItems` / `RX_Form_Alfred_SellItems`. Te dwie funkcje mają listę towarów zaszytą w UNION_ABI.DLL (tabele 0x105692c8 i 0x10568b38) – u nas ich nie było, dialog się zamykał i nic. Funkcje skryptów `DIA_CONSTANTINO_SELLTROPHIES_CALLBACK` itp. to pozostałości – plugin ich nie używa.
@@ -260,12 +260,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - „Umiejętność tworzenia run: N” wchodziło pod X – za długi napis dostaje mniejszą czcionkę.
 - Kocioł, zbroje i ciasta były puste, bo bohater nie zna jeszcze tych przepisów (potwierdzone 23:59). **Do sprawdzenia później**, gdy się ich nauczy.
 
-### 72. Odpowiedzi w dialogach jak na PC, kamera przy menu bohatera (runa teleportu) – 🧪 (17.11.2026)
+### 72. Odpowiedzi w dialogach jak na PC, kamera przy menu bohatera (runa teleportu) – ✅ (17.11.2026)
+- **Sprawdzone (zrzut 00:15):** pergamin z odpowiedziami przy runie teleportu, kamera za bohaterem.
 - **Pliki:** `common/ui/dialogmenu.cpp`, `common/ui/dialogmenu.h`, `common/mainwindow.cpp`
 - **Zgłoszenie (film z PC + zrzut 00:07):** na PC wybór (np. runa teleportu: „...do wieży Xardasa.”, „...do portu Khorinis.”) to mały pergamin na dole ekranu, a kamera zostaje za bohaterem. Na telefonie były duże karty na pół ekranu, a kamera patrzyła z góry na głowę bohatera.
 - **Odpowiedzi:** we wszystkich dialogach jeden pergamin `DLG_CHOICE.TGA` jak na PC (ok. 60% szerokości ekranu, na dole), odpowiedzi linijka pod linijką. Linijka jest trochę wyższa od tekstu, żeby trafić palcem; wybrana ma czcionkę wyróżnienia i jasny pasek pod spodem. Przy wielu odpowiedziach lista przewija się palcem (pasek przewijania przy prawej krawędzi pergaminu).
 - **Kamera:** menu bohatera „z samym sobą” (bez rozmówcy i nie przy stole – runa teleportu i podobne) nie włącza kamery dialogu. Kamera dialogu celowała w bohatera z obu stron naraz, z odległości ~0, więc silnik podnosił ją nad głowę. Teraz zostaje zwykła kamera za bohaterem, jak na PC.
-- **Do sprawdzenia:** czy pergamin nie jest za mały do trafiania palcem; kamera przy runie teleportu.
 
 ---
 
