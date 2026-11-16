@@ -194,13 +194,14 @@ class GameScript final {
     AiOuputPipe* openAiOuput();
     AiOuputPipe* openDlgOuput(Npc &player, Npc &npc);
 
-    // NB fix 70: the crafting window of New Balance (the alchemy): the recipes that the hero knows, as the plugin
-    // shows them, the crafting (as the plugin: the ingredients, CRAFT_* variables, RX_RaiseAlchemy, RX_CraftCallBack),
-    // the end (RX_EndCraft, the hero leaves the table), the skill and the texts of the window
+    // NB fix 70, 71: the crafting windows of New Balance (CRAFT_*): the recipes that the hero knows, as the plugin shows
+    // them, the crafting (as the plugin: the ingredients, CRAFT_* variables, RX_RaiseAlchemy / RX_RaiseSmith,
+    // RX_CraftCallBack), the end (RX_EndCraft, the hero leaves the table), the skill (-1: none) and the texts
     auto             nbCraftList(Npc& hero, int32_t craft) -> std::vector<NbCraft::Item>;
-    std::string      nbCraftCreate(Npc& hero, const NbCraft::Item& rec, size_t count);
+    std::string      nbCraftCreate(Npc& hero, int32_t craft, const NbCraft::Item& rec, size_t count);
     void             nbCraftEnd(Npc& hero);
-    int32_t          nbCraftSkill();
+    int32_t          nbCraftSkill(int32_t craft);
+    size_t           nbCraftAvailable(Npc& hero, size_t cls);
     std::string      nbCraftText(std::string_view symbol, std::string_view fallback);
 
     auto*            goldId() const { return itMi_Gold; }

@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **71**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **72**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -230,9 +230,32 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - teksty: ze skryptów (`RX_Craft_TabAlc*`, `RX_Craft_Max`, `RX_Craft_Create`, `RX_Craft_Created`), a gdy są po rosyjsku – polskie z zrzutu.
   - klawiatura: strzałki, Enter – stwórz, Tab – następna zakładka, Escape – zamknij.
   - w logu `[ctx] craft window: N known recipes`, `[ctx] craft: nazwa xN (recipe id)`, `[ctx] craft window closed`.
-- **Inne stoły** (kowadło, runy, łuki, kuchnia…) – na razie stare menu z poprawki 2; mają swoje listy w DLL (0x10568f9c i dalej), do zrobienia tym samym oknem.
+- **Inne stoły** – poprawka 71.
 - **Nie ma:** mikstur `ItPo_ASNC_POTION_*` (w skryptach NB nie ma takich przedmiotów); przy „rzece dusz” i proszkach plugin sprawdza jeszcze coś w silniku Gothica – tu tylko zmienne skryptów.
 - **Sprawdzone (23:32):** zakładka Alkohole (czysty alkohol z kilku przepisów, x9 naraz), po X bohater odchodzi od stołu.
+
+### 71. Okno rzemiosła NB przy wszystkich stołach – 🧪 (16.11.2026)
+- **Pliki:** `common/game/nbcraft.h`, `common/ui/nbcraftmenu.cpp/.h`, `common/game/gamescript.cpp`, `common/game/gamescript.h`
+- **Co:** to samo okno co alchemia (poprawka 70) przy każdym stole, który w skryptach woła `RX_OpenCraft`:
+  | Stół (skrypt) | `CRAFT_*` | Przepisy | Zakładki | Umiejętność u góry |
+  |---|---|---|---|---|
+  | kowadło (`SMITHWEAPON_S1`) | 1 | 60 | Jednoręczne, Dwuręczne, Rapiery, Broń orków, Inne | kowalstwa |
+  | stół runiczny (`MAKERUNE_S1`) | 2 | 91 | Runy ognia, wody, guru, ciemności, ogólne, Kamienie runiczne | tworzenia run |
+  | łuki (`MAKEBOWS_S1`) | 3 | 48 | Łuki, Strzały, Bełty, Inne | – |
+  | runy demonów (`DEMONCASTER_S1`) | 4 | 12 | Przyzwanie demona, Ulepszenie, Kamienie runiczne | tworzenia run |
+  | zbroje (`RX_ARMORFORGED_S1`) | 5 | 75 | Straż/Zwiadowcy, Najemnicy, Strażnicy, Mroczny rycerz, Inne, Tworzenie | kowalstwa |
+  | kocioł (`KESSEL_S1`) | 6 | 10 | Zupy, Gulasze, Kompoty | – |
+  | skóry (`SKINRAPE_S1`) | 7 | 5 | Skóry (cięciwy) | – |
+  | piec (`SMITHFIRE_S1`) | 8 | 22 | Półfabrykaty, Sztabki, Przetapianie broni | – |
+  | biżuteria (`TRFMAGIC_S1`) | 9 | 38 | Stalowe, Złote, Z rudy, Z czarnej rudy, Specjalne | – |
+  | kuchnia (`HERD_S1`) | 10 | 11 | Mięso, Ciasta | – |
+  | zwoje (`MAKESCROLLS_S1`) | 11 | 6 | Zwoje | – |
+  | patelnia / ognisko (`HERDPAN_S1`) | 12 | 6 | Mięso | – |
+- **Skąd dane:** listy każdego stołu z UNION_ABI.DLL (0x10568f9c, 0x10568fe4, 0x10568fc0…) i test „zna przepis” każdego stołu (0x101a5940): kowadło – `PLAYER_TALENT_SMITH` i zmienne (`KNOWNORESWORD`, `Lovkach_W1..8`, `RX_Rec_Weapon_01..07`, linie broni orków…), runy – `PLAYER_TALENT_RUNES` i wyjątki (przemiany `HeroKnownTrans_*`, runa teleportu, herb żywiołów…), łuki – warunki zapisane przy przepisach („`KNOWHOWTOMAKEARROWS : 1 | MAKEHOLYARROWS : 1`”), zbroje – wzmocnienia według `RX_HeroKnowsReforcement` (1 lub 2) i przepisy (`Know_HuntArmor_*`, zbroja z pełzaczy, zwiadowcy…), kocioł/kuchnia/zwoje/biżuteria/piec – ich zmienne.
+- **Tworzenie** jak w pluginie: niektóre przepisy dają kilka sztuk (groty x25, cięciwy x5, strzały ogniste x5…, w oknie „x N” pod „Maksymalnie”); kowadło i zbroje wołają `RX_RaiseSmith(stopień, ilość)`, runy – za pierwszą runę danego rodzaju `PLAYER_MAKE_RUNES[n] = 1` i `TalentCount_Rune += stopień`. Założonej broni/zbroi okno nie bierze jako składnika (jak plugin: `RX_Craft_EquippedItem`).
+- W logu `[ctx] craft window N: … known recipes`, `[ctx] craft N: nazwa xN (recipe …)`.
+- **Nie ma:** ulepszeń przy kowadle (`UPGRADED_*`) i zaklinania przy łukach (`ENCHANTED_*`) – to osobne okna pluginu (wybór przedmiotu z ekwipunku); kilka warunków silnika Gothica (zbroja kruka – wersja z hełmem, ryby z wysp i suszone mięso – gildia 14 lub 16).
+- **Do sprawdzenia:** każdy stół – czy otwiera się okno, czy widać przepisy, które bohater zna, i czy rośnie umiejętność kowalstwa / tworzenia run.
 
 ---
 
@@ -319,7 +342,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 ### 2. Stoły rzemieślnicze nic nie robiły – ✅ (12.11.2026)
 - **Plik:** `common/game/gamescript.cpp` (`RX_OpenCraft`)
 - NB otwiera stoły graficznym oknem pluginu. Teraz `RX_OpenCraft` otwiera stare menu dialogowe, które nadal jest w skryptach NB (przepisy i składniki ze skryptów).
-- **Od poprawki 70** stół alchemiczny ma okno jak na PC; pozostałe stoły dalej to menu.
+- **Od poprawek 70–71** wszystkie stoły rzemiosła mają okno jak na PC (menu skryptów zostaje tylko dla nieznanego stołu).
 - **Sprawdzone:** stół alchemiczny, runiczny, demonologiczny, stół z tabliczkami, pulpity z księgami (inteligencja 5 → 6). **Do sprawdzenia:** zwoje, kowadło, piec; kuchnia, łuki, biżuteria i runy demoniczne mogą nie mieć starego menu.
 
 ### 7. Łóżko: po przespaniu bohater nagle stał, a potem wstawał z łóżka – ✅ (12.11.2026)
@@ -375,6 +398,6 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - [ ] Funkcje bossów wołane przez plugin: `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…`, razem z obrażeniami w czasie i truciznami (`RX_ApplyDotDamage`, `RX_ApplyPoison`).
 - [ ] System karmy pluginu (`UpdateKarma`, 130 wywołań – wydarzenia, znaki, osiągnięcia); samo wyświetlanie karmy działa (poprawka 62).
 - [ ] Klawisze skrótów NB (`RX_KeyPressed`, 100 wywołań – mikstury, strzały, pochodnia, pomijanie scenek).
-- [ ] Przywołania (`RX_SummonNpcToTarget`, `RX_ResetSummons`) i okna pluginu (rzemiosło z listą poza alchemią – poprawka 70, poker).
+- [ ] Przywołania (`RX_SummonNpcToTarget`, `RX_ResetSummons`) i okna pluginu (ulepszenia przy kowadle, zaklinanie, poker).
 - [ ] Ognik: pokazywanie rzadkich roślin/tabliczek, „zbieranie w pomieszczeniach” (poprawka 11).
 - [ ] Napisy: „Dzień: …” w lewym górnym rogu, liczniki wampira i Full SnC+ (poprawka 62).

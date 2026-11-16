@@ -1877,9 +1877,9 @@ void GameScript::initCommon() {
       return sk!=nullptr && npc->hasOverlay(sk) ? 1 : 0;
       });
     bindNb("RX_OPENCRAFT", [this](int32_t craftType) {
-      // NB fix 70: the alchemy in the window of the plugin (the recipes from UNION_ABI.DLL); the other crafts - the old
-      // menus of the scripts (fix 2)
-      if(craftType==0 && owner.player()!=nullptr) {
+      // NB fix 70, 71: every table in the window of the plugin (the recipes from UNION_ABI.DLL); the old menus of the
+      // scripts (fix 2) only for an unknown table
+      if(craftType>=0 && craftType<=12 && !NbCraft::recipes(craftType).empty() && owner.player()!=nullptr) {
         nbStates[this].craftPending = craftType;
         nbCtx("craft window: ",craftType);
         return;
@@ -6602,9 +6602,9 @@ bool GameScript::doesNpcKnowInfo(const zenkit::INpc& npc, size_t infoInstance) c
   return dlgKnownInfos.find(id)!=dlgKnownInfos.end();
   }
 
-// NB fix 70: the crafting window of New Balance (the alchemy). The plugin keeps the recipes in its code (nbcraft.h)
-// and shows only those that the hero knows: the test of UNION_ABI.DLL at 0x101a5940, written here by the number "kind"
-// of the recipe
+// NB fix 70, 71: the crafting windows of New Balance. The plugin keeps the recipes in its code (nbcraft.h) and shows
+// only those that the hero knows: the test of UNION_ABI.DLL at 0x101a5940, written here by the table and the number
+// "kind" of the recipe
 namespace {
 int32_t nbScriptInt(zenkit::DaedalusVm& vm, std::string_view name, uint16_t index = 0, int32_t missing = 0) {
   std::string up(name);
@@ -6616,90 +6616,258 @@ int32_t nbScriptInt(zenkit::DaedalusVm& vm, std::string_view name, uint16_t inde
   return s->get_int(index);
   }
 
-void nbScriptSetInt(zenkit::DaedalusVm& vm, std::string_view name, int32_t v) {
-  auto* s = vm.find_symbol_by_name(name);
-  if(s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member())
-    s->set_int(v);
+void nbScriptSetInt(zenkit::DaedalusVm& vm, std::string_view name, int32_t v, uint16_t index = 0) {
+  std::string up(name);
+  for(auto& c:up)
+    c = char(std::toupper(uint8_t(c)));
+  auto* s = vm.find_symbol_by_name(up);
+  if(s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member() && index<s->count())
+    s->set_int(v,index);
   }
 
-const NbCraft::Recipe* nbRecipe(int32_t id) {
-  for(auto& r:NbCraft::alchemy())
-    if(r.id==id)
-      return &r;
-  return nullptr;
+const NbCraft::Recipe* nbRecipe(int32_t craft, size_t index) {
+  auto& list = NbCraft::recipes(craft);
+  return index<list.size() ? &list[index] : nullptr;
+  }
+
+// the bows: "VAR : value | VAR : value" (0x1002dd70 / 0x1002e040), every variable must have its value (no variable: -1)
+bool nbCraftCond(zenkit::DaedalusVm& vm, std::string_view cond) {
+  if(cond.empty() || cond=="TRUE" || cond=="true")
+    return true;
+  size_t pos = 0;
+  while(pos<=cond.size()) {
+    size_t end = cond.find('|',pos);
+    if(end==std::string_view::npos)
+      end = cond.size();
+    std::string_view part = cond.substr(pos,end-pos);
+    const size_t colon = part.find(':');
+    if(colon!=std::string_view::npos) {
+      auto trim = [](std::string_view v) {
+        while(!v.empty() && std::isspace(uint8_t(v.front()))) v.remove_prefix(1);
+        while(!v.empty() && std::isspace(uint8_t(v.back())))  v.remove_suffix(1);
+        return v;
+        };
+      const auto name  = trim(part.substr(0,colon));
+      const auto value = trim(part.substr(colon+1));
+      const int32_t want = std::atoi(std::string(value).c_str());
+      if(nbScriptInt(vm,name,0,-1)!=want)
+        return false;
+      }
+    pos = end+1;
+    }
+  return true;
+  }
+
+bool nbCraftKnown(zenkit::DaedalusVm& vm, Npc& hero, int32_t craft, const NbCraft::Recipe& r, size_t heartCls) {
+  const auto v = [&vm](std::string_view name) { return nbScriptInt(vm,name); };
+  const auto smith = [&vm](int32_t i) { return nbScriptInt(vm,"PLAYER_TALENT_SMITH",uint16_t(i))!=0; };
+  const auto runes = [&vm](int32_t i) { return nbScriptInt(vm,"PLAYER_TALENT_RUNES",uint16_t(i))!=0; };
+  const auto guild = [&hero]() { const auto g = hero.guild(); return g==14 || g==16; };
+  const int32_t k = r.kind;
+  switch(craft) {
+    case 0: {
+      // the potions of the talents (Health_01..perm_stamina): PLAYER_TALENT_ALCHEMY[kind]
+      if(k<19 && k!=12)
+        return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",uint16_t(k))>0;
+      switch(k) {
+        case 12: // the Eye of Innos: the recipe with the heart that the hero has
+          return heartCls!=size_t(-1) && hero.inventory().itemCount(heartCls)>0;
+        // these the plugin reads by the symbol: without the variable the recipe is shown
+        case 19: return nbScriptInt(vm,"KNOWFULLHEALTH2",0,1)!=0;
+        case 20: return nbScriptInt(vm,"RX_FULLPOTIONKNOWS",0,1)!=0;
+        case 21: return v("KNOWSPEED3")!=0;
+        case 22: return v("KNOWPERMINT")!=0;
+        case 23: return v("KNOWPROTFALL")!=0;
+        case 24: return v("KNOWFIREDEF")!=0;
+        case 25: return v("KNOWMAGDEF")!=0;
+        case 26: return v("KNOWFAKERECEPT")==0 && v("MIS_MYBREW")==1 && v("FTCONSPOTION")==0;
+        case 27: return v("SOULRIVER")==1;   // the plugin checks also something of the engine (0x1004d580)
+        case 28: return v("KNOWS_MCELIXIER")!=0 && v("KNOWS_BLOODFLY")==0;
+        case 29: return v("KNOWS_MCELIXIER")!=0 && v("KNOWS_BLOODFLY")==1;
+        case 30: return v("READ_AZGOLOR")!=0 && v("RX_EYEAWAKEN")==0;
+        case 31: return v("KNOW_NIMROD_MAKE")!=0 && v("RX_PUMAJIRCRAFTED")==0;
+        // the plugin asks also "MIS_TiamantMuritan " (with a space - no such variable, so it always passes)
+        case 32: return v("MAKEMURITANSWEET")!=0 && v("RX_MURITANCRAFT")==0;
+        case 33: return v("READBOOKSDONE_09")!=0;
+        case 34: return v("READBOOKSDONE_08")!=0;
+        case 35: return v("KNOWS_SCHLAFHAMMER")!=0;
+        case 36: return v("KNOWS_LOUSHAMMER")!=0;
+        case 37: return v("KNOWS_SCHNELLERHERING")!=0;
+        case 38: return v("READBOOKSDONE_99")!=0;
+        case 39: return v("MAKEPUREALCOHOLBOOZE")!=0;
+        case 40: return v("MAKEPUREALCOHOLGROG")!=0;
+        case 41:
+        case 42: return v("MAKEPUREALCOHOLROM")!=0;
+        case 43: return v("ANPOISONKNOW")!=0;
+        case 44:
+        case 45: return v("MAKEPOISONKNOW")!=0;
+        case 46: case 47: case 48: case 49: case 50:
+          return v("RX_POISONKNOWLEVEL")>=k-45;
+        case 51: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEANIMAL")!=0;
+        case 52: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEORC")!=0;
+        case 53: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEUNDEAD")!=0;
+        case 54: case 55: case 56: case 57:   // the tobaccos, the joint
+          return true;
+        case 58: return v("GREEN_EXTREM")==1;
+        case 59:
+        case 60: return v("KNOW_JOINTRECIPE")==1;
+        case 61: case 62: case 63: case 64: case 65:   // the permanent potions from ItMi_PotionPermBlank
+          return true;
+        case 66: case 67: case 68:
+          return v("RX_POISONUNIVERSAL")==1;
+        case 69:
+        case 70: return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",13)>0;
+        case 71:
+        case 72: return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",14)>0;
+        case 73: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_FIRE",     0,1)!=0;
+        case 74: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_SMOKE",    0,1)!=0;
+        case 75: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_EXPLOSION",0,1)!=0;
+        case 76: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_ACID",     0,1)!=0;
+        case 77: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_MAGIC",    0,1)!=0;
+        case 78: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_UNDEAD",   0,1)!=0;
+        }
+      return false;
+      }
+    case 1: { // the anvil (0x101a7f8b)
+      if(k<13)   // read by the symbol: without the variable the recipe is shown
+        return nbScriptInt(vm,"PLAYER_TALENT_SMITH",uint16_t(k),1)!=0;
+      if(k>=65 && k<=69)
+        return smith(k-30);
+      switch(k) {
+        case 13: return v("KNOWNORESWORD")!=0;
+        case 14: case 15: case 16:
+          return v("KNOWNORESWORD")!=0 && v("NETBEKLEADME_STEP2")!=0;
+        case 17: return v("KNOWS_MOONBLADES_LEFT")!=0  && smith(0);
+        case 18: return v("KNOWS_MOONBLADES_RIGHT")!=0 && smith(0);
+        case 19: case 20:
+          return v("SIGILKNOW")!=0 && smith(0);
+        case 21: case 22: case 23: case 24: case 25: case 26: case 27: case 28:
+          return v("LOVKACH_W"+std::to_string(k-20))!=0 && smith(0);
+        case 29: case 30:
+          return v("KNOWHOWTOMAKEARROWS")!=0;
+        case 31: return v("KNOWHOWTOMAKEARROWSKER")!=0;
+        case 34: return v("MIS_MONASTERYSECRET")==4;
+        case 35: case 36: case 37:
+          return v("ORCWEAPON_LINE_STR_0"+std::to_string(k-34))!=0;
+        case 38: case 39: case 40:
+          return v("ORCWEAPON_LINE_HP_0"+std::to_string(k-37))!=0;
+        case 41: return v("ORCPRIMEWEAPON")!=0;
+        case 42: case 43: case 44: case 45: case 46:
+          return v("RX_REC_WEAPON_0"+std::to_string(k-41))!=0 && smith(0);
+        case 47: case 48: case 49: case 50:
+          return v("RX_REC_WEAPON_06")==k-46 && smith(0);
+        case 51: return v("RX_REC_WEAPON_07")!=0 && smith(0);
+        case 70: case 71: case 72:
+          return v("ORCWEAPON_LINE_NEW_0"+std::to_string(k-69))!=0;
+        }
+      return false;
+      }
+    case 2: { // the runes (0x101aac26)
+      if(k<=4)
+        return true;   // the rune stones and the blank runes
+      if(std::string_view(r.result)=="ItMi_RuneBenTeleport")
+        return nbScriptInt(vm,"RX_WC_CANCREATETPRUNE",0,-1)!=0 && nbScriptInt(vm,"RX_WC_TPRUNECREATED",0,-1)==0;
+      switch(k) {
+        case 132: return v("KNOWS_CRESTMAKE")!=0 && v("CRESTNATUREISDONE")==0;
+        case 101: return v("NETBEKLEADME_STEP2")!=0 && v("NETBEKLEADME_STEP2DONE")==0 && v("HOWCANMAKERUNE")!=0;
+        case 7:   return runes(7) && nbScriptInt(vm,"PLAYER_MAKE_RUNES",7)==0;
+        case 48:  return v("HEROKNOWNTRANS_BLOODFLY")!=0;
+        case 55:  return v("HEROKNOWNTRANS_FIREWARAN")!=0;
+        case 54:  return v("HEROKNOWNTRANS_WARG")!=0;
+        case 57:  return v("HEROKNOWNTRANS_SHADOWBEAST")!=0;
+        case 58:  return v("HEROKNOWNTRANS_DRAGONSNAPPER")!=0;
+        }
+      return runes(k);
+      }
+    case 3: // the bows: the conditions of the recipe
+      return nbCraftCond(vm,r.cond);
+    case 4: { // the demon runes (0x101aa33e)
+      if(k==0)
+        return runes(40) && v("XARDASTEACHCASTDEMON_SIMPLE")!=0 && v("SUMMONRUNEDONE")==0;
+      if(k>=1 && k<=3)
+        return v("XARDASTEACHCASTDEMON_SIMPLE")!=0;
+      if(k>=4 && k<=6)
+        return v("XARDASTEACHCASTDEMON_LORD")!=0;
+      return true;
+      }
+    case 5: { // the armors (0x101ab290)
+      if(r.level>0) {   // the reinforcement of an armor
+        const int32_t knows = v("RX_HEROKNOWSREFORCEMENT");
+        return r.level>=2 ? knows==2 : knows>=1;
+        }
+      switch(k) {
+        case 16: return v("KNOWMAKECRAWLERARMOR")!=0;
+        case 17: return v("LIGHTARMORMADE")==0 && smith(33);
+        case 18: return v("DARKARMORMADE")==0  && smith(34);   // 63 - the same armor for another version of the game
+        case 28: case 29: case 30: case 31:
+          return v("KNOW_HUNTARMOR_0"+std::to_string(k-27))!=0;
+        case 50: return v("RX_NB_DH_ARMORRECIPE_READ")!=0;
+        case 58: return v("RX_SCOUT_BLACKHOODRECIPE")!=0;
+        case 62: return v("RX_SCOUT_ARMORLEGRECIPE")!=0;
+        case 73: case 74:
+          return hero.guild()==16 && ((v("RX_AW_NOTESMASK1")>>11)&1)!=0;
+        }
+      return false;
+      }
+    case 6: { // the soups (0x101a9dd1)
+      static const char* const vars[] = {"EDDA_SOUP_00","EDDA_SOUP_01","EDDA_SOUP_02","EDDA_SOUP_03","EDDA_SOUP_04",
+                                         "SNAF_MEAL_02","SNAF_MEAL_01","SNAF_MEAL_03","REZEPT_COMPOTE_01","REZEPT_COMPOTE_02"};
+      if(k==0)
+        return nbScriptInt(vm,vars[0],0,1)!=0;
+      return k>0 && k<10 && v(vars[k])!=0;
+      }
+    case 7: // the skins: the bow strings (0x101ac2ac)
+      return v("BOWMAKE_01")!=0 && k>=0 && k<=4 && v("BOWMAKE_0"+std::to_string(k+1))!=0;
+    case 8: { // the smelting (0x101aa95b)
+      if(k==1 || k==2 || k==22)
+        return true;
+      if(k==0 || k==3 || (k>=6 && k<=8))
+        return v("KNOWHOWTOOREFUS")!=0;
+      if(k==5 || k==21)
+        return v("KNOWHOWTOOREFUSGOLD")!=0;
+      if(k>=9 && k<=20)
+        return v("ORCSWEAPONSTEEL")!=0;
+      return false;
+      }
+    case 9: { // the jewelry (0x101aa652)
+      switch(k) {
+        case 0: return v("JEWERLY_LEVEL_L1")!=0;
+        case 1: return v("JEWERLY_LEVEL_L2")!=0;
+        case 2: case 3: return v("JEWERLY_LEVEL_L3")!=0;
+        case 4: case 5: return v("RX_JEWELMAX")!=0;
+        }
+      return false;
+      }
+    case 10: // the pies (0x101abf9b)
+      if(k<=3)
+        return true;
+      if(r.id==4 || r.id==5)
+        return guild();
+      if(k>=6 && k<=10)
+        return v("THEKLA_CAKE_0"+std::to_string(k-5))!=0;
+      return false;
+    case 11: { // the scrolls (0x101abbb5)
+      static const char* const vars[] = {"HOWCANMAKERUNE_ITSC7","HOWCANMAKERUNE_ITSC1","HOWCANMAKERUNE_ITSC2",
+                                         "HOWCANMAKERUNE_ITSC4","HOWCANMAKERUNE_ITSC5","HOWCANMAKERUNE_ITSC6"};
+      return k>=0 && k<6 && v(vars[k])!=0;
+      }
+    case 12: // the food over the fire (0x101abf09): the island fish and the dried meat - a guild of the plugin
+      return (r.id==4 || r.id==5) ? guild() : true;
+    }
+  return false;
   }
 }
 
-static bool nbCraftKnown(zenkit::DaedalusVm& vm, Npc& hero, const NbCraft::Recipe& r, size_t heartCls) {
-  const auto v = [&vm](std::string_view name) { return nbScriptInt(vm,name); };
-  const int32_t k = r.kind;
-  // the potions of the talents (Health_01..perm_stamina): PLAYER_TALENT_ALCHEMY[kind]
-  if(k<19 && k!=12)
-    return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",uint16_t(k))>0;
-  switch(k) {
-    case 12: // the Eye of Innos: the recipe with the heart that the hero has
-      return heartCls!=size_t(-1) && hero.inventory().itemCount(heartCls)>0;
-    // these the plugin reads by the symbol: without the variable the recipe is shown
-    case 19: return nbScriptInt(vm,"KNOWFULLHEALTH2",0,1)!=0;
-    case 20: return nbScriptInt(vm,"RX_FULLPOTIONKNOWS",0,1)!=0;
-    case 21: return v("KNOWSPEED3")!=0;
-    case 22: return v("KNOWPERMINT")!=0;
-    case 23: return v("KNOWPROTFALL")!=0;
-    case 24: return v("KNOWFIREDEF")!=0;
-    case 25: return v("KNOWMAGDEF")!=0;
-    case 26: return v("KNOWFAKERECEPT")==0 && v("MIS_MYBREW")==1 && v("FTCONSPOTION")==0;
-    case 27: return v("SOULRIVER")==1;   // the plugin checks also something of the engine (0x1004d580)
-    case 28: return v("KNOWS_MCELIXIER")!=0 && v("KNOWS_BLOODFLY")==0;
-    case 29: return v("KNOWS_MCELIXIER")!=0 && v("KNOWS_BLOODFLY")==1;
-    case 30: return v("READ_AZGOLOR")!=0 && v("RX_EYEAWAKEN")==0;
-    case 31: return v("KNOW_NIMROD_MAKE")!=0 && v("RX_PUMAJIRCRAFTED")==0;
-    // the plugin asks also "MIS_TiamantMuritan " (with a space - no such variable, so it always passes)
-    case 32: return v("MAKEMURITANSWEET")!=0 && v("RX_MURITANCRAFT")==0;
-    case 33: return v("READBOOKSDONE_09")!=0;
-    case 34: return v("READBOOKSDONE_08")!=0;
-    case 35: return v("KNOWS_SCHLAFHAMMER")!=0;
-    case 36: return v("KNOWS_LOUSHAMMER")!=0;
-    case 37: return v("KNOWS_SCHNELLERHERING")!=0;
-    case 38: return v("READBOOKSDONE_99")!=0;
-    case 39: return v("MAKEPUREALCOHOLBOOZE")!=0;
-    case 40: return v("MAKEPUREALCOHOLGROG")!=0;
-    case 41:
-    case 42: return v("MAKEPUREALCOHOLROM")!=0;
-    case 43: return v("ANPOISONKNOW")!=0;
-    case 44:
-    case 45: return v("MAKEPOISONKNOW")!=0;
-    case 46: case 47: case 48: case 49: case 50:
-      return v("RX_POISONKNOWLEVEL")>=k-45;
-    case 51: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEANIMAL")!=0;
-    case 52: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEORC")!=0;
-    case 53: return v("RX_POISONNEWRECEPIES")==1 && v("RX_POISON_RECIPEUNDEAD")!=0;
-    case 54: case 55: case 56: case 57:   // the tobaccos, the joint
-      return true;
-    case 58: return v("GREEN_EXTREM")==1;
-    case 59:
-    case 60: return v("KNOW_JOINTRECIPE")==1;
-    case 61: case 62: case 63: case 64: case 65:   // the permanent potions from ItMi_PotionPermBlank
-      return true;
-    case 66: case 67: case 68:
-      return v("RX_POISONUNIVERSAL")==1;
-    case 69:
-    case 70: return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",13)>0;
-    case 71:
-    case 72: return nbScriptInt(vm,"PLAYER_TALENT_ALCHEMY",14)>0;
-    case 73: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_FIRE",     0,1)!=0;
-    case 74: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_SMOKE",    0,1)!=0;
-    case 75: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_EXPLOSION",0,1)!=0;
-    case 76: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_ACID",     0,1)!=0;
-    case 77: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_MAGIC",    0,1)!=0;
-    case 78: return nbScriptInt(vm,"RX_SCOUT_SKILL_POWDER_TYPE_UNDEAD",   0,1)!=0;
-    }
-  return false;
+size_t GameScript::nbCraftAvailable(Npc& hero, size_t cls) {
+  // as the plugin: an equipped item does not go to the table (RX_Craft_EquippedItem)
+  size_t n = hero.inventory().itemCount(cls);
+  if(auto* it = hero.getItem(cls); it!=nullptr && it->isEquipped())
+    n -= std::min<size_t>(n,it->equipCount());
+  return n;
   }
 
 std::vector<NbCraft::Item> GameScript::nbCraftList(Npc& hero, int32_t craft) {
   std::vector<NbCraft::Item> ret;
-  if(craft!=0)
-    return ret;
   const auto itemSym = [this](std::string_view name) -> zenkit::DaedalusSymbol* {
     std::string up(name);
     for(auto& c:up)
@@ -6707,13 +6875,13 @@ std::vector<NbCraft::Item> GameScript::nbCraftList(Npc& hero, int32_t craft) {
     auto* sym = vm.find_symbol_by_name(up);
     return (sym!=nullptr && sym->is_instance_of<zenkit::IItem>()) ? sym : nullptr;
     };
-  for(auto& r:NbCraft::alchemy()) {
+  for(auto& r:NbCraft::recipes(craft)) {
     // the Eye of Innos: the recipe 5000+i is the i-th heart (the second ingredient)
     size_t heart = size_t(-1);
-    if(r.kind==12 && r.ingredients.size()>1)
+    if(craft==0 && r.kind==12 && r.ingredients.size()>1)
       if(auto* h = itemSym(r.ingredients[1].item))
         heart = h->index();
-    if(!nbCraftKnown(vm,hero,r,heart))
+    if(!nbCraftKnown(vm,hero,craft,r,heart))
       continue;
     auto* res = itemSym(r.result);
     if(res==nullptr) {
@@ -6721,9 +6889,11 @@ std::vector<NbCraft::Item> GameScript::nbCraftList(Npc& hero, int32_t craft) {
       continue;
       }
     NbCraft::Item it;
-    it.id  = r.id;
-    it.tab = r.tab;
-    it.cls = res->index();
+    it.id    = r.id;
+    it.index = size_t(&r-NbCraft::recipes(craft).data());
+    it.tab   = r.tab;
+    it.cls   = res->index();
+    it.count = std::max(1,r.count);
     if(auto inst = vm.init_instance<zenkit::IItem>(res); inst!=nullptr)
       it.name = inst->name;
     if(it.name.empty())
@@ -6745,50 +6915,57 @@ std::vector<NbCraft::Item> GameScript::nbCraftList(Npc& hero, int32_t craft) {
     if(ok)
       ret.push_back(std::move(it));
     }
-  nbCtx("craft window: ",ret.size()," known recipes");
+  nbCtx("craft window ",craft,": ",ret.size()," known recipes");
   return ret;
   }
 
-std::string GameScript::nbCraftCreate(Npc& hero, const NbCraft::Item& item, size_t count) {
-  auto* rec = nbRecipe(item.id);
+std::string GameScript::nbCraftCreate(Npc& hero, int32_t craft, const NbCraft::Item& item, size_t count) {
+  auto* rec = nbRecipe(craft,item.index);
   if(rec==nullptr || count==0)
     return std::string();
   for(auto& [cls,need]:item.ingredients)
-    if(hero.inventory().itemCount(cls)<size_t(need)*count)
+    if(nbCraftAvailable(hero,cls)<size_t(need)*count)
       return std::string();
-  // as the plugin (0x101b6400 and 0x101b4b30): the ingredients go, the CRAFT_* variables, the items, the message,
-  // RX_RaiseAlchemy(grade, count) and RX_CraftCallBack
+  // as the plugin (0x101b5a90 and 0x101b4b30): the ingredients go, the runes are counted, the CRAFT_* variables, the
+  // items, the message, RX_RaiseAlchemy / RX_RaiseSmith (grade, count) and RX_CraftCallBack
   for(auto& [cls,need]:item.ingredients)
     hero.delItem(cls,uint32_t(size_t(need)*count));
-  const int32_t n = int32_t(count);
+  const int32_t n    = int32_t(count);
+  const int32_t made = n*std::max(1,rec->count);
+  if(craft==2 && rec->kind>3 && rec->kind!=101 && rec->kind!=132 &&
+     nbScriptInt(vm,"PLAYER_MAKE_RUNES",uint16_t(rec->kind))==0) {
+    // the first rune of a kind: PLAYER_MAKE_RUNES[kind] = 1, TalentCount_Rune += grade
+    nbScriptSetInt(vm,"PLAYER_MAKE_RUNES",1,uint16_t(rec->kind));
+    nbScriptSetInt(vm,"TALENTCOUNT_RUNE",nbScriptInt(vm,"TALENTCOUNT_RUNE")+rec->grade);
+    }
   nbScriptSetInt(vm,"CRAFT_COUNT_TRUE",n);
   nbScriptSetInt(vm,"CRAFT_EXP",       rec->exp*n);
-  hero.addItem(item.cls,count);
+  hero.addItem(item.cls,size_t(made));
   nbScriptSetInt(vm,"CRAFT_ITEM",      int32_t(item.cls));
-  nbScriptSetInt(vm,"CRAFT_CAT",       0);
-  nbScriptSetInt(vm,"CRAFT_COUNT",     n);
+  nbScriptSetInt(vm,"CRAFT_CAT",       craft);
+  nbScriptSetInt(vm,"CRAFT_COUNT",     made);
   nbScriptSetInt(vm,"CRAFT_TAB",       rec->tab);
   nbScriptSetInt(vm,"CRAFT_SKILL",     rec->grade);
-  nbCtx("craft: ",item.name," x",n," (recipe ",item.id,")");
+  nbCtx("craft ",craft,": ",item.name," x",made," (recipe ",item.id,")");
 
   ScopeVar self(*vm.global_self(), hero.handlePtr());
-  if(auto* fn = vm.find_symbol_by_name("RX_RAISEALCHEMY"); fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION) {
+  const auto call = [this](const char* name, auto... args) {
+    auto* fn = vm.find_symbol_by_name(name);
+    if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+      return;
     try {
-      vm.call_function<void>(fn,rec->grade,n);
+      vm.call_function<void>(fn,args...);
       }
     catch(const std::exception& e) {
-      Log::e("NB: RX_RaiseAlchemy failed: ",e.what());
+      Log::e("NB: ",name," failed: ",e.what());
       }
-    }
-  if(auto* fn = vm.find_symbol_by_name("RX_CRAFTCALLBACK"); fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION) {
-    try {
-      vm.call_function<void>(fn);
-      }
-    catch(const std::exception& e) {
-      Log::e("NB: RX_CraftCallBack failed: ",e.what());
-      }
-    }
-  return nbCraftText("RX_CRAFT_CREATED","Stworzono: ")+item.name+" x"+std::to_string(n);
+    };
+  if(craft==0)
+    call("RX_RAISEALCHEMY",rec->grade,made);
+  else if(craft==1 || craft==5)
+    call("RX_RAISESMITH",rec->grade,made);
+  call("RX_CRAFTCALLBACK");
+  return nbCraftText("RX_CRAFT_CREATED","Stworzono: ")+item.name+" x"+std::to_string(made);
   }
 
 void GameScript::nbCraftEnd(Npc& hero) {
@@ -6807,8 +6984,13 @@ void GameScript::nbCraftEnd(Npc& hero) {
   nbCtx("craft window closed");
   }
 
-int32_t GameScript::nbCraftSkill() {
-  return nbScriptInt(vm,"TALENTCOUNT_ALCHEMY");
+int32_t GameScript::nbCraftSkill(int32_t craft) {
+  switch(craft) {
+    case 0:         return nbScriptInt(vm,"TALENTCOUNT_ALCHEMY");
+    case 1: case 5: return nbScriptInt(vm,"TALENTCOUNT_SMITH");
+    case 2: case 4: return nbScriptInt(vm,"TALENTCOUNT_RUNE");
+    }
+  return -1;
   }
 
 std::string GameScript::nbCraftText(std::string_view symbol, std::string_view fallback) {

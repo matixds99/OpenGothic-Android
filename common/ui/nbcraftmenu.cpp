@@ -41,16 +41,62 @@ void NbCraftMenu::open(Npc& pl, int32_t c) {
   craft  = c;
   message.clear();
   auto& sc = pl.world().script();
-  // the texts: the strings of the scripts as the plugin, the Polish ones of the PC window when they are Russian (cp1250)
-  tabs = {
-    sc.nbCraftText("RX_CRAFT_TABALCHEALTH", "Regeneracja"),
-    sc.nbCraftText("RX_CRAFT_TABALCSTA",    "Wytrzyma\xB3o\x9C\xE6"),
-    sc.nbCraftText("RX_CRAFT_TABALCPERM",   "Permanentne"),
-    sc.nbCraftText("RX_CRAFT_TABALCSPECIAL","Specjalne"),
-    sc.nbCraftText("RX_CRAFT_TABALCALCOHOL","Alkohole"),
-    sc.nbCraftText("RX_CRAFT_TABALCPOISONS","Trucizny"),
+  // the tabs of the table (the strings of the scripts as the plugin, the Polish ones when they are Russian; cp1250).
+  // A tab without recipes in the table (the upgrades of the anvil, the enchanting of the bows - other windows of the
+  // plugin) is not shown
+  struct TabDef { int32_t tab; const char* sym; const char* pl; };
+  static const std::vector<std::vector<TabDef>> defs = {
+    /* 0 alchemy */ {{0,"RX_CRAFT_TABALCHEALTH","Regeneracja"},{1,"RX_CRAFT_TABALCSTA","Wytrzyma\xB3o\x9C\xE6"},
+                     {2,"RX_CRAFT_TABALCPERM","Permanentne"},{3,"RX_CRAFT_TABALCSPECIAL","Specjalne"},
+                     {4,"RX_CRAFT_TABALCALCOHOL","Alkohole"},{5,"RX_CRAFT_TABALCPOISONS","Trucizny"}},
+    /* 1 smith   */ {{0,"RX_CRAFT_TAB1H","Jednor\xEA""czne"},{1,"RX_CRAFT_TAB2H","Dwur\xEA""czne"},{2,"RX_CRAFT_TABRAPIER","Rapiery"},
+                     {3,"RX_CRAFT_TABORCS","Bro\xF1 ork\xF3w"},{4,"RX_CRAFT_TABMISC","Inne"},{5,"RX_CRAFT_UPGRADE","Ulepszenia"}},
+    /* 2 runes   */ {{0,"RX_CRAFT_TABRUNES_FIRE","Runy ognia"},{1,"RX_CRAFT_TABRUNES_WATER","Runy wody"},
+                     {2,"RX_CRAFT_TABRUNES_GURU","Runy guru"},{3,"RX_CRAFT_TABRUNES_DARK","Runy ciemno\x9C""ci"},
+                     {4,"RX_CRAFT_TABRUNES_COMMON","Runy og\xF3lne"},{5,"RX_CRAFT_TABDEMONSTONES","Kamienie runiczne"}},
+    /* 3 bows    */ {{0,"RX_CRAFT_TABBOWS","\xA3uki"},{1,"RX_CRAFT_TABARROWS","Strza\xB3y"},{2,"RX_CRAFT_TABBOLTS","Be\xB3ty"},
+                     {3,"RX_CRAFT_TABBOWSMISC","Inne"},{4,"RX_CRAFT_TABENCHANT","Zaklinanie"}},
+    /* 4 demons  */ {{0,"RX_CRAFT_TABDEMONMAIN","Przyzwanie demona"},{1,"RX_CRAFT_TABDEMONUP","Ulepszenie"},
+                     {2,"RX_CRAFT_TABDEMONSTONES","Kamienie runiczne"}},
+    /* 5 armors  */ {{0,"RX_CRAFT_TABARMORMIL","Stra\xBF/Zwiadowcy"},{1,"RX_CRAFT_TABARMORSLD","Najemnicy"},
+                     {2,"RX_CRAFT_TABARMORTPL","Stra\xBFnicy"},{3,"RX_CRAFT_TABARMORDK","Mroczny rycerz"},
+                     {4,"RX_CRAFT_TABARMORMISC","Inne"},{5,"RX_CRAFT_TABARMORCREATE","Tworzenie"}},
+    /* 6 soups   */ {{0,"RX_CRAFT_TABSOUP","Zupy"},{1,"RX_CRAFT_TABPOT","Gulasze"},{2,"RX_CRAFT_TABCOMPOTE","Kompoty"}},
+    /* 7 skins   */ {{0,"RX_CRAFT_TABSKINS_MAIN","Sk\xF3ry"}},
+    /* 8 smelting*/ {{0,"RX_CRAFT_TABSMELTDRAW","P\xF3\xB3""fabrykaty"},{1,"RX_CRAFT_TABSMELTINGOTS","Sztabki"},
+                     {2,"RX_CRAFT_TABSMELTCAST","Przetapianie broni"}},
+    /* 9 jewelry */ {{0,"RX_CRAFT_TABSTEELRING","Stalowe"},{1,"RX_CRAFT_TABGOLDRING","Z\xB3ote"},{2,"RX_CRAFT_TABORERING","Z rudy"},
+                     {3,"RX_CRAFT_TABJEWELBLACK","Z czarnej rudy"},{4,"RX_CRAFT_TABJEWELSPECIAL","Specjalne"}},
+    /* 10 pies   */ {{0,"RX_CRAFT_TABFOOD_MEET","Mi\xEAso"},{1,"RX_CRAFT_TABFOOD_PIE","Ciasta"}},
+    /* 11 scrolls*/ {{0,"RX_CRAFT_TABSCROLLS","Zwoje"}},
+    /* 12 food   */ {{0,"RX_CRAFT_TABFOOD_MEET","Mi\xEAso"}},
     };
-  skillTxt  = "Umiej\xEAtno\x9C\xE6 alchemii: ";
+  tabs.clear();
+  tabIds.clear();
+  if(c>=0 && size_t(c)<defs.size())
+    for(auto& d:defs[size_t(c)]) {
+      bool any = false;
+      for(auto& r:NbCraft::recipes(c))
+        if(r.tab==d.tab && std::string_view(r.result).rfind("UPGRADED_",0)!=0) {
+          any = true;
+          break;
+          }
+      if(!any)
+        continue;
+      tabs.push_back(sc.nbCraftText(d.sym,d.pl));
+      tabIds.push_back(d.tab);
+      }
+  if(tabs.empty()) {
+    tabs.push_back("-");
+    tabIds.push_back(0);
+    }
+  // the skill at the top: the alchemy, the smith (anvil, armors), the runes (runes, demon runes); the others - none
+  switch(c) {
+    case 0:         skillTxt = "Umiej\xEAtno\x9C\xE6 alchemii: "; break;
+    case 1: case 5: skillTxt = "Umiej\xEAtno\x9C\xE6 kowalstwa: "; break;
+    case 2: case 4: skillTxt = "Umiej\xEAtno\x9C\xE6 tworzenia run: "; break;
+    default:        skillTxt.clear(); break;
+    }
   maxTxt    = sc.nbCraftText("RX_CRAFT_MAX",   "Maksymalnie: ");
   createTxt = sc.nbCraftText("RX_CRAFT_CREATE","Stw\xF3rz");
   active = true;
@@ -65,7 +111,7 @@ void NbCraftMenu::open(Npc& pl, int32_t c) {
       t0 = t;
   setTab(t0<tabs.size() ? t0 : 0);
   Gothic::inst().nbSalesOpen = true;   // no HUD of NB under the window (as the sales window)
-  Log::i("NB craft window: ",all.size()," recipes, skill ",skill);
+  Log::i("NB craft window ",craft,": ",all.size()," recipes, skill ",skill);
   update();
   }
 
@@ -88,17 +134,17 @@ void NbCraftMenu::reload(int32_t keepId) {
     return;
   auto& sc = player->world().script();
   all   = sc.nbCraftList(*player,craft);
-  skill = sc.nbCraftSkill();
+  skill = sc.nbCraftSkill(craft);
   if(keepId<0)
     return;
   // the same tab, the same recipe (the list may change: some recipes can be made once)
   items.clear();
   for(auto& it:all)
-    if(size_t(it.tab)==tab)
+    if(tab<tabIds.size() && it.tab==tabIds[tab])
       items.push_back(it);
   sel = 0;
   for(size_t i=0; i<items.size(); ++i)
-    if(items[i].id==keepId)
+    if(int32_t(items[i].index)==keepId)
       sel = i;
   clampScroll();
   }
@@ -106,7 +152,7 @@ void NbCraftMenu::reload(int32_t keepId) {
 size_t NbCraftMenu::tabCount(size_t t, bool makeable) const {
   size_t n = 0;
   for(auto& it:all)
-    if(size_t(it.tab)==t && (!makeable || canMake(it)>0))
+    if(t<tabIds.size() && it.tab==tabIds[t] && (!makeable || canMake(it)>0))
       ++n;
   return n;
   }
@@ -115,7 +161,7 @@ void NbCraftMenu::setTab(size_t t) {
   tab = std::min(t,tabs.size()-1);
   items.clear();
   for(auto& it:all)
-    if(size_t(it.tab)==tab)
+    if(tab<tabIds.size() && it.tab==tabIds[tab])
       items.push_back(it);
   sel    = 0;
   count  = 1;
@@ -134,8 +180,9 @@ size_t NbCraftMenu::canMake(const NbCraft::Item& it) const {
   if(player==nullptr || it.ingredients.empty())
     return 0;
   size_t n = size_t(-1);
+  auto& sc = player->world().script();
   for(auto& [cls,need]:it.ingredients)
-    n = std::min(n,player->inventory().itemCount(cls)/size_t(std::max(1,need)));
+    n = std::min(n,sc.nbCraftAvailable(*player,cls)/size_t(std::max(1,need)));
   return n;
   }
 
@@ -234,10 +281,10 @@ void NbCraftMenu::create() {
     return;
   const auto   rec = items[sel];
   const size_t n   = std::min(count,can);
-  message = player->world().script().nbCraftCreate(*player,rec,n);
+  message = player->world().script().nbCraftCreate(*player,craft,rec,n);
   // the scripts may have changed what the hero knows (RX_RaiseAlchemy, RX_CraftCallBack)
   const std::string msg = message;
-  reload(rec.id);
+  reload(int32_t(rec.index));
   message = msg;
   count   = 1;
   update();
@@ -406,7 +453,8 @@ void NbCraftMenu::paintEvent(PaintEvent& e) {
     textMid(dis,Rect(l.list.x,l.list.y,l.list.w,l.row),"-");
 
   // the middle: the skill of the alchemy (as the plugin) and the arrows of the list
-  textMid(big,l.title,string_frm(skillTxt,int(skill)));
+  if(!skillTxt.empty() && skill>=0)
+    textMid(big,l.title,string_frm(skillTxt,int(skill)));
   const auto arrow = [&](const Rect& r, bool down, bool on) {
     const Color c = on ? Cream : Color(0.5f,0.5f,0.5f,0.6f);
     frame(p,r,th,on ? PanelLine : Color(0.3f,0.3f,0.3f,0.6f),Color(0.f,0.f,0.f,0.65f));
@@ -434,6 +482,10 @@ void NbCraftMenu::paintEvent(PaintEvent& e) {
     int y = l.infoY;
     textMid(yel,Rect(l.panel.x,y,l.panel.w,lh),it.name);                               y += lh;
     textMid(can>0 ? fnt : dis,Rect(l.panel.x,y,l.panel.w,lh),string_frm(maxTxt,int(can))); y += lh;
+    if(it.count>1) {   // one crafting makes more (arrows, tips, strings)
+      textMid(fnt,Rect(l.panel.x,y,l.panel.w,lh),string_frm("x",int(it.count)));
+      y += lh;
+      }
 
     // the ingredients as in the plugin: four in a row, "have/need" in the corner
     const int m     = std::max(6,int(10*s));
@@ -449,7 +501,7 @@ void NbCraftMenu::paintEvent(PaintEvent& e) {
       const int  rowW  = inRow*ib+(inRow-1)*gap;
       const Rect r(l.panel.x+(l.panel.w-rowW)/2+(i%cols)*(ib+gap), y+(i/cols)*(ib+gap), ib, ib);
       const auto [cls,need] = it.ingredients[size_t(i)];
-      const size_t have = player->inventory().itemCount(cls);
+      const size_t have = player->world().script().nbCraftAvailable(*player,cls);
       image(ingr,r,PanelFill);
       drawIcon(cls,r);
       const GthFont& f = have>=size_t(need)*std::max<size_t>(1,n) ? yel : dis;

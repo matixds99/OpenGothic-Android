@@ -13,7 +13,7 @@ class Npc;
 class Item;
 class InventoryRenderer;
 
-/// NB fix 70: the crafting window of the plugin of New Balance (RX_OpenCraft), for now the alchemy table. As the window
+/// NB fix 70, 71: the crafting window of the plugin of New Balance (RX_OpenCraft): every table. As the window
 /// of the plugin on the PC: the tabs and the recipes that the hero knows on the left ("name (xN)", N - how many he can
 /// make), "Umiejętność alchemii: N" at the top, on the right the chosen potion, "Maksymalnie: N", the ingredients
 /// ("have/need"), -, the count, +, Max and "Stwórz". The same look and the same controls as the sales window (fix 68-69)
@@ -74,6 +74,7 @@ class NbCraftMenu : public Tempest::Widget {
     std::vector<NbCraft::Item>   all;       // the known recipes of every tab
     std::vector<NbCraft::Item>   items;     // of the chosen tab
     std::vector<std::string>     tabs;
+    std::vector<int32_t>         tabIds;    // the tab of the plugin for each shown tab
     size_t                       tab    = 0;
     size_t                       sel    = 0;
     size_t                       count  = 1;
