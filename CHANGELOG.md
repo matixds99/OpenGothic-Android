@@ -232,7 +232,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - w logu `[ctx] craft window: N known recipes`, `[ctx] craft: nazwa xN (recipe id)`, `[ctx] craft window closed`.
 - **Inne stoły** (kowadło, runy, łuki, kuchnia…) – na razie stare menu z poprawki 2; mają swoje listy w DLL (0x10568f9c i dalej), do zrobienia tym samym oknem.
 - **Nie ma:** mikstur `ItPo_ASNC_POTION_*` (w skryptach NB nie ma takich przedmiotów); przy „rzece dusz” i proszkach plugin sprawdza jeszcze coś w silniku Gothica – tu tylko zmienne skryptów.
-- **Do sprawdzenia:** czy bohater po X wstaje od stołu; przepisy z innych zakładek (trucizny, permanentne).
+- **Sprawdzone (23:32):** zakładka Alkohole (czysty alkohol z kilku przepisów, x9 naraz), po X bohater odchodzi od stołu.
 
 ---
 
