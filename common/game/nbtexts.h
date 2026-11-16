@@ -42,6 +42,7 @@ namespace NbTexts {
       {"sNextHitPotion", "Ochrona na nast\xEApny atak"},
       {"sWispSearch", "Co\x9C znaleziono!"},
       {"sWispName", "Ognik"},
+      {"itemGold", "Z\xB3oto: "},
       {"sAcquired", "Zdobyto: "},
       {"sDay", "Dzie\xF1: "},
       };

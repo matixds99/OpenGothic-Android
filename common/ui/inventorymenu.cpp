@@ -14,6 +14,8 @@
 #include "utils/keycodec.h"
 #include "gothic.h"
 #include "resources.h"
+#include "game/nbiteminfo.h"
+#include "game/nbtexts.h"
 
 using namespace Tempest;
 
@@ -856,7 +858,9 @@ void InventoryMenu::drawGold(Painter &p, Npc &player, int x, int y) {
   if(txt.empty())
     txt="Gold";
 
-  string_frm vint(txt," : ",int(gold));
+  // NB: the plugin writes "Zloto: N" here (itemGold of AB_Translation.lbr), not the name of the coin
+  const bool nb = (w!=nullptr && NbItemInfo::isNb(w->script().getVm()));
+  string_frm vint(nb ? NbTexts::get("itemGold") : std::string_view(txt), nb ? "" : " : ", int(gold));
 #ifdef OPENGOTHIC_TOUCH_UI
   (void)x;
   (void)y;

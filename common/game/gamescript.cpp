@@ -2316,6 +2316,61 @@ void GameScript::initCommon() {
       st.salesPending = (npc!=nullptr);
       nbCtx("sales window: ",st.salesList.size()," items");
       });
+    // RX_Form_Const_SellItems / RX_Form_Alfred_SellItems: the same window, the list is fixed in the plugin
+    // (UNION_ABI.DLL, tables at 0x105692c8 and 0x10568b38); SELF is the trader (RX_CallbackDialog sets it)
+    const auto fixedSales = [this](const char* who, std::initializer_list<std::pair<const char*,int32_t>> items, bool ownedOnlyCrabAnt) {
+      auto& st = nbStates[this];
+      st.salesList.clear();
+      auto* hero = world().player();
+      for(auto& [name,price]:items) {
+        std::string up(name);
+        for(auto& c:up)
+          c = char(std::toupper(uint8_t(c)));
+        auto* sym = vm.find_symbol_by_name(up);
+        if(sym==nullptr || !sym->is_instance_of<zenkit::IItem>()) {
+          Log::e("NB: ",who," sales: no item \"",name,"\"");
+          continue;
+          }
+        // the plugin offers the crab meat and the ant mandibles only to who has them
+        if(ownedOnlyCrabAnt && (up=="ITFO_CRABRAW" || up=="ITAT_ANTMANDIBULES") &&
+           (hero==nullptr || hero->itemCount(sym->index())==0))
+          continue;
+        Gothic::NbSaleItem it;
+        it.cls   = sym->index();
+        it.price = price;
+        if(auto inst = vm.init_instance<zenkit::IItem>(sym); inst!=nullptr)
+          it.name = inst->name;
+        if(it.name.empty())
+          it.name = up;
+        st.salesList.push_back(std::move(it));
+        }
+      auto self = std::dynamic_pointer_cast<zenkit::INpc>(vm.global_self()->get_instance());
+      st.salesNpc     = self;
+      st.salesPending = (self!=nullptr);
+      nbCtx(who," sales window: ",st.salesList.size()," items",self==nullptr ? " (no SELF)" : "");
+      };
+    bindNb("RX_FORM_CONST_SELLITEMS", [fixedSales]() {
+      fixedSales("Constantino",{
+        {"ITPO_PERM_STR",800},{"ITPO_PERM_DEX",800},{"ITPO_PERM_HEALTH",1000},{"ITPO_PERM_HEALTH_CRAFT",1200},
+        {"ITPO_PERM_MANA",800},{"ITPO_PERM_MANA_CRAFT",1000},{"ITPO_PERM_STAMINA",800},
+        {"ITPL_MANA_HERB_03",20},{"ITPL_HEALTH_HERB_03",30},{"ITPL_TEMP_HERB",15},{"ITPL_SPEED_HERB_01",50},
+        {"ITPL_DEX_HERB_01",300},{"ITPL_STRENGTH_HERB_01",300},{"ITPL_PERM_HERB",2000},{"ITPL_SUPER_HERB",200},
+        {"ITPL_HEALTH_HERB_01",10},{"ITPL_HEALTH_HERB_02",20},{"ITPL_MANA_HERB_01",7},{"ITPL_MANA_HERB_02",15},
+        {"ITPL_MUSHROOM_01",5},{"ITPL_MUSHROOM_02",10},
+        {"ITAT_BUGMANDIBLES",20},{"ITAT_CRAWLERMANDIBLES",30},{"ITAT_SPIDERMANDIBLES",120},{"ITFO_CRABRAW",30},
+        {"ITAT_ANTMANDIBULES",25},{"ITAT_OREBUGCLAW",50},{"ITAT_WING",15},{"ITAT_STING",25},{"ITAT_ADDON_BCKOPF",40},
+        {"ITAT_FIREGOLEMHEART",200},{"ITAT_ICEGOLEMHEART",200},{"ITAT_SWAMPGOLEMHEART",200},{"ITAT_STONEGOLEMHEART",200},
+        },true);
+      });
+    bindNb("RX_FORM_ALFRED_SELLITEMS", [fixedSales]() {
+      fixedSales("Alfred",{
+        {"ItAt_SheepFur",5},{"itat_rabbitfur",3},{"ItAt_WolfFur",8},{"ItAt_WargFur",30},{"ItAt_Addon_KeilerFur",15},
+        {"ItAt_ShadowFur",90},{"ItAt_TrollBlackFur",1000},{"ItAt_TrollFur",175},{"itat_LurkerSkin",12},
+        {"ItAt_SharkSkin",40},{"ItAt_IceWolfFur",30},{"ItAt_OrcDogFur",35},{"itat_pumafur",100},{"ItAt_WhitePuma",100},
+        {"ItAt_Teeth",8},{"ItAt_Claw",5},{"ItAt_TrollTooth",60},{"ItAt_LurkerClaw",12},{"ItAt_CrawlerPlate",25},
+        {"ItAt_SharkTeeth",25},{"ItAt_DesertSharkTeeth",50},{"ItAt_DrgSnapperHorn",50},{"ItAt_ShadowHorn",75},
+        },false);
+      });
     // the items of the scripts by name, equipping, the kind of a weapon
     bindNb("CREATEINVITEMSBYSTRING", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view inst, int32_t count) {
       if(auto* sym = vm.find_symbol_by_name(inst); sym!=nullptr && count>0)

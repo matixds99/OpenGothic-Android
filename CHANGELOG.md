@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **69**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **70**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -196,6 +196,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - **po teście 23:39:** krzyżyk nie zamykał okna. Dodany przycisk „wstecz” nakładki w prawym górnym rogu (Escape – zamyka okno, nie otwiera menu gry), większe pole dotyku krzyżyka i wpis w logu przy każdym dotknięciu okna (`NB sales window: tap x,y …`) – do sprawdzenia, czemu krzyżyk nie łapał. Pod oknem nie są już rysowane napisy NB (strzały, karma, liczniki), które prześwitywały przez wiersze.
 - W logu `[ctx] sales window: N items`.
 - **To samo okno w pluginie robi rzemiosło** (`RX_OpenCraft` z `CRAFT_ALCHEMY`, `CRAFT_SMITH`, `CRAFT_RUNE`, `CRAFT_FORCEARMOR`, `CRAFT_BOWS`, `CRAFT_JEWELRY`, `CRAFT_FOOD`, `CRAFT_PIE`, `CRAFT_SOUP_COMPOTE`, `CRAFT_SCROLLS`, `CRAFT_ORE_SMELTING`, `CRAFT_SKINS_ARMOR`, `CRAFT_DEMONRUNE`). Przepisy są tam zaszyte w kodzie pluginu (nie w skryptach) – na razie zostają stare menu dialogowe z poprawki 2; to okno jest pod nie przygotowane.
+
+### 69. Okno sprzedaży u Constantino i Alfreda, napis „Złoto” w ekwipunku – 🧪 (16.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`, `common/game/nbtexts.h`
+- **Zgłoszenie:** okno sprzedaży z poprawki 68 nie otwiera się u Constantino (trofea) ani w obozie myśliwych; w ekwipunku jest „Złota moneta : N” zamiast „Złoto”.
+- **Przyczyna:** „Przekaż zebrane rośliny i składniki...” (Constantino, czeladnik) i „(Sprzedaj trofea zwierzęce)” (Alfred) nie wołają `RX_OpenCraft_PlayerSales`, tylko `RX_Form_Const_SellItems` / `RX_Form_Alfred_SellItems`. Te dwie funkcje mają listę towarów zaszytą w UNION_ABI.DLL (tabele 0x105692c8 i 0x10568b38) – u nas ich nie było, dialog się zamykał i nic. Funkcje skryptów `DIA_CONSTANTINO_SELLTROPHIES_CALLBACK` itp. to pozostałości – plugin ich nie używa.
+- **Poprawka:** obie funkcje otwierają to samo okno z listą wyciągniętą z DLL:
+  - Constantino (34 pozycje): mikstury permanentne, rzadkie rośliny, zioła i grzyby, trofea (kraby i żuwaczki mrówek tylko gdy je masz – jak w pluginie), serca golemów;
+  - Alfred (23 pozycje): skóry, zęby, pazury, płyty pełzaczy, rogi.
+  - w logu `[ctx] Constantino sales window: N items` / `Alfred …`.
+- **Złoto:** w NB nagłówek złota w ekwipunku to „Złoto: N” (klucz `itemGold` z AB_Translation.lbr, jak w pluginie).
 
 ---
 
