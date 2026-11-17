@@ -706,8 +706,8 @@ void AndroidInput::Controller::onSpecial(int id) {
       t = std::max(t,combo.back().at+30);
     combo.push_back({t,     Mobile::Key::StrafeLeft,true});
     combo.push_back({t+30,  Mobile::Key::Action,    true});
-    combo.push_back({t+150, Mobile::Key::Action,    false});
-    combo.push_back({t+200, Mobile::Key::StrafeLeft,false});
+    combo.push_back({t+300, Mobile::Key::Action,    false});
+    combo.push_back({t+350, Mobile::Key::StrafeLeft,false});
     return;
     }
 
