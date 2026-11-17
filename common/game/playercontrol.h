@@ -5,6 +5,7 @@
 #include "constants.h"
 
 #include <array>
+#include <atomic>
 
 class DialogMenu;
 class InventoryMenu;
@@ -20,6 +21,11 @@ class PlayerControl final {
   public:
     PlayerControl(DialogMenu& dlg, InventoryMenu& inv);
     ~PlayerControl();
+
+    /// NB fix 94: the quick attack of the touch screen sends the keys of the PC (Ctrl held, A/D held, W tapped): while it
+    /// runs, the keys are read as in the controls of Gothic 1 - with the attack key held, A/D is the blow to the side and W
+    /// the blow forward (the touch screen has the controls of Gothic 2 otherwise, where only the attack key strikes)
+    static inline std::atomic<bool> quickCombo{false};
 
     void  onKeyPressed (KeyCodec::Action a, Tempest::Event::KeyType key, KeyCodec::Mapping mapping);
     void  onKeyReleased(KeyCodec::Action a, KeyCodec::Mapping mapping);

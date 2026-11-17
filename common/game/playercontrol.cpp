@@ -142,6 +142,7 @@ void PlayerControl::onKeyPressed(KeyCodec::Action a, Tempest::KeyEvent::KeyType 
   const bool actTunneling = false;
 
   int fk = -1;
+  const bool g2Ctrl = this->g2Ctrl && !quickCombo.load();   // NB fix 94
   if((ctrl[KeyCodec::ActionGeneric] || actTunneling) && !g2Ctrl) {
     if(a==Action::Forward) {
       if(pl!=nullptr && pl->target()!=nullptr && pl->canFinish(*pl->target()) && !pl->isAttackAnim()) {

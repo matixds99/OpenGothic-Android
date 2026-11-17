@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **94**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **95**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -243,7 +243,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
 
-### 93. Szybki atak: krok w bok i atak w tej samej chwili – 🧪 (17.11.2026)
+### 94. Szybki atak: klawisze PC czytane jak sterowanie Gothic 1 – 🧪 (17.11.2026)
+- **Pliki:** `common/game/playercontrol.cpp/.h` (`quickCombo`), `common/utils/androidinput.cpp`
+- **Zgłoszenie:** 93 dalej źle (film 342674). Kombinacja na PC: Ctrl trzymany cały czas, A/D trzymane, W naciskane cały czas.
+- **Przyczyna:** na PC przy trzymanym Ctrl klawisze kierunku to ciosy: A/D – cios w bok, W – cios do przodu (kolejne W – kolejne ciosy kombinacji). Ekran dotykowy w OpenGothic ma zawsze sterowanie Gothic 2 (`g2Ctrl`), gdzie bije tylko sam klawisz ataku, a A/D/W przy Ctrl to zwykły ruch – dlatego żadna sekwencja 85–93 nie dawała tego co na PC.
+- **Poprawka:** na czas sekwencji QUICK `PlayerControl` czyta klawisze jak w sterowaniu Gothic 1 (`quickCombo`): Ctrl wciśnięty i trzymany → A/D (na zmianę) wciśnięte i trzymane – cios w bok → W stukane co 0,26 s (4 razy) – ciosy do przodu → po 1,35 s puszczenie A/D, po 1,38 s Ctrl; potem znowu sterowanie Gothic 2.
+- **Uwaga z filmu 342674:** wytrzymałość spadła do 0/120 – w NB bez wytrzymałości ataki są słabsze/blokowane; testować z pełnym paskiem.
+- **Do sprawdzenia:** QUICK – cios w bok i seria ciosów do przodu jak na PC.
+
+### 93. Szybki atak: krok w bok i atak w tej samej chwili – ❌ (zastąpione w 94) (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp`
 - **Zgłoszenie:** 92 dalej źle; pomysł gracza – krok w lewo/prawo i jednocześnie wyprowadzenie ataku.
 - **Poprawka:** QUICK: A/D (na zmianę) i atak (Ctrl) wciśnięte razem → puszczenie ataku po 0,15 s → puszczenie A/D po 0,4 s.

@@ -20,6 +20,7 @@
 #include "gothic.h"
 #include "world/worldobjects.h"
 #include "game/gamescript.h"
+#include "game/playercontrol.h"
 #include "resources.h"
 #include "winpad.h"
 #include "scripting/modhost.h"
@@ -631,6 +632,8 @@ bool AndroidInput::Controller::update(Window& window, Mobile::Mode mode) {
       if(mode==Mobile::Mode::Game || e.kind==Mobile::Event::Up)
         dispatch(window,Mobile::Mode::Game,e);
       }
+    if(combo.empty())
+      PlayerControl::quickCombo.store(false);   // NB fix 94: the controls of Gothic 2 again
     }
   if(controls.takeHudChanged())
     saveHudPlaces();
@@ -705,14 +708,18 @@ void AndroidInput::Controller::onSpecial(int id) {
     const uint64_t   now  = Application::tickCount();
     const Mobile::Key side = comboRight ? Mobile::Key::StrafeRight : Mobile::Key::StrafeLeft;
     comboRight = !comboRight;
-    // NB fix 93: the step to the side and the attack at the same moment (the idea of the player): the attack comes in the
-    // side step
-    combo = {
-      {now,     side,               true },
-      {now,     Mobile::Key::Action,true },
-      {now+150, Mobile::Key::Action,false},
-      {now+400, side,               false},
-      };
+    // NB fix 94: the keys of the PC as the player presses them - Ctrl held all the time, A/D held, W tapped (a blow to the
+    // side, then blows forward), read as in the controls of Gothic 1 while the sequence runs (PlayerControl::quickCombo)
+    PlayerControl::quickCombo.store(true);
+    combo.clear();
+    combo.push_back({now,    Mobile::Key::Action,true });
+    combo.push_back({now+30, side,               true });
+    for(uint64_t t=250; t<1300; t+=260) {
+      combo.push_back({now+t,     Mobile::Key::Up,true });
+      combo.push_back({now+t+100, Mobile::Key::Up,false});
+      }
+    combo.push_back({now+1350, side,               false});
+    combo.push_back({now+1380, Mobile::Key::Action,false});
     return;
     }
 
