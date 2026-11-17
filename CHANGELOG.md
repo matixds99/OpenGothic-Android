@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **96**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **97**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -243,7 +243,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
 
-### 95. Szybki atak: W „resetuje pozycję” bohatera po ciosie – 🧪 (17.11.2026)
+### 96. Szybki atak: ciosy w bok wykonywane bezpośrednio, reset zaraz po trafieniu – 🧪 (17.11.2026)
+- **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`
+- **Zgłoszenie:** po 95 „dramat” – bohater nie oddaje ciosu. Na PC: Ctrl i A trzymane, W klikane – każde kliknięcie W to reset.
+- **Przyczyna:** na PC trzymane Ctrl + A silnik czyta co klatkę – po resecie od razu wchodzi kolejny cios w bok. W OpenGothic trzymany klawisz daje jeden cios, a udawanie klawiszy (85–95) nie odtwarzało tego zachowania.
+- **Poprawka:** przycisk QUICK nie udaje już klawiszy. `PlayerControl::quickAttack` co klatkę (do 2 s): gdy bohater nie atakuje – cios w bok (strona na zmianę przy kolejnych QUICK), bohater obrócony do celu; gdy cios trafił (po klatce uderzenia) – reset pozycji (`resetAttack`, jak kliknięcie W) i zaraz następny cios; 3 ciosy. Sterowanie Gothic 1 z 94 i reset z 95 nie są już włączane przez QUICK.
+- **Do sprawdzenia:** 3 szybkie ciosy w bok pod rząd, każdy trafia.
+
+### 95. Szybki atak: W „resetuje pozycję” bohatera po ciosie – ❌ (zastąpione w 96) (17.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h` (`resetAttack`), `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.cpp`
 - **Zgłoszenie:** cała tajemnica: po kombinacji Ctrl/mysz + A/D, W resetuje pozycję bohatera – reszta ciosu jest ucinana i od razu można bić znowu. Tego brakowało we wszystkich próbach.
 - **Poprawka:**
@@ -252,7 +259,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - QUICK: Ctrl trzymany → 3 razy: A/D (cios w bok, 0,08 s) → W (reset, 0,05 s) co 0,42 s → puszczenie Ctrl po 1,35 s.
 - **Do sprawdzenia:** szybka seria ciosów w bok, każdy zaraz po poprzednim, jak na PC.
 
-### 94. Szybki atak: klawisze PC czytane jak sterowanie Gothic 1 – 🧪 (17.11.2026)
+### 94. Szybki atak: klawisze PC czytane jak sterowanie Gothic 1 – ❌ (zastąpione w 96) (17.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`quickCombo`), `common/utils/androidinput.cpp`
 - **Zgłoszenie:** 93 dalej źle (film 342674). Kombinacja na PC: Ctrl trzymany cały czas, A/D trzymane, W naciskane cały czas.
 - **Przyczyna:** na PC przy trzymanym Ctrl klawisze kierunku to ciosy: A/D – cios w bok, W – cios do przodu (kolejne W – kolejne ciosy kombinacji). Ekran dotykowy w OpenGothic ma zawsze sterowanie Gothic 2 (`g2Ctrl`), gdzie bije tylko sam klawisz ataku, a A/D/W przy Ctrl to zwykły ruch – dlatego żadna sekwencja 85–93 nie dawała tego co na PC.

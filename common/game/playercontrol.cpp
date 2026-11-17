@@ -381,6 +381,20 @@ void PlayerControl::tickFocus() {
     emptyFocus();
   }
 
+void PlayerControl::quickAttack() {
+  // NB fix 96: QUICK of the touch screen - Ctrl + A or D held and W clicked on the PC: the side changes every time
+  auto w  = Gothic::inst().world();
+  auto pl = w!=nullptr ? w->player() : nullptr;
+  if(pl==nullptr || quickUntil!=0)
+    return;
+  const auto ws = pl->weaponState();
+  if(ws!=WeaponState::W1H && ws!=WeaponState::W2H)
+    return;
+  quickSide  = -quickSide;
+  quickCount = 0;
+  quickUntil = w->tickCount()+2000;
+  }
+
 void PlayerControl::clearFocus() {
   currentFocus = Focus();
   lockedNpc    = nullptr;
@@ -835,6 +849,29 @@ void PlayerControl::implMove(uint64_t dt) {
   if(ctrl[Action::K_ENTER]) {
     pl.transformBack();
     ctrl[Action::K_ENTER] = false;
+    }
+
+  // NB fix 96: the quick attack - a blow to the side, cut off right after its hit (W of the PC), and the next one: 3 blows
+  if(quickUntil!=0) {
+    auto*      wr  = Gothic::inst().world();
+    const auto now = wr!=nullptr ? wr->tickCount() : 0;
+    if(wr==nullptr || now>quickUntil || quickCount>=3 || (ws!=WeaponState::W1H && ws!=WeaponState::W2H)) {
+      quickUntil = 0;
+      } else {
+      if(auto other = pl.target()) {
+        auto dp = other->centerPosition()-pl.centerPosition();
+        pl.turnTo(dp.x,dp.z,true,dt);
+        }
+      if(pl.isAttackAnim()) {
+        if(pl.resetAttack())   // only after the hit of the blow
+          ++quickCount;
+        } else {
+        if(quickSide<0)
+          pl.swingSwordL(); else
+          pl.swingSwordR();
+        }
+      return;
+      }
     }
 
   // NB fix 95: the reset of the position of the quick attack, as soon as the blow is done
