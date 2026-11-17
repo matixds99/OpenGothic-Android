@@ -246,7 +246,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 ### 97. Szybki atak: QUICK = „< STEP” (A) i miecz (W) naciśnięte razem – 🧪 (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp`, `common/mainwindow.cpp`
 - **Zgłoszenie (film 342682):** chodzi o animację, nie o przeciwnika. Na filmie gracz ręcznie robi kombinację na ekranie: strzałka w lewo (A) i miecz (W) dotykane razem (ok. 0,25 s, co ok. 1 s), albo strzałka trzymana i miecz klikany. Taką kombinację ma robić QUICK.
-- **Poprawka:** QUICK nie wywołuje już `PlayerControl::quickAttack` (96). Jedno dotknięcie naciska dokładnie te przyciski co gracz: „< STEP” (A), po 30 ms ACTION (miecz). ACTION jest puszczany po 230 ms, A po 260 ms. Szybkie kolejne dotknięcia są ustawiane w kolejce jedno po drugim. Sterowanie Gothic 2 bez zmian, jak przy ręcznym dotykaniu.
+- **Poprawka:** QUICK nie wywołuje już `PlayerControl::quickAttack` (96). Jedno dotknięcie naciska dokładnie te przyciski co gracz: „< STEP” (A), po 30 ms ACTION (miecz). ACTION jest puszczany po 40 ms, A po 60 ms (czasy podane przez gracza 17.11; wcześniej 230/260 ms). Szybkie kolejne dotknięcia są ustawiane w kolejce jedno po drugim. Sterowanie Gothic 2 bez zmian, jak przy ręcznym dotykaniu.
 - **Do sprawdzenia:** dotknięcie QUICK daje tę samą animację co ręczne dotknięcie strzałki i miecza razem.
 
 ### 96. Szybki atak: ciosy w bok wykonywane bezpośrednio, reset zaraz po trafieniu – ❌ (zastąpione w 97) (17.11.2026)
