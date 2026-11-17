@@ -371,6 +371,7 @@ class Npc final {
     bool      isTalk() const;
 
     bool      isAttackAnim() const;
+    bool      resetAttack();   // NB fix 95: the attack after its blow goes back to the stance of the fight
     bool      isPrehit() const;
     bool      isImmortal() const;
 

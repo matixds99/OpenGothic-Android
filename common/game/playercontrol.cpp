@@ -83,6 +83,15 @@ void PlayerControl::onKeyPressed(KeyCodec::Action a, Tempest::KeyEvent::KeyType 
       }
     }
 
+  // NB fix 95: in the quick attack W "resets the position" - after the blow of the attack the hero is back in the stance
+  // at once (it waits for the blow, if W comes before it); no attack forward
+  if(quickCombo.load() && a==Action::Forward && pl!=nullptr && w!=nullptr && ctrl[KeyCodec::ActionGeneric]) {
+    if(!pl->resetAttack())
+      pendingReset = w->tickCount()+500;
+    ctrl[a] = false;
+    return;
+    }
+
   handleMovementAction(KeyCodec::ActionMapping{a,mapping}, true);
 
   if(pl!=nullptr && pl->interactive()!=nullptr && c!=nullptr && !c->isFree()) {
@@ -826,6 +835,13 @@ void PlayerControl::implMove(uint64_t dt) {
   if(ctrl[Action::K_ENTER]) {
     pl.transformBack();
     ctrl[Action::K_ENTER] = false;
+    }
+
+  // NB fix 95: the reset of the position of the quick attack, as soon as the blow is done
+  if(pendingReset!=0) {
+    auto* wr = Gothic::inst().world();
+    if(wr==nullptr || wr->tickCount()>pendingReset || pl.resetAttack())
+      pendingReset = 0;
     }
 
   if((ws==WeaponState::Bow || ws==WeaponState::CBow) && pl.hasAmmunition()) {

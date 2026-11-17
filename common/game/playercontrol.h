@@ -26,6 +26,7 @@ class PlayerControl final {
     /// runs, the keys are read as in the controls of Gothic 1 - with the attack key held, A/D is the blow to the side and W
     /// the blow forward (the touch screen has the controls of Gothic 2 otherwise, where only the attack key strikes)
     static inline std::atomic<bool> quickCombo{false};
+    uint64_t       pendingReset = 0;   // NB fix 95: W of the quick attack - the reset of the position after the blow
 
     void  onKeyPressed (KeyCodec::Action a, Tempest::Event::KeyType key, KeyCodec::Mapping mapping);
     void  onKeyReleased(KeyCodec::Action a, KeyCodec::Mapping mapping);

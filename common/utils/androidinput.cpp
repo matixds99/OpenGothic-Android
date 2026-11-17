@@ -708,18 +708,19 @@ void AndroidInput::Controller::onSpecial(int id) {
     const uint64_t   now  = Application::tickCount();
     const Mobile::Key side = comboRight ? Mobile::Key::StrafeRight : Mobile::Key::StrafeLeft;
     comboRight = !comboRight;
-    // NB fix 94: the keys of the PC as the player presses them - Ctrl held all the time, A/D held, W tapped (a blow to the
-    // side, then blows forward), read as in the controls of Gothic 1 while the sequence runs (PlayerControl::quickCombo)
+    // NB fix 94, 95: the keys of the PC - Ctrl held all the time, then A/D (a blow to the side) and W, which "resets the
+    // position" after the blow (the rest of the attack is cut off), again and again: 3 blows to the side one after another.
+    // Read as in the controls of Gothic 1 while the sequence runs (PlayerControl::quickCombo)
     PlayerControl::quickCombo.store(true);
     combo.clear();
-    combo.push_back({now,    Mobile::Key::Action,true });
-    combo.push_back({now+30, side,               true });
-    for(uint64_t t=250; t<1300; t+=260) {
-      combo.push_back({now+t,     Mobile::Key::Up,true });
-      combo.push_back({now+t+100, Mobile::Key::Up,false});
+    combo.push_back({now, Mobile::Key::Action,true });
+    for(uint64_t t=30; t<1300; t+=420) {
+      combo.push_back({now+t,     side,            true });
+      combo.push_back({now+t+80,  side,            false});
+      combo.push_back({now+t+150, Mobile::Key::Up, true });
+      combo.push_back({now+t+200, Mobile::Key::Up, false});
       }
-    combo.push_back({now+1350, side,               false});
-    combo.push_back({now+1380, Mobile::Key::Action,false});
+    combo.push_back({now+1350, Mobile::Key::Action,false});
     return;
     }
 

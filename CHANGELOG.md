@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **95**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **96**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -242,6 +242,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zgłoszenie (film 342652):** w NB szybki atak to trzy klawisze po kolei: A albo D (krok w bok, z akrobatyką – przewrotka), W (do przodu) i Ctrl/mysz (atak) – bohater po przewrotce wyprowadza atak w ruchu, który często obala przeciwnika. Na telefonie nie da się tego wcisnąć – potrzebny osobny przycisk (też do testu 83).
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
+
+### 95. Szybki atak: W „resetuje pozycję” bohatera po ciosie – 🧪 (17.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp/.h` (`resetAttack`), `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.cpp`
+- **Zgłoszenie:** cała tajemnica: po kombinacji Ctrl/mysz + A/D, W resetuje pozycję bohatera – reszta ciosu jest ucinana i od razu można bić znowu. Tego brakowało we wszystkich próbach.
+- **Poprawka:**
+  - `Npc::resetAttack()` – gdy cios już trafił (po klatce uderzenia), reszta animacji ataku jest przerywana, bohater od razu w postawie walki;
+  - w trakcie QUICK (`quickCombo`) W przy trzymanym Ctrl nie jest ciosem do przodu, tylko takim resetem; W przed uderzeniem czeka na nie do 0,5 s;
+  - QUICK: Ctrl trzymany → 3 razy: A/D (cios w bok, 0,08 s) → W (reset, 0,05 s) co 0,42 s → puszczenie Ctrl po 1,35 s.
+- **Do sprawdzenia:** szybka seria ciosów w bok, każdy zaraz po poprzednim, jak na PC.
 
 ### 94. Szybki atak: klawisze PC czytane jak sterowanie Gothic 1 – 🧪 (17.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`quickCombo`), `common/utils/androidinput.cpp`

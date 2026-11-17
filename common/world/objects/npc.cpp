@@ -5392,6 +5392,16 @@ bool Npc::isAttackAnim() const {
   return visual.pose().isAttackAnim();
   }
 
+bool Npc::resetAttack() {
+  // NB fix 95: the quick attack of New Balance - W after the blow "resets the position": the rest of the attack is cut off
+  // and the hero stands in the stance of the fight at once, ready for the next blow
+  if(!isAttackAnim() || isPrehit())
+    return false;
+  visual.interrupt();
+  setAnim(Anim::Idle);
+  return true;
+  }
+
 bool Npc::isPrehit() const {
   return visual.pose().isPrehit(owner.tickCount());
   }
