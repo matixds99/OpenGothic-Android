@@ -251,6 +251,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Ramki z metalu z nitami w rogach rysowane w kodzie; lista ciemna, karta przedmiotu pergaminowa.
   - Nagłówek: „Złoto: N” po lewej, nazwa kategorii (ze skryptów moda, bez nich polska/angielska) i liczba przedmiotów po prawej.
   - Karta: nazwa czcionką książek (`FONT_10_BOOK`), obrazek w ciemnym polu po prawej u góry, właściwości po lewej obrazka i pod nim (łamane po słowach, zmniejszane, gdy się nie mieszczą). Na dole przyciski z napisami: ZAŁÓŻ/ZDEJMIJ/UŻYJ/CZYTAJ, WYRZUĆ; przy skrzyni i handlu WEŹ/SCHOWAJ/KUP/SPRZEDAJ i PRZENIEŚ; obok mały przycisk „cały stos”. W NB napisy po polsku, w innych grach po angielsku.
+- **Zrzut 342710 (17.11):** wygląda dobrze, ale opis ma za mało miejsca – w samym ekwipunku lista i karta przedmiotu dostały po połowie ekranu (było 34% na kartę).
 - **Do sprawdzenia:** wygląd na telefonie (ekwipunek, skrzynia, handel), czy napisy z polskimi literami są czytelne, czy dotyk w siatce trafia w dobre pole.
 
 ### 98. Szybki atak: cios przycisku miecza szybciej i z resetem pozycji – 🧪 (17.11.2026)

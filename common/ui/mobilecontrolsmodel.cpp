@@ -235,7 +235,8 @@ InventoryLayout Mobile::inventoryLayout(float W, float H, bool twoLists, float g
   const float bottom = H-0.045f*H;
   const float pad    = 0.022f*H;                            // inside the frames
 
-  const float cardW  = (twoLists ? 0.27f : 0.34f)*W;
+  // one list: the list and the card take a half each (17.11: the description had too little room)
+  const float cardW  = twoLists ? 0.27f*W : (W-2*edge-gap)/2;
   l.info = {W-edge-cardW,top,cardW,bottom-top};
 
   const int   lists  = twoLists ? 2 : 1;
