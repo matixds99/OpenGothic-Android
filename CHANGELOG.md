@@ -237,6 +237,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 102. Runa z bliska nie trafia – 🧪 (18.11.2026)
+- **Pliki:** `common/world/bullet.cpp` (`tickHoming`)
+- **Zgłoszenie (film 342714):** czar z runy rzucony z bliska nie trafia: pocisk krąży nad celem.
+- **Przyczyna:** naprowadzanie z poprawki 84 kieruje pocisk co klatkę w środek celu. Z bliska pocisk startuje w ciele celu albo do niego dolatuje, a fizyka sprawdza trafienie promieniem, który ze środka ciała niczego nie trafia. Pocisk kręcił się wokół środka, aż przeleciał 100 m.
+- **Poprawka:** gdy naprowadzany pocisk jest bliżej środka celu niż ok. 70% połowy szerokości ciała (40–150 cm), trafienie liczone jest od razu (obrażenia, efekt uderzenia) i pocisk się zatrzymuje.
+- **Do sprawdzenia:** runy z bliska (wróg tuż przy bohaterze) – trafiają za pierwszym razem; z daleka bez zmian.
+
 ### 101. Kruk i nieaktywne fazy bossów: RX_IsWaiting, RX_Stop_AI_Wait, UpdateSpeed, przywołańcy – 🧪 (17.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp/.h` (`nbSpeed`, `nbIsWaiting`, `nbStopWait`)
 - **Zgłoszenie:** Kruk – największy boss z fazami.

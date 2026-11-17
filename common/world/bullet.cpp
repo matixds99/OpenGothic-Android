@@ -1,5 +1,7 @@
 #include "bullet.h"
 
+#include <algorithm>
+
 #include <Tempest/Log>
 
 #include "graphics/visualfx.h"
@@ -101,7 +103,21 @@ void Bullet::tickHoming() {
   const float speed = cur.length();
   auto        to    = homing->collosionCenter()-obj->position();
   const float len   = to.length();
-  if(speed<=0.f || len<=1.f)
+
+  // NB fix 102: at close range the spell starts inside the body of the target (or reaches its center): the ray of the
+  // physics from inside the body hits nothing, the spell turned around the center and never hit. Close to the center -
+  // the hit at once
+  const auto  bb    = homing->bounds();
+  const float half  = std::max(bb.bbox[1].x-bb.bbox[0].x, bb.bbox[1].z-bb.bbox[0].z)*0.5f;
+  const float reach = std::clamp(half*0.7f,40.f,150.f);
+  if(len<=reach) {
+    Npc& target = *homing;
+    homing = nullptr;
+    if(onCollide(target))
+      onStop();
+    return;
+    }
+  if(speed<=0.f)
     return;
   setDirection(to*(speed/len));
   }
