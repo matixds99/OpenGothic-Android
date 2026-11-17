@@ -348,7 +348,7 @@ class Npc final {
     void      fistShoot();
     bool      blockFist();
     bool      finishingMove();
-    bool      swingSword();
+    void      swingSword();
     bool      swingSwordL();
     bool      swingSwordR();
     bool      blockSword();

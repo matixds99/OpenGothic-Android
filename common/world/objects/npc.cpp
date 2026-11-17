@@ -5078,11 +5078,11 @@ bool Npc::finishingMove() {
   return false;
   }
 
-bool Npc::swingSword() {
+void Npc::swingSword() {
   auto active=invent.activeWeapon();
   if(active==nullptr)
-    return false;
-  return doAttack(Anim::Attack,BS_HIT);
+    return;
+  doAttack(Anim::Attack,BS_HIT);
   }
 
 bool Npc::swingSwordL() {

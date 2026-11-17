@@ -48,7 +48,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/world/objects/npc.cpp` | `takeDamage` → `nbBeforeHit`/`nbOnDamage` (muzyka bossów, zachwianie, obalenie NB); `commitSpell` – pocisk czaru gracza leci za celem | 82, 83, 84 |
 | `common/world/bullet.cpp` (+ `.h`) | `setHoming`/`tickHoming` – pocisk czaru gracza skręca do celu | 84 |
 | `common/world/world.cpp` | fokus: zamknięta skrzynia z bronią w ręku (siła) albo z runą otwierania (magia) | 80 |
-| `common/game/playercontrol.cpp` (+ `.h`) | przycisk akcji na zamkniętej skrzyni w fokusie: otwieranie zamka NB (siła/magia/wytrychy); cios do przodu czeka na okno kombinacji przy trzymanym ataku (szybki atak) | 80, 88 |
+| `common/game/playercontrol.cpp` (+ `.h`) | przycisk akcji na zamkniętej skrzyni w fokusie: otwieranie zamka NB (siła/magia/wytrychy) | 80 |
 | `common/utils/androidinput.h` | j.w. (`IconSprint`, `hud.sprint`, `hudPlaces`, `stamina`) | 40, 42 |
 | `common/gothic.cpp` | ekran wczytywania: obrazki moda `LOADING_<ŚWIAT>_<numer>` | 3, 3a |
 | `common/mainwindow.cpp` | ekran wczytywania: świat z nagłówka save'a, czarne tło zamiast białego, pasek wczytywania dla tekstur HD | 3, 3a, 14 |
