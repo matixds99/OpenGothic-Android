@@ -195,7 +195,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** miecz w ręku przy zamkniętej skrzyni → fokus na skrzyni → akcja → rąbanie i otwarcie; runa → animacja czaru, −75 many; puste ręce (100+ zręczności) → zużyte wytrychy; komunikaty przy braku siły/many/wytrychów; w logu `[ctx] lock: …` i `lock opened`.
 - **Test (17.11):** magia (runa) działa ✅. Siła i wytrychy – do sprawdzenia na innym zapisie (gracz gra magiem).
 
-### 81. Kolory nazw w fokusie: nastawienie postaci, stan skrzyń (jak zUtilities) – 🧪 (17.11.2026)
+### 81. Kolory nazw w fokusie: nastawienie postaci, stan skrzyń (jak zUtilities) – ✅ (17.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h` (`focusColor`), `common/game/gamescript.cpp/.h` (`nbIsSummon`)
 - **Zgłoszenie:** redesign interfejsu – kolory nastawienia osób jak w pluginie zUtilities, zamknięta skrzynia żółta/zielona, opróżniona szara/biała.
 - **Poprawka:** nazwa w fokusie w kolorze (z cieniem, czytelna na każdym tle):
@@ -204,6 +204,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - **skrzynie i drzwi:** żółty – zamknięte, zielony – coś w środku, szary – pusta;
   - przedmioty i inne obiekty – biały, jak dotąd.
 - **Do sprawdzenia:** kolory przy różnych postaciach (strażnik, bandyta, owca, ognik), zamknięta/otwarta/pusta skrzynia, przeszukane ciało.
+- **Test (17.11):** działa – skrzynia: żółta (zamknięta) → zielona (otwarta runą) → szara (opróżniona).
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`
