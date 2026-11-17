@@ -2484,7 +2484,34 @@ void GameScript::initCommon() {
       return 0;
       });
     // the waits of the plugin (its own queue of the AI) - OpenGothic has none of them
-    bindNb("RX_ISWAITING", [](std::shared_ptr<zenkit::INpc>) -> int32_t { return 0; });
+    // NB fix 101: the inactive phases of the bosses (RX_SetInactive: AI_Wait for 500 s, RX_SetActive ends it)
+    bindNb("RX_ISWAITING", [this](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
+      auto* npc = findNpcRaw(ref);
+      return npc!=nullptr && npc->nbIsWaiting() ? 1 : 0;
+      });
+    bindNb("RX_STOP_AI_WAIT", [this](std::shared_ptr<zenkit::INpc> ref) {
+      if(auto* npc = findNpcRaw(ref))
+        npc->nbStopWait();
+      });
+    bindNb("UPDATESPEED", [this](std::shared_ptr<zenkit::INpc> ref, float speed) {
+      if(auto* npc = findNpcRaw(ref))
+        npc->nbSpeed = (std::isfinite(speed) && speed>0.f) ? std::clamp(speed,0.2f,3.f) : 1.f;
+      });
+    // the summoned creatures of the hero: they stop, while a boss cannot be hurt (RX_SetInactive)
+    const auto forSummons = [this](auto fn) {
+      auto* hero = world().player();
+      if(hero==nullptr)
+        return;
+      world().detectNpc(hero->position(),5000.f,[&](Npc& n) {
+        if(!n.isDead() && !n.isPlayer() && nbIsSummon(n))
+          fn(n);
+        });
+      };
+    bindNb("AI_CLEARAIQUEUE_SUMMONED", [forSummons]() { forSummons([](Npc& n) { n.clearAiQueue(); }); });
+    bindNb("AI_WAIT_SUMMONED", [forSummons](int32_t sec) {
+      forSummons([sec](Npc& n) { if(sec>0) n.aiPush(AiQueue::aiWait(uint64_t(sec)*1000)); });
+      });
+    bindNb("AI_STANDUP_SUMMONED", [forSummons]() { forSummons([](Npc& n) { n.aiPush(AiQueue::aiStandup()); }); });
 
     // the plugin refreshes the texts of its window of the inventory; the summons of the multiplayer
     bindNb("UPDATEITEMSINFOININV", []() {});

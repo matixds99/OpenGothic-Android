@@ -237,6 +237,21 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 101. Kruk i nieaktywne fazy bossów: RX_IsWaiting, RX_Stop_AI_Wait, UpdateSpeed, przywołańcy – 🧪 (17.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp/.h` (`nbSpeed`, `nbIsWaiting`, `nbStopWait`)
+- **Zgłoszenie:** Kruk – największy boss z fazami.
+- **Walka z Krukiem w skryptach:**
+  - `BDT_50011_Addon_Raven` (w skryptach „AD_BOSS7”). Walka zaczyna się po dialogu (`PC_PsionicQuest_TemplateDialog_353_Var`).
+  - Fazy przy 85, 70 i 40% życia oraz dalsze. Na każdą fazę Kruk staje się nieśmiertelny i czeka (`RX_SetInactive`, `AI_Wait` 500/1000 s), wzywa pomocników (`Wld_InsertNpcAndAttackEnemy`, duch Starego/`AD_OldGhostRavenBattle`), a co 30 s rani bohatera o 20% życia.
+  - Potem jest forma demona (`Demon_RavenX`, `Demon_RavenX_Out`).
+  - Wszystko przez `AI_OnTick_`/`AI_OnHit_`/`AI_OnGetDamage_`/`AI_OnDead_` (poprawki 100 i 51).
+- **Brakowało (dopisane):**
+  - `RX_IsWaiting` zawsze zwracało 0. Teraz zwraca, czy postać czeka (`AI_Wait`), więc boss w nieaktywnej fazie nie atakuje.
+  - `RX_Stop_AI_Wait` – koniec czekania przy `RX_SetActive`.
+  - `UpdateSpeed(npc, 1.0–2.0)` – szybszy boss (61 wywołań w skryptach): mnożnik zegara animacji postaci, także ruchu.
+  - `AI_ClearAIQueue_Summoned`, `AI_Wait_Summoned(s)`, `AI_StandUp_Summoned` – przywołańcy bohatera (do 50 m) przerywają walkę, czekają i wstają, gdy boss jest nieśmiertelny.
+- **Do sprawdzenia:** walka z Krukiem: kolejne fazy (napisy, pomocnicy, nieśmiertelność i powrót do walki), forma demona.
+
 ### 100. Fazy bossów: funkcje walki pluginu (AI_OnTick/OnHit/OnGetDamage/OnBreak) – 🧪 (17.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbBossHit`, `nbBossTick`, `nbInstanceFunc`, `nbCallInstanceFunc`, `WLD_INSERTNPCANDATTACKENEMY`)
 - **Zgłoszenie:** taktyki/fazy bossów NB (np. Kruk) – odłożone wcześniej jako duża robota.

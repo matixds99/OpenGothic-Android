@@ -3194,6 +3194,7 @@ void Npc::tick(uint64_t dt) {
       scale = effects->modelTimeScale(*this);
     if(isPlayer())
       scale *= nbQuickSpeed;
+    scale *= nbSpeed;   // NB fix 101
     visual.pose().setTimeScale(scale,owner.tickCount());
   }
   static bool dbg = false;
@@ -6188,6 +6189,7 @@ void Npc::updateAnimation(uint64_t dt, bool force) {
       scale = effects->modelTimeScale(*this);
     if(isPlayer())
       scale *= nbQuickSpeed;
+    scale *= nbSpeed;   // NB fix 101
     visual.pose().setTimeScale(scale,owner.tickCount());
   }
   const auto camera = Gothic::inst().camera();
@@ -6219,4 +6221,12 @@ void Npc::updateAnimation(uint64_t dt, bool force) {
   bool syncAtt = visual.updateAnimation(this,nullptr,owner,dt,force);
   if(syncAtt)
     visual.syncAttaches();
+  }
+
+bool Npc::nbIsWaiting() const {
+  return waitTime>=owner.tickCount();
+  }
+
+void Npc::nbStopWait() {
+  waitTime = 0;
   }
