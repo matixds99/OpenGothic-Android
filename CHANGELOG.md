@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **83**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **85**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -217,6 +217,24 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - wyłączona muzyka w ustawieniach (`musicEnabled`) – bez muzyki bossa.
 - Reszta `RX_OnDamage` (zachwianie `RX_ApplyStagger`, efekty `RX_HeroProcs`/`RX_NpcProcs`, taktyki bossów, przyspieszenie bossów) – jeszcze niepodłączona.
 - **Do sprawdzenia:** walka z bossem z listy (np. Mięsożerca, Kamieniołap – to zwierzęta: tylko z opcją `bToggleMusicAnimalBoss`; postacie/demony/szkielety – zawsze), w logu `[ctx] boss music: BATTLE_…`; po zabiciu bossa wraca zwykła muzyka.
+
+### 83. Zachwianie i obalenie w walce jak w NB – 🧪 (17.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp` (`takeDamage`), `common/game/gamescript.cpp/.h` (`nbBeforeHit`, `nbOnDamage`)
+- **Zgłoszenie:** w walce nie ma zachwiania/obalenia przeciwników jak w oryginale.
+- **Przyczyna:** na PC plugin przy każdym ciosie woła skrypt `RX_OnDamage`; w OpenGothic nikt go nie wołał (82 dodała z niego tylko muzykę).
+- **Poprawka:** z `RX_OnDamage`:
+  - **zachwianie** (`RX_ApplyStagger`) – przed decyzją silnika o potknięciu: postać trafiona przez gracza (albo ta, która trafia gracza) dostaje `bodystate_interruptable_override` wg skryptu – siła/zręczność bohatera kontra rodzaj przeciwnika (elitarne orki, szkielety, draconianie… mają progi), bossowie i walczący na arenie się nie chwieją;
+  - **obalenie** (`RX_NpcProcs`) – po ciosie gracza człowiek (nie boss, nie ork, poziom < 200, nie w trybie łuku/magii) przewraca się (`T_FALLB_2_FALLENB`) z szansą wg umiejętności broni bohatera (1H/2H, łuk/kusza; pięść 5%);
+  - licznik walki `BIT_FIGHT_TIMER_STARTED` dla obu stron (inne mechaniki NB z niego korzystają).
+- Efekty perków (`RX_HeroProcs`) i taktyki bossów – nadal później.
+- **Do sprawdzenia:** bandyci/strażnicy przewracają się czasem od ciosu miecza (częściej przy wysokiej umiejętności), słabsi przeciwnicy chwieją się od ciosów, mocni (elitarne orki, szkielety) nie przy niskiej sile.
+
+### 84. Magia: pocisk leci za celem – 🧪 (17.11.2026)
+- **Pliki:** `common/world/bullet.cpp/.h`, `common/world/worldobjects.cpp`, `common/world/objects/npc.cpp` (`commitSpell`)
+- **Zgłoszenie:** przy celowaniu magią w potwora pocisk nie trafia.
+- **Przyczyna:** pocisk czaru leciał prosto w miejsce, gdzie cel był w chwili rzucenia (`setTarget(nullptr)`), a potwory się ruszają; nisko stojące małe stworzenia (szczury) – pocisk z wysokości piersi bohatera łatwo zahacza o ziemię.
+- **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
+- **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`

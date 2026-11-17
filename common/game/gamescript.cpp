@@ -7337,6 +7337,27 @@ void GameScript::nbOnDamage(Npc& target, Npc& attacker) {
       return false;
       }
     };
+  // NB fix 83: the rest of RX_OnDamage that the fights need - the timer of the fight (BIT_FIGHT_TIMER_STARTED) and the knock
+  // down by the blows of the player (RX_NpcProcs: a person falls by the chance of the weapon skill of the player)
+  const auto call = [this](std::string_view name, auto... args) {
+    auto* fn = vm.find_symbol_by_name(name);
+    if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+      return;
+    try {
+      vm.call_function<void>(fn,args...);
+      }
+    catch(const std::exception& e) {
+      Log::e("NB: ",name," failed: ",e.what());
+      }
+    };
+  const int32_t fightBit = nbScriptInt(vm,"BIT_FIGHT_TIMER_STARTED",0,-1);
+  if(attacker.isPlayer() && fightBit>=0)
+    call("SETVAR2_TRUE",target.handlePtr(),fightBit);
+  if(target.isPlayer() && fightBit>=0)
+    call("SETVAR2_TRUE",attacker.handlePtr(),fightBit);
+  if(attacker.isPlayer() && !target.isPlayer() && !target.isDead())
+    call("RX_NPCPROCS",attacker.handlePtr(),target.handlePtr());
+
   Npc* b = nullptr;
   if((target.isPlayer() || nbIsSummon(target)) && boss(attacker))
     b = &attacker; else
@@ -7349,5 +7370,27 @@ void GameScript::nbOnDamage(Npc& target, Npc& attacker) {
     }
   catch(const std::exception& e) {
     Log::e("NB: RX_CheckMusicBoss failed: ",e.what());
+    }
+  }
+
+void GameScript::nbBeforeHit(Npc& target, Npc& attacker) {
+  // NB fix 83: RX_ApplyStagger of RX_OnDamage - the character hit by the player (or the attacker of the player) is
+  // interrupted (stumbles) or not by the strength/dexterity of the hero against its kind: C_NPC.bodystate_interruptable_override.
+  // The bosses, the arena fighters and some creatures are never staggered (the script decides)
+  auto* fn = vm.find_symbol_by_name("RX_APPLYSTAGGER");
+  if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+    return;
+  Npc* n = nullptr;
+  if(attacker.isPlayer() && !target.isPlayer())
+    n = &target; else
+  if(target.isPlayer() && !attacker.isPlayer())
+    n = &attacker;
+  if(n==nullptr)
+    return;
+  try {
+    vm.call_function<void>(fn,n->handlePtr());
+    }
+  catch(const std::exception& e) {
+    Log::e("NB: RX_ApplyStagger failed: ",e.what());
     }
   }

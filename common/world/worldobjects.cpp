@@ -231,6 +231,8 @@ void WorldObjects::tick(uint64_t dt, uint64_t dtPlayer) {
   bullets.remove_if([](Bullet& b){
     return b.isFinished();
     });
+  for(auto& b:bullets)
+    b.tickHoming();   // NB fix 84
 
   for(size_t i=0; i<effects.size();) {
     if(effects[i].timeUntil<owner.tickCount()) {

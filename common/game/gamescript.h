@@ -208,7 +208,8 @@ class GameScript final {
     /// rune of the unlocking drawn); 3: with lock picks (no weapon, the talent and 100 of dexterity)
     int32_t          nbLockMode(const Npc& pl);
     bool             nbIsSummon(const Npc& npc);
-    void             nbOnDamage(Npc& target, Npc& attacker);   // NB fix 82: the music of the bosses (RX_OnDamage)   // NB fix 81: RX_IsSummonNpc (aivar[91]==RX_SUMMON_ID)
+    void             nbOnDamage(Npc& target, Npc& attacker);   // NB fix 82, 83: RX_OnDamage - the music of the bosses, the knock down
+    void             nbBeforeHit(Npc& target, Npc& attacker);  // NB fix 83: RX_OnDamage - the stagger   // NB fix 81: RX_IsSummonNpc (aivar[91]==RX_SUMMON_ID)
     void             nbBreakLock(Npc& hero, Interactive& mob, int32_t mode);
     int32_t          nbCraftSkill(int32_t craft);
     size_t           nbCraftAvailable(Npc& hero, size_t cls);

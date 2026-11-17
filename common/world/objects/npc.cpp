@@ -2671,6 +2671,10 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
     return;
     }
 
+  // NB fix 83: the stagger of New Balance (RX_ApplyStagger): whether this blow interrupts the character, before the stumble
+  if(hitResult.hasHit)
+    owner.script().nbBeforeHit(*this,other);
+
   if(hitResult.hasHit) {
     ++nbHitsSinceJump()[this];   // NB fix 33
     auto state = bodyStateMasked();
@@ -4256,6 +4260,9 @@ void Npc::commitSpell() {
     b.setDamage(dmg);
     b.setOrigin(this);
     b.setTarget(nullptr);
+    // NB fix 84: the projectile of the player follows the creature he aims at
+    if(isPlayer() && currentTarget!=nullptr)
+      b.setHoming(currentTarget);
     visual.setMagicWeaponKey(owner,SpellFxKey::Init);
     } else {
     // NOTE: use pfx_ppsIsLoopingChg ?

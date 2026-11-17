@@ -6,6 +6,7 @@
 #include "world/objects/item.h"
 #include "world/objects/npc.h"
 #include "world.h"
+#include "world/focus.h"
 
 using namespace Tempest;
 
@@ -85,6 +86,24 @@ void Bullet::setOrigin(Npc *n) {
 
 Npc *Bullet::origin() const {
   return ow;
+  }
+
+void Bullet::tickHoming() {
+  if(homing==nullptr || obj==nullptr || isFinished())
+    return;
+  // the target is checked every tick: it may be gone from the world, dead or down
+  homing = wrld->validateFocus(Focus(*homing)).npc;
+  if(homing==nullptr || homing->isDead() || homing->isDown()) {
+    homing = nullptr;
+    return;
+    }
+  const auto  cur   = obj->direction();
+  const float speed = cur.length();
+  auto        to    = homing->collosionCenter()-obj->position();
+  const float len   = to.length();
+  if(speed<=0.f || len<=1.f)
+    return;
+  setDirection(to*(speed/len));
   }
 
 void Bullet::setTarget(const Npc* n) {
