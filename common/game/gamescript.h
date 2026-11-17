@@ -200,6 +200,11 @@ class GameScript final {
     auto             nbCraftList(Npc& hero, int32_t craft) -> std::vector<NbCraft::Item>;
     std::string      nbCraftCreate(Npc& hero, int32_t craft, const NbCraft::Item& rec, size_t count);
     void             nbCraftEnd(Npc& hero);
+    // NB fix 79: the locks of New Balance (the key Y / Shift+Y of the plugin: HandleEvent, Mob_SetBrakeChest)
+    bool             nbHasBreakLock();
+    bool             nbCanBreakLock(const Interactive* mob) const;
+    void             nbSetFocusMob(Interactive* mob);
+    void             nbBreakLock(Npc& hero, Interactive& mob);
     int32_t          nbCraftSkill(int32_t craft);
     size_t           nbCraftAvailable(Npc& hero, size_t cls);
     std::string      nbCraftText(std::string_view symbol, std::string_view fallback);

@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **79**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **80**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -174,6 +174,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** nowy wiersz w ustawieniach „Peaceful targets” → `Target peaceful creatures: ON/OFF` (domyślnie ON – jak dotąd; w `Gothic.ini`, sekcja `MOBILE`, `peacefulfocus`, wersja ustawień 8). Przy OFF z celowania gracza (fokus, walka, zaklęcia) wypadają stworzenia (gildie potworów), które nie są do niego wrogie (nastawienie neutralne/przyjazne): ognik, przywołańce, owce, króliki, żółwie… Zostają: ludzie i orkowie (dialogi), martwe ciała (łupy), oraz każde stworzenie, które atakuje gracza albo jest do niego wrogie/rozgniewane.
 - **Do sprawdzenia:** OFF – walka obok ognika i przywołańców nie zaznacza ich, owca się nie podświetla; ON – rozmowa z ognikiem, polowanie na owce jak dotąd.
 - **Test (17.11):** działa – fokus na ognika wyłącza się i włącza przełącznikiem.
+
+### 79. Otwieranie zamków NB: siłą, magią, wytrychami – przycisk kłódki – 🧪 (17.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`, `android/assets/touch-icons/lockpick.png` (nowa ikona)
+- **Zgłoszenie:** w New Balance zamki otwiera się na 3 sposoby: siłą (nauka u Karla – bohater rąbie skrzynię bronią), wytrychami (zręczność – zużywa tyle wytrychów, ile wymaga zamek) i magią (runa od Gallahada – animacja rzucania czaru). Na telefonie nie działało żadne.
+- **Jak to działa na PC (UNION_ABI.DLL):** plugin przy każdym klawiszu woła skrypt `HandleEvent(key)`. Klawisz Y (`KEY_BREAKCHEST_STR`): runa `ItRu_Unlock` (75 many, `T_FIBCAST_2_FIBSHOOT`) albo siła (`RX_ForcePickLock`, broń do walki wręcz, siła ≥ 12 × liczba obrotów zamka − 50, `T_1HSBRKCHST`/`T_2HSBRKCHST`, −30% wytrzymałości); Shift+Y (`KEY_BREAKCHEST_DEX`): wytrychy (talent, zręczność ≥ 100, liczba wytrychów zależna od zamka i zręczności, `T_PLUNDER`). Skrypt sprawdza warunki, gra animację i pyta plugin (`Mob_GetBreakNum` – liczba obrotów zamka, `Mob_SetBrakeChest` – otwórz skrzynię w fokusie).
+- **Poprawka:**
+  - funkcje pluginu: `Mob_GetBreakNum` (długość kodu zamka skrzyni w fokusie), `Mob_SetBrakeChest` (otwiera skrzynię/drzwi w fokusie i woła `UnlockBreakDone`; zamek tylko na klucz → `CantUnlock`), `Mob_SetUnLocked` / `Mob_SetUnLocked_Rune` (zaklęcie otwierania: zwój zużyty, `UnlockDone`), `RX_KeyPressed` (klawisz pluginu – tu tylko przycisk kłódki);
+  - nowy przycisk **kłódki** na HUD (nad przyciskiem celu, da się go przesunąć/ukryć w edytorze HUD, id `lockpick`) – widoczny, gdy w fokusie jest zamknięta skrzynia z zamkiem do wyważenia, a bohater nie ma broni w ręku;
+  - jeden przycisk zamiast dwóch klawiszy – sposób wybierany sam: magia (runa i ≥ 75 many) albo siła (gdy jej wystarczy) → klawisz Y; inaczej wytrychy → Shift+Y; gdy nic nie zadziała, skrypt mówi dlaczego (za mało many/siły/zręczności, brak talentu, brak wytrychów). Potem `HandleEvent` jak na PC.
+- Zwykłe otwieranie wytrychami (minigra lewo/prawo przyciskiem akcji) bez zmian.
+- **Do sprawdzenia:** każdy z 3 sposobów na zamkniętej skrzyni (animacja, tekst „Udany włam”, skrzynia otwarta), komunikaty przy braku siły/many/wytrychów; w logu `[ctx] lock: KEY_BREAKCHEST_…` i `lock opened`.
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`

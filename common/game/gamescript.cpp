@@ -23,6 +23,7 @@
 #include "world/objects/npc.h"
 #include "world/objects/item.h"
 #include "world/objects/interactive.h"
+#include "world/focus.h"
 #include "world/triggers/abstracttrigger.h"
 #include "graphics/visualfx.h"
 #include "utils/fileutil.h"
@@ -178,6 +179,10 @@ struct NbState {
   bool                                        salesPending = false;
   // NB fix 70: the crafting window of the plugin (RX_OpenCraft), opened at the next tick out of the dialog
   int32_t                                     craftPending = -1;
+  // NB fix 79: the mob in the focus of the player (Mob_GetBreakNum, Mob_SetBrakeChest), set every frame by the window,
+  // and the key of the plugin that HandleEvent sees pressed (RX_KeyPressed) while the button of the lock is handled
+  Interactive*                                focusMob = nullptr;
+  std::string                                 keyPressed;
   // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
   std::weak_ptr<zenkit::INpc>                 wispBody;
   std::unordered_map<const zenkit::INpc*,uint64_t> wispBodySkip;
@@ -2178,6 +2183,64 @@ void GameScript::initCommon() {
       for(auto& c:name)
         c = char(std::toupper(static_cast<unsigned char>(c)));
       return name.find(up)!=std::string::npos ? 1 : 0;
+      });
+    // NB fix 79: the locks of the plugin (UNION_ABI.DLL). The key Y calls HandleEvent: the rune (ItRu_Unlock, 75 of mana),
+    // or the strength (RX_ForcePickLock, from Karl), Shift+Y the lock picks (100 of dexterity) - the scripts check, play
+    // the animation and ask the plugin to open the chest in the focus
+    const auto focusMob = [this]() -> Interactive* {
+      auto& st = nbStates[this];
+      auto* w  = owner.world();
+      if(st.focusMob==nullptr || w==nullptr)
+        return nullptr;
+      st.focusMob = w->validateFocus(Focus(*st.focusMob)).interactive;
+      return st.focusMob;
+      };
+    // Mob_GetBreakNum (0x1015a240): the turns of the lock of the chest in the focus (the length of the code of the lock)
+    bindNb("MOB_GETBREAKNUM", [focusMob]() -> int32_t {
+      auto* mob = focusMob();
+      if(mob==nullptr || !mob->isContainer())
+        return 0;
+      return int32_t(mob->pickLockCode().size());
+      });
+    // the chest (or the door) in the focus is opened: CantUnlock for a lock only with a key, else open and the function
+    // of the script (UnlockBreakDone / UnlockDone)
+    const auto unlockFocus = [this,focusMob](std::string_view done, bool scroll) {
+      auto* mob = focusMob();
+      if(mob==nullptr || !(mob->isContainer() || mob->isDoor()) || !mob->isLocked())
+        return;
+      auto call = [this](std::string_view name) {
+        auto* fn = vm.find_symbol_by_name(name);
+        if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+          return;
+        try {
+          vm.call_function<void>(fn);
+          }
+        catch(const std::exception& e) {
+          Log::e("NB: ",name," failed: ",e.what());
+          }
+        };
+      if(!mob->keyName().empty() && mob->pickLockCode().empty()) {
+        call("CANTUNLOCK");
+        return;
+        }
+      if(scroll) {
+        auto* pl = owner.player();
+        auto* sc = vm.find_symbol_by_name("ITSC_UNLOCK");
+        if(pl!=nullptr && sc!=nullptr && pl->itemCount(sc->index())>0)
+          pl->delItem(sc->index(),1);
+        }
+      mob->setAsCracked(true);
+      nbCtx("lock opened: ",mob->tag().empty() ? std::string_view("(chest)") : mob->tag()," (",done,")");
+      call(done);
+      };
+    bindNb("MOB_SETBRAKECHEST",    [unlockFocus]() { unlockFocus("UNLOCKBREAKDONE",false); });
+    bindNb("MOB_SETUNLOCKED",      [unlockFocus]() { unlockFocus("UNLOCKDONE",true);       });
+    bindNb("MOB_SETUNLOCKED_RUNE", [unlockFocus]() { unlockFocus("UNLOCKDONE",false);      });
+    // RX_KeyPressed(name, ...): the key of the options of the plugin. On the touch screen the only one is the button of the
+    // lock while it is handled
+    bindNb("RX_KEYPRESSED", [this](std::string_view name, int32_t, int32_t) -> int32_t {
+      auto& k = nbStates[this].keyPressed;
+      return !k.empty() && nbEqualsNoCase(name,k) ? 1 : 0;
       });
     // RX_TerminateDialog (oCInformationManager::Exit) and RX_ClearInput (zCInput::ClearKeyBuffer) after the teleport
     // of the rune: the scripts call AI_StopProcessInfos before, the dialog closes by it - nothing more here
@@ -7126,4 +7189,63 @@ std::string GameScript::nbCraftText(std::string_view symbol, std::string_view fa
   if(txt.empty() || letters==0 || high*2>letters)
     return std::string(fallback);
   return txt;
+  }
+
+// NB fix 79: the locks of New Balance. On the PC the plugin calls HandleEvent(key) for every key: the key Y
+// (KEY_BREAKCHEST_STR) opens the chest in the focus with the rune ItRu_Unlock (75 of mana) or by strength (RX_ForcePickLock,
+// taught by Karl, a melee weapon, 12 of strength a turn of the lock over 50); Shift+Y (KEY_BREAKCHEST_DEX) with lock picks
+// (the talent, 100 of dexterity). The touch screen has one button: the way that can work is chosen here, the scripts do
+// the rest (the checks, the animation, the texts, the mana, the stamina, the lock picks)
+bool GameScript::nbHasBreakLock() {
+  auto* fn = vm.find_symbol_by_name("HANDLEEVENT");
+  auto* gb = vm.find_symbol_by_name("MOB_SETBRAKECHEST");
+  return fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION && !fn->is_external() &&
+         gb!=nullptr && gb->is_external();
+  }
+
+bool GameScript::nbCanBreakLock(const Interactive* mob) const {
+  return mob!=nullptr && mob->isContainer() && mob->isLocked() && !mob->pickLockCode().empty();
+  }
+
+void GameScript::nbSetFocusMob(Interactive* mob) {
+  if(auto it = nbStates.find(this); it!=nbStates.end())
+    it->second.focusMob = mob;
+  }
+
+void GameScript::nbBreakLock(Npc& hero, Interactive& mob) {
+  auto* fn = vm.find_symbol_by_name("HANDLEEVENT");
+  if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+    return;
+  auto& st = nbStates[this];
+
+  const auto count = [this,&hero](std::string_view name) -> size_t {
+    auto* s = vm.find_symbol_by_name(name);
+    return s!=nullptr ? hero.itemCount(s->index()) : 0;
+    };
+  const int32_t lvl     = int32_t(mob.pickLockCode().size());
+  const int32_t strNeed = std::max(0,lvl*12-50);
+  const bool    runeKnow = nbScriptInt(vm,"PLAYER_TALENT_RUNES",99)!=0 && count("ITRU_UNLOCK")>0;
+  const bool    rune     = runeKnow && hero.attribute(ATR_MANA)>=75;
+  const bool    force    = nbScriptInt(vm,"RX_FORCEPICKLOCK")!=0;
+  const bool    forceOk  = force && hero.currentMeleeWeapon()!=nullptr && hero.attribute(ATR_STRENGTH)>=strNeed;
+  const bool    dex      = hero.talentSkill(TALENT_PICKLOCK)>0;
+
+  // as the keys of the PC: Y for the rune and the strength, Shift+Y for the lock picks. When nothing can work, the key whose
+  // scripts say why (the mana, the strength, no talent)
+  const char* key = "KEY_BREAKCHEST_DEX";
+  if(rune || forceOk)
+    key = "KEY_BREAKCHEST_STR"; else
+  if(!dex && (force || runeKnow))
+    key = "KEY_BREAKCHEST_STR";
+  nbCtx("lock: ",key," (turns ",lvl,", rune ",int(runeKnow),", strength ",int(force),", lock picks ",int(dex),")");
+
+  st.focusMob   = &mob;
+  st.keyPressed = key;
+  try {
+    vm.call_function<void>(fn,int32_t(0));
+    }
+  catch(const std::exception& e) {
+    Log::e("NB: HandleEvent failed: ",e.what());
+    }
+  st.keyPressed.clear();
   }

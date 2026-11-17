@@ -48,7 +48,7 @@ const char* const IconFiles[AndroidInput::IconCount] = {
   "food.png", "potion.png", "documents.png", "misc.png",
   "use_new.png", "drop.png", "transfer_new.png", "up_new.png", "down_new.png", "inv_slot.png", "inv_slot_selected.png",
   "skip.png", "talk.png", "target_lock.png", "fast_forward.png", "save.png", "human.png", "transfer_all.png",
-  "sprint.png"
+  "sprint.png", "lockpick.png"
   };
 
 const char* const SettingNames[Mobile::SettingCount] = {
@@ -751,6 +751,8 @@ int AndroidInput::Controller::iconFor(const Mobile::Button& b) const {
       return IconSave;
     case Mobile::Special::Sprint:
       return IconSprint;
+    case Mobile::Special::BreakLock:
+      return IconLockpick;
     default:
       if(inventory && b.special>=Mobile::Special::FirstCategory)
         return IconCategoryAll+b.special-Mobile::Special::FirstCategory;
