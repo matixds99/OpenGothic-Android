@@ -707,13 +707,14 @@ void AndroidInput::Controller::onSpecial(int id) {
     comboRight = !comboRight;
     // the attack key first and held, then the side and forward together (NB fix 87: the order of the PC); the attack key
     // is held long enough for the forward blow to come after the side one (NB fix 88: the attack waits for its window)
+    // NB fix 89: the times of the player - Ctrl held all the time, A/D about 0.7 s, then W 0.5 s
     combo = {
-      {now,     Mobile::Key::Action,true },
-      {now+40,  side,               true },
-      {now+60,  Mobile::Key::Up,    true },
-      {now+160, side,               false},
-      {now+400, Mobile::Key::Up,    false},
-      {now+900, Mobile::Key::Action,false},
+      {now,      Mobile::Key::Action,true },
+      {now+40,   side,               true },
+      {now+740,  side,               false},
+      {now+740,  Mobile::Key::Up,    true },
+      {now+1240, Mobile::Key::Up,    false},
+      {now+1300, Mobile::Key::Action,false},
       };
     return;
     }
