@@ -237,13 +237,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 85. Przycisk szybkiego ataku (A/D → W → Ctrl jak na PC) – 🧪 (17.11.2026)
-- **Pliki:** `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `android/assets/touch-icons/quick_attack.png` (nowa ikona)
-- **Zgłoszenie (film 342652):** w NB szybki atak to trzy klawisze po kolei: A albo D (krok w bok, z akrobatyką – przewrotka), W (do przodu) i Ctrl/mysz (atak) – bohater po przewrotce wyprowadza atak w ruchu, który często obala przeciwnika. Na telefonie nie da się tego wcisnąć – potrzebny osobny przycisk (też do testu 83).
-- **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
-- **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
-
-### 99. Nowy wygląd ekwipunku (dotyk) – 🧪 (17.11.2026)
+### 99. Nowy wygląd ekwipunku (dotyk) – ✅ (17.11.2026)
 - **Pliki:** `common/ui/mobilecontrolsmodel.cpp/.h` (`inventoryLayout`), `common/ui/inventorymenu.cpp/.h`, `common/utils/androidinput.cpp`
 - **Zgłoszenie (zrzut 342701):** przerobić interfejs ekwipunku na wzór ze zdjęcia: po lewej ramka z „Złoto: N” i nazwą kategorii z liczbą przedmiotów, kafelki kategorii nad siatką, siatka w wielu kolumnach; po prawej karta przedmiotu na pergaminie (nazwa, właściwości, obrazek w ramce, przyciski ZAŁÓŻ / WYRZUĆ) i krzyżyk w rogu.
 - **Poprawka:**
@@ -252,87 +246,25 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Nagłówek: „Złoto: N” po lewej, nazwa kategorii (ze skryptów moda, bez nich polska/angielska) i liczba przedmiotów po prawej.
   - Karta: nazwa czcionką książek (`FONT_10_BOOK`), obrazek w ciemnym polu po prawej u góry, właściwości po lewej obrazka i pod nim (łamane po słowach, zmniejszane, gdy się nie mieszczą). Na dole przyciski z napisami: ZAŁÓŻ/ZDEJMIJ/UŻYJ/CZYTAJ, WYRZUĆ; przy skrzyni i handlu WEŹ/SCHOWAJ/KUP/SPRZEDAJ i PRZENIEŚ; obok mały przycisk „cały stos”. W NB napisy po polsku, w innych grach po angielsku.
 - **Zrzut 342710 (17.11):** wygląda dobrze, ale opis ma za mało miejsca – w samym ekwipunku lista i karta przedmiotu dostały po połowie ekranu (było 34% na kartę).
-- **Do sprawdzenia:** wygląd na telefonie (ekwipunek, skrzynia, handel), czy napisy z polskimi literami są czytelne, czy dotyk w siatce trafia w dobre pole.
+- **Test (17.11, zrzut z Magią):** okej wg gracza – więcej widać naraz niż przy 3 kolumnach, zostaje tak. Możliwe drobne poprawki później: większa czcionka opisu, ramka zamiast plamy na wybranym polu, pasek życia nad ramką, czerwone numery skrótów.
 
-### 98. Szybki atak: cios przycisku miecza szybciej i z resetem pozycji – 🧪 (17.11.2026)
-- **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`), `common/world/objects/npc.cpp/.h` (`nbQuickSpeed`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`
-- **Zgłoszenie (zrzut 17.11):** przycisk miecza (między obroną a QUICK) robi to, co trzeba, tylko za wolno. Trzeba go przyspieszyć i resetować pozycję – wtedy będzie szybki atak.
-- **Poprawka:** QUICK nie naciska już klawiszy (97). `PlayerControl::quickAttack`: cios do przodu jak z przycisku miecza (`swingSword`), zaraz po trafieniu reset pozycji (`resetAttack`) i od razu następny cios. W tym czasie animacje bohatera są szybsze (zegar modelu × `QuickSpeed`). Liczby w `playercontrol.h`: `QuickHits = 3` ciosy, `QuickTime = 2000` ms limitu, `QuickSpeed = 2.2f` (17.11 gracz: 2,5× minimalnie za szybko, 2,2× jak na PC; najpierw było 1,5). Po serii prędkość wraca do 1.
-- **Do sprawdzenia:** dotknięcie QUICK daje 3 szybkie ciosy do przodu, jeden po drugim. Prędkość i liczbę ciosów da się zmienić w `playercontrol.h`.
-
-### 97. Szybki atak: QUICK = „< STEP” (A) i miecz (W) naciśnięte razem – ❌ (zastąpione w 98) (17.11.2026)
-- **Pliki:** `common/utils/androidinput.cpp`, `common/mainwindow.cpp`
-- **Zgłoszenie (film 342682):** chodzi o animację, nie o przeciwnika. Na filmie gracz ręcznie robi kombinację na ekranie: strzałka w lewo (A) i miecz (W) dotykane razem (ok. 0,25 s, co ok. 1 s), albo strzałka trzymana i miecz klikany. Taką kombinację ma robić QUICK.
-- **Poprawka:** QUICK nie wywołuje już `PlayerControl::quickAttack` (96). Jedno dotknięcie naciska dokładnie te przyciski co gracz: „< STEP” (A), po 30 ms ACTION (miecz). ACTION jest puszczany po 300 ms, A po 350 ms (test, czasy wg gracza 17.11). Przy 40/60 ms gra nie widziała W, przy 150/200 ms bohater tylko przesuwał się w lewo bez ataku. Wcześniej 230/260 ms. Szybkie kolejne dotknięcia są ustawiane w kolejce jedno po drugim. Sterowanie Gothic 2 bez zmian, jak przy ręcznym dotykaniu.
-- **Do sprawdzenia:** dotknięcie QUICK daje tę samą animację co ręczne dotknięcie strzałki i miecza razem.
-
-### 96. Szybki atak: ciosy w bok wykonywane bezpośrednio, reset zaraz po trafieniu – ❌ (zastąpione w 97) (17.11.2026)
-- **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`
-- **Zgłoszenie:** po 95 „dramat” – bohater nie oddaje ciosu. Na PC: Ctrl i A trzymane, W klikane – każde kliknięcie W to reset.
-- **Przyczyna:** na PC trzymane Ctrl + A silnik czyta co klatkę – po resecie od razu wchodzi kolejny cios w bok. W OpenGothic trzymany klawisz daje jeden cios, a udawanie klawiszy (85–95) nie odtwarzało tego zachowania.
-- **Poprawka:** przycisk QUICK nie udaje już klawiszy. `PlayerControl::quickAttack` co klatkę (do 2 s): gdy bohater nie atakuje – cios w bok (strona na zmianę przy kolejnych QUICK), bohater obrócony do celu; gdy cios trafił (po klatce uderzenia) – reset pozycji (`resetAttack`, jak kliknięcie W) i zaraz następny cios; 3 ciosy. Sterowanie Gothic 1 z 94 i reset z 95 nie są już włączane przez QUICK.
-- **Do sprawdzenia:** 3 szybkie ciosy w bok pod rząd, każdy trafia.
-- **Build (17.11):** `-Werror,-Wunused-private-field` – nieużywane pole `comboRight` w `androidinput.h` usunięte.
-
-### 95. Szybki atak: W „resetuje pozycję” bohatera po ciosie – ❌ (zastąpione w 96) (17.11.2026)
-- **Pliki:** `common/world/objects/npc.cpp/.h` (`resetAttack`), `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.cpp`
-- **Zgłoszenie:** cała tajemnica: po kombinacji Ctrl/mysz + A/D, W resetuje pozycję bohatera – reszta ciosu jest ucinana i od razu można bić znowu. Tego brakowało we wszystkich próbach.
-- **Poprawka:**
-  - `Npc::resetAttack()` – gdy cios już trafił (po klatce uderzenia), reszta animacji ataku jest przerywana, bohater od razu w postawie walki;
-  - w trakcie QUICK (`quickCombo`) W przy trzymanym Ctrl nie jest ciosem do przodu, tylko takim resetem; W przed uderzeniem czeka na nie do 0,5 s;
-  - QUICK: Ctrl trzymany → 3 razy: A/D (cios w bok, 0,08 s) → W (reset, 0,05 s) co 0,42 s → puszczenie Ctrl po 1,35 s.
-- **Do sprawdzenia:** szybka seria ciosów w bok, każdy zaraz po poprzednim, jak na PC.
-
-### 94. Szybki atak: klawisze PC czytane jak sterowanie Gothic 1 – ❌ (zastąpione w 96) (17.11.2026)
-- **Pliki:** `common/game/playercontrol.cpp/.h` (`quickCombo`), `common/utils/androidinput.cpp`
-- **Zgłoszenie:** 93 dalej źle (film 342674). Kombinacja na PC: Ctrl trzymany cały czas, A/D trzymane, W naciskane cały czas.
-- **Przyczyna:** na PC przy trzymanym Ctrl klawisze kierunku to ciosy: A/D – cios w bok, W – cios do przodu (kolejne W – kolejne ciosy kombinacji). Ekran dotykowy w OpenGothic ma zawsze sterowanie Gothic 2 (`g2Ctrl`), gdzie bije tylko sam klawisz ataku, a A/D/W przy Ctrl to zwykły ruch – dlatego żadna sekwencja 85–93 nie dawała tego co na PC.
-- **Poprawka:** na czas sekwencji QUICK `PlayerControl` czyta klawisze jak w sterowaniu Gothic 1 (`quickCombo`): Ctrl wciśnięty i trzymany → A/D (na zmianę) wciśnięte i trzymane – cios w bok → W stukane co 0,26 s (4 razy) – ciosy do przodu → po 1,35 s puszczenie A/D, po 1,38 s Ctrl; potem znowu sterowanie Gothic 2.
-- **Uwaga z filmu 342674:** wytrzymałość spadła do 0/120 – wg gracza w NB brak wytrzymałości tylko spowalnia ruch bohatera (przez to nie wchodzą krytyki), ataków nie blokuje.
-- **Do sprawdzenia:** QUICK – cios w bok i seria ciosów do przodu jak na PC.
-
-### 93. Szybki atak: krok w bok i atak w tej samej chwili – ❌ (zastąpione w 94) (17.11.2026)
-- **Pliki:** `common/utils/androidinput.cpp`
-- **Zgłoszenie:** 92 dalej źle; pomysł gracza – krok w lewo/prawo i jednocześnie wyprowadzenie ataku.
-- **Poprawka:** QUICK: A/D (na zmianę) i atak (Ctrl) wciśnięte razem → puszczenie ataku po 0,15 s → puszczenie A/D po 0,4 s.
-
-### 92. Szybki atak wg filmu z PC z widocznymi klawiszami – ❌ (zastąpione w 93) (17.11.2026)
-- **Pliki:** `common/utils/androidinput.cpp`
-- **Zgłoszenie (film Video_Project z nakładką klawiszy):** lewy przycisk myszy (atak) trzymany, A albo D razem z W trzymane (bohater idzie do przodu na ukos) i W cały czas klikane – cios za ciosem w ruchu, ok. 1,4 s. Ctrl czy mysz – bez różnicy, chodzi o wyprowadzenie ataku.
-- **Poprawka:** QUICK: A/D (na zmianę) i W trzymane razem przez 1,4 s, a w tym czasie atak (Ctrl) stukany co 0,3 s (5 ciosów). Na ekranie dotykowym (sterowanie Gothic 2) cios wychodzi z wciśnięcia klawisza ataku, więc stukany jest atak zamiast W; z trzymanym W to atak w ruchu.
-- **Do sprawdzenia:** seria ciosów w ruchu na ukos jak na filmie z PC; tempo (0,3 s) i długość (1,4 s) do dopasowania.
-
-### 91. Szybki atak: powrót do ustawienia z 87 (88–90 cofnięte) – 🧪 (17.11.2026)
-- **Pliki:** `common/utils/androidinput.cpp`, `common/game/playercontrol.cpp/.h`, `common/world/objects/npc.cpp/.h` (stan z commita `ddfef34`)
-- **Zgłoszenie:** 90 też nie działa; najlepiej działało ustawienie z 87 (commit `ddfef34`) – wracamy do niego i będziemy je dopracowywać.
-- **Poprawka:** kod szybkiego ataku jak w 87: Ctrl wciśnięty → po 40 ms A/D (na zmianę) i W razem → po 400 ms puszczenie A/D i W → po 420 ms puszczenie Ctrl. Cofnięte: czekanie ciosu do przodu na okno kombinacji (88), czasy z 89 i cios w bok osobnym klawiszem (90).
-
-### 90. Szybki atak: cios w bok osobnym klawiszem, potem atak w ruchu – ❌ (cofnięte w 91) (17.11.2026)
-- **Pliki:** `common/utils/androidinput.cpp`
-- **Zgłoszenie (film 342668):** po 89 jest gorzej – bohater tylko chodzi w bok i do przodu, „brak Ctrl”.
-- **Przyczyna:** ekran dotykowy ma sterowanie Gothic 2 (`g2Ctrl`): samo Ctrl to od razu cios do przodu (jeden), a A/D i W z trzymanym Ctrl to tylko ruch – cios w bok jest osobnym klawiszem (`AttackLeft`/`AttackRight`, przyciski „< HIT”/„HIT >”). Ctrl wciśnięty na początku dawał jeden cios, potem 1,2 s chodzenia.
-- **Poprawka:** QUICK: cios w bok (na zmianę lewy/prawy, 0,1 s) → po 0,6 s W wciśnięte → po 0,62 s Ctrl → po 1,15 s puszczenie W → po 1,2 s puszczenie Ctrl. Ctrl z trzymanym W to atak w ruchu (`T_1HATTACKMOVE`/`T_2HATTACKMOVE` w biegu), który czeka na okno kombinacji po ciosie w bok (88).
-- **Do sprawdzenia:** QUICK – cios w bok, zaraz potem wypad do przodu z ciosem.
-
-### 89. Szybki atak: czasy klawiszy jak na PC – ❌ (cofnięte w 91) (17.11.2026)
-- **Pliki:** `common/utils/androidinput.cpp`
-- **Zgłoszenie:** po 88 ataki do przodu wchodzą, ale za wolno; na PC: Ctrl trzymany cały czas, A/D ok. 0,7 s, potem W ok. 0,5 s.
-- **Poprawka:** QUICK: Ctrl wciśnięty → po 40 ms A/D (na zmianę) przez 0,7 s → W przez 0,5 s → puszczenie Ctrl (razem ok. 1,3 s).
-- **Do sprawdzenia:** tempo i kolejność ciosów jak na filmie z PC.
-
-### 88. Szybki atak: cios w bok i zaraz cios do przodu (W „resetuje pozycję”) – ❌ (cofnięte w 91) (17.11.2026)
-- **Pliki:** `common/game/playercontrol.cpp/.h`, `common/world/objects/npc.cpp/.h` (`swingSword` zwraca, czy cios wszedł), `common/utils/androidinput.cpp`
-- **Zgłoszenie (filmy 342665 – telefon, 342652 – PC):** na telefonie po QUICK bohater robi tylko szeroki cios w bok; na PC Ctrl + A/D + W daje cios w bok, a W od razu „resetuje pozycję” – drugi cios do przodu, szybka seria, przeciwnik leci do tyłu.
-- **Przyczyna:** silnik oryginału co klatkę czyta trzymane klawisze: W trzymane z Ctrl daje cios do przodu, gdy tylko cios w bok dojdzie do okna kombinacji. W OpenGothic wciśnięcie W to jedna próba – w chwili, gdy cios w bok dopiero się zaczął, próba przepadała.
-- **Poprawka:** cios do przodu, który nie wszedł (za wcześnie w trwającym ciosie), czeka do 0,7 s i wchodzi, gdy tylko może – dopóki klawisz ataku jest trzymany (dotyczy też klawiatury, jak w oryginale). QUICK: Ctrl → A/D (krótko) + W → Ctrl trzymany 0,9 s.
-- **Do sprawdzenia:** QUICK z mieczem przy przeciwniku – cios w bok i zaraz cios do przodu, jak na filmie z PC.
-
-### 87. Szybki atak: właściwa kolejność klawiszy – ✅ (przywrócone w 91) (17.11.2026)
-- **Pliki:** `common/utils/androidinput.cpp`
-- **Zgłoszenie:** kolejność na PC jest inna niż podana w 85: najpierw Ctrl (atak) i trzymany, a razem z nim A/D + W naraz.
-- **Poprawka:** przycisk QUICK wysyła: Ctrl wciśnięty → po 40 ms A albo D (na zmianę) i W razem → po 400 ms puszczenie A/D i W → po 420 ms puszczenie Ctrl.
-- **Do sprawdzenia:** szybki atak jak na filmie; jeśli trzeba dłużej/krócej trzymać – zmienię 400 ms.
-- **Test (17.11, filmy 342656/342657):** działa wg gracza – szybkie ataki w walce z Cipherem i towarzyszami, każdy zużywa wytrzymałość jak w NB. Postać grana magiem, więc w zwarciu obrywa – do dopracowania później.
+### 85–98. Szybki atak – przycisk QUICK – ✅ (17.11.2026)
+- **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`, stałe `QuickHits`/`QuickTime`/`QuickSpeed`), `common/world/objects/npc.cpp/.h` (`resetAttack`, `nbQuickSpeed`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `android/assets/touch-icons/quick_attack.png`
+- **Zgłoszenie:** w NB szybki atak robi się na PC kombinacją klawiszy (Ctrl trzymany, A/D, W klikane). Każde W „resetuje pozycję” bohatera: reszta ciosu jest ucinana i od razu wchodzi następny. Seria szybkich ciosów często obala przeciwnika. Na telefonie nie da się tego wcisnąć, więc potrzebny jest osobny przycisk.
+- **Jak działa teraz (98):**
+  - Przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku. Można go przesunąć albo ukryć w edytorze HUD (id `quickattack`).
+  - Jedno dotknięcie daje serię ciosów do przodu, jak z przycisku miecza (`swingSword`). Bohater obraca się do celu.
+  - Zaraz po klatce uderzenia każdy cios jest ucinany (`Npc::resetAttack`, „reset pozycji”) i od razu wchodzi następny.
+  - Na czas serii animacje bohatera są przyspieszone (zegar modelu × `QuickSpeed`). Potem prędkość wraca do 1.
+  - Liczby w `playercontrol.h`: `QuickHits = 3` ciosy, `QuickTime = 2000` ms limitu, `QuickSpeed = 2.2f`. Przy 1,5× było za wolno, przy 2,5× minimalnie za szybko, 2,2× jest jak na PC.
+- **Droga do tego (85–97, w skrócie):**
+  - 85–94: QUICK udawał klawisze PC w różnych kolejnościach i czasach: A/D → W → Ctrl, Ctrl + A/D + W, cios w bok osobnym klawiszem, sterowanie Gothic 1 na czas serii. Nic nie dawało tego co na PC. Ekran dotykowy ma sterowanie Gothic 2, gdzie A/D/W przy Ctrl to zwykły ruch, a oryginalny silnik czyta trzymane klawisze co klatkę.
+  - 95: odkryty „reset pozycji” po ciosie (`resetAttack`).
+  - 96: ciosy w bok wykonywane bezpośrednio z resetem.
+  - 97: QUICK naciskał przyciski ekranu „< STEP” i miecz razem; przy żadnych czasach atak nie wchodził.
+  - 98: gracz zauważył, że sam przycisk miecza robi właściwy cios, tylko za wolno. Przyspieszenie animacji i reset po trafieniu dały szybki atak jak na PC.
+- **Test (17.11):** działa wg gracza, tempo jak na PC przy 2,2×.
+- **Pozostałości w kodzie:** `PlayerControl::quickCombo` (94) i `pendingReset` (95) są już nieużywane (zawsze wyłączone), a sekwencer klawiszy `combo` w `androidinput` jest pusty. Do usunięcia przy sprzątaniu.
 
 ### 86. Ustawienie: akrobatyka NB (przewrotki) – 🧪 (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/game/gamescript.cpp/.h`
