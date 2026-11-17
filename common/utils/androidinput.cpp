@@ -698,20 +698,21 @@ void AndroidInput::Controller::onSpecial(int id) {
   if(id==Mobile::Special::HudReset)
     return;
   if(id==Mobile::Special::QuickAttack) {
-    // NB fix 85: as on the PC - a step to the side (with the acrobatics a roll), then forward and the attack: the attack
-    // in the move. The side changes every time. A sequence still running is not started again
+    // NB fix 85, 87: as on the PC - the attack key (Ctrl) held, and with it the side (A/D) and forward (W) at once: the quick
+    // attack. The side changes every time. A sequence still running is not started again
     if(!combo.empty())
       return;
     const uint64_t   now  = Application::tickCount();
     const Mobile::Key side = comboRight ? Mobile::Key::StrafeRight : Mobile::Key::StrafeLeft;
     comboRight = !comboRight;
+    // the attack key first and held, then the side and forward together (NB fix 87: the order of the PC)
     combo = {
-      {now,     side,               true },
-      {now+300, side,               false},
-      {now+300, Mobile::Key::Up,    true },
-      {now+360, Mobile::Key::Action,true },
-      {now+600, Mobile::Key::Action,false},
-      {now+620, Mobile::Key::Up,    false},
+      {now,     Mobile::Key::Action,true },
+      {now+40,  side,               true },
+      {now+40,  Mobile::Key::Up,    true },
+      {now+400, side,               false},
+      {now+400, Mobile::Key::Up,    false},
+      {now+420, Mobile::Key::Action,false},
       };
     return;
     }

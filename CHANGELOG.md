@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **87**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **88**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -241,6 +241,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zgłoszenie (film 342652):** w NB szybki atak to trzy klawisze po kolei: A albo D (krok w bok, z akrobatyką – przewrotka), W (do przodu) i Ctrl/mysz (atak) – bohater po przewrotce wyprowadza atak w ruchu, który często obala przeciwnika. Na telefonie nie da się tego wcisnąć – potrzebny osobny przycisk (też do testu 83).
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
+
+### 87. Szybki atak: właściwa kolejność klawiszy – 🧪 (17.11.2026)
+- **Pliki:** `common/utils/androidinput.cpp`
+- **Zgłoszenie:** kolejność na PC jest inna niż podana w 85: najpierw Ctrl (atak) i trzymany, a razem z nim A/D + W naraz.
+- **Poprawka:** przycisk QUICK wysyła: Ctrl wciśnięty → po 40 ms A albo D (na zmianę) i W razem → po 400 ms puszczenie A/D i W → po 420 ms puszczenie Ctrl.
+- **Do sprawdzenia:** szybki atak jak na filmie; jeśli trzeba dłużej/krócej trzymać – zmienię 400 ms.
 
 ### 86. Ustawienie: akrobatyka NB (przewrotki) – 🧪 (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/game/gamescript.cpp/.h`
