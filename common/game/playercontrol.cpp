@@ -71,6 +71,18 @@ void PlayerControl::onKeyPressed(KeyCodec::Action a, Tempest::KeyEvent::KeyType 
   if(w!=nullptr && w->isCutsceneLock())
     return;
 
+  // NB fix 80: the locked chest in the focus is opened as in New Balance (the key Y / Shift+Y of the plugin): the action
+  // with the weapon (strength), the rune of the unlocking (magic) or nothing in the hands (lock picks, 100 of dexterity)
+  if(a==Action::ActionGeneric && w!=nullptr && pl!=nullptr) {
+    auto* mob = w->validateFocus(currentFocus).interactive;
+    if(mob!=nullptr && w->script().nbCanBreakLock(mob)) {
+      if(const int32_t mode = w->script().nbLockMode(*pl); mode!=0) {
+        w->script().nbBreakLock(*pl,*mob,mode);
+        return;
+        }
+      }
+    }
+
   handleMovementAction(KeyCodec::ActionMapping{a,mapping}, true);
 
   if(pl!=nullptr && pl->interactive()!=nullptr && c!=nullptr && !c->isFree()) {

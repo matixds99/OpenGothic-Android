@@ -7191,11 +7191,12 @@ std::string GameScript::nbCraftText(std::string_view symbol, std::string_view fa
   return txt;
   }
 
-// NB fix 79: the locks of New Balance. On the PC the plugin calls HandleEvent(key) for every key: the key Y
+// NB fix 79, 80: the locks of New Balance. On the PC the plugin calls HandleEvent(key) for every key: the key Y
 // (KEY_BREAKCHEST_STR) opens the chest in the focus with the rune ItRu_Unlock (75 of mana) or by strength (RX_ForcePickLock,
 // taught by Karl, a melee weapon, 12 of strength a turn of the lock over 50); Shift+Y (KEY_BREAKCHEST_DEX) with lock picks
-// (the talent, 100 of dexterity). The touch screen has one button: the way that can work is chosen here, the scripts do
-// the rest (the checks, the animation, the texts, the mana, the stamina, the lock picks)
+// (the talent, 100 of dexterity). On the touch screen it is the interaction with the chest in the focus, as with a person:
+// the way is the one in the hands (the weapon - strength, the rune - magic, nothing - lock picks), the action button calls
+// HandleEvent with its key, the scripts do the rest (the checks, the animation, the texts, the mana, the stamina)
 bool GameScript::nbHasBreakLock() {
   auto* fn = vm.find_symbol_by_name("HANDLEEVENT");
   auto* gb = vm.find_symbol_by_name("MOB_SETBRAKECHEST");
@@ -7207,38 +7208,47 @@ bool GameScript::nbCanBreakLock(const Interactive* mob) const {
   return mob!=nullptr && mob->isContainer() && mob->isLocked() && !mob->pickLockCode().empty();
   }
 
+int32_t GameScript::nbLockMode(const Npc& pl) {
+  if(!pl.isPlayer() || pl.isDead() || pl.isDown() || pl.interactive()!=nullptr || !nbHasBreakLock())
+    return 0;
+  const auto ws = pl.weaponState();
+  if(ws==WeaponState::W1H || ws==WeaponState::W2H)
+    return nbScriptInt(vm,"RX_FORCEPICKLOCK")!=0 ? 1 : 0;
+  if(ws==WeaponState::Mage) {
+    auto* sp = const_cast<Npc&>(pl).inventory().activeWeapon();
+    return (sp!=nullptr && sp->spellId()==nbScriptInt(vm,"SPL_UNLOCKCHEST",0,99)) ? 2 : 0;
+    }
+  if(ws==WeaponState::NoWeapon)
+    return (pl.talentSkill(TALENT_PICKLOCK)>0 && pl.attribute(ATR_DEXTERITY)>=100) ? 3 : 0;
+  return 0;
+  }
+
 void GameScript::nbSetFocusMob(Interactive* mob) {
   if(auto it = nbStates.find(this); it!=nbStates.end())
     it->second.focusMob = mob;
   }
 
-void GameScript::nbBreakLock(Npc& hero, Interactive& mob) {
+void GameScript::nbBreakLock(Npc& hero, Interactive& mob, int32_t mode) {
   auto* fn = vm.find_symbol_by_name("HANDLEEVENT");
-  if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+  if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION || mode<=0)
     return;
   auto& st = nbStates[this];
 
-  const auto count = [this,&hero](std::string_view name) -> size_t {
-    auto* s = vm.find_symbol_by_name(name);
-    return s!=nullptr ? hero.itemCount(s->index()) : 0;
-    };
-  const int32_t lvl     = int32_t(mob.pickLockCode().size());
-  const int32_t strNeed = std::max(0,lvl*12-50);
-  const bool    runeKnow = nbScriptInt(vm,"PLAYER_TALENT_RUNES",99)!=0 && count("ITRU_UNLOCK")>0;
-  const bool    rune     = runeKnow && hero.attribute(ATR_MANA)>=75;
-  const bool    force    = nbScriptInt(vm,"RX_FORCEPICKLOCK")!=0;
-  const bool    forceOk  = force && hero.currentMeleeWeapon()!=nullptr && hero.attribute(ATR_STRENGTH)>=strNeed;
-  const bool    dex      = hero.talentSkill(TALENT_PICKLOCK)>0;
+  // the key Y tries the rune first, then the strength: the way in the hands only (the rune known by the scripts is hidden
+  // for the weapon, the strength for the rune), as the player has chosen it by what he has drawn
+  auto* runes = vm.find_symbol_by_name("PLAYER_TALENT_RUNES");
+  auto* force = vm.find_symbol_by_name("RX_FORCEPICKLOCK");
+  const bool runesOk = runes!=nullptr && runes->type()==zenkit::DaedalusDataType::INT && !runes->is_member() && runes->count()>99;
+  const bool forceOk = force!=nullptr && force->type()==zenkit::DaedalusDataType::INT && !force->is_member();
+  const int32_t runeWas  = runesOk ? runes->get_int(99) : 0;
+  const int32_t forceWas = forceOk ? force->get_int() : 0;
+  if(mode==1 && runesOk)
+    runes->set_int(0,99);
+  if(mode==2 && forceOk)
+    force->set_int(0);
 
-  // as the keys of the PC: Y for the rune and the strength, Shift+Y for the lock picks. When nothing can work, the key whose
-  // scripts say why (the mana, the strength, no talent)
-  const char* key = "KEY_BREAKCHEST_DEX";
-  if(rune || forceOk)
-    key = "KEY_BREAKCHEST_STR"; else
-  if(!dex && (force || runeKnow))
-    key = "KEY_BREAKCHEST_STR";
-  nbCtx("lock: ",key," (turns ",lvl,", rune ",int(runeKnow),", strength ",int(force),", lock picks ",int(dex),")");
-
+  const char* key = mode==3 ? "KEY_BREAKCHEST_DEX" : "KEY_BREAKCHEST_STR";
+  nbCtx("lock: ",key," (mode ",mode,", turns ",int(mob.pickLockCode().size()),")");
   st.focusMob   = &mob;
   st.keyPressed = key;
   try {
@@ -7248,4 +7258,8 @@ void GameScript::nbBreakLock(Npc& hero, Interactive& mob) {
     Log::e("NB: HandleEvent failed: ",e.what());
     }
   st.keyPressed.clear();
+  if(mode==1 && runesOk)
+    runes->set_int(runeWas,99);
+  if(mode==2 && forceOk)
+    force->set_int(forceWas);
   }

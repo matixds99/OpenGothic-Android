@@ -38,7 +38,7 @@ enum Icon : int {
   IconCategoryFood, IconCategoryPotion, IconCategoryDocuments, IconCategoryMisc,
   IconInvUse, IconInvDrop, IconInvTransfer, IconInvUp, IconInvDown, IconInvSlot, IconInvSlotSelected,
   IconSkip, IconTalk, IconTargetLock, IconFastForward, IconSave, IconHuman, IconInvStack,
-  IconSprint, IconLockpick,
+  IconSprint,
   IconCount
   };
 
@@ -103,7 +103,6 @@ class Controller {
     void  keyboard(bool on) { controls.showKeyboard(on); }
     void  playerDead(bool on) { controls.playerDead(on); }
     void  sprint(bool available) { controls.sprint(available); }
-    void  breakLock(bool feature, bool available) { controls.breakLock(feature,available); }
     void  stamina(bool available) { controls.stamina(available); }
     const std::map<std::string,Mobile::HudPlace>& hudPlaces() const { return controls.hudPlaces(); }
     bool  editingHud() const { return controls.editingHud(); }

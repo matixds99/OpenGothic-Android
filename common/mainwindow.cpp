@@ -2229,17 +2229,6 @@ void MainWindow::onMobileAction(int id) {
       nbToggleSprint();
     return;
     }
-  if(id==Mobile::Special::BreakLock) {
-    // NB fix 79: the key Y / Shift+Y of New Balance on the chest in the focus
-    auto* w  = Gothic::inst().world();
-    auto* pl = Gothic::inst().player();
-    if(mobileContext()==Mobile::Mode::Game && w!=nullptr && pl!=nullptr) {
-      const auto focus = w->validateFocus(player.focus());
-      if(w->script().nbCanBreakLock(focus.interactive))
-        w->script().nbBreakLock(*pl,*focus.interactive);
-      }
-    return;
-    }
   if(mobileContext()!=Mobile::Mode::Game)
     return;
   if(id==Mobile::Special::Target)
@@ -2307,20 +2296,6 @@ void MainWindow::updateMobileAvailability() {
   androidControls.playerDead(mode==Mobile::Mode::Game && pl!=nullptr && pl->isDead());
   // NB fix 40: the button of the sprint, when the scripts have it
   androidControls.sprint(nbSprintFn()!=nullptr);
-  // NB fix 79: the button of the lock, when the scripts open the locks; shown with a locked chest in the focus
-  {
-  auto* w       = Gothic::inst().world();
-  bool  feature = false, lock = false;
-  if(w!=nullptr && pl!=nullptr) {
-    feature = w->script().nbHasBreakLock();
-    if(feature && mode==Mobile::Mode::Game && !pl->isDead() && !pl->isDown() && pl->interactive()==nullptr &&
-       pl->weaponState()==WeaponState::NoWeapon) {
-      const auto focus = w->validateFocus(player.focus());
-      lock = w->script().nbCanBreakLock(focus.interactive);
-      }
-    }
-  androidControls.breakLock(feature,lock);
-  }
   }
 
   if(mode==Mobile::Mode::Game) {

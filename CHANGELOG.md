@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **80**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **81**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -175,7 +175,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** OFF – walka obok ognika i przywołańców nie zaznacza ich, owca się nie podświetla; ON – rozmowa z ognikiem, polowanie na owce jak dotąd.
 - **Test (17.11):** działa – fokus na ognika wyłącza się i włącza przełącznikiem.
 
-### 79. Otwieranie zamków NB: siłą, magią, wytrychami – przycisk kłódki – 🧪 (17.11.2026)
+### 79. Otwieranie zamków NB: funkcje pluginu (przycisk kłódki – zastąpiony w 80) – ✅ (17.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`, `android/assets/touch-icons/lockpick.png` (nowa ikona)
 - **Zgłoszenie:** w New Balance zamki otwiera się na 3 sposoby: siłą (nauka u Karla – bohater rąbie skrzynię bronią), wytrychami (zręczność – zużywa tyle wytrychów, ile wymaga zamek) i magią (runa od Gallahada – animacja rzucania czaru). Na telefonie nie działało żadne.
 - **Jak to działa na PC (UNION_ABI.DLL):** plugin przy każdym klawiszu woła skrypt `HandleEvent(key)`. Klawisz Y (`KEY_BREAKCHEST_STR`): runa `ItRu_Unlock` (75 many, `T_FIBCAST_2_FIBSHOOT`) albo siła (`RX_ForcePickLock`, broń do walki wręcz, siła ≥ 12 × liczba obrotów zamka − 50, `T_1HSBRKCHST`/`T_2HSBRKCHST`, −30% wytrzymałości); Shift+Y (`KEY_BREAKCHEST_DEX`): wytrychy (talent, zręczność ≥ 100, liczba wytrychów zależna od zamka i zręczności, `T_PLUNDER`). Skrypt sprawdza warunki, gra animację i pyta plugin (`Mob_GetBreakNum` – liczba obrotów zamka, `Mob_SetBrakeChest` – otwórz skrzynię w fokusie).
@@ -184,7 +184,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - nowy przycisk **kłódki** na HUD (nad przyciskiem celu, da się go przesunąć/ukryć w edytorze HUD, id `lockpick`) – widoczny, gdy w fokusie jest zamknięta skrzynia z zamkiem do wyważenia, a bohater nie ma broni w ręku;
   - jeden przycisk zamiast dwóch klawiszy – sposób wybierany sam: magia (runa i ≥ 75 many) albo siła (gdy jej wystarczy) → klawisz Y; inaczej wytrychy → Shift+Y; gdy nic nie zadziała, skrypt mówi dlaczego (za mało many/siły/zręczności, brak talentu, brak wytrychów). Potem `HandleEvent` jak na PC.
 - Zwykłe otwieranie wytrychami (minigra lewo/prawo przyciskiem akcji) bez zmian.
-- **Do sprawdzenia:** każdy z 3 sposobów na zamkniętej skrzyni (animacja, tekst „Udany włam”, skrzynia otwarta), komunikaty przy braku siły/many/wytrychów; w logu `[ctx] lock: KEY_BREAKCHEST_…` i `lock opened`.
+- **Test (17.11):** gracz woli interakcję jak na PC/z NPC (wyciągnięta broń/runa, skrzynia w fokusie, przycisk akcji) – kłódka usunięta, zostały funkcje pluginu → poprawka 80.
+
+### 80. Otwieranie zamków NB jako interakcja: broń, runa, wytrychy + przycisk akcji – 🧪 (17.11.2026)
+- **Pliki:** `common/world/world.cpp`, `common/world/worldobjects.cpp/.h`, `common/game/playercontrol.cpp`, `common/game/gamescript.cpp/.h`; usunięte: przycisk kłódki i `lockpick.png` z 79
+- **Zgłoszenie:** zamiast osobnego przycisku – jak w oryginale: wyciągnięta broń albo runa, zamknięta skrzynia w fokusie, przycisk akcji (jak rozmowa z NPC).
+- **Poprawka:**
+  - **fokus:** z bronią do walki wręcz w ręku (gdy Karl nauczył wyważania, `RX_ForcePickLock`) albo z runą otwierania zamków (zaklęcie `SPL_UnlockChest`) zamknięta skrzynia z zamkiem do wyważenia wchodzi w fokus (fokus walki normalnie nie ma skrzyń), gdy w pobliżu nie ma postaci;
+  - **przycisk akcji** na takiej skrzyni: broń → siła (Y, runa na ten czas pominięta), runa → magia (Y, siła na ten czas pominięta), puste ręce z talentem i ≥ 100 zręczności → wytrychy (Shift+Y). Dalej skrypt `HandleEvent` jak na PC: warunki, animacja (rąbanie bronią / rzucanie czaru / `T_PLUNDER`), mana, wytrzymałość, wytrychy, teksty. Bez broni i przy zręczności < 100 – zwykła minigra wytrychów jak dotąd.
+- **Do sprawdzenia:** miecz w ręku przy zamkniętej skrzyni → fokus na skrzyni → akcja → rąbanie i otwarcie; runa → animacja czaru, −75 many; puste ręce (100+ zręczności) → zużyte wytrychy; komunikaty przy braku siły/many/wytrychów; w logu `[ctx] lock: …` i `lock opened`.
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`

@@ -470,6 +470,15 @@ Focus World::findFocus(const Npc &pl, const Focus& def) {
     inter = wobj.findInteractive(pl,def.interactive,optMob);
     }
 
+  // NB fix 80: the player opens the locks of New Balance with the weapon or the rune in his hands: the locked chests are in
+  // his focus as in the hands of nobody (the focus of the fight has no mobs), when no person is
+  if(n==nullptr && pl.isPlayer() && (script().nbLockMode(pl)==1 || script().nbLockMode(pl)==2)) {
+    auto& norm = script().focusNorm();
+    WorldObjects::SearchOpt optChest {norm.mob_range1, norm.mob_range2, norm.mob_azi, TARGET_COLLECT_FOCUS};
+    if(auto* chest = wobj.findLockedChest(pl,def.interactive,optChest))
+      return Focus(*chest);
+    }
+
   if(policy.npc_prio>=policy.item_prio &&
      policy.npc_prio>=policy.mob_prio) {
     if(n)

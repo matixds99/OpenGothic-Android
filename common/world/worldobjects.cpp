@@ -932,6 +932,29 @@ Interactive* WorldObjects::findInteractive(const Npc &pl, Interactive* def, cons
   return ret;
   }
 
+/// NB fix 80: the locked chests (with a code of the lock) for the player who opens the locks with a weapon or a rune
+Interactive* WorldObjects::findLockedChest(const Npc& pl, Interactive* def, const SearchOpt& opt) {
+  const auto ok = [](const Interactive& i) {
+    return i.isContainer() && i.isLocked() && !i.pickLockCode().empty();
+    };
+  def = validateInteractive(def);
+  if(def && ok(*def) && testObj(*def,pl,opt))
+    return def;
+  if(owner.view()==nullptr)
+    return nullptr;
+  Interactive* ret  = nullptr;
+  float        rlen = opt.rangeMax*opt.rangeMax;
+  interactiveObj.find(pl.position(),opt.rangeMax,[&](Interactive& n){
+    float nlen = rlen;
+    if(ok(n) && testObj(n,pl,opt,nlen)){
+      rlen = nlen;
+      ret  = &n;
+      }
+    return false;
+    });
+  return ret;
+  }
+
 Npc* WorldObjects::findNpcNear(const Npc& pl, Npc* def, const SearchOpt& opt) {
   def = validateNpc(def);
   if(def) {

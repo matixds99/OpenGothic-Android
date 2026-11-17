@@ -195,20 +195,6 @@ void Controls::sprint(bool available) {
   rebuild();
   }
 
-void Controls::breakLock(bool feature, bool available) {
-  if(featureLock!=feature) {
-    cancel();
-    featureLock = feature;
-    availableLock = available;
-    rebuild();
-    return;
-    }
-  if(availableLock==available)
-    return;
-  availableLock = available;
-  applyAvailability();
-  }
-
 void Controls::playerDead(bool value) {
   if(dead==value)
     return;
@@ -519,9 +505,6 @@ void Controls::buildGame(const Anchor&) {
   icon("weapon",    right(300),   bottom(276),    52, "WEAPON", Key::Weapon);
   // shown only while a transformation spell is on (see MainWindow::updateMobileAvailability): turns the character back (icon human.png)
   icon("human",     right(300),   bottom(340),    52, "HUMAN",  Key::Enter);
-  // NB fix 79: the lock of the chest in the focus (the key Y of New Balance), over the button of the target
-  if(featureLock && !dead)
-    icon("lockpick", right(372),  bottom(310),    56, "LOCK",   Key::Enter, false, Special::BreakLock);
 
   // NB fix 42: the status bars in the editor: their frames are dragged (the bars are drawn by the window)
   if(editing) {
@@ -1004,9 +987,7 @@ void Controls::applyAvailability() {
     if(b.special==Special::Speed || b.special==Special::LoadSave || b.special==Special::QuickSave)
       usable = true; else
     if(b.special==Special::Sprint)
-      usable = availableMovement; else
-    if(b.special==Special::BreakLock)
-      usable = availableLock || editing;
+      usable = availableMovement;
 
     // The hotbar stays visible while the player can move, other controls hide when unusable
     // Inventory actions disappear when there is no item to act on, the tabs and the close button stay.

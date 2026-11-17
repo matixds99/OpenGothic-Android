@@ -59,7 +59,6 @@ namespace Special {
     HudDone,       // the editor of the HUD: back to the settings
     HudReset,      // the editor of the HUD: every button goes back to its place
     FirstSetting  = 11,
-    BreakLock     = 26,   // NB fix 79: the locked chest in the focus is opened (strength, magic or lock picks of New Balance)
     Sprint        = 29,   // NB fix 40: the sprint of New Balance (B_Hotkey_Sprint, the key ~ in the original)
     QuickSave     = 30,   // saves the game to the quick save slot
     LoadSave      = 31,   // the player is dead: loads the newest save (above the settings, below the categories)
@@ -111,7 +110,7 @@ inline float hotbarSlot(float buttons) {
 constexpr const char* HudIds[] = {
   "menu", "character", "speed", "log", "map", "sneak", "walk", "stepleft", "stepright", "stepforward", "stepback",
   "action", "hitleft", "hitright", "block", "jump", "inventory", "target", "spells", "weapon", "quicksave", "human",
-  "sprint", "bar_hp", "bar_stamina", "bar_mana", "lockpick"
+  "sprint", "bar_hp", "bar_stamina", "bar_mana"
   };
 constexpr int HudIdCount = int(sizeof(HudIds)/sizeof(HudIds[0]));
 
@@ -221,9 +220,6 @@ class Controls {
     bool  speedAllowed() const { return featureSpeed; }
     /// The scripts have a sprint (New Balance: B_Hotkey_Sprint): its button is on the HUD (NB fix 40)
     void  sprint(bool available);
-    /// NB fix 79: the scripts open the locks by strength, magic and lock picks (New Balance: HandleEvent of the key Y):
-    /// the button is on the HUD (feature), it is shown when a locked chest is in the focus (available)
-    void  breakLock(bool feature, bool available);
     /// The scripts have a bar of the stamina (New Balance): it is in the editor of the HUD (NB fix 42)
     void  stamina(bool available);
     float buttonsScale() const { return buttonScale; }
@@ -363,8 +359,6 @@ class Controls {
     bool     featureSpeed  = false;   // a mod has asked for the fast forward
     bool     featureStrafe = true;    // the step buttons: the side steps and the arrows forward and back
     bool     featureSprint = false;   // the scripts have a sprint (NB fix 40)
-    bool     featureLock   = false;   // the scripts open the locks (NB fix 79)
-    bool     availableLock = false;   // a locked chest is in the focus (NB fix 79)
     bool     featureStamina = false;  // the scripts have a bar of the stamina (NB fix 42)
     bool     dead          = false;   // the player is dead
     bool     editing    = false;      // the editor of the HUD

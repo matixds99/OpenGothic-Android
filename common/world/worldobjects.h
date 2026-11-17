@@ -152,6 +152,8 @@ class WorldObjects final {
     bool           testFocusNpc       (const Npc &pl, Npc *def, const SearchOpt& opt);
 
     Interactive*   findInteractive(const Npc& pl, Interactive *def, const SearchOpt& opt);
+
+    Interactive* findLockedChest(const Npc& pl, Interactive* def, const SearchOpt& opt);   // NB fix 80
     Npc*           findNpcNear    (const Npc& pl, Npc* def, const SearchOpt& opt);
     Item*          findItem       (const Npc& pl, Item* def, const SearchOpt& opt);
 

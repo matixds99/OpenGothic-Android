@@ -204,7 +204,10 @@ class GameScript final {
     bool             nbHasBreakLock();
     bool             nbCanBreakLock(const Interactive* mob) const;
     void             nbSetFocusMob(Interactive* mob);
-    void             nbBreakLock(Npc& hero, Interactive& mob);
+    /// 0: the player does not open locks now; 1: by strength (a melee weapon drawn, RX_ForcePickLock); 2: by magic (the
+    /// rune of the unlocking drawn); 3: with lock picks (no weapon, the talent and 100 of dexterity)
+    int32_t          nbLockMode(const Npc& pl);
+    void             nbBreakLock(Npc& hero, Interactive& mob, int32_t mode);
     int32_t          nbCraftSkill(int32_t craft);
     size_t           nbCraftAvailable(Npc& hero, size_t cls);
     std::string      nbCraftText(std::string_view symbol, std::string_view fallback);
