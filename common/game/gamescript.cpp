@@ -1,6 +1,7 @@
 #include "gamescript.h"
 
 #include <cmath>
+#include <Tempest/Application>
 #include "nboptions.h"
 #include "nbiteminfo.h"
 #include "nbbars.h"
@@ -183,6 +184,8 @@ struct NbState {
   // and the key of the plugin that HandleEvent sees pressed (RX_KeyPressed) while the button of the lock is handled
   Interactive*                                focusMob = nullptr;
   std::string                                 keyPressed;
+  // NB fix 82: the music of the boss fight - the last time the fight went on (RX_StartBossMusic, RX_UpdateBossMusicCoords)
+  uint64_t                                    bossMusicSeen = 0;
   // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
   std::weak_ptr<zenkit::INpc>                 wispBody;
   std::unordered_map<const zenkit::INpc*,uint64_t> wispBodySkip;
@@ -2242,6 +2245,29 @@ void GameScript::initCommon() {
       auto& k = nbStates[this].keyPressed;
       return !k.empty() && nbEqualsNoCase(name,k) ? 1 : 0;
       });
+    // NB fix 82: the music of the bosses (RX_CheckMusicBoss): a sound of SFX.DAT (BATTLE_*.wav), the music of the game is off
+    // meanwhile (RX_MusicOff); RX_StopBossMusic (ZS_Dead of the boss) stops it by RX_StopAllSound and RX_MusicOn
+    bindNb("RX_STARTBOSSMUSIC", [this](std::string_view name) {
+      nbStates[this].bossMusicSeen = Application::tickCount();
+      if(auto* last = vm.find_symbol_by_name("RX_LASTBOSSMUSIC"); last!=nullptr && last->type()==zenkit::DaedalusDataType::STRING)
+        last->set_string(std::string(name));
+      nbCtx("boss music: ",name);
+      if(Gothic::settingsGetI("SOUND","musicEnabled")!=0)
+        Gothic::inst().playBossMusic(name);
+      });
+    bindNb("RX_UPDATEBOSSMUSICCOORDS", [this]() {
+      nbStates[this].bossMusicSeen = Application::tickCount();
+      // a save from a boss fight (RX_MusicBoss is TRUE): the music goes on after the load
+      if(!Gothic::inst().isBossMusic() && Gothic::settingsGetI("SOUND","musicEnabled")!=0)
+        if(auto* last = vm.find_symbol_by_name("RX_LASTBOSSMUSIC"); last!=nullptr && last->type()==zenkit::DaedalusDataType::STRING &&
+           !last->get_string().empty()) {
+          GameMusic::inst().setEnabled(false);
+          Gothic::inst().playBossMusic(last->get_string());
+          }
+      });
+    bindNb("RX_STOPALLSOUND", []() {
+      Gothic::inst().stopBossMusic();
+      });
     // RX_TerminateDialog (oCInformationManager::Exit) and RX_ClearInput (zCInput::ClearKeyBuffer) after the teleport
     // of the rune: the scripts call AI_StopProcessInfos before, the dialog closes by it - nothing more here
     bindNb("RX_TERMINATEDIALOG", []() {});
@@ -4177,6 +4203,26 @@ void GameScript::tick(uint64_t dt) {
     auto* hero = world().player();
     if(npc!=nullptr && hero!=nullptr && !st.salesList.empty())
       Gothic::inst().onOpenPlayerSales(*hero,*npc,st.salesList);
+    }
+  // NB fix 82: the music of a boss fight plays again from the start; it ends 45 s after the last blow of the fight (the
+  // player has run away) or with the death of the player, as the death of the boss does (RX_StopBossMusic)
+  if(Gothic::inst().isBossMusic()) {
+    auto* hero = world().player();
+    if(hero==nullptr || hero->isDead() || Application::tickCount()>st.bossMusicSeen+45000) {
+      nbCtx("boss music: stop (",hero==nullptr || hero->isDead() ? "the hero is dead" : "no fight for 45 s",")");
+      auto* fn = vm.find_symbol_by_name("RX_STOPBOSSMUSIC");
+      if(fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION) {
+        try {
+          vm.call_function<void>(fn);
+          }
+        catch(const std::exception& e) {
+          Log::e("NB: RX_StopBossMusic failed: ",e.what());
+          }
+        }
+      Gothic::inst().stopBossMusic();
+      } else {
+      Gothic::inst().tickBossMusic();
+      }
     }
   // NB fix 70: the crafting window, when the hero is at the table and no dialog is open
   if(st.craftPending>=0 && !Gothic::inst().isInDialog()) {
@@ -7272,4 +7318,36 @@ bool GameScript::nbIsSummon(const Npc& npc) {
   const auto& h = const_cast<Npc&>(npc).handle();
   constexpr size_t AIV_SUMMON = 91;
   return AIV_SUMMON<std::size(h.aivar) && h.aivar[AIV_SUMMON]==id->get_int() && id->get_int()!=0;
+  }
+
+void GameScript::nbOnDamage(Npc& target, Npc& attacker) {
+  // NB fix 82: the part of RX_OnDamage (the plugin calls it at every damage) for the music of the bosses: the player or his
+  // summoned creature fights a boss (RX_IsBoss) - RX_CheckMusicBoss chooses and starts the music, or keeps it on
+  auto* isBoss = vm.find_symbol_by_name("RX_ISBOSS");
+  auto* check  = vm.find_symbol_by_name("RX_CHECKMUSICBOSS");
+  if(isBoss==nullptr || check==nullptr || isBoss->type()!=zenkit::DaedalusDataType::FUNCTION ||
+     check->type()!=zenkit::DaedalusDataType::FUNCTION)
+    return;
+  const auto boss = [this,isBoss](Npc& n) {
+    try {
+      return vm.call_function<int>(isBoss,n.handlePtr())!=0;
+      }
+    catch(const std::exception& e) {
+      Log::e("NB: RX_IsBoss failed: ",e.what());
+      return false;
+      }
+    };
+  Npc* b = nullptr;
+  if((target.isPlayer() || nbIsSummon(target)) && boss(attacker))
+    b = &attacker; else
+  if((attacker.isPlayer() || nbIsSummon(attacker)) && boss(target))
+    b = &target;
+  if(b==nullptr)
+    return;
+  try {
+    vm.call_function<void>(check,b->handlePtr());
+    }
+  catch(const std::exception& e) {
+    Log::e("NB: RX_CheckMusicBoss failed: ",e.what());
+    }
   }

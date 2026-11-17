@@ -107,6 +107,12 @@ class Gothic final {
     void         emitGlobalSound(const Tempest::Sound& sfx);
 
     void         emitGlobalSoundWav(std::string_view wav);
+    // NB fix 82: the music of a boss fight of New Balance (a sound of SFX.DAT, BATTLE_*): one at a time, again from the
+    // start when it ends, until it is stopped
+    void         playBossMusic(std::string_view sfx);
+    void         stopBossMusic();
+    void         tickBossMusic();
+    bool         isBossMusic() const { return !bossMusicName.empty(); }
     void         stopGlobalSounds();
 
     static auto  invCatOrder()  -> const std::vector<ItmFlags>&;
@@ -279,6 +285,8 @@ class Gothic final {
     std::unordered_map<std::string,SoundFx> sndFxCache;
     std::unordered_map<std::string,SoundFx> sndWavCache;
     std::vector<Tempest::SoundEffect>       sndStorage;
+    Tempest::SoundEffect                    bossMusic;       // NB fix 82
+    std::string                             bossMusicName;
 
     std::vector<std::unique_ptr<DocumentMenu::Show>> documents;
     ChapterScreen::Show                     chapter;

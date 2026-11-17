@@ -430,6 +430,33 @@ void Gothic::emitGlobalSoundWav(std::string_view wav) {
   sndStorage.push_back(std::move(s));
   }
 
+void Gothic::playBossMusic(std::string_view sfx) {
+  if(bossMusicName==sfx && !bossMusic.isEmpty() && !bossMusic.isFinished())
+    return;
+  bossMusic     = Tempest::SoundEffect();
+  bossMusicName = std::string(sfx);
+  tickBossMusic();
+  }
+
+void Gothic::stopBossMusic() {
+  bossMusic     = Tempest::SoundEffect();
+  bossMusicName.clear();
+  }
+
+void Gothic::tickBossMusic() {
+  if(bossMusicName.empty() || (!bossMusic.isEmpty() && !bossMusic.isFinished()))
+    return;
+  auto* sfx = loadSoundFx(bossMusicName);
+  if(sfx==nullptr) {
+    Tempest::Log::e("NB: no sound of the boss music \"",bossMusicName,"\"");
+    bossMusicName.clear();
+    return;
+    }
+  bool loop = false;
+  bossMusic = sfx->load(sndDev,loop);
+  bossMusic.play();
+  }
+
 void Gothic::stopGlobalSounds() {
   sndStorage.clear();
   }

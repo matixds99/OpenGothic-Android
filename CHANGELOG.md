@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **82**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **83**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -205,6 +205,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - przedmioty i inne obiekty – biały, jak dotąd.
 - **Do sprawdzenia:** kolory przy różnych postaciach (strażnik, bandyta, owca, ognik), zamknięta/otwarta/pusta skrzynia, przeszukane ciało.
 - **Test (17.11):** działa – skrzynia: żółta (zamknięta) → zielona (otwarta runą) → szara (opróżniona).
+
+### 82. Muzyka walk z bossami NB – 🧪 (17.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/gothic.cpp/.h`, `common/world/objects/npc.cpp`
+- **Zgłoszenie:** przy bossach nie gra ich muzyka (osobna dla postaci, osobna dla potworów). Lista bossów: arkusz `SPIS_NB.xlsx`, zakładka „Bossy” (gałąź `NewBalance`, `nb-docs/`).
+- **Jak to działa na PC:** plugin przy każdym ciosie woła `RX_OnDamage`; gdy gracz albo jego przywołaniec walczy z bossem (`RX_IsBoss`: `aivar[90]` albo PN za zabicie), `RX_CheckMusicBoss` wybiera utwór – własny dla ok. 50 bossów (Xardas, Kreol, Ahiron, Kruk, smoki, Lordowie szkieletów, demony, awatary…) albo losowy z 54 – wyłącza muzykę gry (`RX_MusicOff`) i woła `RX_StartBossMusic("BATTLE_…")` (dźwięk z `SFX.DAT`, plik `BATTLE_*.wav`). Śmierć bossa (`ZS_Dead`) → `RX_StopBossMusic`. Opcje NB: `bToggleBossMusic` (domyślnie wł.), `bToggleMusicAnimalBoss` – bossowie-zwierzęta (domyślnie wył.).
+- **Poprawka:**
+  - przy każdym trafieniu (`Npc::takeDamage`) część `RX_OnDamage` od muzyki: gracz/przywołaniec ↔ boss → `RX_CheckMusicBoss` ze skryptów;
+  - `RX_StartBossMusic` – utwór grany jako dźwięk (jeden naraz, od początku po zakończeniu), `RX_UpdateBossMusicCoords` – walka trwa, `RX_StopAllSound` – stop; muzyka gry wraca przez `RX_MusicOn`;
+  - koniec także, gdy przez 45 s nie ma ciosu w walce z bossem (ucieczka) albo gracz zginie (`RX_StopBossMusic`); po wczytaniu zapisu z walki utwór wraca przy następnym ciosie;
+  - wyłączona muzyka w ustawieniach (`musicEnabled`) – bez muzyki bossa.
+- Reszta `RX_OnDamage` (zachwianie `RX_ApplyStagger`, efekty `RX_HeroProcs`/`RX_NpcProcs`, taktyki bossów, przyspieszenie bossów) – jeszcze niepodłączona.
+- **Do sprawdzenia:** walka z bossem z listy (np. Mięsożerca, Kamieniołap – to zwierzęta: tylko z opcją `bToggleMusicAnimalBoss`; postacie/demony/szkielety – zawsze), w logu `[ctx] boss music: BATTLE_…`; po zabiciu bossa wraca zwykła muzyka.
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`
