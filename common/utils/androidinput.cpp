@@ -705,19 +705,14 @@ void AndroidInput::Controller::onSpecial(int id) {
     const uint64_t   now  = Application::tickCount();
     const Mobile::Key side = comboRight ? Mobile::Key::StrafeRight : Mobile::Key::StrafeLeft;
     comboRight = !comboRight;
-    // NB fix 92 (the film of the PC with the keys on the screen): the left mouse button (the attack) held, A or D with W held
-    // together - the hero goes forward to the side - and W tapped all the time: a blow after a blow in the move. The touch
-    // screen has the controls of Gothic 2, where the attack is the press of the attack key: it is tapped here, every 300 ms,
-    // while the side and forward are held (1.4 s)
-    combo.clear();
-    combo.push_back({now,    side,            true });
-    combo.push_back({now,    Mobile::Key::Up, true });
-    for(uint64_t t=30; t<1400; t+=300) {
-      combo.push_back({now+t,     Mobile::Key::Action,true });
-      combo.push_back({now+t+120, Mobile::Key::Action,false});
-      }
-    combo.push_back({now+1400, side,            false});
-    combo.push_back({now+1400, Mobile::Key::Up, false});
+    // NB fix 93: the step to the side and the attack at the same moment (the idea of the player): the attack comes in the
+    // side step
+    combo = {
+      {now,     side,               true },
+      {now,     Mobile::Key::Action,true },
+      {now+150, Mobile::Key::Action,false},
+      {now+400, side,               false},
+      };
     return;
     }
 
