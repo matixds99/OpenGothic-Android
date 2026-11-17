@@ -237,6 +237,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 100. Fazy bossów: funkcje walki pluginu (AI_OnTick/OnHit/OnGetDamage/OnBreak) – 🧪 (17.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h` (`nbBossHit`, `nbBossTick`, `nbInstanceFunc`, `nbCallInstanceFunc`, `WLD_INSERTNPCANDATTACKENEMY`)
+- **Zgłoszenie:** taktyki/fazy bossów NB (np. Kruk) – odłożone wcześniej jako duża robota.
+- **Przyczyna:** fazy bossów są w skryptach (84 × `AI_OnTick_<instancja>`, 72 × `AI_OnHit_`, 137 × `AI_OnGetDamage_`, 9 × `AI_OnBreak_`). Np. `AI_OnTick_AL_Boss3` przy 75/50/15% życia włącza kolejne etapy (`AIVRX_NPC_BOSS_STAGE_*`), atak specjalny i leczenie. Wywołuje je plugin po nazwie instancji – w OpenGothic nikt ich nie wołał (działało tylko `AI_OnDead_`, poprawka 51), więc bossowie walczyli jak zwykłe potwory.
+- **Poprawka (wg UNION_ABI.DLL):**
+  - przy każdym trafieniu (`0x10054220`): napastnik i ofiara, które mają `AI_OnTick_<instancja>`, dołączają do walki bossów; potem `AI_OnHit_<napastnik>` (SELF napastnik, OTHER ofiara) i `AI_OnGetDamage_<ofiara>` (SELF ofiara, OTHER napastnik);
+  - co sekundę (`0x100546A0`): licznik walki (`aivar[95]`, 1..300, zerowany przez `RX_ResetNpcTimer`) +1 i `AI_OnTick_<instancja>(licznik)` z SELF = boss;
+  - przerwanie walki (`0x10054030`): boss martwy, 70 m od bohatera albo bohater martwy. Wtedy zmienne NB 35..51 (etapy, liczniki czarów) są zerowane, boss dostaje pełne życie, licznik spada do 0 i wołane jest `AI_OnBreak_<instancja>`;
+  - po wczytaniu zapisu walki są odtwarzane z `aivar[95]>0`, jak w pluginie;
+  - nowa funkcja `Wld_InsertNpcAndAttackEnemy(instancja, punkt)` (19 wywołań w walkach bossów): pomocnik pojawia się w punkcie i od razu atakuje bohatera (`B_Attack` / `ZS_MM_Attack`).
+- **Jeszcze brak (log pokaże, które są potrzebne):** `UpdateSpeed` (prędkość bossa), `RX_ApplyDotDamage`/`RX_ClearAllDots` (obrażenia rozłożone w czasie), `AI_Wait_Summoned`/`AI_StandUp_Summoned`/`AI_ClearAIQueue_Summoned`, `AI_PlayEffect`.
+- **Do sprawdzenia:** walka z bossem z listy (`nb-docs/SPIS_NB.xlsx`) – czy zmienia zachowanie przy kolejnych progach życia (napisy, czary, przywołania), czy po ucieczce na 70 m boss wraca do pełnego życia. W logu: `boss fight: … joins` / `broken`.
+
 ### 99. Nowy wygląd ekwipunku (dotyk) – ✅ (17.11.2026)
 - **Pliki:** `common/ui/mobilecontrolsmodel.cpp/.h` (`inventoryLayout`), `common/ui/inventorymenu.cpp/.h`, `common/utils/androidinput.cpp`
 - **Zgłoszenie (zrzut 342701):** przerobić interfejs ekwipunku na wzór ze zdjęcia: po lewej ramka z „Złoto: N” i nazwą kategorii z liczbą przedmiotów, kafelki kategorii nad siatką, siatka w wielu kolumnach; po prawej karta przedmiotu na pergaminie (nazwa, właściwości, obrazek w ramce, przyciski ZAŁÓŻ / WYRZUĆ) i krzyżyk w rogu.

@@ -186,6 +186,11 @@ struct NbState {
   std::string                                 keyPressed;
   // NB fix 82: the music of the boss fight - the last time the fight went on (RX_StartBossMusic, RX_UpdateBossMusicCoords)
   uint64_t                                    bossMusicSeen = 0;
+  // NB fix 100: the fights of the bosses of the plugin (UNION_ABI.DLL 0x10054220, 0x100546A0): the characters with
+  // AI_OnTick_<instance> that fight, their timer goes every second; built again after a load from aivar[95]
+  std::vector<std::weak_ptr<zenkit::INpc>>    bossFight;
+  uint64_t                                    nextBossTick  = 0;
+  bool                                        bossFightLoaded = false;
   // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
   std::weak_ptr<zenkit::INpc>                 wispBody;
   std::unordered_map<const zenkit::INpc*,uint64_t> wispBodySkip;
@@ -2601,6 +2606,39 @@ void GameScript::initCommon() {
       // ITEM_SWD (1<<14) or ITEM_AXE (1<<15) of the melee weapons of one hand
       return itm!=nullptr && (uint32_t(itm->flags) & ((1u<<14)|(1u<<15)))!=0 ? 1 : 0;
       });
+    // NB fix 100: the bosses call their helpers - the character at the point, and it attacks the hero at once
+    bindNb("WLD_INSERTNPCANDATTACKENEMY", [this](int32_t instance, std::string_view point) {
+      if(instance<=0)
+        return;
+      auto* npc  = world().addNpc(size_t(instance),point);
+      auto* hero = world().player();
+      if(npc==nullptr)
+        return;
+      fixNpcPosition(*npc,0,150);
+      if(hero==nullptr || hero->isDead())
+        return;
+      npc->setTarget(hero);
+      const auto constInt = [this](std::string_view name, int32_t def) {
+        auto* sym = vm.find_symbol_by_name(name);
+        return sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INT ? sym->get_int() : def;
+        };
+      const int32_t sepHum = constInt("GIL_SEPERATOR_HUM",16);
+      try {
+        if(npc->handle().guild<sepHum) {
+          auto* fn = vm.find_symbol_by_name("B_ATTACK");
+          if(fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION)
+            vm.call_function<void>(fn,npc->handlePtr(),hero->handlePtr(),constInt("AR_KILL",19),int32_t(0));
+          } else {
+          auto* zs = vm.find_symbol_by_name("ZS_MM_ATTACK");
+          if(zs!=nullptr)
+            ai_startstate(npc->handlePtr(),int(zs->index()),0,"");
+          }
+        }
+      catch(const std::exception& e) {
+        Log::e("NB: Wld_InsertNpcAndAttackEnemy failed: ",e.what());
+        }
+      nbCtx("boss helper: ",npc->displayName()," at ",point," attacks the hero");
+      });
     bindNb("NPC_CANSEENPC2", [this](std::shared_ptr<zenkit::INpc> aRef, std::shared_ptr<zenkit::INpc> bRef, int32_t freeLos) -> int32_t {
       auto a = findNpc(aRef);
       auto b = findNpc(bRef);
@@ -4204,6 +4242,7 @@ void GameScript::tick(uint64_t dt) {
     if(npc!=nullptr && hero!=nullptr && !st.salesList.empty())
       Gothic::inst().onOpenPlayerSales(*hero,*npc,st.salesList);
     }
+  nbBossTick();   // NB fix 100: the phases of the bosses
   // NB fix 82: the music of a boss fight plays again from the start; it ends 45 s after the last blow of the fight (the
   // player has run away) or with the death of the player, as the death of the boss does (RX_StopBossMusic)
   if(Gothic::inst().isBossMusic()) {
@@ -7339,6 +7378,7 @@ bool GameScript::nbIsSummon(const Npc& npc) {
   }
 
 void GameScript::nbOnDamage(Npc& target, Npc& attacker) {
+  nbBossHit(target,attacker);   // NB fix 100
   // NB fix 82: the part of RX_OnDamage (the plugin calls it at every damage) for the music of the bosses: the player or his
   // summoned creature fights a boss (RX_IsBoss) - RX_CheckMusicBoss chooses and starts the music, or keeps it on
   auto* isBoss = vm.find_symbol_by_name("RX_ISBOSS");
@@ -7410,5 +7450,122 @@ void GameScript::nbBeforeHit(Npc& target, Npc& attacker) {
     }
   catch(const std::exception& e) {
     Log::e("NB: RX_ApplyStagger failed: ",e.what());
+    }
+  }
+
+// NB fix 100: the functions of the bosses that the plugin calls by the name of the instance of the character
+zenkit::DaedalusSymbol* GameScript::nbInstanceFunc(std::string_view prefix, Npc& npc) {
+  auto* inst = vm.find_symbol_by_index(npc.handle().symbol_index());
+  if(inst==nullptr)
+    return nullptr;
+  auto* fn = vm.find_symbol_by_name(std::string(prefix)+inst->name());
+  return fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION ? fn : nullptr;
+  }
+
+void GameScript::nbCallInstanceFunc(zenkit::DaedalusSymbol* fn, Npc& self, Npc* other, int32_t* arg) {
+  if(fn==nullptr)
+    return;
+  ScopeVar sv(*vm.global_self(), self.handlePtr());
+  ScopeVar ov(*vm.global_other(), other!=nullptr ? other->handlePtr() : vm.global_other()->get_instance());
+  try {
+    if(arg!=nullptr) {
+      if(fn->has_return())
+        (void)vm.call_function<int>(fn,*arg); else
+        vm.call_function<void>(fn,*arg);
+      } else {
+      if(fn->has_return())
+        (void)vm.call_function<int>(fn); else
+        vm.call_function<void>(fn);
+      }
+    }
+  catch(const std::exception& e) {
+    Log::e("NB: ",fn->name()," failed: ",e.what());
+    }
+  }
+
+/// UNION_ABI.DLL 0x10054220, at every damage: the attacker and the victim with AI_OnTick_<instance> join the fight of
+/// the bosses (their timer starts), then AI_OnHit_<attacker> (SELF the attacker, OTHER the victim) and
+/// AI_OnGetDamage_<victim> (SELF the victim, OTHER the attacker). The phases of the bosses are in these functions.
+void GameScript::nbBossHit(Npc& target, Npc& attacker) {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end() || target.isDead() || attacker.isDead())
+    return;
+  auto& st = nb->second;
+  auto join = [&](Npc& n) {
+    if(nbInstanceFunc("AI_ONTICK_",n)==nullptr)
+      return;
+    auto h = n.handlePtr();
+    for(auto& w:st.bossFight)
+      if(w.lock()==h)
+        return;
+    st.bossFight.push_back(h);
+    nbCtx("boss fight: ",n.displayName()," joins (AI_OnTick)");
+    };
+  join(attacker);
+  join(target);
+  nbCallInstanceFunc(nbInstanceFunc("AI_ONHIT_",attacker),attacker,&target,nullptr);
+  if(!target.isDead() && !attacker.isDead())
+    nbCallInstanceFunc(nbInstanceFunc("AI_ONGETDAMAGE_",target),target,&attacker,nullptr);
+  }
+
+/// UNION_ABI.DLL 0x100546A0, every second of the game: a character of the fight that is dead, or 70 m from the hero, or
+/// the hero is dead - the fight is broken (0x10054030: the variables 35..51 of NB - the phases, the spells counted - are
+/// cleared, full health, the timer 0, AI_OnBreak_<instance>). The others: the timer (aivar[95]) goes 1..300 and
+/// AI_OnTick_<instance>(timer) is called with SELF the character.
+void GameScript::nbBossTick() {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end())
+    return;
+  auto& st   = nb->second;
+  auto* hero = world().player();
+  if(hero==nullptr)
+    return;
+
+  if(!st.bossFightLoaded) {
+    // after a load: the fights that went on (the timer is in the save)
+    st.bossFightLoaded = true;
+    world().detectNpc(hero->position(),7000.f,[&](Npc& n) {
+      if(!n.isDead() && n.handle().aivar[95]>0 && nbInstanceFunc("AI_ONTICK_",n)!=nullptr)
+        st.bossFight.push_back(n.handlePtr());
+      });
+    }
+  if(st.bossFight.empty() || tickCount()<st.nextBossTick)
+    return;
+  st.nextBossTick = tickCount()+1000;
+
+  for(size_t i=st.bossFight.size(); i>0; --i) {
+    auto  ref = st.bossFight[i-1].lock();
+    auto* npc = ref!=nullptr ? findNpcRaw(ref) : nullptr;
+    if(npc==nullptr) {
+      st.bossFight.erase(st.bossFight.begin()+ptrdiff_t(i-1));
+      continue;
+      }
+    const bool far = (npc->position()-hero->position()).length()>=7000.f;
+    if(!npc->isDead() && !hero->isDead() && !far)
+      continue;
+    st.bossFight.erase(st.bossFight.begin()+ptrdiff_t(i-1));
+    for(int32_t v=35; v<=51; ++v)
+      npc->newBalanceSetNpcVar(v,0);
+    npc->handle().aivar[95] = 0;
+    if(!npc->isDead())
+      npc->changeAttribute(ATR_HITPOINTS,npc->attribute(ATR_HITPOINTSMAX),false);
+    nbCtx("boss fight: ",npc->displayName()," broken (",npc->isDead() ? "dead" : hero->isDead() ? "the hero is dead" : "70 m away",")");
+    nbCallInstanceFunc(nbInstanceFunc("AI_ONBREAK_",*npc),*npc,nullptr,nullptr);
+    }
+
+  // the functions may change the list (a new character joins): a copy
+  auto list = st.bossFight;
+  for(auto& w:list) {
+    auto  ref = w.lock();
+    auto* npc = ref!=nullptr ? findNpcRaw(ref) : nullptr;
+    if(npc==nullptr || npc->isDead())
+      continue;
+    auto* fn = nbInstanceFunc("AI_ONTICK_",*npc);
+    if(fn==nullptr)
+      continue;
+    int32_t& timer = npc->handle().aivar[95];
+    timer = timer>=300 ? 1 : timer+1;
+    int32_t arg = timer;
+    nbCallInstanceFunc(fn,*npc,nullptr,&arg);
     }
   }
