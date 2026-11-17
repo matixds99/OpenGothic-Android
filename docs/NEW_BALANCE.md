@@ -47,7 +47,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/world/worldobjects.cpp` (+ `.h`) | ustawienie „Target peaceful creatures: OFF” – niewrogie stworzenia (ognik, przywołańce, owce, króliki, żółwie) poza celowaniem gracza; `findLockedChest` – zamknięte skrzynie w fokusie z bronią/runą; `tickHoming` pocisków | 78, 80, 84 |
 | `common/gothic.cpp` (+ `.h`) | muzyka walki z bossem NB (`playBossMusic`, `stopBossMusic`, `tickBossMusic`) | 82 |
 | `common/world/objects/npc.cpp` | `takeDamage` → `nbBeforeHit`/`nbOnDamage` (muzyka bossów, zachwianie, obalenie NB); `commitSpell` – pocisk czaru gracza leci za celem; `resetAttack`, `nbQuickSpeed` (szybki atak) | 82, 83, 84, 95, 98 |
-| `common/world/bullet.cpp` (+ `.h`) | `setHoming`/`tickHoming` – pocisk czaru gracza skręca do celu | 84 |
+| `common/world/bullet.cpp` (+ `.h`) | `setHoming`/`tickHoming` – pocisk czaru gracza skręca do celu; z bliska trafia od razu | 84, 102 |
 | `common/world/world.cpp` | fokus: zamknięta skrzynia z bronią w ręku (siła) albo z runą otwierania (magia) | 80 |
 | `common/game/playercontrol.cpp` (+ `.h`) | przycisk akcji na zamkniętej skrzyni w fokusie: otwieranie zamka NB (siła/magia/wytrychy); `quickCombo` – szybki atak czytany jak sterowanie Gothic 1, W resetuje pozycję po ciosie; `quickAttack` – szybkie ciosy do przodu z resetem (`QuickHits`, `QuickTime`, `QuickSpeed` w `.h`) | 80, 94, 95, 98 |
 | `common/utils/androidinput.h` | j.w. (`IconSprint`, `hud.sprint`, `hudPlaces`, `stamina`) | 40, 42 |
