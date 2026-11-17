@@ -65,6 +65,7 @@ struct Preferences {
   int hudXp       = 0;   // 1: the experience (500/1000) between the bars
   int strafe      = 1;   // 1: the buttons of the side steps (and the arrows forward and back) on the HUD
   int autoLock    = 0;   // 1: the lock of the target is taken by itself when a weapon is drawn
+  int peaceful    = 1;   // 1: the peaceful creatures can be in the focus (to talk to the wisp, to hunt the sheep)
   };
 
 Preferences preferences();

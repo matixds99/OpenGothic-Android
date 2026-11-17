@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **78**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **79**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -166,6 +166,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zgłoszenie:** w statystykach „Zupy / Kompoty / Ciasta – uczony”, a okno kotła puste. W logu `NB: craft: no item "itfo_pottage_mushroom_black"`, `no item "itfo_compote_00"`, `0 known recipes`.
 - **Przyczyna:** przepis był rozpoznany, ale przedmiot wyniku odrzucony: test `is_instance_of<IItem>()` z ZenKita jest prawdziwy tylko dla przedmiotu, którego instancja już powstała (był w świecie albo w czyimś ekwipunku). Nowe przedmioty (gęsty gulasz z czarnych grzybów, kompot) wypadały z listy – tak samo składniki, których nikt jeszcze nie miał.
 - **Poprawka:** przedmiot rozpoznawany po klasie `C_ITEM` (przez prototyp), bez względu na to, czy instancja już jest. Dotyczy wszystkich stołów (70–71) i okna sprzedaży (68).
+
+### 78. Ustawienie: celowanie w pokojowe stworzenia (ognik, przywołańce, zwierzęta) – 🧪 (17.11.2026)
+- **Pliki:** `common/world/worldobjects.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`
+- **Zgłoszenie:** w walce gracz zaznacza i bije ognika (i przywołane istoty). Potrzebny przełącznik w ustawieniach: włączony – można zaznaczyć ognika (rozmowa), owce, króliki, żółwie (polowanie); wyłączony – pokojowe stworzenia nie są zaznaczane.
+- **Poprawka:** nowy wiersz w ustawieniach „Peaceful targets” → `Target peaceful creatures: ON/OFF` (domyślnie ON – jak dotąd; w `Gothic.ini`, sekcja `MOBILE`, `peacefulfocus`, wersja ustawień 8). Przy OFF z celowania gracza (fokus, walka, zaklęcia) wypadają stworzenia (gildie potworów), które nie są do niego wrogie (nastawienie neutralne/przyjazne): ognik, przywołańce, owce, króliki, żółwie… Zostają: ludzie i orkowie (dialogi), martwe ciała (łupy), oraz każde stworzenie, które atakuje gracza albo jest do niego wrogie/rozgniewane.
+- **Do sprawdzenia:** OFF – walka obok ognika i przywołańców nie zaznacza ich, owca się nie podświetla; ON – rozmowa z ognikiem, polowanie na owce jak dotąd.
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`

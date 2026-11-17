@@ -1225,6 +1225,21 @@ static bool checkParty(Npc& n, const Npc& pl, World& w) {
   return !w.script().dmaHidesPartyFocus();
   }
 
+/// NB fix 78: with the setting "Target peaceful creatures" off a creature that is not hostile to the player is not in
+/// his focus. The people and the orcs stay (the dialogs), the dead stay (the loot), and who attacks the player stays
+template<class T>
+static bool checkPeaceful(T&, const Npc&, World&) { return true; }
+
+static bool checkPeaceful(Npc& n, const Npc& pl, World& w) {
+  if(WorldObjects::peacefulFocus.load(std::memory_order_relaxed) || !pl.isPlayer())
+    return true;
+  if(n.isDead() || !n.isMonster())
+    return true;
+  if(n.target()==&pl)
+    return true;
+  return w.script().personAttitude(n,pl)<ATT_NEUTRAL;
+  }
+
 template<class T>
 static bool checkTargetType(T&, TargetType, World&) { return true; }
 
@@ -1291,6 +1306,8 @@ bool WorldObjects::testObj(T &src, const Npc &pl, const WorldObjects::SearchOpt 
   if(!checkFlag(npc,opt.flags))
     return false;
   if(!checkParty(npc,pl,owner))
+    return false;
+  if(!checkPeaceful(npc,pl,owner))
     return false;
   if(!checkTargetType(npc,opt.collectType,owner))
     return false;

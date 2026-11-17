@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <vector>
 #include <unordered_map>
 #include <memory>
@@ -29,6 +30,10 @@ class WorldObjects final {
   public:
     WorldObjects(World &owner);
     ~WorldObjects();
+
+    /// NB fix 78 (the setting "Target peaceful creatures"): false - the creatures that are not hostile to the player
+    /// (the wisp, the summons, the sheep, the rabbits...) are not in his focus, the fight does not hit them
+    static inline std::atomic<bool> peacefulFocus{true};
 
     enum SearchFlg : uint8_t {
       NoFlg         = 0,

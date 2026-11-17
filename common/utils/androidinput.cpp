@@ -18,6 +18,7 @@
 #include <cmath>
 
 #include "gothic.h"
+#include "world/worldobjects.h"
 #include "resources.h"
 #include "winpad.h"
 #include "scripting/modhost.h"
@@ -52,7 +53,7 @@ const char* const IconFiles[AndroidInput::IconCount] = {
 
 const char* const SettingNames[Mobile::SettingCount] = {
   "buttons", "resolution", "shadows", "effects", "fps", "deadzone", "sensitivity", "vibration", "gui",
-  "speed", "hudnumbers", "hudxp", "strafe", "autolock"
+  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus"
   };
 
 // Gives access to the dispatch functions of SystemApi
@@ -186,6 +187,7 @@ int nextValue(int setting, int value) {
     case Mobile::SettingHudXp:
     case Mobile::SettingStrafe:
     case Mobile::SettingAutoLock:
+    case Mobile::SettingPeaceful:
       return value ? 0 : 1;
     }
   return value;
@@ -205,6 +207,8 @@ std::string settingText(int setting, const std::string& label) {
     return value ? "Step buttons: ON" : "Step buttons: OFF";
   if(setting==Mobile::SettingAutoLock)
     return value ? "Auto lock on weapon draw: ON" : "Auto lock on weapon draw: OFF";
+  if(setting==Mobile::SettingPeaceful)
+    return value ? "Target peaceful creatures: ON" : "Target peaceful creatures: OFF";
   if(setting==Mobile::SettingSpeed)
     return label+"   "+std::to_string(value/100)+"."+std::to_string(value%100/10)+"x";
 
@@ -302,6 +306,8 @@ AndroidInput::Preferences AndroidInput::preferences() {
     ret.strafe = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingStrafe])!=0 ? 1 : 0;
   if(Gothic::settingsGetI(Section,"version")>=7)
     ret.autoLock = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingAutoLock])!=0 ? 1 : 0;
+  if(Gothic::settingsGetI(Section,"version")>=8)
+    ret.peaceful = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingPeaceful])!=0 ? 1 : 0;
   return ret;
   }
 
@@ -322,10 +328,11 @@ void AndroidInput::Controller::bind() {
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingHudXp],      def.hudXp);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingStrafe],     def.strafe);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingAutoLock],   def.autoLock);
-    Gothic::settingsSetI(Section,"version",7);
+    Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPeaceful],   def.peaceful);
+    Gothic::settingsSetI(Section,"version",8);
     Gothic::flushSettings();
     } else
-  if(Gothic::settingsGetI(Section,"version")<7) {
+  if(Gothic::settingsGetI(Section,"version")<8) {
     // settings saved before the vibration, the scale of the interface, the fast forward, the side steps and the auto lock were added
     const Preferences def;
     const int version = Gothic::settingsGetI(Section,"version");
@@ -345,7 +352,10 @@ void AndroidInput::Controller::bind() {
     // the lock of the target by itself is off until the player switches it on
     if(version<7)
       Gothic::settingsSetI(Section,SettingNames[Mobile::SettingAutoLock],def.autoLock);
-    Gothic::settingsSetI(Section,"version",7);
+    // NB fix 78: the peaceful creatures stay in the focus until the player switches them off
+    if(version<8)
+      Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPeaceful],def.peaceful);
+    Gothic::settingsSetI(Section,"version",8);
     Gothic::flushSettings();
     }
   loadHudPlaces();
@@ -535,6 +545,7 @@ void AndroidInput::Controller::applyPreferences() {
   padSensitivity = float(pref.sensitivity)/100.f;
   // the game is vanilla: the fast forward is on the HUD and in the settings only when a mod has asked for it
   controls.features(Scripting::ModHost::inst().fastForwardWanted(),pref.strafe!=0);
+  WorldObjects::peacefulFocus.store(pref.peaceful!=0);
   }
 
 void AndroidInput::Controller::loadHudPlaces() {

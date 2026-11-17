@@ -39,9 +39,10 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/game/inventory.cpp` | osobne miejsce na hełm (zbroja z `WEAR_HEAD`), stare zapisy: hełm z miejsca zbroi na swoje | 39 |
 | `common/game/inventory.h` | j.w. (`currentHelmet`, `isHelmet`) | 39 |
 | `common/mainwindow.cpp` | sprint NB: klawisz `~` i przycisk na nakładce wywołują `B_Hotkey_Sprint`; pasek wytrzymałości NB, paski w miejscach i rozmiarach z edytora HUD, okno sprzedaży NB (widżet, tryb menu nakładki, dotyk i klawisze), okno alchemii NB (to samo); Android: swapchain od nowa po powrocie z tła | 40, 41, 42, 45, 49, 68, 69, 70, 74 |
-| `common/ui/mobilecontrolsmodel.cpp` | przycisk sprintu na nakładce (obok chodu), da się go przesuwać i ukryć w edytorze HUD; paski życia/wytrzymałości/many w edytorze HUD | 40, 42 |
-| `common/ui/mobilecontrolsmodel.h` | j.w. (`Special::Sprint`, `sprint()`, id `sprint`, `hudBarRect`, id `bar_*`) | 40, 42 |
-| `common/utils/androidinput.cpp` | ikona sprintu, podświetlenie, gdy sprint włączony; ramki pasków w edytorze HUD | 40, 42 |
+| `common/ui/mobilecontrolsmodel.cpp` | przycisk sprintu na nakładce (obok chodu), da się go przesuwać i ukryć w edytorze HUD; paski życia/wytrzymałości/many w edytorze HUD; ustawienie „Peaceful targets” | 40, 42, 78 |
+| `common/ui/mobilecontrolsmodel.h` | j.w. (`Special::Sprint`, `sprint()`, id `sprint`, `hudBarRect`, id `bar_*`, `SettingPeaceful`) | 40, 42, 78 |
+| `common/utils/androidinput.cpp` (+ `.h`) | ikona sprintu, podświetlenie, gdy sprint włączony; ramki pasków w edytorze HUD; ustawienie `peacefulfocus` (wersja ustawień 8) | 40, 42, 78 |
+| `common/world/worldobjects.cpp` (+ `.h`) | ustawienie „Target peaceful creatures: OFF” – niewrogie stworzenia (ognik, przywołańce, owce, króliki, żółwie) poza celowaniem gracza | 78 |
 | `common/utils/androidinput.h` | j.w. (`IconSprint`, `hud.sprint`, `hudPlaces`, `stamina`) | 40, 42 |
 | `common/gothic.cpp` | ekran wczytywania: obrazki moda `LOADING_<ŚWIAT>_<numer>` | 3, 3a |
 | `common/mainwindow.cpp` | ekran wczytywania: świat z nagłówka save'a, czarne tło zamiast białego, pasek wczytywania dla tekstur HD | 3, 3a, 14 |

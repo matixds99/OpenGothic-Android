@@ -81,6 +81,7 @@ enum Setting : int {
   SettingHudXp,
   SettingStrafe,
   SettingAutoLock,
+  SettingPeaceful,   // NB fix 78: the peaceful creatures (the wisp, the summons, the sheep...) in the focus
   SettingCount
   };
 
