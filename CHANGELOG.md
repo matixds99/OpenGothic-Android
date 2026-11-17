@@ -229,12 +229,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - Efekty perków (`RX_HeroProcs`) i taktyki bossów – nadal później.
 - **Do sprawdzenia:** bandyci/strażnicy przewracają się czasem od ciosu miecza (częściej przy wysokiej umiejętności), słabsi przeciwnicy chwieją się od ciosów, mocni (elitarne orki, szkielety) nie przy niskiej sile.
 
-### 84. Magia: pocisk leci za celem – 🧪 (17.11.2026)
+### 84. Magia: pocisk leci za celem – ✅ (17.11.2026)
 - **Pliki:** `common/world/bullet.cpp/.h`, `common/world/worldobjects.cpp`, `common/world/objects/npc.cpp` (`commitSpell`)
 - **Zgłoszenie:** przy celowaniu magią w potwora pocisk nie trafia.
 - **Przyczyna:** pocisk czaru leciał prosto w miejsce, gdzie cel był w chwili rzucenia (`setTarget(nullptr)`), a potwory się ruszają; nisko stojące małe stworzenia (szczury) – pocisk z wysokości piersi bohatera łatwo zahacza o ziemię.
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
+- **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
 ### 85. Przycisk szybkiego ataku (A/D → W → Ctrl jak na PC) – 🧪 (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `android/assets/touch-icons/quick_attack.png` (nowa ikona)
