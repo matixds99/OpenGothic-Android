@@ -248,7 +248,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zgłoszenie:** 93 dalej źle (film 342674). Kombinacja na PC: Ctrl trzymany cały czas, A/D trzymane, W naciskane cały czas.
 - **Przyczyna:** na PC przy trzymanym Ctrl klawisze kierunku to ciosy: A/D – cios w bok, W – cios do przodu (kolejne W – kolejne ciosy kombinacji). Ekran dotykowy w OpenGothic ma zawsze sterowanie Gothic 2 (`g2Ctrl`), gdzie bije tylko sam klawisz ataku, a A/D/W przy Ctrl to zwykły ruch – dlatego żadna sekwencja 85–93 nie dawała tego co na PC.
 - **Poprawka:** na czas sekwencji QUICK `PlayerControl` czyta klawisze jak w sterowaniu Gothic 1 (`quickCombo`): Ctrl wciśnięty i trzymany → A/D (na zmianę) wciśnięte i trzymane – cios w bok → W stukane co 0,26 s (4 razy) – ciosy do przodu → po 1,35 s puszczenie A/D, po 1,38 s Ctrl; potem znowu sterowanie Gothic 2.
-- **Uwaga z filmu 342674:** wytrzymałość spadła do 0/120 – w NB bez wytrzymałości ataki są słabsze/blokowane; testować z pełnym paskiem.
+- **Uwaga z filmu 342674:** wytrzymałość spadła do 0/120 – wg gracza w NB brak wytrzymałości tylko spowalnia ruch bohatera (przez to nie wchodzą krytyki), ataków nie blokuje.
 - **Do sprawdzenia:** QUICK – cios w bok i seria ciosów do przodu jak na PC.
 
 ### 93. Szybki atak: krok w bok i atak w tej samej chwili – ❌ (zastąpione w 94) (17.11.2026)
