@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **90**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **91**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -242,6 +242,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zgłoszenie (film 342652):** w NB szybki atak to trzy klawisze po kolei: A albo D (krok w bok, z akrobatyką – przewrotka), W (do przodu) i Ctrl/mysz (atak) – bohater po przewrotce wyprowadza atak w ruchu, który często obala przeciwnika. Na telefonie nie da się tego wcisnąć – potrzebny osobny przycisk (też do testu 83).
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
+
+### 90. Szybki atak: cios w bok osobnym klawiszem, potem atak w ruchu – 🧪 (17.11.2026)
+- **Pliki:** `common/utils/androidinput.cpp`
+- **Zgłoszenie (film 342668):** po 89 jest gorzej – bohater tylko chodzi w bok i do przodu, „brak Ctrl”.
+- **Przyczyna:** ekran dotykowy ma sterowanie Gothic 2 (`g2Ctrl`): samo Ctrl to od razu cios do przodu (jeden), a A/D i W z trzymanym Ctrl to tylko ruch – cios w bok jest osobnym klawiszem (`AttackLeft`/`AttackRight`, przyciski „< HIT”/„HIT >”). Ctrl wciśnięty na początku dawał jeden cios, potem 1,2 s chodzenia.
+- **Poprawka:** QUICK: cios w bok (na zmianę lewy/prawy, 0,1 s) → po 0,6 s W wciśnięte → po 0,62 s Ctrl → po 1,15 s puszczenie W → po 1,2 s puszczenie Ctrl. Ctrl z trzymanym W to atak w ruchu (`T_1HATTACKMOVE`/`T_2HATTACKMOVE` w biegu), który czeka na okno kombinacji po ciosie w bok (88).
+- **Do sprawdzenia:** QUICK – cios w bok, zaraz potem wypad do przodu z ciosem.
 
 ### 89. Szybki atak: czasy klawiszy jak na PC – 🧪 (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp`

@@ -703,18 +703,18 @@ void AndroidInput::Controller::onSpecial(int id) {
     if(!combo.empty())
       return;
     const uint64_t   now  = Application::tickCount();
-    const Mobile::Key side = comboRight ? Mobile::Key::StrafeRight : Mobile::Key::StrafeLeft;
+    // NB fix 90: the touch screen has the controls of Gothic 2 (g2Ctrl): Ctrl alone is the attack forward, the side blow is
+    // its own key (AttackLeft/AttackRight - Ctrl + A/D of the PC). So: the side blow, then W held with Ctrl - the attack in
+    // the move ("W resets the position"), which waits for the window of the combo after the side blow (fix 88)
+    const Mobile::Key side = comboRight ? Mobile::Key::AttackRight : Mobile::Key::AttackLeft;
     comboRight = !comboRight;
-    // the attack key first and held, then the side and forward together (NB fix 87: the order of the PC); the attack key
-    // is held long enough for the forward blow to come after the side one (NB fix 88: the attack waits for its window)
-    // NB fix 89: the times of the player - Ctrl held all the time, A/D about 0.7 s, then W 0.5 s
     combo = {
-      {now,      Mobile::Key::Action,true },
-      {now+40,   side,               true },
-      {now+740,  side,               false},
-      {now+740,  Mobile::Key::Up,    true },
-      {now+1240, Mobile::Key::Up,    false},
-      {now+1300, Mobile::Key::Action,false},
+      {now,      side,               true },
+      {now+100,  side,               false},
+      {now+600,  Mobile::Key::Up,    true },
+      {now+620,  Mobile::Key::Action,true },
+      {now+1150, Mobile::Key::Up,    false},
+      {now+1200, Mobile::Key::Action,false},
       };
     return;
     }
