@@ -620,7 +620,7 @@ bool AndroidInput::Controller::update(Window& window, Mobile::Mode mode) {
     }
   for(const auto& input:controls.drain())
     dispatch(window,mode,input);
-  // NB fix 85: the keys of the quick attack that are due now
+  // NB fix 85, 97: the keys of the quick attack that are due now
   if(!combo.empty()) {
     const uint64_t now = Application::tickCount();
     while(!combo.empty() && (combo.front().at<=now || mode!=Mobile::Mode::Game)) {
@@ -632,8 +632,6 @@ bool AndroidInput::Controller::update(Window& window, Mobile::Mode mode) {
       if(mode==Mobile::Mode::Game || e.kind==Mobile::Event::Up)
         dispatch(window,Mobile::Mode::Game,e);
       }
-    if(combo.empty())
-      PlayerControl::quickCombo.store(false);   // NB fix 94: the controls of Gothic 2 again
     }
   if(controls.takeHudChanged())
     saveHudPlaces();
@@ -700,7 +698,18 @@ void AndroidInput::Controller::onSpecial(int id) {
     }
   if(id==Mobile::Special::HudReset)
     return;
-  // NB fix 96: the quick attack (Special::QuickAttack) is done by PlayerControl::quickAttack (MainWindow::onMobileAction)
+  if(id==Mobile::Special::QuickAttack) {
+    // NB fix 97: QUICK presses the same buttons as the player on the touch screen:
+    // "< STEP" (A) and ACTION (the sword, W) together, then both are released
+    uint64_t t = Application::tickCount();
+    if(!combo.empty())
+      t = std::max(t,combo.back().at+30);
+    combo.push_back({t,     Mobile::Key::StrafeLeft,true});
+    combo.push_back({t+30,  Mobile::Key::Action,    true});
+    combo.push_back({t+230, Mobile::Key::Action,    false});
+    combo.push_back({t+260, Mobile::Key::StrafeLeft,false});
+    return;
+    }
 
   const int setting = id-Mobile::Special::FirstSetting;
   if(0<=setting && setting<Mobile::SettingCount) {

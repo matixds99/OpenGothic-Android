@@ -243,7 +243,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
 
-### 96. Szybki atak: ciosy w bok wykonywane bezpośrednio, reset zaraz po trafieniu – 🧪 (17.11.2026)
+### 97. Szybki atak: QUICK = „< STEP” (A) i miecz (W) naciśnięte razem – 🧪 (17.11.2026)
+- **Pliki:** `common/utils/androidinput.cpp`, `common/mainwindow.cpp`
+- **Zgłoszenie (film 342682):** chodzi o animację, nie o przeciwnika. Na filmie gracz ręcznie robi kombinację na ekranie: strzałka w lewo (A) i miecz (W) dotykane razem (ok. 0,25 s, co ok. 1 s), albo strzałka trzymana i miecz klikany. Taką kombinację ma robić QUICK.
+- **Poprawka:** QUICK nie wywołuje już `PlayerControl::quickAttack` (96). Jedno dotknięcie naciska dokładnie te przyciski co gracz: „< STEP” (A), po 30 ms ACTION (miecz). ACTION jest puszczany po 230 ms, A po 260 ms. Szybkie kolejne dotknięcia są ustawiane w kolejce jedno po drugim. Sterowanie Gothic 2 bez zmian, jak przy ręcznym dotykaniu.
+- **Do sprawdzenia:** dotknięcie QUICK daje tę samą animację co ręczne dotknięcie strzałki i miecza razem.
+
+### 96. Szybki atak: ciosy w bok wykonywane bezpośrednio, reset zaraz po trafieniu – ❌ (zastąpione w 97) (17.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`
 - **Zgłoszenie:** po 95 „dramat” – bohater nie oddaje ciosu. Na PC: Ctrl i A trzymane, W klikane – każde kliknięcie W to reset.
 - **Przyczyna:** na PC trzymane Ctrl + A silnik czyta co klatkę – po resecie od razu wchodzi kolejny cios w bok. W OpenGothic trzymany klawisz daje jeden cios, a udawanie klawiszy (85–95) nie odtwarzało tego zachowania.
