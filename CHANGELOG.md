@@ -242,11 +242,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
 
-### 87. Szybki atak: właściwa kolejność klawiszy – 🧪 (17.11.2026)
+### 87. Szybki atak: właściwa kolejność klawiszy – ✅ (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp`
 - **Zgłoszenie:** kolejność na PC jest inna niż podana w 85: najpierw Ctrl (atak) i trzymany, a razem z nim A/D + W naraz.
 - **Poprawka:** przycisk QUICK wysyła: Ctrl wciśnięty → po 40 ms A albo D (na zmianę) i W razem → po 400 ms puszczenie A/D i W → po 420 ms puszczenie Ctrl.
 - **Do sprawdzenia:** szybki atak jak na filmie; jeśli trzeba dłużej/krócej trzymać – zmienię 400 ms.
+- **Test (17.11, filmy 342656/342657):** działa wg gracza – szybkie ataki w walce z Cipherem i towarzyszami, każdy zużywa wytrzymałość jak w NB. Postać grana magiem, więc w zwarciu obrywa – do dopracowania później.
 
 ### 86. Ustawienie: akrobatyka NB (przewrotki) – 🧪 (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/game/gamescript.cpp/.h`
