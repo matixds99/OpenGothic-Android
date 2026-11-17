@@ -157,6 +157,7 @@ class PlayerControl final {
     float          rotMouse=0;
     float          rotMouseY=0;
     bool           casting = false;
+    uint64_t       pendingSwing = 0;   // NB fix 88: a forward attack pressed too early, tried again while the attack key is held
     size_t         pickLockProgress = 0;
 
     float          runAngleDest   = 0.f;

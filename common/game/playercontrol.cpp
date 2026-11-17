@@ -827,6 +827,17 @@ void PlayerControl::implMove(uint64_t dt) {
     ctrl[Action::K_ENTER] = false;
     }
 
+  // NB fix 88: as the original engine reads the held keys every frame - a forward attack (W with Ctrl held) pressed while
+  // the side attack (A/D) has not reached its window of the combo yet comes as soon as it can: the quick attack of New
+  // Balance (Ctrl + A/D + W: the side blow and right after it the blow forward, W "resets the position")
+  if(pendingSwing!=0) {
+    const uint64_t now = Gothic::inst().world()!=nullptr ? Gothic::inst().world()->tickCount() : 0;
+    if(!ctrl[KeyCodec::ActionGeneric] || now>pendingSwing || (ws!=WeaponState::W1H && ws!=WeaponState::W2H))
+      pendingSwing = 0;
+    else if(pl.swingSword())
+      pendingSwing = 0;
+    }
+
   if((ws==WeaponState::Bow || ws==WeaponState::CBow) && pl.hasAmmunition()) {
     if(actrl[ActGeneric] || actrl[ActForward]) {
       if(auto other = pl.target()) {
@@ -898,7 +909,10 @@ void PlayerControl::implMove(uint64_t dt) {
         return;
       case WeaponState::W1H:
       case WeaponState::W2H: {
-        pl.swingSword();
+        if(!pl.swingSword() && ctrl[KeyCodec::ActionGeneric] && Gothic::inst().world()!=nullptr)
+          pendingSwing = Gothic::inst().world()->tickCount()+700;   // NB fix 88
+        else
+          pendingSwing = 0;
         return;
         }
       case WeaponState::Bow:

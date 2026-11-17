@@ -705,14 +705,15 @@ void AndroidInput::Controller::onSpecial(int id) {
     const uint64_t   now  = Application::tickCount();
     const Mobile::Key side = comboRight ? Mobile::Key::StrafeRight : Mobile::Key::StrafeLeft;
     comboRight = !comboRight;
-    // the attack key first and held, then the side and forward together (NB fix 87: the order of the PC)
+    // the attack key first and held, then the side and forward together (NB fix 87: the order of the PC); the attack key
+    // is held long enough for the forward blow to come after the side one (NB fix 88: the attack waits for its window)
     combo = {
       {now,     Mobile::Key::Action,true },
       {now+40,  side,               true },
-      {now+40,  Mobile::Key::Up,    true },
-      {now+400, side,               false},
+      {now+60,  Mobile::Key::Up,    true },
+      {now+160, side,               false},
       {now+400, Mobile::Key::Up,    false},
-      {now+420, Mobile::Key::Action,false},
+      {now+900, Mobile::Key::Action,false},
       };
     return;
     }
