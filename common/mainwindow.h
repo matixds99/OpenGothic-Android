@@ -79,6 +79,7 @@ class MainWindow : public Tempest::Window {
 
     void focusEvent     (Tempest::FocusEvent&  event) override;
 
+    static Tempest::Color focusColor(const Focus& focus, const Npc& pl);   // NB fix 81
     void paintFocus     (Tempest::Painter& p, const Focus& fc, const Tempest::Matrix4x4& vp);
     void paintFocus     (Tempest::Painter& p, Tempest::Rect rect);
 

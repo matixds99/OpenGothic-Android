@@ -22,6 +22,7 @@
 #include "world/triggers/abstracttrigger.h"
 #include "world/objects/npc.h"
 #include "world/objects/item.h"
+#include "world/objects/interactive.h"
 #include "game/originalsave.h"
 #include "game/serialize.h"
 #include "game/savegameheader.h"
@@ -890,6 +891,44 @@ void MainWindow::focusEvent(FocusEvent &event) {
     setCursorPosition(Point(w()/2,h()/2));
   }
 
+/// NB fix 81: the color of the name in the focus. People and creatures: red - hostile, orange - angry, white - neutral,
+/// green - friendly, turquoise - a companion or a summoned creature; the dead: white with loot, grey without. Chests and
+/// doors: yellow - locked, green - something inside, grey - empty
+Tempest::Color MainWindow::focusColor(const Focus& focus, const Npc& pl) {
+  static const Tempest::Color white (1.f,  1.f,  1.f,  1.f);
+  static const Tempest::Color grey  (0.62f,0.62f,0.62f,1.f);
+  static const Tempest::Color red   (1.f,  0.32f,0.26f,1.f);
+  static const Tempest::Color orange(1.f,  0.62f,0.22f,1.f);
+  static const Tempest::Color green (0.45f,1.f,  0.42f,1.f);
+  static const Tempest::Color cyan  (0.3f, 0.92f,0.9f, 1.f);
+  static const Tempest::Color yellow(1.f,  0.86f,0.25f,1.f);
+  auto* world = Gothic::inst().world();
+  if(world==nullptr)
+    return white;
+
+  if(auto* npc = focus.npc) {
+    if(npc->isDead())
+      return npc->inventory().iterator(Inventory::T_Ransack).isValid() ? white : grey;
+    constexpr size_t AIV_PARTYMEMBER = 15;
+    if(npc->handle().aivar[AIV_PARTYMEMBER]!=0 || world->script().nbIsSummon(*npc))
+      return cyan;
+    switch(world->script().personAttitude(*npc,pl)) {
+      case ATT_HOSTILE:  return red;
+      case ATT_ANGRY:    return orange;
+      case ATT_FRIENDLY: return green;
+      default:           return white;
+      }
+    }
+
+  if(auto* mob = focus.interactive) {
+    if(mob->isLocked())
+      return yellow;
+    if(mob->isContainer())
+      return mob->inventory().isEmpty() ? grey : green;
+    }
+  return white;
+  }
+
 void MainWindow::paintFocus(Painter& p, const Focus& focus, const Matrix4x4& vp) {
   if(!focus || dialogs.isActive())
     return;
@@ -919,7 +958,11 @@ void MainWindow::paintFocus(Painter& p, const Focus& focus, const Matrix4x4& vp)
     iy = tsize.h;
   if(iy>h())
     iy = h();
-  fnt.drawText(p,ix,iy,focus.displayName());
+  // NB fix 81: the name in the color of what it is (as zUtilities): the attitude of a person to the player, the state of a chest
+  const auto color = focusColor(focus,*pl);
+  const int  sh    = std::max(1,int(scale));
+  fnt.tinted(Tempest::Color(0.f,0.f,0.f,0.8f)).drawText(p,ix+sh,iy+sh,focus.displayName());
+  fnt.tinted(color).drawText(p,ix,iy,focus.displayName());
 
   if(focus.npc!=nullptr && !focus.npc->isDead() &&
      !(focus.npc->handle().aivar[15]!=0 && world->script().dmaHidesPartyFocus())) {   // CoM: no bar for the companions

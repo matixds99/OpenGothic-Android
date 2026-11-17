@@ -7263,3 +7263,13 @@ void GameScript::nbBreakLock(Npc& hero, Interactive& mob, int32_t mode) {
   if(mode==2 && forceOk)
     force->set_int(forceWas);
   }
+
+bool GameScript::nbIsSummon(const Npc& npc) {
+  // NB fix 81: RX_IsSummonNpc of the scripts - the summoned creatures of New Balance carry RX_SUMMON_ID in aivar[91]
+  auto* id = vm.find_symbol_by_name("RX_SUMMON_ID");
+  if(id==nullptr || id->type()!=zenkit::DaedalusDataType::INT || id->is_member())
+    return false;
+  const auto& h = const_cast<Npc&>(npc).handle();
+  constexpr size_t AIV_SUMMON = 91;
+  return AIV_SUMMON<std::size(h.aivar) && h.aivar[AIV_SUMMON]==id->get_int() && id->get_int()!=0;
+  }

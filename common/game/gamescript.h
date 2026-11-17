@@ -207,6 +207,7 @@ class GameScript final {
     /// 0: the player does not open locks now; 1: by strength (a melee weapon drawn, RX_ForcePickLock); 2: by magic (the
     /// rune of the unlocking drawn); 3: with lock picks (no weapon, the talent and 100 of dexterity)
     int32_t          nbLockMode(const Npc& pl);
+    bool             nbIsSummon(const Npc& npc);   // NB fix 81: RX_IsSummonNpc (aivar[91]==RX_SUMMON_ID)
     void             nbBreakLock(Npc& hero, Interactive& mob, int32_t mode);
     int32_t          nbCraftSkill(int32_t craft);
     size_t           nbCraftAvailable(Npc& hero, size_t cls);
