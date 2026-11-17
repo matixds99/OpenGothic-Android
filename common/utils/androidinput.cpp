@@ -48,7 +48,7 @@ const char* const IconFiles[AndroidInput::IconCount] = {
   "food.png", "potion.png", "documents.png", "misc.png",
   "use_new.png", "drop.png", "transfer_new.png", "up_new.png", "down_new.png", "inv_slot.png", "inv_slot_selected.png",
   "skip.png", "talk.png", "target_lock.png", "fast_forward.png", "save.png", "human.png", "transfer_all.png",
-  "sprint.png"
+  "sprint.png", "quick_attack.png"
   };
 
 const char* const SettingNames[Mobile::SettingCount] = {
@@ -608,6 +608,19 @@ bool AndroidInput::Controller::update(Window& window, Mobile::Mode mode) {
     }
   for(const auto& input:controls.drain())
     dispatch(window,mode,input);
+  // NB fix 85: the keys of the quick attack that are due now
+  if(!combo.empty()) {
+    const uint64_t now = Application::tickCount();
+    while(!combo.empty() && (combo.front().at<=now || mode!=Mobile::Mode::Game)) {
+      Mobile::Event e;
+      e.kind = combo.front().down ? Mobile::Event::Down : Mobile::Event::Up;
+      e.key  = combo.front().key;
+      combo.erase(combo.begin());
+      // out of the game only the releases are sent
+      if(mode==Mobile::Mode::Game || e.kind==Mobile::Event::Up)
+        dispatch(window,Mobile::Mode::Game,e);
+      }
+    }
   if(controls.takeHudChanged())
     saveHudPlaces();
   return changed;
@@ -673,6 +686,24 @@ void AndroidInput::Controller::onSpecial(int id) {
     }
   if(id==Mobile::Special::HudReset)
     return;
+  if(id==Mobile::Special::QuickAttack) {
+    // NB fix 85: as on the PC - a step to the side (with the acrobatics a roll), then forward and the attack: the attack
+    // in the move. The side changes every time. A sequence still running is not started again
+    if(!combo.empty())
+      return;
+    const uint64_t   now  = Application::tickCount();
+    const Mobile::Key side = comboRight ? Mobile::Key::StrafeRight : Mobile::Key::StrafeLeft;
+    comboRight = !comboRight;
+    combo = {
+      {now,     side,               true },
+      {now+300, side,               false},
+      {now+300, Mobile::Key::Up,    true },
+      {now+360, Mobile::Key::Action,true },
+      {now+600, Mobile::Key::Action,false},
+      {now+620, Mobile::Key::Up,    false},
+      };
+    return;
+    }
 
   const int setting = id-Mobile::Special::FirstSetting;
   if(0<=setting && setting<Mobile::SettingCount) {
@@ -751,6 +782,8 @@ int AndroidInput::Controller::iconFor(const Mobile::Button& b) const {
       return IconSave;
     case Mobile::Special::Sprint:
       return IconSprint;
+    case Mobile::Special::QuickAttack:
+      return IconQuickAttack;
     default:
       if(inventory && b.special>=Mobile::Special::FirstCategory)
         return IconCategoryAll+b.special-Mobile::Special::FirstCategory;

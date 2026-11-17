@@ -38,7 +38,7 @@ enum Icon : int {
   IconCategoryFood, IconCategoryPotion, IconCategoryDocuments, IconCategoryMisc,
   IconInvUse, IconInvDrop, IconInvTransfer, IconInvUp, IconInvDown, IconInvSlot, IconInvSlotSelected,
   IconSkip, IconTalk, IconTargetLock, IconFastForward, IconSave, IconHuman, IconInvStack,
-  IconSprint,
+  IconSprint, IconQuickAttack,
   IconCount
   };
 
@@ -164,6 +164,14 @@ class Controller {
       } padState;
     float            padSensitivity = 1;
     bool             paused = false;
+    // NB fix 85: the quick attack is a sequence of the keys of the PC (A or D, then W, then Ctrl), sent at these times
+    struct ComboKey {
+      uint64_t    at   = 0;
+      Mobile::Key key  = Mobile::Key::Enter;
+      bool        down = false;
+      };
+    std::vector<ComboKey> combo;
+    bool             comboRight = false;   // the side of the next quick attack: left and right in turn
 
     std::array<Tempest::Sprite,IconCount> icons;
     std::array<float,IconCount>           iconPx{}; // side of the icon in pixels

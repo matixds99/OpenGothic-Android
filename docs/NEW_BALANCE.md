@@ -18,6 +18,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | 🆕 `common/game/nbcraft.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.h`, `ui/nbcraftmenu.h` (przepisy stołów rzemiosła z UNION_ABI.DLL) | 70, 71 |
 | `common/game/nbiteminfo.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp` | 12, 13 |
 | `common/game/nbbars.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp`, `mainwindow.cpp` (pasek wytrzymałości, otwarty ekwipunek) | 41, 49 |
+| `android/assets/touch-icons/quick_attack.png` | do folderu `android/assets/touch-icons/` | `utils/androidinput.cpp` (ikona szybkiego ataku) | 85 |
 | `android/assets/touch-icons/sprint.png` | do folderu `android/assets/touch-icons/`, obok `walk.png` | `utils/androidinput.cpp` (ikona sprintu) | 40 |
 
 > Nagłówki (`.h`) i ikona – nie trzeba niczego dopisywać w `CMakeLists.txt` (ikony są zbierane z folderu automatycznie; przy pierwszym buildzie po dodaniu ikony CMake sam przeładuje listę).
@@ -39,9 +40,9 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/game/inventory.cpp` | osobne miejsce na hełm (zbroja z `WEAR_HEAD`), stare zapisy: hełm z miejsca zbroi na swoje | 39 |
 | `common/game/inventory.h` | j.w. (`currentHelmet`, `isHelmet`) | 39 |
 | `common/mainwindow.cpp` | sprint NB: klawisz `~` i przycisk na nakładce wywołują `B_Hotkey_Sprint`; pasek wytrzymałości NB, paski w miejscach i rozmiarach z edytora HUD, okno sprzedaży NB (widżet, tryb menu nakładki, dotyk i klawisze), okno alchemii NB (to samo); Android: swapchain od nowa po powrocie z tła; skrzynia w fokusie dla funkcji zamków NB (`nbSetFocusMob`); kolory nazw w fokusie (`focusColor`) | 40, 41, 42, 45, 49, 68, 69, 70, 74, 79, 81 |
-| `common/ui/mobilecontrolsmodel.cpp` | przycisk sprintu na nakładce (obok chodu), da się go przesuwać i ukryć w edytorze HUD; paski życia/wytrzymałości/many w edytorze HUD; ustawienie „Peaceful targets” | 40, 42, 78 |
+| `common/ui/mobilecontrolsmodel.cpp` | przycisk sprintu na nakładce (obok chodu), da się go przesuwać i ukryć w edytorze HUD; paski życia/wytrzymałości/many w edytorze HUD; ustawienie „Peaceful targets”; przycisk szybkiego ataku (`Special::QuickAttack`, id `quickattack`) | 40, 42, 78, 85 |
 | `common/ui/mobilecontrolsmodel.h` | j.w. (`Special::Sprint`, `sprint()`, id `sprint`, `hudBarRect`, id `bar_*`, `SettingPeaceful`) | 40, 42, 78 |
-| `common/utils/androidinput.cpp` (+ `.h`) | ikona sprintu, podświetlenie, gdy sprint włączony; ramki pasków w edytorze HUD; ustawienie `peacefulfocus` (wersja ustawień 8) | 40, 42, 78 |
+| `common/utils/androidinput.cpp` (+ `.h`) | ikona sprintu, podświetlenie, gdy sprint włączony; ramki pasków w edytorze HUD; ustawienie `peacefulfocus` (wersja ustawień 8); szybki atak – sekwencja klawiszy A/D, W, Ctrl, ikona `quick_attack.png` | 40, 42, 78, 85 |
 | `common/world/worldobjects.cpp` (+ `.h`) | ustawienie „Target peaceful creatures: OFF” – niewrogie stworzenia (ognik, przywołańce, owce, króliki, żółwie) poza celowaniem gracza; `findLockedChest` – zamknięte skrzynie w fokusie z bronią/runą; `tickHoming` pocisków | 78, 80, 84 |
 | `common/gothic.cpp` (+ `.h`) | muzyka walki z bossem NB (`playBossMusic`, `stopBossMusic`, `tickBossMusic`) | 82 |
 | `common/world/objects/npc.cpp` | `takeDamage` → `nbBeforeHit`/`nbOnDamage` (muzyka bossów, zachwianie, obalenie NB); `commitSpell` – pocisk czaru gracza leci za celem | 82, 83, 84 |

@@ -505,6 +505,8 @@ void Controls::buildGame(const Anchor&) {
   icon("weapon",    right(300),   bottom(276),    52, "WEAPON", Key::Weapon);
   // shown only while a transformation spell is on (see MainWindow::updateMobileAvailability): turns the character back (icon human.png)
   icon("human",     right(300),   bottom(340),    52, "HUMAN",  Key::Enter);
+  // NB fix 85: the quick attack (a step to the side, forward and the attack), over the action button, with a melee weapon
+  icon("quickattack", right(198), bottom(330),    56, "QUICK",  Key::Enter, false, Special::QuickAttack);
 
   // NB fix 42: the status bars in the editor: their frames are dragged (the bars are drawn by the window)
   if(editing) {
@@ -987,7 +989,9 @@ void Controls::applyAvailability() {
     if(b.special==Special::Speed || b.special==Special::LoadSave || b.special==Special::QuickSave)
       usable = true; else
     if(b.special==Special::Sprint)
-      usable = availableMovement;
+      usable = availableMovement; else
+    if(b.special==Special::QuickAttack)
+      usable = (availableKeys & keyMask(Key::AttackLeft))!=0;   // a melee weapon in the hands
 
     // The hotbar stays visible while the player can move, other controls hide when unusable
     // Inventory actions disappear when there is no item to act on, the tabs and the close button stay.

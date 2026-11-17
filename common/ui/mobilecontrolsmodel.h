@@ -59,6 +59,7 @@ namespace Special {
     HudDone,       // the editor of the HUD: back to the settings
     HudReset,      // the editor of the HUD: every button goes back to its place
     FirstSetting  = 11,
+    QuickAttack   = 26,   // NB fix 85: the quick attack of New Balance - a side step (A/D), forward (W) and the attack (Ctrl)
     Sprint        = 29,   // NB fix 40: the sprint of New Balance (B_Hotkey_Sprint, the key ~ in the original)
     QuickSave     = 30,   // saves the game to the quick save slot
     LoadSave      = 31,   // the player is dead: loads the newest save (above the settings, below the categories)
@@ -110,7 +111,7 @@ inline float hotbarSlot(float buttons) {
 constexpr const char* HudIds[] = {
   "menu", "character", "speed", "log", "map", "sneak", "walk", "stepleft", "stepright", "stepforward", "stepback",
   "action", "hitleft", "hitright", "block", "jump", "inventory", "target", "spells", "weapon", "quicksave", "human",
-  "sprint", "bar_hp", "bar_stamina", "bar_mana"
+  "sprint", "bar_hp", "bar_stamina", "bar_mana", "quickattack"
   };
 constexpr int HudIdCount = int(sizeof(HudIds)/sizeof(HudIds[0]));
 
