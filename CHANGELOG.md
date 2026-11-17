@@ -243,6 +243,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
 
+### 99. Nowy wygląd ekwipunku (dotyk) – 🧪 (17.11.2026)
+- **Pliki:** `common/ui/mobilecontrolsmodel.cpp/.h` (`inventoryLayout`), `common/ui/inventorymenu.cpp/.h`, `common/utils/androidinput.cpp`
+- **Zgłoszenie (zrzut 342701):** przerobić interfejs ekwipunku na wzór ze zdjęcia: po lewej ramka z „Złoto: N” i nazwą kategorii z liczbą przedmiotów, kafelki kategorii nad siatką, siatka w wielu kolumnach; po prawej karta przedmiotu na pergaminie (nazwa, właściwości, obrazek w ramce, przyciski ZAŁÓŻ / WYRZUĆ) i krzyżyk w rogu.
+- **Poprawka:**
+  - Układ: siatka 9 kolumn (przy skrzyni/handlu 5 kolumn w każdej z dwóch ramek), wiersze dopasowane do wysokości ekranu, przewijanie palcem jak dotąd. Kategorie w jednym rzędzie nad listą gracza.
+  - Ramki z metalu z nitami w rogach rysowane w kodzie; lista ciemna, karta przedmiotu pergaminowa.
+  - Nagłówek: „Złoto: N” po lewej, nazwa kategorii (ze skryptów moda, bez nich polska/angielska) i liczba przedmiotów po prawej.
+  - Karta: nazwa czcionką książek (`FONT_10_BOOK`), obrazek w ciemnym polu po prawej u góry, właściwości po lewej obrazka i pod nim (łamane po słowach, zmniejszane, gdy się nie mieszczą). Na dole przyciski z napisami: ZAŁÓŻ/ZDEJMIJ/UŻYJ/CZYTAJ, WYRZUĆ; przy skrzyni i handlu WEŹ/SCHOWAJ/KUP/SPRZEDAJ i PRZENIEŚ; obok mały przycisk „cały stos”. W NB napisy po polsku, w innych grach po angielsku.
+- **Do sprawdzenia:** wygląd na telefonie (ekwipunek, skrzynia, handel), czy napisy z polskimi literami są czytelne, czy dotyk w siatce trafia w dobre pole.
+
 ### 98. Szybki atak: cios przycisku miecza szybciej i z resetem pozycji – 🧪 (17.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`), `common/world/objects/npc.cpp/.h` (`nbQuickSpeed`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`
 - **Zgłoszenie (zrzut 17.11):** przycisk miecza (między obroną a QUICK) robi to, co trzeba, tylko za wolno. Trzeba go przyspieszyć i resetować pozycję – wtedy będzie szybki atak.

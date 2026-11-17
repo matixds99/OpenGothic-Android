@@ -147,7 +147,6 @@ class InventoryMenu : public Tempest::Widget {
     int32_t                   scrollDelta = 0;
 
 #ifdef OPENGOTHIC_TOUCH_UI
-    static constexpr size_t   TouchColumns = 3;
     Tempest::Sprite           touchSlot, touchSelected;
 
     /// Dragging of a list with a finger
@@ -171,6 +170,12 @@ class InventoryMenu : public Tempest::Widget {
     void                      drawTouchHeader(Tempest::Painter& p, std::string_view title, const Mobile::Rect& r);
     void                      drawScrollHints(Tempest::Painter& p, const Page& inv, const PageLocal& sel, const Mobile::Rect& r);
     void                      drawInfoTouch(Tempest::Painter& p);
+    // NB fix 99: the new look of the inventory
+    void                      touchSyncColumns();
+    bool                      touchPolish() const;
+    std::string               touchCategoryTitle() const;
+    void                      drawTouchPanel(Tempest::Painter& p, const Mobile::Rect& r, bool parchment);
+    void                      drawTouchButton(Tempest::Painter& p, const Mobile::Rect& r, std::string_view label);
 #endif
 
     size_t                    rowsCount() const;

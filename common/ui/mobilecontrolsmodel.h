@@ -167,17 +167,20 @@ inline Rect hudBarRect(int bar, float width, float height, float buttons, const 
   }
 
 /// Positions of the inventory screen. Shared by the controls and the inventory widget.
+/// NB fix 99: the panels of the lists (a frame, a title, the tabs of the categories over the player's list, a grid of
+/// many columns) and the card of the item on the right (a name, the properties, a picture and the actions at the bottom).
 struct InventoryLayout {
-  static constexpr int Columns = 3;
-  static constexpr int Rows    = 6;
-
+  int   cols = 9;                     // columns and visible rows of the grids
+  int   rows = 4;
   float side = 0;                     // size of a slot
+  Rect  panel[2];                     // frames of the other (chest, trader) and the player's lists
   Rect  list[2];                      // slots of the other (chest, trader) and the player's lists
   Rect  header[2];                    // titles of the lists
   Rect  close;
-  Rect  tab[CategoryCount];           // categories, attached to the right of the player's list
-  Rect  info;                         // description of the item
-  Rect  use, drop, stack;             // actions, below the description
+  Rect  tab[CategoryCount];           // categories, a row over the player's list
+  Rect  info;                         // the card of the item
+  Rect  picture;                      // the picture of the item in the card
+  Rect  use, drop, stack;             // actions, at the bottom of the card
   };
 
 InventoryLayout inventoryLayout(float width, float height, bool twoLists, float gui=1.f);

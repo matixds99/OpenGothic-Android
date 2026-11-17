@@ -142,7 +142,7 @@ InventoryMenu::InventoryMenu(const KeyCodec& key)
     columsCount = size_t(invMaxColumns); else
     columsCount = 5;
 #ifdef OPENGOTHIC_TOUCH_UI
-  columsCount = TouchColumns;
+  columsCount = 9;   // NB fix 99: set from the layout, see touchSyncColumns
 #endif
 
   setFocusPolicy(NoFocus);
@@ -376,6 +376,9 @@ void InventoryMenu::keyDownEvent(KeyEvent &e) {
   // A tap of the touch screen is a press that is released at once: it moves one stack of items once. Only a key that is
   // really held (a keyboard, a gamepad) repeats the transfer.
   keyFromTouch = e.code>=0x110000u;
+#ifdef OPENGOTHIC_TOUCH_UI
+  touchSyncColumns();
+#endif
 
 #ifndef OPENGOTHIC_TOUCH_UI
   if(int dir = categoryKeyDir(e)) {
@@ -495,7 +498,7 @@ void InventoryMenu::mouseWheelEvent(MouseEvent &e) {
 
 size_t InventoryMenu::rowsCount() const {
 #ifdef OPENGOTHIC_TOUCH_UI
-  return size_t(Mobile::InventoryLayout::Rows);
+  return size_t(touchLayout().rows);
 #else
   int iy=30+34+70;
   return size_t((h()-iy-infoHeight()-20)/slotSize().h);
@@ -966,7 +969,7 @@ bool InventoryMenu::touchHit(float px, float py, uint8_t& list, int& column, int
     if(!r.contains(px,py))
       continue;
     list   = i;
-    column = std::min(int((px-r.x)/lay.side),Mobile::InventoryLayout::Columns-1);
+    column = std::min(int((px-r.x)/lay.side),lay.cols-1);
     row    = int((py-r.y+pageLocal[i].scrollPx)/lay.side);   // of the whole list
     return true;
     }
@@ -976,6 +979,7 @@ bool InventoryMenu::touchHit(float px, float py, uint8_t& list, int& column, int
 void InventoryMenu::mobileTap(float px, float py) {
   if(player==nullptr || state==State::Closed || state==State::LockPicking)
     return;
+  touchSyncColumns();
 
   uint8_t list   = 0;
   int     column = 0, row = 0;
@@ -986,7 +990,7 @@ void InventoryMenu::mobileTap(float px, float py) {
   PageLocal* local    = &pageLocal[list];
   page = list==1 ? (pageOth ? 1 : 0) : 0;
 
-  const size_t id = size_t(row)*TouchColumns+size_t(column);
+  const size_t id = size_t(row)*columsCount+size_t(column);
   if(selected==nullptr || id>=selected->size())
     return;
   local->sel = id;
@@ -1003,7 +1007,8 @@ InventoryMenu::PageLocal* InventoryMenu::touchList(float px, float py, const Pag
   }
 
 float InventoryMenu::touchMaxScroll(const Page& list) const {
-  const size_t rows = (list.size()+TouchColumns-1)/TouchColumns;
+  const size_t cols = size_t(touchLayout().cols);
+  const size_t rows = (list.size()+cols-1)/cols;
   const size_t view = rowsCount();
   return rows>view ? float(rows-view)*float(slotSize().h) : 0.f;
   }
@@ -1047,8 +1052,9 @@ void InventoryMenu::mobileTouch(float x, float y, int phase) {
   local.scroll   = size_t(local.scrollPx/side);
 
   // The selected item stays on the screen, so the buttons never act on a hidden one
-  const size_t first = local.scroll*TouchColumns;
-  const size_t last  = (local.scroll+rowsCount())*TouchColumns;
+  touchSyncColumns();
+  const size_t first = local.scroll*columsCount;
+  const size_t last  = (local.scroll+rowsCount())*columsCount;
   if(local.sel<first)
     local.sel = first; else
   if(local.sel>=last)
@@ -1060,10 +1066,21 @@ void InventoryMenu::mobileTouch(float x, float y, int phase) {
 void InventoryMenu::drawAllTouch(Painter& p, Npc& player, DrawPass pass) {
   if(state==State::LockPicking)
     return;
+  touchSyncColumns();
 
-  const auto lay   = touchLayout();
-  const int  wcount = int(columsCount);
-  const int  hcount = int(rowsCount());
+  const auto lay    = touchLayout();
+  const int  wcount = lay.cols;
+  const int  hcount = lay.rows;
+  const bool own    = state!=State::Ransack;
+
+  // NB fix 99: the frames go first, the slots and the card over them
+  if(pass==DrawPass::Back) {
+    if(pageOth!=nullptr)
+      drawTouchPanel(p,lay.panel[0],false);
+    if(own)
+      drawTouchPanel(p,lay.panel[1],false);
+    drawTouchPanel(p,lay.info,true);
+    }
 
   auto list = [&](const Page& inv, const PageLocal& sel, size_t index) {
     const auto& r = lay.list[index];
@@ -1084,9 +1101,16 @@ void InventoryMenu::drawAllTouch(Painter& p, Npc& player, DrawPass pass) {
     list(*pageOth,pageLocal[0],0);
     }
 
-  if(state!=State::Ransack) {
-    if(pass==DrawPass::Back)
+  if(own) {
+    if(pass==DrawPass::Back) {
       drawGold(p,player,0,0);
+      // the name of the category and the number of the items, on the right of the gold
+      const auto  title = touchCategoryTitle();
+      const auto& r     = lay.header[1];
+      auto&       fnt   = Resources::font(touchTextScale()*1.1f);
+      const auto  sz    = fnt.textSize(title);
+      fnt.drawText(p,int(r.x+r.w)-sz.w,int(r.y+r.h/2)+sz.h/2,title);
+      }
     list(*pagePl,pageLocal[1],1);
     }
 
@@ -1094,23 +1118,105 @@ void InventoryMenu::drawAllTouch(Painter& p, Npc& player, DrawPass pass) {
     drawInfo(p);
   }
 
+void InventoryMenu::touchSyncColumns() {
+  columsCount = size_t(std::max(1,touchLayout().cols));
+  }
+
+bool InventoryMenu::touchPolish() const {
+  // New Balance is a Polish mod, the labels of the buttons are in its language
+  auto w = Gothic::inst().world();
+  return w!=nullptr && NbItemInfo::isNb(w->script().getVm());
+  }
+
+std::string InventoryMenu::touchCategoryTitle() const {
+  int index = 0;
+  for(int i=0; i<int(CatCount); ++i)
+    if(CategoryOrder[i]==category())
+      index = i;
+
+  std::string name;
+  if(player!=nullptr) {
+    const auto& names = player->world().script().inventoryCategoryNames();
+    if(index<int(names.size()))
+      name = names[size_t(index)];
+    }
+  if(name.empty()) {
+    // the order of CategoryOrder; the Polish ones in the code page of the font
+    static const char* en[CatCount] = {"All","Weapons","Armor","Magic","Jewelry","Food","Potions","Documents","Other"};
+    static const char* pl[CatCount] = {"Wszystko","Bronie","Pancerze","Magia","Bi\xBF" "uteria","Jedzenie","Mikstury","Dokumenty","Inne"};
+    name = touchPolish() ? pl[index] : en[index];
+    }
+  const size_t count = pagePl!=nullptr ? pagePl->size() : 0;
+  return name+" ("+std::to_string(count)+")";
+  }
+
+/// A frame of metal; the lists are dark inside, the card of the item is a parchment
+void InventoryMenu::drawTouchPanel(Painter& p, const Mobile::Rect& r, bool parchment) {
+  if(r.w<=0 || r.h<=0)
+    return;
+  const float H     = float(h());
+  const float outer = std::max(3.f,H*0.009f);
+  const float inner = std::max(1.f,H*0.0025f);
+  const float x = r.x, y = r.y, w = r.w, hh = r.h;
+
+  auto box = [&](float bx, float by, float bw, float bh, const Color& c) {
+    p.setBrush(Brush(c));
+    p.drawRect(int(bx),int(by),int(std::ceil(bw)),int(std::ceil(bh)));
+    };
+
+  // shadow, the metal and its dark inner edge
+  box(x-outer*0.5f,y-outer*0.5f+outer,w+outer,hh+outer,Color(0.f,0.f,0.f,0.45f));
+  box(x-outer,y-outer,w+2*outer,hh+2*outer,Color(0.33f,0.33f,0.32f,0.98f));
+  box(x-outer,y-outer,w+2*outer,inner,Color(0.62f,0.62f,0.60f,0.98f));                  // light on the top
+  box(x-inner,y-inner,w+2*inner,hh+2*inner,Color(0.10f,0.10f,0.10f,0.98f));
+
+  if(parchment) {
+    box(x,y,w,hh,Color(0.62f,0.50f,0.33f,0.98f));
+    const float band = H*0.014f;
+    box(x+band,y+band,w-2*band,hh-2*band,Color(0.80f,0.70f,0.52f,0.98f));
+    box(x+band*2,y+band*2,w-4*band,hh-4*band,Color(0.84f,0.75f,0.58f,0.98f));
+    } else {
+    box(x,y,w,hh,Color(0.035f,0.045f,0.055f,0.90f));
+    }
+
+  // the rivets in the corners
+  const float rv = outer*1.6f;
+  const Color rc(0.55f,0.55f,0.53f,1.f);
+  box(x-outer*1.3f,y-outer*1.3f,rv,rv,rc);
+  box(x+w+outer*1.3f-rv,y-outer*1.3f,rv,rv,rc);
+  box(x-outer*1.3f,y+hh+outer*1.3f-rv,rv,rv,rc);
+  box(x+w+outer*1.3f-rv,y+hh+outer*1.3f-rv,rv,rv,rc);
+  }
+
+void InventoryMenu::drawTouchButton(Painter& p, const Mobile::Rect& r, std::string_view label) {
+  const float H      = float(h());
+  const int   border = std::max(2,int(H*0.004f));
+  p.setBrush(Brush(Color(0.36f,0.37f,0.38f,0.98f)));
+  p.drawRect(int(r.x),int(r.y),int(r.w),int(r.h));
+  p.setBrush(Brush(Color(0.09f,0.12f,0.15f,0.98f)));
+  p.drawRect(int(r.x)+border,int(r.y)+border,int(r.w)-2*border,int(r.h)-2*border);
+
+  float sc = touchTextScale()*1.15f;
+  for(int i=0; i<8; ++i) {
+    if(Resources::font(sc).textSize(label).w<=int(r.w)-4*border)
+      break;
+    sc *= 0.9f;
+    }
+  auto&      fnt = Resources::font(sc);
+  const auto sz  = fnt.textSize(label);
+  fnt.drawText(p,int(r.x+(r.w-float(sz.w))/2),int(r.y+r.h/2)+sz.h/2,label);
+  }
+
 void InventoryMenu::drawTouchHeader(Painter& p, std::string_view title, const Mobile::Rect& r) {
-  const int x = int(r.x), y = int(r.y), dw = int(r.w), dh = int(r.h);
-  const int border = std::max(2,dh/16);
-
-  p.setBrush(Brush(Color(0.50f,0.52f,0.55f,0.95f)));
-  p.drawRect(x,y,dw,dh);
-  p.setBrush(Brush(Color(0.03f,0.10f,0.19f,0.96f)));
-  p.drawRect(x+border,y+border,dw-2*border,dh-2*border);
-
-  auto& fnt = Resources::font(touchTextScale());
-  const auto sz = fnt.textSize(title);
-  fnt.drawText(p,x+(dw-sz.w)/2,y+dh/2+sz.h/2,title);
+  // NB fix 99: the title is a bare text on the top of the frame, on the left
+  auto&      fnt = Resources::font(touchTextScale()*1.1f);
+  const auto sz  = fnt.textSize(title);
+  fnt.drawText(p,int(r.x),int(r.y+r.h/2)+sz.h/2,title);
   }
 
 /// Arrows over the lists, when there are items out of sight
 void InventoryMenu::drawScrollHints(Painter& p, const Page& inv, const PageLocal& sel, const Mobile::Rect& r) {
-  const float side = r.w/float(Mobile::InventoryLayout::Columns);
+  const float side = touchLayout().side;
   const float a    = side*0.14f;
   const float cx   = r.x+r.w/2;
 
@@ -1126,6 +1232,8 @@ void InventoryMenu::drawScrollHints(Painter& p, const Page& inv, const PageLocal
   }
 
 void InventoryMenu::drawInfoTouch(Painter& p) {
+  // NB fix 99: the card of the item - the name on the top, the properties on the left of the picture and below it,
+  // the actions at the bottom. The text is dark, the font of the books.
   auto& pg  = activePage();
   auto& sel = activePageSel();
   auto  it  = pg.get(sel.sel);
@@ -1134,89 +1242,43 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
   auto& item = *pg.get(sel.sel);
   updateItemInfo(item);
 
-  const auto  lay = touchLayout();
-  const auto& r   = lay.info;
+  const auto  lay  = touchLayout();
+  const auto& r    = lay.info;
   if(r.w<=0)
     return;
+  const float H    = float(h());
+  const int   cpad = int(H*0.03f);
+  const int   x0   = int(r.x)+cpad;
+  const int   x1   = int(r.x+r.w)-cpad;
 
-  const float H   = float(h());
-  const int   x   = int(r.x);
-  const int   y   = int(r.y);
-  const int   dw  = int(r.w);
-  const int   dh  = int(r.h);
-  const int   in  = int(float(w())*0.0126f);
-
-  p.setBrush(Brush(Color(0.01f,0.015f,0.02f,0.62f)));
-  p.drawRect(x,y,dw,dh);
-
-  auto desc = item.description();
-
-  // The panel is as wide as the space between the two lists: on a screen of another proportion (a tablet, a phone with
-  // a big font) the text of the item did not fit and ran over the lists. The scale goes down in steps (the fonts are
-  // cached by the scale, so there are only a few of them) until the widest line fits.
-  float textScale = touchTextScale();
-  {
-    const int avail = std::max(1,dw-2*in);
-    for(int n=0; n<12; ++n) {
-      auto& f = Resources::font(textScale);
-      auto& t = Resources::font(textScale*1.05f);
-      bool  fits = t.textSize(desc).w<=avail;
-      for(size_t i=0; i<Item::MAX_UI_ROWS && fits; ++i) {
-        auto txt = item.uiText(i);
-        if(txt.empty())
-          continue;
-        int32_t val = item.uiValue(i);
-        if(i+1==Item::MAX_UI_ROWS && state==State::Trade && player!=nullptr && pg.is(&player->inventory()))
-          val = item.sellCost();
-        int need = f.textSize(txt).w;
-        if(val!=0) {
-          string_frm vint(val);
-          need += f.textSize(vint).w+in;
-          }
-        fits = need<=avail;
-        }
-      if(fits)
-        break;
-      textScale *= 0.9f;
-      }
-    }
-
-  auto& fnt = Resources::font(textScale);
-  const int pix = fnt.pixelSize();
-
-  // title in the center
-  auto& title = Resources::font(textScale*1.05f);
-  title.drawText(p,x+(dw-title.textSize(desc).w)/2,y+int(H*0.05f)+title.pixelSize()/2,desc);
-
-  // The separator of the actions. Properties are packed above it.
-  const int sepY = int(lay.use.y-H*0.022f);
-  p.setBrush(Brush(Color(0.62f,0.58f,0.50f,0.85f)));
-  p.drawRect(x,sepY,dw,std::max(2,int(H*0.002f)));
-
-  int rows = 0;
-  for(size_t i=0; i<Item::MAX_UI_ROWS; ++i) {
-    if(!item.uiText(i).empty())
-      ++rows;
-    }
-
-  // NB: the descriptions have up to 6 rows and long ones - they are fitted into the panel:
-  // the rows get smaller, when they do not fit under the title, and a long row is shrunk to the width.
-  // A smaller font scale is rounded down to 0.05 (Resources keeps a font per scale).
-  auto fontFor = [&](float sc) -> const GthFont& {
-    sc = std::max(0.5f,std::floor(sc*20.f)/20.f);
-    return Resources::font(sc);
+  auto book = [](float sc) -> const GthFont& {
+    sc = std::max(0.5f,std::floor(sc*20.f)/20.f);   // a font is cached per scale
+    return Resources::font("FONT_10_BOOK.TGA",Resources::FontType::Normal,sc);
     };
-  const float baseSc   = touchTextScale();
-  const int   titleBot = y+int(H*0.05f)+title.pixelSize()/2+title.pixelSize()/3;
-  const int   bottom   = sepY-int(H*0.016f);
-  int         rowH     = pix+pix/3;
-  float       rowSc    = baseSc;
-  if(rows>0 && rows*rowH>bottom-titleBot) {
-    rowH  = std::max(1,(bottom-titleBot)/rows);
-    rowSc = baseSc*float(rowH)/float(pix+pix/3);
-    }
-  int       ry       = bottom-(rows-1)*rowH;
-  const int propsTop = ry-rowH;
+
+  // the name, smaller when it is too wide
+  const auto desc = item.description();
+  float tsc = touchTextScale()*1.45f;
+  for(int i=0; i<10 && book(tsc).textSize(desc).w>x1-x0; ++i)
+    tsc *= 0.9f;
+  auto& title = book(tsc);
+  const int titleY = int(r.y+H*0.035f)+title.pixelSize();
+  title.drawText(p,int(r.x+(r.w-float(title.textSize(desc).w))/2),titleY,desc);
+
+  // the picture in a dark box
+  const auto& pic = lay.picture;
+  {
+    const int b = std::max(2,int(H*0.004f));
+    p.setBrush(Brush(Color(0.30f,0.27f,0.22f,1.f)));
+    p.drawRect(int(pic.x)-b,int(pic.y)-b,int(pic.w)+2*b,int(pic.h)+2*b);
+    p.setBrush(Brush(Color(0.10f,0.13f,0.15f,1.f)));
+    p.drawRect(int(pic.x),int(pic.y),int(pic.w),int(pic.h));
+    const int in = int(pic.w*0.06f);
+    renderer.drawItem(int(pic.x)+in,int(pic.y)+in,int(pic.w)-2*in,int(pic.h)-2*in,item);
+  }
+
+  // the properties: "text value", broken into lines by the words
+  std::vector<std::string> rows;
   for(size_t i=0; i<Item::MAX_UI_ROWS; ++i) {
     auto    txt = item.uiText(i);
     int32_t val = item.uiValue(i);
@@ -1224,24 +1286,90 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
       continue;
     if(i+1==Item::MAX_UI_ROWS && state==State::Trade && player!=nullptr && pg.is(&player->inventory()))
       val = item.sellCost();
-
-    string_frm vint(val);
-    const GthFont* f    = rowSc<baseSc ? &fontFor(rowSc) : &fnt;
-    const int      maxW = dw-2*in;
-    const int      need = f->textSize(txt).w + (val!=0 ? f->textSize(vint).w+in : 0);
-    if(need>maxW)
-      f = &fontFor(rowSc*float(maxW)/float(need));
-    f->drawText(p,x+in,ry,txt);
+    std::string row(txt);
     if(val!=0)
-      f->drawText(p,x+dw-in-f->textSize(vint).w,ry,vint);
-    ry += rowH;
+      row += " "+std::to_string(val);
+    rows.push_back(std::move(row));
     }
 
-  // The model fills the space between the title and the properties
-  const int top = y+title.pixelSize()*2;
-  const int sz  = std::min({propsTop-top,int(float(lay.info.h)*0.55f),dw/2});
-  if(sz>int(H*0.05f))
-    renderer.drawItem(x+(dw-sz)/2,top,sz,sz,item);
+  const int top    = int(pic.y);
+  const int narrow = int(pic.x)-int(H*0.02f);          // on the left of the picture
+  const int below  = int(pic.y+pic.h)+int(H*0.015f);   // from here the lines are as wide as the card
+  const int bottom = int(lay.use.y)-int(H*0.02f);
+
+  struct Line { std::string text; int y; };
+  std::vector<Line> lines;
+  float rsc = touchTextScale();
+  for(int attempt=0; attempt<8; ++attempt) {
+    lines.clear();
+    auto&     f    = book(rsc);
+    const int step = f.pixelSize()+f.pixelSize()/5;
+    int       y    = top+f.pixelSize();
+    bool      fits = true;
+    for(auto& row:rows) {
+      std::string line, word;
+      auto flush = [&]() {
+        lines.push_back({line,y});
+        y += step;
+        line.clear();
+        };
+      auto widthAt = [&](int yy) { return (yy-f.pixelSize()<below ? narrow : x1)-x0; };
+      size_t pos = 0;
+      while(pos<=row.size()) {
+        size_t sp = row.find(' ',pos);
+        if(sp==std::string::npos)
+          sp = row.size();
+        word = row.substr(pos,sp-pos);
+        pos  = sp+1;
+        std::string next = line.empty() ? word : line+" "+word;
+        if(!line.empty() && f.textSize(next).w>widthAt(y))
+          flush(), next = word;
+        line = next;
+        }
+      if(!line.empty())
+        flush();
+      }
+    if(!lines.empty() && lines.back().y>bottom)
+      fits = false;
+    if(fits)
+      break;
+    rsc *= 0.9f;
+    }
+  auto& f = book(rsc);
+  for(auto& l:lines)
+    f.drawText(p,x0,l.y,l.text);
+
+  // the actions
+  const bool pl = touchPolish();
+  auto label = [&](std::string_view en) -> std::string_view {
+    if(!pl) {
+      if(en=="Equip")   return "EQUIP";
+      if(en=="Unequip") return "UNEQUIP";
+      if(en=="Read")    return "READ";
+      if(en=="Use")     return "USE";
+      if(en=="Store")   return "STORE";
+      if(en=="Take")    return "TAKE";
+      if(en=="Sell")    return "SELL";
+      if(en=="Buy")     return "BUY";
+      if(en=="Drop")    return "DROP";
+      if(en=="Move")    return "MOVE";
+      return en;
+      }
+    // in the code page of the font: \xA3 Ł, \xD3 Ó, \xAF Ż, \xC6 Ć, \x8F Ź, \x8C Ś
+    if(en=="Equip")   return "ZA\xA3\xD3\xAF";
+    if(en=="Unequip") return "ZDEJMIJ";
+    if(en=="Read")    return "CZYTAJ";
+    if(en=="Use")     return "U\xAFYJ";
+    if(en=="Store")   return "SCHOWAJ";
+    if(en=="Take")    return "WE\x8F";
+    if(en=="Sell")    return "SPRZEDAJ";
+    if(en=="Buy")     return "KUP";
+    if(en=="Drop")    return "WYRZU\xC6";
+    if(en=="Move")    return "PRZENIE\x8C";
+    return en;
+    };
+  drawTouchButton(p,lay.use, label(mobileActionLabel()));
+  drawTouchButton(p,lay.drop,label(state==State::Equip ? "Drop" : "Move"));
   }
 
 std::string_view InventoryMenu::mobileActionLabel() {

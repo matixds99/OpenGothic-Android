@@ -226,46 +226,64 @@ void Controls::dialogPad(bool visible) {
   }
 
 InventoryLayout Mobile::inventoryLayout(float W, float H, bool twoLists, float gui) {
+  // NB fix 99: the new inventory - the panels of the lists on the left, the card of the item on the right
   InventoryLayout l;
-  const float cols = float(InventoryLayout::Columns);
-  const float rows = float(InventoryLayout::Rows);
+  const float q      = std::clamp(0.766f*gui,0.6f,1.f);   // a smaller interface keeps more room around
+  const float edge   = 0.025f*W;
+  const float gap    = 0.018f*W;
+  const float top    = 0.045f*H;
+  const float bottom = H-0.045f*H;
+  const float pad    = 0.022f*H;                            // inside the frames
 
-  // q is the size of the interface compared to the largest one that fits the screen
-  const float q = std::min(1.f,0.766f*gui);
-  l.side = std::min(0.128f*H*q,0.095f*W);
-  const float side   = l.side;
-  const float top    = 0.125f*H;
-  const float tabW   = 0.9f*side;
-  const float tabsX  = W-0.03f*W-tabW;
-  const float inset  = 0.034f*W;
+  const float cardW  = (twoLists ? 0.27f : 0.34f)*W;
+  l.info = {W-edge-cardW,top,cardW,bottom-top};
 
-  const float tabGap = 0.12f*side;
-  l.list[1] = {tabsX-tabGap-cols*side,top,cols*side,rows*side};
-  l.list[0] = {inset,top,cols*side,rows*side};
+  const int   lists  = twoLists ? 2 : 1;
+  const float panelW = (l.info.x-gap-edge-float(lists-1)*gap)/float(lists);
+  l.cols = twoLists ? 5 : 9;
 
-  // close button over the tabs, the title of the player's list ends before it
-  const float closeW = 0.57f*side;
-  l.close = {tabsX+(tabW-closeW)/2,0.046f*H,closeW,closeW};
-  l.header[1] = {l.list[1].x,0.053f*H,l.close.x-0.05f*side-l.list[1].x,0.058f*H*q};
-  l.header[0] = {l.list[0].x,0.053f*H,cols*side,0.058f*H*q};
+  const float headH  = 0.075f*H*q;
+  const float innerW = panelW-2*pad;
+  const float pitch  = innerW/float(CategoryCount);
+  const float tabS   = std::min(pitch*0.9f,0.105f*H*q);
+  const float tabsY  = top+pad+headH+0.012f*H;
+  const float gridY  = tabsY+tabS+0.018f*H;
+  const float gridH  = bottom-pad-gridY;
 
-  const float tabTop    = top+0.042f*H*q;
-  const float tabBottom = top+rows*side-0.042f*H*q;
-  const float pitch     = (tabBottom-tabTop)/float(CategoryCount);
+  l.side = std::min(innerW/float(l.cols),gridH/2.f);
+  l.rows = std::max(2,int(gridH/l.side));
+
+  for(int i=0; i<2; ++i) {
+    // the player's list is the last panel, the other one (if any) is before it
+    const int   slotIndex = (i==1) ? lists-1 : 0;
+    const float px        = edge+float(slotIndex)*(panelW+gap);
+    const float gridW     = l.side*float(l.cols);
+    l.panel[i]  = {px,top,panelW,gridY+l.side*float(l.rows)+pad-top};
+    l.header[i] = {px+pad,top+pad,innerW,headH};
+    l.list[i]   = {px+(panelW-gridW)/2,gridY,gridW,l.side*float(l.rows)};
+    }
+  if(!twoLists)
+    l.panel[0] = l.panel[1];
+
+  const float tabsX = l.panel[1].x+pad+(innerW-pitch*float(CategoryCount))/2;
   for(int i=0; i<CategoryCount; ++i)
-    l.tab[i] = {tabsX,tabTop+float(i)*pitch,tabW,pitch*0.9f};
+    l.tab[i] = {tabsX+float(i)*pitch+(pitch-tabS)/2,tabsY,tabS,tabS};
 
-  const float gap = 0.03f*W;
-  const float x0  = twoLists ? l.list[0].x+l.list[0].w+gap : inset;
-  const float x1  = twoLists ? l.list[1].x-gap : l.list[1].x-0.054f*W;
-  l.info = {x0,top,std::max(0.f,x1-x0),0.5f*H*q};
+  // the cross sits on the top right corner of the card
+  const float closeW = 0.085f*H;
+  l.close = {l.info.x+l.info.w-closeW*0.8f,l.info.y-closeW*0.2f,closeW,closeW};
 
-  const float btn = 0.07f*H*q;
-  const float by  = l.info.y+l.info.h-0.02f*H*q-btn;
-  const float pad = 0.008f*W;
-  l.use   = {l.info.x+pad,by,btn,btn};
-  l.drop  = {l.info.x+l.info.w-pad-btn,by,btn,btn};
-  l.stack = {l.drop.x-pad-btn,by,btn,btn};
+  const float cpad = 0.03f*H;
+  const float pic  = std::min(l.info.w*0.42f,l.info.h*0.32f);
+  l.picture = {l.info.x+l.info.w-cpad-pic,l.info.y+0.14f*H,pic,pic};
+
+  const float btnH = 0.11f*H*q;
+  const float by   = l.info.y+l.info.h-cpad-btnH;
+  const float bgap = 0.02f*H;
+  const float bw   = (l.info.w-2*cpad-2*bgap-btnH)/2;
+  l.use   = {l.info.x+cpad,by,bw,btnH};
+  l.drop  = {l.use.x+bw+bgap,by,bw,btnH};
+  l.stack = {l.drop.x+bw+bgap,by,btnH,btnH};
   return l;
   }
 

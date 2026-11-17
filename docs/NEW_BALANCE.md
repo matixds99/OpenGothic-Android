@@ -59,7 +59,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |
 | `patches/tempest-opengothic.patch` (+ `patches/README.md`) | Tempest: gra nie zamyka się, gdy idzie w tło (wiadomość, ekran główny) – nowa powierzchnia Vulkana po powrocie, swapchain niszczony przy wyjściu w tło | 73, 74 |
 | `common/ui/dialogmenu.cpp` / `.h` | odpowiedzi w dialogach na pergaminie jak na PC (dotyk, przewijanie); menu bohatera bez kamery dialogu | 72 |
-| `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N” | 12, 69 |
+| `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N”; nowy wygląd ekwipunku: ramki, siatka 9 kolumn, kategorie w rzędzie, karta przedmiotu na pergaminie z przyciskami | 12, 69, 99 |
 | 🆕 `common/ui/nbsalesmenu.cpp` | okno sprzedaży NB (jak okno pluginu, dotykowe) | 68, 69 |
 | 🆕 `common/ui/nbsalesmenu.h` | j.w. | 68, 69 |
 | 🆕 `common/ui/nbcraftmenu.cpp` | okno rzemiosła NB (jak okno pluginu na PC, dotykowe) – wszystkie stoły | 70, 71 |
