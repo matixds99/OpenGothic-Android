@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **92**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **93**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -242,6 +242,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zgłoszenie (film 342652):** w NB szybki atak to trzy klawisze po kolei: A albo D (krok w bok, z akrobatyką – przewrotka), W (do przodu) i Ctrl/mysz (atak) – bohater po przewrotce wyprowadza atak w ruchu, który często obala przeciwnika. Na telefonie nie da się tego wcisnąć – potrzebny osobny przycisk (też do testu 83).
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
+
+### 92. Szybki atak wg filmu z PC z widocznymi klawiszami – 🧪 (17.11.2026)
+- **Pliki:** `common/utils/androidinput.cpp`
+- **Zgłoszenie (film Video_Project z nakładką klawiszy):** lewy przycisk myszy (atak) trzymany, A albo D razem z W trzymane (bohater idzie do przodu na ukos) i W cały czas klikane – cios za ciosem w ruchu, ok. 1,4 s. Ctrl czy mysz – bez różnicy, chodzi o wyprowadzenie ataku.
+- **Poprawka:** QUICK: A/D (na zmianę) i W trzymane razem przez 1,4 s, a w tym czasie atak (Ctrl) stukany co 0,3 s (5 ciosów). Na ekranie dotykowym (sterowanie Gothic 2) cios wychodzi z wciśnięcia klawisza ataku, więc stukany jest atak zamiast W; z trzymanym W to atak w ruchu.
+- **Do sprawdzenia:** seria ciosów w ruchu na ukos jak na filmie z PC; tempo (0,3 s) i długość (1,4 s) do dopasowania.
 
 ### 91. Szybki atak: powrót do ustawienia z 87 (88–90 cofnięte) – 🧪 (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp`, `common/game/playercontrol.cpp/.h`, `common/world/objects/npc.cpp/.h` (stan z commita `ddfef34`)
