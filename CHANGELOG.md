@@ -243,7 +243,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
 
-### 97. Szybki atak: QUICK = „< STEP” (A) i miecz (W) naciśnięte razem – 🧪 (17.11.2026)
+### 98. Szybki atak: cios przycisku miecza szybciej i z resetem pozycji – 🧪 (17.11.2026)
+- **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`), `common/world/objects/npc.cpp/.h` (`nbQuickSpeed`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`
+- **Zgłoszenie (zrzut 17.11):** przycisk miecza (między obroną a QUICK) robi to, co trzeba, tylko za wolno. Trzeba go przyspieszyć i resetować pozycję – wtedy będzie szybki atak.
+- **Poprawka:** QUICK nie naciska już klawiszy (97). `PlayerControl::quickAttack`: cios do przodu jak z przycisku miecza (`swingSword`), zaraz po trafieniu reset pozycji (`resetAttack`) i od razu następny cios. W tym czasie animacje bohatera są szybsze (zegar modelu × `QuickSpeed`). Liczby w `playercontrol.h`: `QuickHits = 3` ciosy, `QuickTime = 2000` ms limitu, `QuickSpeed = 1.5f`. Po serii prędkość wraca do 1.
+- **Do sprawdzenia:** dotknięcie QUICK daje 3 szybkie ciosy do przodu, jeden po drugim. Prędkość i liczbę ciosów da się zmienić w `playercontrol.h`.
+
+### 97. Szybki atak: QUICK = „< STEP” (A) i miecz (W) naciśnięte razem – ❌ (zastąpione w 98) (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp`, `common/mainwindow.cpp`
 - **Zgłoszenie (film 342682):** chodzi o animację, nie o przeciwnika. Na filmie gracz ręcznie robi kombinację na ekranie: strzałka w lewo (A) i miecz (W) dotykane razem (ok. 0,25 s, co ok. 1 s), albo strzałka trzymana i miecz klikany. Taką kombinację ma robić QUICK.
 - **Poprawka:** QUICK nie wywołuje już `PlayerControl::quickAttack` (96). Jedno dotknięcie naciska dokładnie te przyciski co gracz: „< STEP” (A), po 30 ms ACTION (miecz). ACTION jest puszczany po 300 ms, A po 350 ms (test, czasy wg gracza 17.11). Przy 40/60 ms gra nie widziała W, przy 150/200 ms bohater tylko przesuwał się w lewo bez ataku. Wcześniej 230/260 ms. Szybkie kolejne dotknięcia są ustawiane w kolejce jedno po drugim. Sterowanie Gothic 2 bez zmian, jak przy ręcznym dotykaniu.

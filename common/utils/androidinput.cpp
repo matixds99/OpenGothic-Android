@@ -698,18 +698,7 @@ void AndroidInput::Controller::onSpecial(int id) {
     }
   if(id==Mobile::Special::HudReset)
     return;
-  if(id==Mobile::Special::QuickAttack) {
-    // NB fix 97: QUICK presses the same buttons as the player on the touch screen:
-    // "< STEP" (A) and ACTION (the sword, W) together, then both are released
-    uint64_t t = Application::tickCount();
-    if(!combo.empty())
-      t = std::max(t,combo.back().at+30);
-    combo.push_back({t,     Mobile::Key::StrafeLeft,true});
-    combo.push_back({t+30,  Mobile::Key::Action,    true});
-    combo.push_back({t+300, Mobile::Key::Action,    false});
-    combo.push_back({t+350, Mobile::Key::StrafeLeft,false});
-    return;
-    }
+  // NB fix 98: QUICK (Special::QuickAttack) goes to PlayerControl::quickAttack (MainWindow::onMobileAction)
 
   const int setting = id-Mobile::Special::FirstSetting;
   if(0<=setting && setting<Mobile::SettingCount) {

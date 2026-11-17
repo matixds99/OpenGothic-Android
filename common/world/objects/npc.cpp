@@ -3187,8 +3187,15 @@ void Npc::tickAnimationTags() {
   }
 
 void Npc::tick(uint64_t dt) {
-  if(auto* effects = owner.globalFx())
-    visual.pose().setTimeScale(effects->modelTimeScale(*this),owner.tickCount());
+  {
+    // NB fix 98: QUICK speeds up the animations of the player
+    float scale = 1.f;
+    if(auto* effects = owner.globalFx())
+      scale = effects->modelTimeScale(*this);
+    if(isPlayer())
+      scale *= nbQuickSpeed;
+    visual.pose().setTimeScale(scale,owner.tickCount());
+  }
   static bool dbg = false;
   static int  kId = 432;
   if(dbg && !isPlayer() && hnpc->id!=kId)
@@ -6174,8 +6181,15 @@ void Npc::updateTransform() {
   }
 
 void Npc::updateAnimation(uint64_t dt, bool force) {
-  if(auto* effects = owner.globalFx())
-    visual.pose().setTimeScale(effects->modelTimeScale(*this),owner.tickCount());
+  {
+    // NB fix 98: QUICK speeds up the animations of the player
+    float scale = 1.f;
+    if(auto* effects = owner.globalFx())
+      scale = effects->modelTimeScale(*this);
+    if(isPlayer())
+      scale *= nbQuickSpeed;
+    visual.pose().setTimeScale(scale,owner.tickCount());
+  }
   const auto camera = Gothic::inst().camera();
   if(isPlayer() && camera!=nullptr && camera->isFree())
     dt = 0;

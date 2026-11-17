@@ -372,6 +372,7 @@ class Npc final {
 
     bool      isAttackAnim() const;
     bool      resetAttack();   // NB fix 95: the attack after its blow goes back to the stance of the fight
+    static inline float nbQuickSpeed = 1.f;   // NB fix 98: the speed of the animations of the player during QUICK
     bool      isPrehit() const;
     bool      isImmortal() const;
 

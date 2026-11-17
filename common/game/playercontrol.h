@@ -31,7 +31,10 @@ class PlayerControl final {
     // NB fix 96: the quick attack of New Balance as on the PC (Ctrl + A/D held, W clicked): blows to the side one after
     // another, each one cut off right after its hit (the reset of W)
     uint64_t       quickUntil = 0;
-    int            quickSide  = -1;   // -1 left, +1 right; in turn
+    // NB fix 98: QUICK - the number of the blows, their time limit and the speed of the animations
+    static constexpr int      QuickHits  = 3;
+    static constexpr uint64_t QuickTime  = 2000;   // ms
+    static constexpr float    QuickSpeed = 1.5f;
     int            quickCount = 0;
 
     void  onKeyPressed (KeyCodec::Action a, Tempest::Event::KeyType key, KeyCodec::Mapping mapping);

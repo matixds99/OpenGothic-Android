@@ -382,7 +382,7 @@ void PlayerControl::tickFocus() {
   }
 
 void PlayerControl::quickAttack() {
-  // NB fix 96: QUICK of the touch screen - Ctrl + A or D held and W clicked on the PC: the side changes every time
+  // NB fix 96, 98: QUICK of the touch screen - the forward blows of the sword button, faster and reset after each hit
   auto w  = Gothic::inst().world();
   auto pl = w!=nullptr ? w->player() : nullptr;
   if(pl==nullptr || quickUntil!=0)
@@ -390,9 +390,8 @@ void PlayerControl::quickAttack() {
   const auto ws = pl->weaponState();
   if(ws!=WeaponState::W1H && ws!=WeaponState::W2H)
     return;
-  quickSide  = -quickSide;
   quickCount = 0;
-  quickUntil = w->tickCount()+2000;
+  quickUntil = w->tickCount()+QuickTime;
   }
 
 void PlayerControl::clearFocus() {
@@ -851,13 +850,16 @@ void PlayerControl::implMove(uint64_t dt) {
     ctrl[Action::K_ENTER] = false;
     }
 
-  // NB fix 96: the quick attack - a blow to the side, cut off right after its hit (W of the PC), and the next one: 3 blows
+  // NB fix 96, 98: the quick attack - the forward blow (the sword button) played faster, cut off right after its hit
+  // (the reset of the position) and the next one at once
   if(quickUntil!=0) {
     auto*      wr  = Gothic::inst().world();
     const auto now = wr!=nullptr ? wr->tickCount() : 0;
-    if(wr==nullptr || now>quickUntil || quickCount>=3 || (ws!=WeaponState::W1H && ws!=WeaponState::W2H)) {
+    if(wr==nullptr || now>quickUntil || quickCount>=QuickHits || (ws!=WeaponState::W1H && ws!=WeaponState::W2H)) {
       quickUntil = 0;
+      Npc::nbQuickSpeed = 1.f;
       } else {
+      Npc::nbQuickSpeed = QuickSpeed;
       if(auto other = pl.target()) {
         auto dp = other->centerPosition()-pl.centerPosition();
         pl.turnTo(dp.x,dp.z,true,dt);
@@ -866,9 +868,7 @@ void PlayerControl::implMove(uint64_t dt) {
         if(pl.resetAttack())   // only after the hit of the blow
           ++quickCount;
         } else {
-        if(quickSide<0)
-          pl.swingSwordL(); else
-          pl.swingSwordR();
+        pl.swingSword();
         }
       return;
       }

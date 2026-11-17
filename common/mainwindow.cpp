@@ -2274,6 +2274,8 @@ void MainWindow::onMobileAction(int id) {
     }
   if(mobileContext()!=Mobile::Mode::Game)
     return;
+  if(id==Mobile::Special::QuickAttack)
+    player.quickAttack();   // NB fix 98
   if(id==Mobile::Special::Target)
     player.cycleTarget();
   if(id==Mobile::Special::Spell) {
