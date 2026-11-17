@@ -237,6 +237,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 103. Szybki atak u maga – 🧪 (18.11.2026)
+- **Pliki:** `common/game/playercontrol.cpp/.h` (`QuickSpellSpeed`), `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.h`
+- **Zgłoszenie:** QUICK ma działać też z magią w ręku, ale wolniej niż w walce wręcz. Przy okazji: w walce wręcz jednak 2,5× (2,2× za wolno).
+- **Poprawka:** przycisk QUICK jest widoczny także z runą/zwojem w ręku (gdy jest mana). Dotknięcie rzuca czar z ręki `QuickHits` = 3 razy pod rząd, bohater zwrócony do celu. Czary ładowane wychodzą od razu na pierwszym poziomie. Animacje są przyspieszone `QuickSpellSpeed = 1.3f` (walka wręcz `QuickSpeed = 2.5f`). Limit to 4 s, a prędkość wraca do 1 po skończeniu ostatniego czaru. Brak many kończy serię.
+- **Do sprawdzenia:** QUICK z runą – 3 czary szybciej niż normalnie. Tempo do ustawienia w `playercontrol.h` (`QuickSpellSpeed`: 1.0 = normalnie).
+
 ### 102. Runa z bliska nie trafia – 🧪 (18.11.2026)
 - **Pliki:** `common/world/bullet.cpp` (`tickHoming`)
 - **Zgłoszenie (film 342714):** czar z runy rzucony z bliska nie trafia: pocisk krąży nad celem.
@@ -291,14 +297,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Jedno dotknięcie daje serię ciosów do przodu, jak z przycisku miecza (`swingSword`). Bohater obraca się do celu.
   - Zaraz po klatce uderzenia każdy cios jest ucinany (`Npc::resetAttack`, „reset pozycji”) i od razu wchodzi następny.
   - Na czas serii animacje bohatera są przyspieszone (zegar modelu × `QuickSpeed`). Potem prędkość wraca do 1.
-  - Liczby w `playercontrol.h`: `QuickHits = 3` ciosy, `QuickTime = 2000` ms limitu, `QuickSpeed = 2.2f`. Przy 1,5× było za wolno, przy 2,5× minimalnie za szybko, 2,2× jest jak na PC.
+  - Liczby w `playercontrol.h`: `QuickHits = 3` ciosy, `QuickTime = 2000` ms limitu, `QuickSpeed = 2.5f`. Przy 1,5× było za wolno; 2,2× też okazało się za wolne (18.11), więc wróciło 2,5×.
 - **Droga do tego (85–97, w skrócie):**
   - 85–94: QUICK udawał klawisze PC w różnych kolejnościach i czasach: A/D → W → Ctrl, Ctrl + A/D + W, cios w bok osobnym klawiszem, sterowanie Gothic 1 na czas serii. Nic nie dawało tego co na PC. Ekran dotykowy ma sterowanie Gothic 2, gdzie A/D/W przy Ctrl to zwykły ruch, a oryginalny silnik czyta trzymane klawisze co klatkę.
   - 95: odkryty „reset pozycji” po ciosie (`resetAttack`).
   - 96: ciosy w bok wykonywane bezpośrednio z resetem.
   - 97: QUICK naciskał przyciski ekranu „< STEP” i miecz razem; przy żadnych czasach atak nie wchodził.
   - 98: gracz zauważył, że sam przycisk miecza robi właściwy cios, tylko za wolno. Przyspieszenie animacji i reset po trafieniu dały szybki atak jak na PC.
-- **Test (17.11):** działa wg gracza, tempo jak na PC przy 2,2×.
+- **Test (17.11–18.11):** działa wg gracza; ostatecznie tempo jak na PC przy 2,5×.
 - **Pozostałości w kodzie:** `PlayerControl::quickCombo` (94) i `pendingReset` (95) są już nieużywane (zawsze wyłączone), a sekwencer klawiszy `combo` w `androidinput` jest pusty. Do usunięcia przy sprzątaniu.
 
 ### 86. Ustawienie: akrobatyka NB (przewrotki) – 🧪 (17.11.2026)

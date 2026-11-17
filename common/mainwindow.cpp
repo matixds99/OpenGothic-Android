@@ -2344,7 +2344,7 @@ void MainWindow::updateMobileAvailability() {
   }
 
   if(mode==Mobile::Mode::Game) {
-    bool target = false, spells = false, movement = false;
+    bool target = false, spells = false, movement = false, quick = false;
     if(auto pl = Gothic::inst().player()) {
       const auto camera = Gothic::inst().camera();
       const bool alive  = !pl->isDead() && !pl->isDown();
@@ -2390,13 +2390,14 @@ void MainWindow::updateMobileAvailability() {
             ++spellCount;
           }
         spells = ws==WeaponState::Mage && spellCount>1;
+        quick  = melee || (ws==WeaponState::Mage && pl->attribute(ATR_MANA)>0);   // NB fix 103
         }
       if(free && !pl->isInAir() && !pl->isJump())
         allowed |= keyMask(Key::Jump);
       if(alive && pl->interactive()!=nullptr)
         allowed |= keyMask(Key::Action);
       }
-    androidControls.availability(allowed,target,spells,movement);
+    androidControls.availability(allowed,target,spells,movement,quick);
     return;
     }
 

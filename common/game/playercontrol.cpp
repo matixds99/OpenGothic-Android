@@ -388,10 +388,10 @@ void PlayerControl::quickAttack() {
   if(pl==nullptr || quickUntil!=0)
     return;
   const auto ws = pl->weaponState();
-  if(ws!=WeaponState::W1H && ws!=WeaponState::W2H)
+  if(ws!=WeaponState::W1H && ws!=WeaponState::W2H && ws!=WeaponState::Mage)
     return;
   quickCount = 0;
-  quickUntil = w->tickCount()+QuickTime;
+  quickUntil = w->tickCount()+(ws==WeaponState::Mage ? 2*QuickTime : QuickTime);   // NB fix 103: the spells are longer
   }
 
 void PlayerControl::clearFocus() {
@@ -855,9 +855,35 @@ void PlayerControl::implMove(uint64_t dt) {
   if(quickUntil!=0) {
     auto*      wr  = Gothic::inst().world();
     const auto now = wr!=nullptr ? wr->tickCount() : 0;
-    if(wr==nullptr || now>quickUntil || quickCount>=QuickHits || (ws!=WeaponState::W1H && ws!=WeaponState::W2H)) {
+    const bool mage     = ws==WeaponState::Mage;
+    // NB fix 103: the last spell is cast to its end before the speed goes back
+    const bool castDone = !mage || pl.bodyStateMasked()==BS_STAND;
+    if(wr==nullptr || now>quickUntil || (quickCount>=QuickHits && castDone) ||
+       (ws!=WeaponState::W1H && ws!=WeaponState::W2H && !mage)) {
       quickUntil = 0;
       Npc::nbQuickSpeed = 1.f;
+      } else
+    if(mage) {
+      // NB fix 103: QUICK with magic - the spell in the hand cast QuickHits times in a row, faster (QuickSpellSpeed)
+      Npc::nbQuickSpeed = QuickSpellSpeed;
+      if(auto other = pl.target()) {
+        auto dp = other->centerPosition()-pl.centerPosition();
+        pl.turnTo(dp.x,dp.z,true,dt);
+        }
+      if(quickCount<QuickHits && !casting) {
+        const auto r = pl.beginCastSpell();
+        if(r==Npc::BC_Invest) {
+          pl.endCastSpell(true);   // a spell that is charged goes at its first level
+          ++quickCount;
+          } else
+        if(r==Npc::BC_Cast) {
+          ++quickCount;
+          } else
+        if(r==Npc::BC_NoMana) {
+          quickCount = QuickHits;
+          }
+        }
+      return;
       } else {
       Npc::nbQuickSpeed = QuickSpeed;
       if(auto other = pl.target()) {

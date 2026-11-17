@@ -1010,7 +1010,7 @@ void Controls::applyAvailability() {
     if(b.special==Special::Sprint)
       usable = availableMovement; else
     if(b.special==Special::QuickAttack)
-      usable = (availableKeys & keyMask(Key::AttackLeft))!=0;   // a melee weapon in the hands
+      usable = availableQuick;   // NB fix 103: a melee weapon or magic in the hands
 
     // The hotbar stays visible while the player can move, other controls hide when unusable
     // Inventory actions disappear when there is no item to act on, the tabs and the close button stay.
@@ -1021,8 +1021,9 @@ void Controls::applyAvailability() {
     }
   }
 
-void Controls::availability(uint64_t keys, bool target, bool spells, bool movement) {
+void Controls::availability(uint64_t keys, bool target, bool spells, bool movement, bool quick) {
   availableKeys     = keys;
+  availableQuick    = quick;
   availableTarget   = target;
   availableSpells   = spells;
   availableMovement = movement;

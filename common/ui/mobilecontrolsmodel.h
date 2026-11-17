@@ -212,7 +212,7 @@ struct Event {
 class Controls {
   public:
     void  configure(float width, float height, Mode next);
-    void  availability(uint64_t keys, bool target, bool spells, bool movement);
+    void  availability(uint64_t keys, bool target, bool spells, bool movement, bool quick=false);
     void  preferences(float buttons, float deadzone, float sensitivity);
     void  inventoryLists(bool two);
     /// Dialog answers are tapped. The cross with OK is an alternative that is hidden by default.
@@ -374,6 +374,7 @@ class Controls {
     uint64_t availableKeys     = ~uint64_t(0);
     bool     availableTarget   = true;
     bool     availableSpells   = true;
+    bool     availableQuick    = false;   // NB fix 103: QUICK - a melee weapon or magic in the hands
     bool     availableMovement = true;
 
     Rect     stick;

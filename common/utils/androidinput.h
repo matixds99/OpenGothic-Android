@@ -116,8 +116,8 @@ class Controller {
     void  pointerUp  (int id, float x, float y);
     void  physical(Mobile::Key key, bool down);
 
-    void  availability(uint64_t keys, bool target, bool spells, bool movement) {
-      controls.availability(keys,target,spells,movement);
+    void  availability(uint64_t keys, bool target, bool spells, bool movement, bool quick=false) {
+      controls.availability(keys,target,spells,movement,quick);
       }
 
     const Tempest::Sprite&     icon(Icon id) const { return icons.at(size_t(id)); }
