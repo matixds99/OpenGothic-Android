@@ -161,17 +161,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Crash z `Item::position` ← `Npc::nextAiAction`** (dołączony crash.log) to stary, naprawiony już błąd 63 – w obecnym kodzie to miejsce ma sprawdzenie; launcher pokazuje ostatni zapisany crash.
 - **Test (17.11):** działa – gra wraca z tła z obrazem (w logu `the window comes back` i `the swapchain is made anew (2608x1200)`).
 
-### 77. Kocioł pusty, choć bohater zna przepisy na zupy i kompoty – 🧪 (17.11.2026)
+### 77. Kocioł pusty, choć bohater zna przepisy na zupy i kompoty – ✅ (17.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
 - **Zgłoszenie:** w statystykach „Zupy / Kompoty / Ciasta – uczony”, a okno kotła puste. W logu `NB: craft: no item "itfo_pottage_mushroom_black"`, `no item "itfo_compote_00"`, `0 known recipes`.
 - **Przyczyna:** przepis był rozpoznany, ale przedmiot wyniku odrzucony: test `is_instance_of<IItem>()` z ZenKita jest prawdziwy tylko dla przedmiotu, którego instancja już powstała (był w świecie albo w czyimś ekwipunku). Nowe przedmioty (gęsty gulasz z czarnych grzybów, kompot) wypadały z listy – tak samo składniki, których nikt jeszcze nie miał.
 - **Poprawka:** przedmiot rozpoznawany po klasie `C_ITEM` (przez prototyp), bez względu na to, czy instancja już jest. Dotyczy wszystkich stołów (70–71) i okna sprzedaży (68).
+- **Test (17.11):** działa – kotły i piec Thekli pokazują przepisy.
 
-### 78. Ustawienie: celowanie w pokojowe stworzenia (ognik, przywołańce, zwierzęta) – 🧪 (17.11.2026)
+### 78. Ustawienie: celowanie w pokojowe stworzenia (ognik, przywołańce, zwierzęta) – ✅ (17.11.2026)
 - **Pliki:** `common/world/worldobjects.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`
 - **Zgłoszenie:** w walce gracz zaznacza i bije ognika (i przywołane istoty). Potrzebny przełącznik w ustawieniach: włączony – można zaznaczyć ognika (rozmowa), owce, króliki, żółwie (polowanie); wyłączony – pokojowe stworzenia nie są zaznaczane.
 - **Poprawka:** nowy wiersz w ustawieniach „Peaceful targets” → `Target peaceful creatures: ON/OFF` (domyślnie ON – jak dotąd; w `Gothic.ini`, sekcja `MOBILE`, `peacefulfocus`, wersja ustawień 8). Przy OFF z celowania gracza (fokus, walka, zaklęcia) wypadają stworzenia (gildie potworów), które nie są do niego wrogie (nastawienie neutralne/przyjazne): ognik, przywołańce, owce, króliki, żółwie… Zostają: ludzie i orkowie (dialogi), martwe ciała (łupy), oraz każde stworzenie, które atakuje gracza albo jest do niego wrogie/rozgniewane.
 - **Do sprawdzenia:** OFF – walka obok ognika i przywołańców nie zaznacza ich, owca się nie podświetla; ON – rozmowa z ognikiem, polowanie na owce jak dotąd.
+- **Test (17.11):** działa – fokus na ognika wyłącza się i włącza przełącznikiem.
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`
