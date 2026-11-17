@@ -249,6 +249,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna:** na PC trzymane Ctrl + A silnik czyta co klatkę – po resecie od razu wchodzi kolejny cios w bok. W OpenGothic trzymany klawisz daje jeden cios, a udawanie klawiszy (85–95) nie odtwarzało tego zachowania.
 - **Poprawka:** przycisk QUICK nie udaje już klawiszy. `PlayerControl::quickAttack` co klatkę (do 2 s): gdy bohater nie atakuje – cios w bok (strona na zmianę przy kolejnych QUICK), bohater obrócony do celu; gdy cios trafił (po klatce uderzenia) – reset pozycji (`resetAttack`, jak kliknięcie W) i zaraz następny cios; 3 ciosy. Sterowanie Gothic 1 z 94 i reset z 95 nie są już włączane przez QUICK.
 - **Do sprawdzenia:** 3 szybkie ciosy w bok pod rząd, każdy trafia.
+- **Build (17.11):** `-Werror,-Wunused-private-field` – nieużywane pole `comboRight` w `androidinput.h` usunięte.
 
 ### 95. Szybki atak: W „resetuje pozycję” bohatera po ciosie – ❌ (zastąpione w 96) (17.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h` (`resetAttack`), `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.cpp`

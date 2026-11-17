@@ -172,7 +172,6 @@ class Controller {
       bool        down = false;
       };
     std::vector<ComboKey> combo;
-    bool             comboRight = false;   // the side of the next quick attack: left and right in turn
 
     std::array<Tempest::Sprite,IconCount> icons;
     std::array<float,IconCount>           iconPx{}; // side of the icon in pixels
