@@ -246,7 +246,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 ### 98. Szybki atak: cios przycisku miecza szybciej i z resetem pozycji – 🧪 (17.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`), `common/world/objects/npc.cpp/.h` (`nbQuickSpeed`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`
 - **Zgłoszenie (zrzut 17.11):** przycisk miecza (między obroną a QUICK) robi to, co trzeba, tylko za wolno. Trzeba go przyspieszyć i resetować pozycję – wtedy będzie szybki atak.
-- **Poprawka:** QUICK nie naciska już klawiszy (97). `PlayerControl::quickAttack`: cios do przodu jak z przycisku miecza (`swingSword`), zaraz po trafieniu reset pozycji (`resetAttack`) i od razu następny cios. W tym czasie animacje bohatera są szybsze (zegar modelu × `QuickSpeed`). Liczby w `playercontrol.h`: `QuickHits = 3` ciosy, `QuickTime = 2000` ms limitu, `QuickSpeed = 1.5f`. Po serii prędkość wraca do 1.
+- **Poprawka:** QUICK nie naciska już klawiszy (97). `PlayerControl::quickAttack`: cios do przodu jak z przycisku miecza (`swingSword`), zaraz po trafieniu reset pozycji (`resetAttack`) i od razu następny cios. W tym czasie animacje bohatera są szybsze (zegar modelu × `QuickSpeed`). Liczby w `playercontrol.h`: `QuickHits = 3` ciosy, `QuickTime = 2000` ms limitu, `QuickSpeed = 2.5f` (17.11 gracz: przy 2,5× jest jak na PC; najpierw było 1,5). Po serii prędkość wraca do 1.
 - **Do sprawdzenia:** dotknięcie QUICK daje 3 szybkie ciosy do przodu, jeden po drugim. Prędkość i liczbę ciosów da się zmienić w `playercontrol.h`.
 
 ### 97. Szybki atak: QUICK = „< STEP” (A) i miecz (W) naciśnięte razem – ❌ (zastąpione w 98) (17.11.2026)

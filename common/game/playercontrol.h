@@ -34,7 +34,7 @@ class PlayerControl final {
     // NB fix 98: QUICK - the number of the blows, their time limit and the speed of the animations
     static constexpr int      QuickHits  = 3;
     static constexpr uint64_t QuickTime  = 2000;   // ms
-    static constexpr float    QuickSpeed = 1.5f;
+    static constexpr float    QuickSpeed = 2.5f;
     int            quickCount = 0;
 
     void  onKeyPressed (KeyCodec::Action a, Tempest::Event::KeyType key, KeyCodec::Mapping mapping);
