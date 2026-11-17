@@ -59,7 +59,7 @@ namespace Special {
     HudDone,       // the editor of the HUD: back to the settings
     HudReset,      // the editor of the HUD: every button goes back to its place
     FirstSetting  = 11,
-    QuickAttack   = 26,   // NB fix 85: the quick attack of New Balance - a side step (A/D), forward (W) and the attack (Ctrl)
+    QuickAttack   = 28,   // NB fix 85: the quick attack of New Balance - a side step (A/D), forward (W) and the attack (Ctrl)
     Sprint        = 29,   // NB fix 40: the sprint of New Balance (B_Hotkey_Sprint, the key ~ in the original)
     QuickSave     = 30,   // saves the game to the quick save slot
     LoadSave      = 31,   // the player is dead: loads the newest save (above the settings, below the categories)
@@ -83,6 +83,7 @@ enum Setting : int {
   SettingStrafe,
   SettingAutoLock,
   SettingPeaceful,   // NB fix 78: the peaceful creatures (the wisp, the summons, the sheep...) in the focus
+  SettingAcrobatic,  // NB fix 86: the acrobatics of New Balance (the rolls instead of the side steps; KEY_ACROBAT on the PC)
   SettingCount
   };
 

@@ -66,6 +66,7 @@ struct Preferences {
   int strafe      = 1;   // 1: the buttons of the side steps (and the arrows forward and back) on the HUD
   int autoLock    = 0;   // 1: the lock of the target is taken by itself when a weapon is drawn
   int peaceful    = 1;   // 1: the peaceful creatures can be in the focus (to talk to the wisp, to hunt the sheep)
+  int acrobatic   = 0;   // 1: the acrobatics of New Balance (rolls), when the hero has learned it
   };
 
 Preferences preferences();

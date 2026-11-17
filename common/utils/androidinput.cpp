@@ -19,6 +19,7 @@
 
 #include "gothic.h"
 #include "world/worldobjects.h"
+#include "game/gamescript.h"
 #include "resources.h"
 #include "winpad.h"
 #include "scripting/modhost.h"
@@ -53,7 +54,7 @@ const char* const IconFiles[AndroidInput::IconCount] = {
 
 const char* const SettingNames[Mobile::SettingCount] = {
   "buttons", "resolution", "shadows", "effects", "fps", "deadzone", "sensitivity", "vibration", "gui",
-  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus"
+  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus", "acrobatic"
   };
 
 // Gives access to the dispatch functions of SystemApi
@@ -188,6 +189,7 @@ int nextValue(int setting, int value) {
     case Mobile::SettingStrafe:
     case Mobile::SettingAutoLock:
     case Mobile::SettingPeaceful:
+    case Mobile::SettingAcrobatic:
       return value ? 0 : 1;
     }
   return value;
@@ -209,6 +211,8 @@ std::string settingText(int setting, const std::string& label) {
     return value ? "Auto lock on weapon draw: ON" : "Auto lock on weapon draw: OFF";
   if(setting==Mobile::SettingPeaceful)
     return value ? "Target peaceful creatures: ON" : "Target peaceful creatures: OFF";
+  if(setting==Mobile::SettingAcrobatic)
+    return value ? "Acrobatics (rolls): ON" : "Acrobatics (rolls): OFF";
   if(setting==Mobile::SettingSpeed)
     return label+"   "+std::to_string(value/100)+"."+std::to_string(value%100/10)+"x";
 
@@ -308,6 +312,8 @@ AndroidInput::Preferences AndroidInput::preferences() {
     ret.autoLock = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingAutoLock])!=0 ? 1 : 0;
   if(Gothic::settingsGetI(Section,"version")>=8)
     ret.peaceful = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingPeaceful])!=0 ? 1 : 0;
+  if(Gothic::settingsGetI(Section,"version")>=9)
+    ret.acrobatic = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingAcrobatic])!=0 ? 1 : 0;
   return ret;
   }
 
@@ -329,10 +335,11 @@ void AndroidInput::Controller::bind() {
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingStrafe],     def.strafe);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingAutoLock],   def.autoLock);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPeaceful],   def.peaceful);
-    Gothic::settingsSetI(Section,"version",8);
+    Gothic::settingsSetI(Section,SettingNames[Mobile::SettingAcrobatic],  def.acrobatic);
+    Gothic::settingsSetI(Section,"version",9);
     Gothic::flushSettings();
     } else
-  if(Gothic::settingsGetI(Section,"version")<8) {
+  if(Gothic::settingsGetI(Section,"version")<9) {
     // settings saved before the vibration, the scale of the interface, the fast forward, the side steps and the auto lock were added
     const Preferences def;
     const int version = Gothic::settingsGetI(Section,"version");
@@ -355,7 +362,10 @@ void AndroidInput::Controller::bind() {
     // NB fix 78: the peaceful creatures stay in the focus until the player switches them off
     if(version<8)
       Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPeaceful],def.peaceful);
-    Gothic::settingsSetI(Section,"version",8);
+    // NB fix 86: the acrobatics is off until the player switches it on (as the key of the PC)
+    if(version<9)
+      Gothic::settingsSetI(Section,SettingNames[Mobile::SettingAcrobatic],def.acrobatic);
+    Gothic::settingsSetI(Section,"version",9);
     Gothic::flushSettings();
     }
   loadHudPlaces();
@@ -546,6 +556,7 @@ void AndroidInput::Controller::applyPreferences() {
   // the game is vanilla: the fast forward is on the HUD and in the settings only when a mod has asked for it
   controls.features(Scripting::ModHost::inst().fastForwardWanted(),pref.strafe!=0);
   WorldObjects::peacefulFocus.store(pref.peaceful!=0);
+  GameScript::nbAcrobaticPref.store(pref.acrobatic);
   }
 
 void AndroidInput::Controller::loadHudPlaces() {

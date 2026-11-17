@@ -4224,6 +4224,24 @@ void GameScript::tick(uint64_t dt) {
       Gothic::inst().tickBossMusic();
       }
     }
+  // NB fix 86: the acrobatics from the settings (KEY_ACROBAT of the PC): RX_AcrobaticActive and the overlay of the rolls
+  // (RX_ApplyAcrobatic puts Humans_Acrobatic.MDS on the hero who has learned it, from Cassia)
+  if(const int pref = nbAcrobaticPref.load(); pref>=0) {
+    auto* var  = vm.find_symbol_by_name("RX_ACROBATICACTIVE");
+    auto* fn   = vm.find_symbol_by_name("RX_APPLYACROBATIC");
+    auto* hero = world().player();
+    if(var!=nullptr && fn!=nullptr && hero!=nullptr && var->type()==zenkit::DaedalusDataType::INT &&
+       fn->type()==zenkit::DaedalusDataType::FUNCTION && var->get_int()!=pref && !hero->isDead()) {
+      var->set_int(pref);
+      nbCtx("acrobatics: ",pref!=0 ? "on" : "off");
+      try {
+        vm.call_function<void>(fn,hero->handlePtr());
+        }
+      catch(const std::exception& e) {
+        Log::e("NB: RX_ApplyAcrobatic failed: ",e.what());
+        }
+      }
+    }
   // NB fix 70: the crafting window, when the hero is at the table and no dialog is open
   if(st.craftPending>=0 && !Gothic::inst().isInDialog()) {
     const int32_t craft = st.craftPending;

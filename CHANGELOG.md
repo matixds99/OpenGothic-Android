@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **86**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **87**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -241,6 +241,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zgłoszenie (film 342652):** w NB szybki atak to trzy klawisze po kolei: A albo D (krok w bok, z akrobatyką – przewrotka), W (do przodu) i Ctrl/mysz (atak) – bohater po przewrotce wyprowadza atak w ruchu, który często obala przeciwnika. Na telefonie nie da się tego wcisnąć – potrzebny osobny przycisk (też do testu 83).
 - **Poprawka:** nowy przycisk **QUICK** (ikona miecza z liniami ruchu) nad przyciskiem akcji, widoczny z bronią do walki wręcz w ręku; da się go przesunąć/ukryć w edytorze HUD (id `quickattack`). Jedno dotknięcie wysyła klawisze PC po kolei: krok w bok (300 ms; na zmianę w lewo i w prawo), do przodu, atak (po 60 ms, przez 240 ms), puszczenie. Wyjście z gry w trakcie – klawisze są puszczane.
 - **Do sprawdzenia:** z mieczem w ręku – przewrotka/krok w bok i atak w ruchu jak na filmie; czy czasy pasują (jeśli atak wchodzi za wcześnie/za późno, zmienię 300/360 ms).
+
+### 86. Ustawienie: akrobatyka NB (przewrotki) – 🧪 (17.11.2026)
+- **Pliki:** `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/game/gamescript.cpp/.h`
+- **Zgłoszenie:** przełącznik akrobatyki w ustawieniach – przewrotki w lewo/prawo zamiast kroków w bok (na PC klawisz `KEY_ACROBAT`), potrzebne m.in. do szybkiego ataku (85).
+- **Jak to działa na PC:** `HandleEvent` przy klawiszu akrobatyki przełącza `RX_AcrobaticActive` i woła `RX_ApplyAcrobatic(hero)` – nakładka animacji `Humans_Acrobatic.MDS`, tylko gdy bohater ma talent akrobatyki (Cassia).
+- **Poprawka:** nowy wiersz ustawień „Acrobatics” → `Acrobatics (rolls): ON/OFF` (domyślnie OFF; `Gothic.ini`, `MOBILE`, `acrobatic`, wersja ustawień 8 → 9). Gra co klatkę porównuje ustawienie z `RX_AcrobaticActive` skryptów; gdy się różnią – ustawia zmienną i woła `RX_ApplyAcrobatic` (bez talentu skrypt nakładki nie zakłada). Na PC (bez ekranu dotykowego) bez zmian – decyduje klawisz.
+- Przycisk szybkiego ataku (85) dostał numer `Special::QuickAttack = 28` (26 zajął nowy wiersz ustawień).
+- **Uwaga:** jeśli akrobatyka jest włączona, zanim bohater się jej nauczy – po nauce przełącz OFF/ON.
+- **Do sprawdzenia:** z talentem akrobatyki: ON → kroki w bok z bronią to przewrotki, szybki atak z przewrotką; OFF → zwykłe kroki; w logu `[ctx] acrobatics: on/off`.
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`

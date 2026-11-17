@@ -4,6 +4,7 @@
 #include <zenkit/addon/daedalus.hh>
 #include <zenkit/CutsceneLibrary.hh>
 
+#include <atomic>
 #include <memory>
 #include <vector>
 #include <set>
@@ -54,6 +55,9 @@ class GameScript final {
   public:
     GameScript(GameSession &owner);
     ~GameScript();
+
+    /// NB fix 86: the acrobatics from the settings of the touch screen (-1: no setting, the scripts decide - the PC)
+    static inline std::atomic<int> nbAcrobaticPref{-1};
 
     /// GIL_SEPERATOR_HUM / GIL_SEPERATOR_ORC of the scripts: the humans are below the first, the monsters between them.
     /// A mod can move them (New Balance: 21, it has guilds of its own); the values of the original game without the symbols
