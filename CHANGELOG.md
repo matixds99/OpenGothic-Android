@@ -194,8 +194,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - **przycisk akcji** na takiej skrzyni: broń → siła (Y, runa na ten czas pominięta), runa → magia (Y, siła na ten czas pominięta), puste ręce z talentem i ≥ 100 zręczności → wytrychy (Shift+Y). Dalej skrypt `HandleEvent` jak na PC: warunki, animacja (rąbanie bronią / rzucanie czaru / `T_PLUNDER`), mana, wytrzymałość, wytrychy, teksty. Bez broni i przy zręczności < 100 – zwykła minigra wytrychów jak dotąd.
 - **Do sprawdzenia:** miecz w ręku przy zamkniętej skrzyni → fokus na skrzyni → akcja → rąbanie i otwarcie; runa → animacja czaru, −75 many; puste ręce (100+ zręczności) → zużyte wytrychy; komunikaty przy braku siły/many/wytrychów; w logu `[ctx] lock: …` i `lock opened`.
 - **Test (17.11):** magia (runa) działa ✅. Siła i wytrychy – do sprawdzenia na innym zapisie (gracz gra magiem).
-
 - **Test (18.11):** potwierdzone – runa, siła (najpierw wyciągnąć miecz, potem interakcja) i zręczność działają.
+
 ### 81. Kolory nazw w fokusie: nastawienie postaci, stan skrzyń (jak zUtilities) – ✅ (17.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h` (`focusColor`), `common/game/gamescript.cpp/.h` (`nbIsSummon`)
 - **Zgłoszenie:** redesign interfejsu – kolory nastawienia osób jak w pluginie zUtilities, zamknięta skrzynia żółta/zielona, opróżniona szara/biała.
