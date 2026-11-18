@@ -535,15 +535,118 @@ int32_t AndroidInput::Controller::onInput(AInputEvent* e) {
 #endif
 
 void AndroidInput::Controller::pointerDown(int id, float x, float y) {
+  if(wheel.open) {
+    // NB fix 111: the wheel takes the touches; the finger may slide over the slots, the choice is where it goes up
+    if(wheel.pointer<0) {
+      wheel.pointer = id;
+      wheel.slot    = wheelSlotAt(x,y);
+      wheel.downAt  = Application::tickCount();
+      }
+    return;
+    }
   controls.down(id,x,y,Application::tickCount());
   }
 
 void AndroidInput::Controller::pointerMove(int id, float x, float y) {
+  if(wheel.open) {
+    if(id==wheel.pointer)
+      wheel.slot = wheelSlotAt(x,y);
+    return;
+    }
   controls.move(id,x,y);
   }
 
 void AndroidInput::Controller::pointerUp(int id, float x, float y) {
+  if(wheel.open) {
+    if(id!=wheel.pointer)
+      return;
+    const int  k    = wheelSlotAt(x,y);
+    const bool held = Application::tickCount()-wheel.downAt>=600;
+    wheelToggle(false);
+    if(k>=0 && wheelPick)
+      wheelPick(k,held);
+    return;
+    }
   controls.up(id,x,y);
+  }
+
+void AndroidInput::Controller::wheelToggle(bool open) {
+  if(wheel.open==open)
+    return;
+  wheel = Wheel();
+  wheel.open = open;
+  if(open) {
+    controls.cancel();   // the fingers on the buttons go up
+    Gothic::inst().pushPause();
+    } else {
+    Gothic::inst().popPause();
+    }
+  }
+
+/// the slot under a point: 0 on the top, then clockwise; -1 in the middle (closes the wheel) or far out
+int AndroidInput::Controller::wheelSlotAt(float x, float y) const {
+  const float cx = screenW*0.5f, cy = screenH*0.5f;
+  const float R  = screenH*0.42f, r = screenH*0.15f;
+  const float dx = x-cx, dy = y-cy;
+  const float d  = std::sqrt(dx*dx+dy*dy);
+  if(d<r || d>R*1.3f)
+    return -1;
+  float ang = std::atan2(dy,dx)*180.f/float(M_PI)+90.f;   // 0 on the top
+  if(ang<0)
+    ang += 360.f;
+  return int(std::floor((ang+22.5f)/45.f))%8;
+  }
+
+Mobile::Rect AndroidInput::Controller::wheelSlot(int k) const {
+  const float cx = screenW*0.5f, cy = screenH*0.5f;
+  const float R  = screenH*0.42f, r = screenH*0.15f;
+  const float m  = (R+r)*0.5f;
+  const float a  = (float(k)*45.f-90.f)*float(M_PI)/180.f;
+  const float s  = screenH*0.15f;
+  const float x  = cx+std::cos(a)*m, y = cy+std::sin(a)*m-s*0.12f;
+  return {x-s/2,y-s/2,s,s};
+  }
+
+void AndroidInput::Controller::paintWheel(Painter& p, Font& font) {
+  const float cx = screenW*0.5f, cy = screenH*0.5f;
+  const float R  = screenH*0.42f, r = screenH*0.15f;
+  fill(p,{0,0,screenW,screenH},Color(0.f,0.f,0.f,0.45f));
+
+  // the sectors: a ring cut in 8, the chosen one is blue (as in GTA)
+  constexpr int steps = 10;
+  for(int k=0; k<8; ++k) {
+    const float a0 = (float(k)*45.f-90.f-22.5f)*float(M_PI)/180.f;
+    const Color c  = k==wheel.slot ? Color(0.20f,0.45f,0.85f,0.70f) : Color(0.05f,0.06f,0.07f,0.80f);
+    p.setBrush(Brush(c));
+    for(int i=0; i<steps; ++i) {
+      const float t0 = a0+float(i)  *float(M_PI)/4.f/float(steps)+0.012f;
+      const float t1 = a0+float(i+1)*float(M_PI)/4.f/float(steps)-(i+1==steps ? 0.012f : 0.f);
+      const float ix0 = cx+std::cos(t0)*r, iy0 = cy+std::sin(t0)*r;
+      const float ix1 = cx+std::cos(t1)*r, iy1 = cy+std::sin(t1)*r;
+      const float ox0 = cx+std::cos(t0)*R, oy0 = cy+std::sin(t0)*R;
+      const float ox1 = cx+std::cos(t1)*R, oy1 = cy+std::sin(t1)*R;
+      p.drawTriangle(ix0,iy0,0.f,0.f, ox0,oy0,0.f,0.f, ox1,oy1,0.f,0.f);
+      p.drawTriangle(ix0,iy0,0.f,0.f, ox1,oy1,0.f,0.f, ix1,iy1,0.f,0.f);
+      }
+    }
+
+  // the numbers under the models, the name of the chosen one in the middle
+  setFontSize(p,font,15.f*controls.unit());
+  for(int k=0; k<8; ++k) {
+    if(hud.wheelName[size_t(k)].empty())
+      continue;
+    const auto  s = wheelSlot(k);
+    const Mobile::Rect t = {s.x,s.y+s.h*0.92f,s.w,s.h*0.3f};
+    if(hud.wheelCount[size_t(k)]>1)
+      drawCentered(p,font,t,std::to_string(hud.wheelCount[size_t(k)]));
+    }
+  setFontSize(p,font,17.f*controls.unit());
+  std::string mid = "Ko\xC5\x82o szybkiego wyboru";
+  if(0<=wheel.slot && wheel.slot<8)
+    mid = hud.wheelName[size_t(wheel.slot)].empty() ? std::string("(puste - dodaj w ekwipunku)") : hud.wheelName[size_t(wheel.slot)];
+  const auto sz = font.textSize(mid);
+  p.setBrush(Brush(Color(1.f,1.f,1.f)));
+  p.drawText(int(cx-float(sz.w)/2),int(cy+float(sz.h)/3),mid);
   }
 
 void AndroidInput::Controller::physical(Mobile::Key key, bool down) {
@@ -609,6 +712,8 @@ bool AndroidInput::Controller::update(Window& window, Mobile::Mode mode) {
     paused = false;
     }
 
+  if(wheel.open && mode!=Mobile::Mode::Game)
+    wheelToggle(false);   // NB fix 111: a dialog, the inventory, the death close the wheel
   controls.tick(Application::tickCount());
 #if defined(_WIN32)
   WinPad::poll(pad);
@@ -698,6 +803,10 @@ void AndroidInput::Controller::onSpecial(int id) {
     }
   if(id==Mobile::Special::HudReset)
     return;
+  if(id==Mobile::Special::Wheel) {
+    wheelToggle(!wheel.open);   // NB fix 111
+    return;
+    }
   // NB fix 98: QUICK (Special::QuickAttack) goes to PlayerControl::quickAttack (MainWindow::onMobileAction)
 
   const int setting = id-Mobile::Special::FirstSetting;
@@ -867,6 +976,26 @@ void AndroidInput::Controller::paintButton(Painter& p, Font& font, size_t index)
     }
 
   const int icon = iconFor(b);
+  if(b.special==Mobile::Special::Wheel) {
+    // NB fix 111: the button of the wheel - a white ring
+    const float cx = r.x+r.w/2, cy = r.y+r.h/2;
+    const float ro = std::min(r.w,r.h)*0.46f, ri = ro*0.62f;
+    const float al = (!b.enabled ? 0.3f : active ? 1.f : 0.9f)*(b.dimmed ? 0.3f : 1.f);
+    p.setBrush(Brush(Color(0.f,0.f,0.f,0.35f*al)));
+    for(int i=0; i<24; ++i) {
+      const float t0 = float(i)*float(M_PI)/12.f, t1 = float(i+1)*float(M_PI)/12.f;
+      p.drawTriangle(cx,cy,0.f,0.f, cx+std::cos(t0)*ro,cy+std::sin(t0)*ro,0.f,0.f, cx+std::cos(t1)*ro,cy+std::sin(t1)*ro,0.f,0.f);
+      }
+    p.setBrush(Brush(Color(1.f,1.f,1.f,al)));
+    for(int i=0; i<24; ++i) {
+      const float t0 = float(i)*float(M_PI)/12.f, t1 = float(i+1)*float(M_PI)/12.f;
+      const float ix0 = cx+std::cos(t0)*ri, iy0 = cy+std::sin(t0)*ri, ix1 = cx+std::cos(t1)*ri, iy1 = cy+std::sin(t1)*ri;
+      const float ox0 = cx+std::cos(t0)*ro, oy0 = cy+std::sin(t0)*ro, ox1 = cx+std::cos(t1)*ro, oy1 = cy+std::sin(t1)*ro;
+      p.drawTriangle(ix0,iy0,0.f,0.f, ox0,oy0,0.f,0.f, ox1,oy1,0.f,0.f);
+      p.drawTriangle(ix0,iy0,0.f,0.f, ox1,oy1,0.f,0.f, ix1,iy1,0.f,0.f);
+      }
+    return;
+    }
   if(icon==NoIcon) {
     if(game && Key::One<=b.key && b.key<=Key::Zero) {
       paintHotbarSlot(p,font,index);
@@ -960,7 +1089,7 @@ void AndroidInput::Controller::paintInventoryButton(Painter& p, Font& font, size
     return;
     }
 
-  if(b.key==Key::Enter || b.key==Key::Weapon || b.key==Key::Sneak) {
+  if(b.key==Key::Enter || b.key==Key::Weapon || b.key==Key::Sneak || b.key==Key::Walk) {
     // NB fix 99: the inventory draws these buttons with their words on the card of the item; only the press is lit here
     if(active)
       fill(p,r,Color(0.85f,0.70f,0.42f,0.35f));
@@ -1024,6 +1153,8 @@ void AndroidInput::Controller::paint(PaintEvent& event) {
     if(game && (controls.movementAvailable() || controls.editingHud())) {
       paintStick(p);
       }
+    if(game && wheel.open)
+      paintWheel(p,font);   // NB fix 111
     return;
     }
   }

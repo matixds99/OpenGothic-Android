@@ -398,6 +398,22 @@ void InventoryMenu::keyDownEvent(KeyEvent &e) {
 
 #ifdef OPENGOTHIC_TOUCH_UI
   // NB fix 110: C (the button of the card) puts the selected item on the hotbar or takes it off
+  // NB fix 111: Shift (the button of the card) puts the selected item on the wheel of the quick choice or takes it off
+  if(e.key==KeyEvent::K_LShift && mobileCanHotbar()) {
+    auto& pg  = activePage();
+    auto  it  = pg.get(activePageSel().sel);
+    if(it.isValid()) {
+      const int  s  = NbWheel::toggle(*player,*it);
+      const bool on = s>=0 && NbWheel::slotOf(NbHotbar::itemName(*player,*it))==s;
+      std::string msg;
+      if(s<0)
+        msg = "Ko\xB3o pe\xB3ne (8 miejsc)"; else
+        msg = on ? "Na kole szybkiego wyboru" : "Zdj\xEAte z ko\xB3""a";
+      Gothic::inst().onPrintScreen(msg,-1,70,2,Resources::font(1.f));
+      }
+    update();
+    return;
+    }
   if(e.key==KeyEvent::K_C && mobileCanHotbar()) {
     auto& pg  = activePage();
     auto  it  = pg.get(activePageSel().sel);
@@ -1445,9 +1461,14 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
   // NB fix 110: the hotbar
   if(mobileCanHotbar()) {
     const bool onBar = NbHotbar::slotOf(NbHotbar::itemName(*player,item))>=0;
-    std::string_view t = pl ? (onBar ? std::string_view("ZDEJMIJ Z PASKA") : std::string_view("NA PASEK SZYBKIEGO WYBORU"))
-                            : (onBar ? std::string_view("OFF THE HOTBAR")  : std::string_view("TO THE HOTBAR"));
+    std::string_view t = pl ? (onBar ? std::string_view("Z PASKA") : std::string_view("NA PASEK"))
+                            : (onBar ? std::string_view("OFF THE BAR") : std::string_view("TO THE BAR"));
     drawTouchButton(p,lay.hotbar,t);
+    // NB fix 111: the wheel of the quick choice
+    const bool onWheel = NbWheel::slotOf(NbHotbar::itemName(*player,item))>=0;
+    std::string_view tw = pl ? (onWheel ? std::string_view("Z KO\xA3""A") : std::string_view("NA KO\xA3O"))
+                             : (onWheel ? std::string_view("OFF THE WHEEL") : std::string_view("TO THE WHEEL"));
+    drawTouchButton(p,lay.wheel,tw);
     }
   }
 

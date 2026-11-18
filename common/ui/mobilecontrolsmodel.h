@@ -59,6 +59,7 @@ namespace Special {
     HudDone,       // the editor of the HUD: back to the settings
     HudReset,      // the editor of the HUD: every button goes back to its place
     FirstSetting  = 11,
+    Wheel         = 27,   // NB fix 111: the wheel of the quick choice (after the settings 11..26)
     QuickAttack   = 28,   // NB fix 85: the quick attack of New Balance - a side step (A/D), forward (W) and the attack (Ctrl)
     Sprint        = 29,   // NB fix 40: the sprint of New Balance (B_Hotkey_Sprint, the key ~ in the original)
     QuickSave     = 30,   // saves the game to the quick save slot
@@ -182,6 +183,7 @@ struct InventoryLayout {
   Rect  picture;                      // the picture of the item in the card
   Rect  use, drop, stack;             // actions, at the bottom of the card
   Rect  hotbar;                       // NB fix 110: the item on the hotbar or off it, over the actions
+  Rect  wheel;                        // NB fix 111: the item on the wheel of the quick choice or off it
   };
 
 InventoryLayout inventoryLayout(float width, float height, bool twoLists, float gui=1.f);

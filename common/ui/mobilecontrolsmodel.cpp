@@ -285,7 +285,8 @@ InventoryLayout Mobile::inventoryLayout(float W, float H, bool twoLists, float g
   l.use   = {l.info.x+cpad,by,bw,btnH};
   l.drop  = {l.use.x+bw+bgap,by,bw,btnH};
   l.stack = {l.drop.x+bw+bgap,by,btnH,btnH};
-  l.hotbar = {l.use.x,by-bgap-btnH,bw*2+bgap,btnH};   // NB fix 110
+  l.hotbar = {l.use.x,by-bgap-btnH,bw,btnH};   // NB fix 110
+  l.wheel  = {l.drop.x,by-bgap-btnH,bw,btnH};  // NB fix 111
   return l;
   }
 
@@ -529,6 +530,7 @@ void Controls::buildGame(const Anchor&) {
   icon("human",     right(300),   bottom(340),    52, "HUMAN",  Key::Enter);
   // NB fix 85: the quick attack (a step to the side, forward and the attack), over the action button, with a melee weapon
   icon("quickattack", right(198), bottom(330),    56, "QUICK",  Key::Enter, false, Special::QuickAttack);
+  icon("wheel",     right(150),   bottom(40),     56, "WHEEL",  Key::Enter, false, Special::Wheel);   // NB fix 111
 
   // NB fix 42: the status bars in the editor: their frames are dragged (the bars are drawn by the window)
   if(editing) {
@@ -609,6 +611,7 @@ void Controls::buildInventory() {
   tile(l.drop, "DROP", Key::Weapon);
   tile(l.stack,"STACK",Key::Jump);
   tile(l.hotbar,"HOTBAR",Key::Sneak);   // NB fix 110: the inventory draws it, the key C toggles the hotbar
+  tile(l.wheel, "WHEEL", Key::Walk);    // NB fix 111: the key Shift toggles the wheel
   applyAvailability();
   }
 
@@ -1014,7 +1017,9 @@ void Controls::applyAvailability() {
     if(b.special==Special::Sprint)
       usable = availableMovement; else
     if(b.special==Special::QuickAttack)
-      usable = availableQuick;   // NB fix 103: a melee weapon or magic in the hands
+      usable = availableQuick; else   // NB fix 103: a melee weapon or magic in the hands
+    if(b.special==Special::Wheel)
+      usable = availableMovement;     // NB fix 111
 
     // The hotbar stays visible while the player can move, other controls hide when unusable
     // Inventory actions disappear when there is no item to act on, the tabs and the close button stay.

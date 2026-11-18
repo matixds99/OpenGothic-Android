@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **111**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **112**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 111. Koło szybkiego wyboru (drugi pasek, jak w GTA 5) – 🧪 (18.11.2026)
+- **Pliki:** `common/game/nbhotbar.h` (`NbWheel`), `common/utils/androidinput.cpp/.h` (koło: dotyk, rysowanie), `common/ui/mobilecontrolsmodel.cpp/.h` (przycisk `wheel`, `Special::Wheel` = 27), `common/ui/inventorymenu.cpp/.h`, `common/mainwindow.cpp`
+- **Zgłoszenie (zrzuty 342740, 342739):** drugi pasek szybkiego wyboru: broń, mikstury, rośliny. Przycisk z kółkiem obok paska otwiera koło jak w GTA 5, a przedmioty można przypisać i tu (pasek), i tam (koło).
+- **Poprawka:**
+  - Nowy przycisk HUD (białe kółko, id `wheel`, obok plecaka; można go przesunąć w edytorze HUD).
+  - Dotknięcie otwiera koło na środku ekranu: 8 pól z modelami przedmiotów i liczbą sztuk; gra jest wstrzymana. Palec można przesuwać po polach (niebieskie podświetlenie), wybór następuje przy puszczeniu; na środku nazwa przedmiotu z pola pod palcem; puszczenie na środku zamyka koło.
+  - Wybrane pole używa przedmiotu (broń zakłada, mikstura/roślina – zużywa). Puste pole otwiera ekwipunek. Przytrzymanie pola (0,6 s) zdejmuje przedmiot z koła.
+  - Na karcie przedmiotu w ekwipunku dwa przyciski: **NA PASEK / Z PASKA** (poprawka 110) i **NA KOŁO / Z KOŁA**.
+  - Zapis: `[MOBILE_WHEEL] slot0..7` w `Gothic.ini`.
+- **Do sprawdzenia:** przypisać mikstury i broń na koło, otworzyć koło w walce – wybór, przytrzymanie, puste pole.
 
 ### 110. Własne przedmioty na pasku szybkiego wyboru (broń, mikstury, rośliny) – 🧪 (18.11.2026)
 - **Pliki:** `common/game/nbhotbar.h` 🆕, `common/ui/inventorymenu.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp`, `common/mainwindow.cpp`

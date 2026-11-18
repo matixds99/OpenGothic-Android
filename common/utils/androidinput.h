@@ -89,7 +89,15 @@ class Controller {
       bool  targetLocked = false;
       bool  fastForward  = false;
       bool  sprint       = false;   // the sprint of New Balance is on (NB fix 40)
+      // NB fix 111: the wheel of the quick choice - the name (UTF-8) and the number of the item of every slot
+      std::array<std::string,8> wheelName;
+      std::array<int,8>         wheelCount{};
       };
+
+    /// NB fix 111: the wheel of the quick choice (GTA 5): open, the places of the models of its slots, the choice
+    bool         wheelOpen() const { return wheel.open; }
+    Mobile::Rect wheelSlot(int k) const;
+    std::function<void(int,bool)> wheelPick;   // slot, a long press
 
     void  bind();
     void  unbind();
@@ -165,6 +173,16 @@ class Controller {
       } padState;
     float            padSensitivity = 1;
     bool             paused = false;
+    // NB fix 111
+    struct Wheel {
+      bool     open    = false;
+      int      pointer = -1;
+      int      slot    = -1;
+      uint64_t downAt  = 0;
+      } wheel;
+    void  wheelToggle(bool open);
+    int   wheelSlotAt(float x, float y) const;
+    void  paintWheel(Tempest::Painter& p, Tempest::Font& font);
     // NB fix 85: the quick attack is a sequence of the keys of the PC (A or D, then W, then Ctrl), sent at these times
     struct ComboKey {
       uint64_t    at   = 0;

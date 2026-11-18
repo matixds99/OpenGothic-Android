@@ -2231,6 +2231,24 @@ void MainWindow::setupMobileControls() {
   androidControls.action = [this](int id) {
     onMobileAction(id);
     };
+  // NB fix 111: a slot of the wheel: the item is used; an empty slot opens the inventory (to put something there);
+  // a long press on a slot takes its item off the wheel
+  androidControls.wheelPick = [this](int slot, bool held) {
+    auto* pl = Gothic::inst().player();
+    if(pl==nullptr || pl->isDead())
+      return;
+    auto* it = NbWheel::item(*pl,slot);
+    if(it==nullptr) {
+      if(NbWheel::name(slot).empty())
+        inventory.open(*pl);
+      return;
+      }
+    if(held) {
+      NbWheel::set(slot,"");
+      return;
+      }
+    pl->useItem(it->clsId());
+    };
 
   androidControls.loadIcons(atlas);
   inventory.setTouchSprites(androidControls.icon(AndroidInput::IconInvSlot),
@@ -2443,7 +2461,7 @@ void MainWindow::updateMobileAvailability() {
       if(inventory.isOpen()!=InventoryMenu::State::Equip)
         allowed |= keyMask(Key::Jump);
       if(inventory.mobileCanHotbar())
-        allowed |= keyMask(Key::Sneak);   // NB fix 110
+        allowed |= keyMask(Key::Sneak) | keyMask(Key::Walk);   // NB fix 110, 111
       }
     androidControls.availability(allowed,false,false,false);
     }
@@ -2508,6 +2526,51 @@ void MainWindow::updateMobileOverlay() {
       stamp += std::string(item->handle().visual)+":"+std::to_string(index)+":"+
                std::to_string(b.rect.x)+":"+std::to_string(b.rect.y)+":"+
                std::to_string(b.rect.w)+":"+std::to_string(b.rect.h)+";";
+      }
+    }
+
+  // NB fix 111: the wheel of the quick choice - its models in the slots, the names and the numbers for the controls
+  if(auto* pl = Gothic::inst().player(); pl!=nullptr && androidControls.wheelOpen()) {
+    auto utf8 = [](std::string_view s) {
+      // the names of the game are in cp1250 (the fonts of Gothic), the controls draw UTF-8
+      static const uint16_t hi[128] = {
+        0x20AC,0,0x201A,0,0x201E,0x2026,0x2020,0x2021,0,0x2030,0x0160,0x2039,0x015A,0x0164,0x017D,0x0179,
+        0,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,0,0x2122,0x0161,0x203A,0x015B,0x0165,0x017E,0x017A,
+        0x00A0,0x02C7,0x02D8,0x0141,0x00A4,0x0104,0x00A6,0x00A7,0x00A8,0x00A9,0x015E,0x00AB,0x00AC,0x00AD,0x00AE,0x017B,
+        0x00B0,0x00B1,0x02DB,0x0142,0x00B4,0x00B5,0x00B6,0x00B7,0x00B8,0x0105,0x015F,0x00BB,0x013D,0x02DD,0x013E,0x017C,
+        0x0154,0x00C1,0x00C2,0x0102,0x00C4,0x0139,0x0106,0x00C7,0x010C,0x00C9,0x0118,0x00CB,0x011A,0x00CD,0x00CE,0x010E,
+        0x0110,0x0143,0x0147,0x00D3,0x00D4,0x0150,0x00D6,0x00D7,0x0158,0x016E,0x00DA,0x0170,0x00DC,0x00DD,0x0162,0x00DF,
+        0x0155,0x00E1,0x00E2,0x0103,0x00E4,0x013A,0x0107,0x00E7,0x010D,0x00E9,0x0119,0x00EB,0x011B,0x00ED,0x00EE,0x010F,
+        0x0111,0x0144,0x0148,0x00F3,0x00F4,0x0151,0x00F6,0x00F7,0x0159,0x016F,0x00FA,0x0171,0x00FC,0x00FD,0x0163,0x02D9};
+      std::string out;
+      for(char sc:s) {
+        const auto     ch = uint8_t(sc);
+        const uint32_t c  = ch<0x80 ? ch : hi[ch-0x80];
+        if(c==0)
+          continue;
+        if(c<0x80) {
+          out += char(c);
+          } else
+        if(c<0x800) {
+          out += char(0xC0u|(c>>6));
+          out += char(0x80u|(c&0x3Fu));
+          } else {
+          out += char(0xE0u|(c>>12));
+          out += char(0x80u|((c>>6)&0x3Fu));
+          out += char(0x80u|(c&0x3Fu));
+          }
+        }
+      return out;
+      };
+    for(int k=0; k<NbWheel::Count; ++k) {
+      auto* it = NbWheel::item(*pl,k);
+      hud.wheelName [size_t(k)] = it!=nullptr ? utf8(it->description()) : std::string();
+      hud.wheelCount[size_t(k)] = it!=nullptr ? int(it->count()) : 0;
+      if(it==nullptr)
+        continue;
+      const auto r = androidControls.wheelSlot(k);
+      hotbar.push_back({it,r});
+      stamp += "w"+std::string(it->handle().visual)+":"+std::to_string(k)+";";
       }
     }
 

@@ -76,4 +76,58 @@ inline int toggle(Npc& pl, const Item& it) {
   return -1;
   }
 
+
+}
+
+// NB fix 111: the wheel of the quick choice (the second hotbar, as the weapon wheel of GTA 5): 8 slots for a weapon, a
+// potion, a plant. [MOBILE_WHEEL] slotN - the name of the instance.
+namespace NbWheel {
+
+inline constexpr char Section[] = "MOBILE_WHEEL";
+inline constexpr int  Count     = 8;
+
+inline std::string name(int i) { return std::string(Gothic::settingsGetS(Section,NbHotbar::key(i))); }
+
+inline void set(int i, std::string_view v) {
+  Gothic::settingsSetS(Section,NbHotbar::key(i),v);
+  Gothic::flushSettings();
+  }
+
+inline Item* item(Npc& pl, int i) {
+  if(i<0 || i>=Count)
+    return nullptr;
+  const auto n = name(i);
+  if(n.empty())
+    return nullptr;
+  const size_t id = pl.world().script().findSymbolIndex(n);
+  if(id==size_t(-1))
+    return nullptr;
+  return const_cast<Inventory&>(pl.inventory()).getItem(id);
+  }
+
+inline int slotOf(std::string_view n) {
+  for(int i=0; i<Count; ++i)
+    if(!n.empty() && name(i)==n)
+      return i;
+  return -1;
+  }
+
+/// puts the item on the first free slot of the wheel or takes it off; the slot, -1 when the wheel is full
+inline int toggle(Npc& pl, const Item& it) {
+  const auto n = NbHotbar::itemName(pl,it);
+  if(n.empty())
+    return -1;
+  if(const int s = slotOf(n); s>=0) {
+    set(s,"");
+    return s;
+    }
+  for(int i=0; i<Count; ++i) {
+    if(item(pl,i)!=nullptr)
+      continue;
+    set(i,n);
+    return i;
+    }
+  return -1;
+  }
+
 }
