@@ -828,7 +828,7 @@ void GameMenu::initItems() {
         break;
       auto h = std::make_shared<zenkit::IMenuItem>();
       h->type    = zenkit::MenuItemType::CHOICEBOX;
-      h->text[0] = off + "|" + on;
+      h->text[0] = o.choices!=nullptr ? std::string(o.choices) : off + "|" + on;   // NB fix 109
       h->text[1] = nbScriptText(std::string("RX_MENU_TITLE_STR_")+o.name, o.label!=nullptr ? o.label : o.key);
       h->on_chg_set_option_section = o.section;
       h->on_chg_set_option         = o.key;

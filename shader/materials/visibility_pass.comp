@@ -27,6 +27,7 @@ layout(push_constant, std430) uniform UboPush {
   vec2      viewportSize;
   float     objectDistance;
   float     modelDetail;
+  float     npcDistance;   // NB fix 109: the characters (skinned) are drawn up to this distance, 0 - no limit
   } push;
 
 Instance pullInstance(uint i) {
@@ -193,6 +194,18 @@ void runCluster(const uint clusterId) {
     const float range = push.objectDistance+cluster.sphere.w;
     if(dot(offset,offset)>range*range)
       return;
+    }
+
+  // NB fix 109: the range of the characters of New Balance (its plugin had a slider for it): the people and the monsters
+  // farther than that are not drawn - more frames in big places
+  if(cluster.instanceId!=0xFFFFFFFF && push.npcDistance>0) {
+    const uint bIdN = cluster.bucketId_commandId >> 16;
+    if((bucket[bIdN].flags & BK_SKIN)!=0) {
+      const vec3  offset = cluster.sphere.xyz-scene.camPos;
+      const float range  = push.npcDistance+cluster.sphere.w;
+      if(dot(offset,offset)>range*range)
+        return;
+      }
     }
 
 #if defined(MAIN_VIEW)

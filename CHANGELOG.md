@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **109**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **110**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 109. Zasięg rysowania postaci (jak suwak NB 3000–7000) – 🧪 (18.11.2026)
+- **Pliki:** `shader/materials/visibility_pass.comp`, `common/graphics/drawcommands.cpp`, `common/game/nboptions.h`, `common/ui/gamemenu.cpp`
+- **Zgłoszenie:** na PC w sterowaniu dodatkowym NB był suwak, jak daleko rysować NPC (od 3000). Na małej mapie, np. na Pustyni Adanosa, gracz ustawiał 7000 i widział postacie z daleka. W Khorinis zmniejszał, bo spadały klatki.
+- **Poprawka:** nowe ustawienie na stronie NB (kategoria detali) „Zasięg rysowania postaci”: bez limitu / 30 / 40 / 50 / 60 / 70 / 100 m (`NB_OG/npcDistance`, zapisywany numer wyboru). W przebiegu widoczności GPU części modeli ze szkieletem (ludzie, potwory) dalej niż ten zasięg od kamery nie są rysowane. Zasięg widzenia świata i obiektów się nie zmienia. Działa od razu, bez wczytywania gry.
+- **Uwaga:** postacie za zasięgiem dalej żyją (AI jak dotąd, OpenGothic liczy je w pełni do 30 m, potem rzadziej). Ustawienie oszczędza rysowanie, nie logikę.
+- **Do sprawdzenia:** Khorinis – 30/40 m, czy przybywa klatek; pustynia – 70/100 m, postacie widać z daleka.
 
 ### 108. Ustawienia NB: osobne strony, tylko działające przełączniki, akrobatyka, ekran śmierci – 🧪 (18.11.2026)
 - **Pliki:** `common/ui/gamemenu.cpp`, `common/game/nboptions.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/mainwindow.cpp`

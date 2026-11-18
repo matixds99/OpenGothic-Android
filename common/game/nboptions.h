@@ -166,6 +166,7 @@ struct Option {
   const char* key;
   int         category; // RX_MENU_CAT_<category>
   const char* label = nullptr; // the text when GOTHIC.DAT has no RX_MENU_TITLE_STR_<name> (the options of OpenGothic)
+  const char* choices = nullptr; // NB fix 109: the values "a|b|c" (the index is written), nullptr - off/on
   };
 
 // the options shown in OpenGothic: the switches that the scripts themselves read (Menu_ReadInt),
@@ -192,6 +193,8 @@ inline constexpr Option shown[] = {
   // NB fix 108: the acrobatics of the touch screen (NB fix 86) - here instead of the settings of the touch screen
   {"OG_ACROBATIC", "MOBILE", "acrobatic", 2, "Akrobatyka (przewrotki na A/D)"},
   // the details
+  // NB fix 109: the range of the characters (a slider of the plugin, 3000-7000): drawcommands.cpp, visibility_pass.comp
+  {"OG_NPC_DISTANCE", "NB_OG", "npcDistance", 3, "Zasi\xEAg rysowania postaci", "bez limitu|30 m|40 m|50 m|60 m|70 m|100 m"},
   {"SHOW_SCALE_NPC", "AST", "bScaleStr", 3},
   {"SHOW_HIDE_NPC_POCKETS", "AST", "bHidePocketsNpc", 3},
   // the rage of Beliar
