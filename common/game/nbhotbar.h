@@ -80,11 +80,11 @@ inline int toggle(Npc& pl, const Item& it) {
 }
 
 // NB fix 111: the wheel of the quick choice (the second hotbar, as the weapon wheel of GTA 5): 8 slots for a weapon, a
-// potion, a plant. [MOBILE_WHEEL] slotN - the name of the instance.
+// potion, a plant (9 slots, fix 112). [MOBILE_WHEEL] slotN - the name of the instance.
 namespace NbWheel {
 
 inline constexpr char Section[] = "MOBILE_WHEEL";
-inline constexpr int  Count     = 8;
+inline constexpr int  Count     = 9;   // NB fix 112: 9 (was 8)
 
 inline std::string name(int i) { return std::string(Gothic::settingsGetS(Section,NbHotbar::key(i))); }
 

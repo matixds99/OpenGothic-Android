@@ -90,8 +90,8 @@ class Controller {
       bool  fastForward  = false;
       bool  sprint       = false;   // the sprint of New Balance is on (NB fix 40)
       // NB fix 111: the wheel of the quick choice - the name (UTF-8) and the number of the item of every slot
-      std::array<std::string,8> wheelName;
-      std::array<int,8>         wheelCount{};
+      std::array<std::string,9> wheelName;    // NB fix 112: 9 slots
+      std::array<int,9>         wheelCount{};
       };
 
     /// NB fix 111: the wheel of the quick choice (GTA 5): open, the places of the models of its slots, the choice

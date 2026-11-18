@@ -594,15 +594,15 @@ int AndroidInput::Controller::wheelSlotAt(float x, float y) const {
   float ang = std::atan2(dy,dx)*180.f/float(M_PI)+90.f;   // 0 on the top
   if(ang<0)
     ang += 360.f;
-  return int(std::floor((ang+22.5f)/45.f))%8;
+  return int(std::floor((ang+20.f)/40.f))%9;   // NB fix 112: 9 slots of 40 degrees
   }
 
 Mobile::Rect AndroidInput::Controller::wheelSlot(int k) const {
   const float cx = screenW*0.5f, cy = screenH*0.5f;
   const float R  = screenH*0.42f, r = screenH*0.15f;
   const float m  = (R+r)*0.5f;
-  const float a  = (float(k)*45.f-90.f)*float(M_PI)/180.f;
-  const float s  = screenH*0.15f;
+  const float a  = (float(k)*40.f-90.f)*float(M_PI)/180.f;
+  const float s  = screenH*0.14f;
   const float x  = cx+std::cos(a)*m, y = cy+std::sin(a)*m-s*0.12f;
   return {x-s/2,y-s/2,s,s};
   }
@@ -612,27 +612,36 @@ void AndroidInput::Controller::paintWheel(Painter& p, Font& font) {
   const float R  = screenH*0.42f, r = screenH*0.15f;
   fill(p,{0,0,screenW,screenH},Color(0.f,0.f,0.f,0.45f));
 
-  // the sectors: a ring cut in 8, the chosen one is blue (as in GTA)
-  constexpr int steps = 10;
-  for(int k=0; k<8; ++k) {
-    const float a0 = (float(k)*45.f-90.f-22.5f)*float(M_PI)/180.f;
-    const Color c  = k==wheel.slot ? Color(0.20f,0.45f,0.85f,0.70f) : Color(0.05f,0.06f,0.07f,0.80f);
+  // NB fix 112: the sectors - a ring cut in 9, the chosen one is blue (as in GTA). The painter puts the corners on whole
+  // pixels: the small triangles of a sector overlap a little and the colors are not transparent, else lines show
+  // between them; the gaps between the sectors are drawn as dark lines over them
+  constexpr int   steps = 12;
+  constexpr float sect  = 40.f*float(M_PI)/180.f;
+  for(int k=0; k<9; ++k) {
+    const float a0 = (float(k)*40.f-90.f-20.f)*float(M_PI)/180.f;
+    const Color c  = k==wheel.slot ? Color(0.17f,0.38f,0.72f,1.f) : Color(0.07f,0.08f,0.09f,1.f);
     p.setBrush(Brush(c));
     for(int i=0; i<steps; ++i) {
-      const float t0 = a0+float(i)  *float(M_PI)/4.f/float(steps)+0.012f;
-      const float t1 = a0+float(i+1)*float(M_PI)/4.f/float(steps)-(i+1==steps ? 0.012f : 0.f);
-      const float ix0 = cx+std::cos(t0)*r, iy0 = cy+std::sin(t0)*r;
-      const float ix1 = cx+std::cos(t1)*r, iy1 = cy+std::sin(t1)*r;
-      const float ox0 = cx+std::cos(t0)*R, oy0 = cy+std::sin(t0)*R;
-      const float ox1 = cx+std::cos(t1)*R, oy1 = cy+std::sin(t1)*R;
+      const float t0 = a0+float(i)*sect/float(steps);
+      const float t1 = std::min(a0+sect,t0+sect/float(steps)+0.01f);
+      const float ri = r-1.f, ro = R+1.f;
+      const float ix0 = cx+std::cos(t0)*ri, iy0 = cy+std::sin(t0)*ri;
+      const float ix1 = cx+std::cos(t1)*ri, iy1 = cy+std::sin(t1)*ri;
+      const float ox0 = cx+std::cos(t0)*ro, oy0 = cy+std::sin(t0)*ro;
+      const float ox1 = cx+std::cos(t1)*ro, oy1 = cy+std::sin(t1)*ro;
       p.drawTriangle(ix0,iy0,0.f,0.f, ox0,oy0,0.f,0.f, ox1,oy1,0.f,0.f);
       p.drawTriangle(ix0,iy0,0.f,0.f, ox1,oy1,0.f,0.f, ix1,iy1,0.f,0.f);
       }
     }
+  for(int k=0; k<9; ++k) {
+    const float a = (float(k)*40.f-90.f-20.f)*float(M_PI)/180.f;
+    stroke(p,cx+std::cos(a)*(r-2.f),cy+std::sin(a)*(r-2.f),cx+std::cos(a)*(R+2.f),cy+std::sin(a)*(R+2.f),
+           std::max(2.f,screenH*0.006f),Color(0.f,0.f,0.f,1.f));
+    }
 
   // the numbers under the models, the name of the chosen one in the middle
   setFontSize(p,font,15.f*controls.unit());
-  for(int k=0; k<8; ++k) {
+  for(int k=0; k<9; ++k) {
     if(hud.wheelName[size_t(k)].empty())
       continue;
     const auto  s = wheelSlot(k);
@@ -642,7 +651,7 @@ void AndroidInput::Controller::paintWheel(Painter& p, Font& font) {
     }
   setFontSize(p,font,17.f*controls.unit());
   std::string mid = "Ko\xC5\x82o szybkiego wyboru";
-  if(0<=wheel.slot && wheel.slot<8)
+  if(0<=wheel.slot && wheel.slot<9)
     mid = hud.wheelName[size_t(wheel.slot)].empty() ? std::string("(puste - dodaj w ekwipunku)") : hud.wheelName[size_t(wheel.slot)];
   const auto sz = font.textSize(mid);
   p.setBrush(Brush(Color(1.f,1.f,1.f)));
@@ -977,23 +986,25 @@ void AndroidInput::Controller::paintButton(Painter& p, Font& font, size_t index)
 
   const int icon = iconFor(b);
   if(b.special==Mobile::Special::Wheel) {
-    // NB fix 111: the button of the wheel - a white ring
+    // NB fix 112: the button of the wheel - two arrows in opposite directions (⇄) on a black circle
     const float cx = r.x+r.w/2, cy = r.y+r.h/2;
-    const float ro = std::min(r.w,r.h)*0.46f, ri = ro*0.62f;
-    const float al = (!b.enabled ? 0.3f : active ? 1.f : 0.9f)*(b.dimmed ? 0.3f : 1.f);
-    p.setBrush(Brush(Color(0.f,0.f,0.f,0.35f*al)));
-    for(int i=0; i<24; ++i) {
-      const float t0 = float(i)*float(M_PI)/12.f, t1 = float(i+1)*float(M_PI)/12.f;
+    const float ro = std::min(r.w,r.h)*0.46f;
+    const float al = (!b.enabled ? 0.3f : active ? 1.f : 0.92f)*(b.dimmed ? 0.3f : 1.f);
+    p.setBrush(Brush(Color(0.02f,0.02f,0.02f,0.9f*al)));
+    for(int i=0; i<32; ++i) {
+      const float t0 = float(i)*float(M_PI)/16.f, t1 = float(i+1)*float(M_PI)/16.f+0.02f;
       p.drawTriangle(cx,cy,0.f,0.f, cx+std::cos(t0)*ro,cy+std::sin(t0)*ro,0.f,0.f, cx+std::cos(t1)*ro,cy+std::sin(t1)*ro,0.f,0.f);
       }
-    p.setBrush(Brush(Color(1.f,1.f,1.f,al)));
-    for(int i=0; i<24; ++i) {
-      const float t0 = float(i)*float(M_PI)/12.f, t1 = float(i+1)*float(M_PI)/12.f;
-      const float ix0 = cx+std::cos(t0)*ri, iy0 = cy+std::sin(t0)*ri, ix1 = cx+std::cos(t1)*ri, iy1 = cy+std::sin(t1)*ri;
-      const float ox0 = cx+std::cos(t0)*ro, oy0 = cy+std::sin(t0)*ro, ox1 = cx+std::cos(t1)*ro, oy1 = cy+std::sin(t1)*ro;
-      p.drawTriangle(ix0,iy0,0.f,0.f, ox0,oy0,0.f,0.f, ox1,oy1,0.f,0.f);
-      p.drawTriangle(ix0,iy0,0.f,0.f, ox1,oy1,0.f,0.f, ix1,iy1,0.f,0.f);
-      }
+    const Color w(1.f,1.f,1.f,al);
+    const float L  = ro*0.95f, th = std::max(2.f,ro*0.13f), hd = ro*0.30f, dy = ro*0.24f;
+    // the upper arrow to the right
+    stroke(p,cx-L/2,cy-dy,cx+L/2-hd*0.6f,cy-dy,th,w);
+    p.setBrush(Brush(w));
+    p.drawTriangle(cx+L/2,cy-dy,0.f,0.f, cx+L/2-hd,cy-dy-hd*0.7f,0.f,0.f, cx+L/2-hd,cy-dy+hd*0.7f,0.f,0.f);
+    // the lower arrow to the left
+    stroke(p,cx+L/2,cy+dy,cx-L/2+hd*0.6f,cy+dy,th,w);
+    p.setBrush(Brush(w));
+    p.drawTriangle(cx-L/2,cy+dy,0.f,0.f, cx-L/2+hd,cy+dy-hd*0.7f,0.f,0.f, cx-L/2+hd,cy+dy+hd*0.7f,0.f,0.f);
     return;
     }
   if(icon==NoIcon) {

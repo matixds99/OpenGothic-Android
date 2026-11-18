@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **112**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **113**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 112. Koło szybkiego wyboru: 9 pól bez prążków, przycisk ze strzałkami ⇄ – 🧪 (18.11.2026)
+- **Pliki:** `common/utils/androidinput.cpp/.h`, `common/game/nbhotbar.h`
+- **Zgłoszenie (zrzut 342743, wzór 342745):** koło wygląda, jakby miało za dużo pól – prążki. Ma być 9 pól. Przycisk: dwie strzałki w przeciwnych kierunkach na czarnym kółku.
+- **Przyczyna prążków:** każde pole było złożone z 10 półprzezroczystych trójkątów. Painter zaokrągla wierzchołki do pikseli, więc między trójkątami zostawały szpary. Wyglądało to jak kilkadziesiąt pól.
+- **Poprawka:**
+  - 9 pól po 40° (`NbWheel::Count` = 9, slot 8 nowy).
+  - Trójkąty pola lekko na siebie zachodzą i mają pełny (nieprzezroczysty) kolor; granice między polami to czarne linie.
+  - Przycisk: czarne kółko, górna strzałka w prawo, dolna w lewo.
+- **Do sprawdzenia:** równe 9 pól, podświetlenie, nowy przycisk.
 
 ### 111. Koło szybkiego wyboru (drugi pasek, jak w GTA 5) – 🧪 (18.11.2026)
 - **Pliki:** `common/game/nbhotbar.h` (`NbWheel`), `common/utils/androidinput.cpp/.h` (koło: dotyk, rysowanie), `common/ui/mobilecontrolsmodel.cpp/.h` (przycisk `wheel`, `Special::Wheel` = 27), `common/ui/inventorymenu.cpp/.h`, `common/mainwindow.cpp`
