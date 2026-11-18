@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **113**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **114**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 113. Koło szybkiego wyboru nie reaguje na dotyk – 🧪 (18.11.2026)
+- **Pliki:** `common/utils/androidinput.cpp` (`onInput`)
+- **Zgłoszenie:** z koła nie da się niczego wybrać.
+- **Przyczyna:** na Androidzie dotyk szedł prosto do przycisków (`controls.down/move/up`), z pominięciem `pointerDown/Move/Up`, w których koło (111) przejmuje palce. Koło się otwierało, ale nie widziało żadnego dotknięcia.
+- **Poprawka:** dotyk Androida idzie przez `pointerDown/Move/Up`; anulowanie dotyku czyści też palec koła.
+- **Do sprawdzenia:** dotknięcie pola koła – przedmiot użyty; puste pole – ekwipunek; przytrzymanie – zdjęcie z koła; środek – zamknięcie.
 
 ### 112. Koło szybkiego wyboru: 9 pól bez prążków, przycisk ze strzałkami ⇄ – 🧪 (18.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp/.h`, `common/game/nbhotbar.h`

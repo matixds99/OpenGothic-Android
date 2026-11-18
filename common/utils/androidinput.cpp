@@ -512,21 +512,24 @@ int32_t AndroidInput::Controller::onInput(AInputEvent* e) {
 
   if(masked==AMOTION_EVENT_ACTION_CANCEL || masked==AMOTION_EVENT_ACTION_OUTSIDE) {
     controls.resetPointers();
+    wheel.pointer = -1;   // NB fix 113
     return 1;
     }
 
+  // NB fix 113: through pointerDown/Move/Up - the wheel of the quick choice takes the touches while it is open (the
+  // touches of Android went straight to the controls, the wheel saw none)
   if(masked==AMOTION_EVENT_ACTION_MOVE) {
     for(size_t i=0; i<count; ++i)
-      controls.move(AMotionEvent_getPointerId(e,i),AMotionEvent_getX(e,i),AMotionEvent_getY(e,i));
+      pointerMove(AMotionEvent_getPointerId(e,i),AMotionEvent_getX(e,i),AMotionEvent_getY(e,i));
     } else
   if(index<count) {
     const int32_t id = AMotionEvent_getPointerId(e,index);
     const float   x  = AMotionEvent_getX(e,index);
     const float   y  = AMotionEvent_getY(e,index);
     if(masked==AMOTION_EVENT_ACTION_DOWN || masked==AMOTION_EVENT_ACTION_POINTER_DOWN)
-      controls.down(id,x,y,Application::tickCount()); else
+      pointerDown(id,x,y); else
     if(masked==AMOTION_EVENT_ACTION_UP || masked==AMOTION_EVENT_ACTION_POINTER_UP)
-      controls.up(id,x,y);
+      pointerUp(id,x,y);
     }
 
   // All motion is owned here. It must never become a mouse click in MenuRoot.
