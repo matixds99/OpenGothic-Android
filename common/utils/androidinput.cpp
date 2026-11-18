@@ -960,7 +960,7 @@ void AndroidInput::Controller::paintInventoryButton(Painter& p, Font& font, size
     return;
     }
 
-  if(b.key==Key::Enter || b.key==Key::Weapon) {
+  if(b.key==Key::Enter || b.key==Key::Weapon || b.key==Key::Sneak) {
     // NB fix 99: the inventory draws these buttons with their words on the card of the item; only the press is lit here
     if(active)
       fill(p,r,Color(0.85f,0.70f,0.42f,0.35f));

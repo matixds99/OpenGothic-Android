@@ -285,6 +285,7 @@ InventoryLayout Mobile::inventoryLayout(float W, float H, bool twoLists, float g
   l.use   = {l.info.x+cpad,by,bw,btnH};
   l.drop  = {l.use.x+bw+bgap,by,bw,btnH};
   l.stack = {l.drop.x+bw+bgap,by,btnH,btnH};
+  l.hotbar = {l.use.x,by-bgap-btnH,bw*2+bgap,btnH};   // NB fix 110
   return l;
   }
 
@@ -607,6 +608,7 @@ void Controls::buildInventory() {
   tile(l.use,  "USE",  Key::Enter);
   tile(l.drop, "DROP", Key::Weapon);
   tile(l.stack,"STACK",Key::Jump);
+  tile(l.hotbar,"HOTBAR",Key::Sneak);   // NB fix 110: the inventory draws it, the key C toggles the hotbar
   applyAvailability();
   }
 

@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "game/nbhotbar.h"
 #include "ui/cursorshape.h"
 
 #include <Tempest/Except>
@@ -749,6 +750,20 @@ void MainWindow::keyDownEvent(KeyEvent &event) {
   if((event.code=='`' || event.code=='~') && nbToggleSprint()) {
     event.accept();
     return;
+    }
+
+  // NB fix 110: the keys 3..0 of a slot without a rune, with an item put there by the player: the item is used (a
+  // weapon is equipped, a potion drunk, a plant eaten)
+  if(auto* pl = Gothic::inst().player(); pl!=nullptr && !pl->isDead() && !dialogs.isActive() &&
+     ((Event::K_3<=event.key && event.key<=Event::K_9) || event.key==Event::K_0)) {
+    const int index = event.key==Event::K_0 ? 9 : int(event.key-Event::K_1);
+    if(pl->inventory().currentSpell(uint8_t(index-2))==nullptr) {
+      if(auto* it = NbHotbar::item(*pl,index)) {
+        pl->useItem(it->clsId());
+        event.accept();
+        return;
+        }
+      }
     }
 
   auto act     = keycodec.tr(event);
@@ -2121,7 +2136,9 @@ const Item* hotbarItem(Npc& pl, int index) {
     return pl.currentMeleeWeapon();
   if(index==1)
     return pl.currentRangedWeapon();
-  return pl.inventory().currentSpell(uint8_t(index-2));
+  if(auto* spl = pl.inventory().currentSpell(uint8_t(index-2)))
+    return spl;
+  return NbHotbar::item(pl,index);   // NB fix 110: an item put on the hotbar by the player
   }
 
 void cycleSpell(Npc& pl) {
@@ -2425,6 +2442,8 @@ void MainWindow::updateMobileAvailability() {
                  keyMask(Key::Up) | keyMask(Key::Down) | keyMask(Key::Left) | keyMask(Key::Right);
       if(inventory.isOpen()!=InventoryMenu::State::Equip)
         allowed |= keyMask(Key::Jump);
+      if(inventory.mobileCanHotbar())
+        allowed |= keyMask(Key::Sneak);   // NB fix 110
       }
     androidControls.availability(allowed,false,false,false);
     }

@@ -181,6 +181,7 @@ struct InventoryLayout {
   Rect  info;                         // the card of the item
   Rect  picture;                      // the picture of the item in the card
   Rect  use, drop, stack;             // actions, at the bottom of the card
+  Rect  hotbar;                       // NB fix 110: the item on the hotbar or off it, over the actions
   };
 
 InventoryLayout inventoryLayout(float width, float height, bool twoLists, float gui=1.f);

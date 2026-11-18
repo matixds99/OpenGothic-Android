@@ -75,6 +75,7 @@ class InventoryMenu : public Tempest::Widget {
     void  mobileTouch(float x, float y, int phase);
     bool  mobileTwoLists() const { return pageOth!=nullptr; }
     std::string_view mobileActionLabel();
+    bool  mobileCanHotbar();   // NB fix 110: the selected item can go on the hotbar
     void  setTouchSprites(const Tempest::Sprite& slot, const Tempest::Sprite& selected) {
       touchSlot     = slot;
       touchSelected = selected;

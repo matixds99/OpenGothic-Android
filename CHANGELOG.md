@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **110**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **111**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 110. Własne przedmioty na pasku szybkiego wyboru (broń, mikstury, rośliny) – 🧪 (18.11.2026)
+- **Pliki:** `common/game/nbhotbar.h` 🆕, `common/ui/inventorymenu.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp`, `common/mainwindow.cpp`
+- **Zgłoszenie:** możliwość wkładania broni lub przedmiotu (mikstura, roślina) na pasek szybkiego wyboru.
+- **Poprawka:**
+  - Na karcie przedmiotu w ekwipunku nowy przycisk nad ZAŁÓŻ/WYRZUĆ: **NA PASEK SZYBKIEGO WYBORU**, a gdy przedmiot już tam jest, **ZDEJMIJ Z PASKA**. Dotyczy broni białej i dystansowej, jedzenia i mikstur; runy i zwoje trafiają tam same, jak w grze.
+  - Przedmiot zajmuje pierwszy wolny slot 3–0 (bez runy i bez innego przedmiotu). Na ekranie napis „Na pasku: N” / „Zdjęte z paska: N” / „Pasek pełny”.
+  - Dotknięcie slotu (albo klawisz 3–0) używa przedmiotu: broń zakłada, miksturę pije, roślinę je. Na pasku widać model przedmiotu, dopóki bohater go ma.
+  - Zapis w `Gothic.ini`, `[MOBILE_HOTBAR] slotN` = nazwa instancji (wspólne dla wszystkich zapisów gry).
+- **Akrobatyka (108):** przełącznik zapisuje `MOBILE/acrobatic` i działa jak w ustawieniach dotyku, ale skrypt `RX_ApplyAcrobatic` zakłada przewrotki tylko bohaterowi, który nauczył się akrobatyki (`NPC_TALENT_ACROBAT`) – bez nauki przełącznik nic nie zmienia.
+- **Do sprawdzenia:** mikstura i roślina na pasek, dotknięcie – używa; druga broń na pasek – zakłada.
 
 ### 109. Zasięg rysowania postaci (jak suwak NB 3000–7000) – 🧪 (18.11.2026)
 - **Pliki:** `shader/materials/visibility_pass.comp`, `common/graphics/drawcommands.cpp`, `common/game/nboptions.h`, `common/ui/gamemenu.cpp`

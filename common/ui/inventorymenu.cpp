@@ -16,6 +16,7 @@
 #include "resources.h"
 #include "game/nbiteminfo.h"
 #include "game/nbtexts.h"
+#include "game/nbhotbar.h"
 
 using namespace Tempest;
 
@@ -394,6 +395,25 @@ void InventoryMenu::keyDownEvent(KeyEvent &e) {
 #endif
 
   processMove(e);
+
+#ifdef OPENGOTHIC_TOUCH_UI
+  // NB fix 110: C (the button of the card) puts the selected item on the hotbar or takes it off
+  if(e.key==KeyEvent::K_C && mobileCanHotbar()) {
+    auto& pg  = activePage();
+    auto  it  = pg.get(activePageSel().sel);
+    if(it.isValid()) {
+      const int s = NbHotbar::toggle(*player,*it);
+      const bool on = s>=0 && NbHotbar::slotOf(NbHotbar::itemName(*player,*it))==s;
+      std::string msg;
+      if(s<0)
+        msg = "Pasek pe\xB3ny (sloty 3-0 zaj\xEAte)"; else
+        msg = std::string(on ? "Na pasku: " : "Zdj\xEAte z paska: ")+std::to_string(s==9 ? 0 : s+1);
+      Gothic::inst().onPrintScreen(msg,-1,70,2,Resources::font(1.f));
+      }
+    update();
+    return;
+    }
+#endif
 
   if(keycodec.tr(e)==KeyCodec::Jump) {
     lootMode = LootMode::Stack;
@@ -1347,7 +1367,7 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
   const int top    = int(pic.y);
   const int narrow = int(pic.x)-int(H*0.02f);          // on the left of the picture
   const int below  = int(pic.y+pic.h)+int(H*0.015f);   // from here the lines are as wide as the card
-  const int bottom = int(lay.use.y)-int(H*0.02f);
+  const int bottom = int(mobileCanHotbar() ? lay.hotbar.y : lay.use.y)-int(H*0.02f);   // NB fix 110
 
   struct Line { std::string text; int y; };
   std::vector<Line> lines;
@@ -1422,6 +1442,25 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
     };
   drawTouchButton(p,lay.use, label(mobileActionLabel()));
   drawTouchButton(p,lay.drop,label(state==State::Equip ? "Drop" : "Move"));
+  // NB fix 110: the hotbar
+  if(mobileCanHotbar()) {
+    const bool onBar = NbHotbar::slotOf(NbHotbar::itemName(*player,item))>=0;
+    std::string_view t = pl ? (onBar ? std::string_view("ZDEJMIJ Z PASKA") : std::string_view("NA PASEK SZYBKIEGO WYBORU"))
+                            : (onBar ? std::string_view("OFF THE HOTBAR")  : std::string_view("TO THE HOTBAR"));
+    drawTouchButton(p,lay.hotbar,t);
+    }
+  }
+
+bool InventoryMenu::mobileCanHotbar() {
+  // NB fix 110: an item of the hero that can be used or worn: weapons, potions, food, scrolls...
+  if(player==nullptr || state!=State::Equip)
+    return false;
+  auto& pg = activePage();
+  auto  it = pg.get(activePageSel().sel);
+  if(!it.isValid())
+    return false;
+  const auto flag = it->mainFlag();
+  return (flag & (ITM_CAT_NF|ITM_CAT_FF|ITM_CAT_FOOD|ITM_CAT_POTION))!=0;   // the runes go there by the game itself
   }
 
 std::string_view InventoryMenu::mobileActionLabel() {
