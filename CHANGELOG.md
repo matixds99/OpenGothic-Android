@@ -237,6 +237,22 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 104. Ekwipunek w wyglądzie Hedin's Advanced Inventory (z pliku VDF gracza) – 🧪 (18.11.2026)
+- **Pliki:** `common/ui/inventorymenu.cpp/.h` (`hedin`), `common/utils/androidinput.cpp` (kafelki kategorii)
+- **Zgłoszenie:** z `Hedin_Union_Adv_Inventory.vdf` (z niego jest wzór ze zdjęcia 342701) wziąć ikonki i wygląd ekwipunku.
+- **Zawartość VDF:** 67 tekstur (`_WORK/DATA/TEXTURES/_COMPILED`, DXT1/DXT3):
+  - ikony kategorii `INV_*_SELECT`/`_NOT_SELECT`;
+  - pola `INV_NEW_SLOT` i warianty `_HIGHLIGHTED` (turkus), `_EQUIPPED` (zieleń), `_H_SELECT`;
+  - tło `INV_SIMPLE_BG_ITEM_1`;
+  - strzałki `INV_ARROW_UP`/`_DOWN`;
+  - dodatkowo DLL pluginu, `INV_NAMES.CFG` (nazwy kategorii po rosyjsku/angielsku/polsku).
+- **Poprawka:** tekstury nie są w repozytorium (to pliki autora pluginu). Gra bierze je z VDF-a, gdy leży w folderze `Data` (OpenGothic czyta wszystkie VDF-y z `Data` i podfolderów). Gdy go nie ma, zostaje wygląd z poprawki 99.
+  - Pola listy: `INV_NEW_SLOT`. Wybrane: turkusowe, założone: zielone, wybrane i założone: `INV_NEW_SLOT_H_SELECT`.
+  - Kategorie: Wszystko `INV_ALL`, Broń `INV_WEAPON`, Pancerze `INV_ARMOR`, Biżuteria `INV_MAGIC` (pierścień), Magia `INV_MAGIC_RUNE`, Jedzenie `INV_FOOD`, Mikstury `INV_POTIONS`, Dokumenty `INV_DOC`, Inne `INV_OTHER`. Wybrana kategoria czerwona (`_SELECT`).
+  - Ramki listy i karty przedmiotu: tło `INV_SIMPLE_BG_ITEM_1` (ciemne, z własną ramką), na karcie biała czcionka gry zamiast czcionki książek.
+  - Strzałki przewijania: `INV_ARROW_UP`/`INV_ARROW_DOWN`.
+- **Do sprawdzenia:** skopiować `Hedin_Union_Adv_Inventory.vdf` do `Data` gry na telefonie i otworzyć ekwipunek, skrzynię, handel.
+
 ### 103. Szybki atak u maga – 🧪 (18.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`QuickSpellSpeed`), `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.h`
 - **Zgłoszenie:** QUICK ma działać też z magią w ręku, ale wolniej niż w walce wręcz. Przy okazji: w walce wręcz jednak 2,5× (2,2× za wolno).

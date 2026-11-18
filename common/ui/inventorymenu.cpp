@@ -134,6 +134,15 @@ InventoryMenu::InventoryMenu(const KeyCodec& key)
   slot = Resources::loadTexture("INV_SLOT.TGA");
   selT = Resources::loadTexture("INV_SLOT_HIGHLIGHTED.TGA");
   selU = Resources::loadTexture("INV_SLOT_EQUIPPED.TGA");
+#ifdef OPENGOTHIC_TOUCH_UI
+  hedin.slot     = Resources::loadTexture("INV_NEW_SLOT.TGA");
+  hedin.sel      = Resources::loadTexture("INV_NEW_SLOT_HIGHLIGHTED.TGA");
+  hedin.equip    = Resources::loadTexture("INV_NEW_SLOT_EQUIPPED.TGA");
+  hedin.selEquip = Resources::loadTexture("INV_NEW_SLOT_H_SELECT.TGA");
+  hedin.panel    = Resources::loadTexture("INV_SIMPLE_BG_ITEM_1.TGA");
+  hedin.up       = Resources::loadTexture("INV_ARROW_UP.TGA");
+  hedin.down     = Resources::loadTexture("INV_ARROW_DOWN.TGA");
+#endif
   tex  = Resources::loadTexture("INV_BACK.TGA"); // INV_TITEL.TGA
 
 
@@ -769,10 +778,15 @@ void InventoryMenu::drawItems(Painter &p, DrawPass pass,
       const int x = x0 + r*slotSize().w;
       if(pass==DrawPass::Back) {
 #ifdef OPENGOTHIC_TOUCH_UI
-        p.setBrush(Brush(Color(0.01f,0.018f,0.025f,0.90f)));
-        p.drawRect(x+1,y+1,slotSize().w-2,slotSize().h-2);
-        p.setBrush(Brush(touchSlot));
-        p.drawRect(float(x),float(y),float(slotSize().w),float(slotSize().h),0.f,0.f,float(touchSlot.w()),float(touchSlot.h()));
+        if(hedin.on()) {
+          p.setBrush(*hedin.slot);
+          p.drawRect(x,y,slotSize().w,slotSize().h,0,0,hedin.slot->w(),hedin.slot->h());
+          } else {
+          p.setBrush(Brush(Color(0.01f,0.018f,0.025f,0.90f)));
+          p.drawRect(x+1,y+1,slotSize().w-2,slotSize().h-2);
+          p.setBrush(Brush(touchSlot));
+          p.drawRect(float(x),float(y),float(slotSize().w),float(slotSize().h),0.f,0.f,float(touchSlot.w()),float(touchSlot.h()));
+          }
 #else
         p.setBrush(*slot);
         p.drawRect(x,y,slotSize().w,slotSize().h,
@@ -806,7 +820,19 @@ void InventoryMenu::drawSlot(Painter &p, DrawPass pass, const Inventory::Iterato
 #endif
 
   if(pass==DrawPass::Back) {
-    if((!it.isValid() && id==0) || (id==sel.sel && &page==&active)){
+    const bool selected = (!it.isValid() && id==0) || (id==sel.sel && &page==&active);
+#ifdef OPENGOTHIC_TOUCH_UI
+    // NB fix 104: the slots of Hedin's inventory - lit (selected), green (equipped), both
+    const Texture2d* hs = !hedin.on() ? nullptr :
+                          (selected && it.isEquipped()) ? hedin.selEquip :
+                          selected ? hedin.sel : it.isEquipped() ? hedin.equip : nullptr;
+    if(hs!=nullptr) {
+      p.setBrush(*hs);
+      p.drawRect(x,y,slotSize().w,slotSize().h,0,0,hs->w(),hs->h());
+      }
+    if(hedin.on()) {} else
+#endif
+    if(selected){
 #ifdef OPENGOTHIC_TOUCH_UI
       p.setBrush(Brush(touchSelected));
       p.drawRect(float(x),float(y),float(slotSize().w),float(slotSize().h),0.f,0.f,float(touchSelected.w()),float(touchSelected.h()));
@@ -817,7 +843,11 @@ void InventoryMenu::drawSlot(Painter &p, DrawPass pass, const Inventory::Iterato
 #endif
       }
 
-    if(it.isEquipped() && selU!=nullptr) {
+    if(it.isEquipped() && selU!=nullptr
+#ifdef OPENGOTHIC_TOUCH_UI
+       && !hedin.on()
+#endif
+       ) {
       p.setBrush(*selU);
       p.drawRect(x,y,slotSize().w,slotSize().h,
                  0,0,selU->w(),selU->h());
@@ -1154,6 +1184,14 @@ std::string InventoryMenu::touchCategoryTitle() const {
 void InventoryMenu::drawTouchPanel(Painter& p, const Mobile::Rect& r, bool parchment) {
   if(r.w<=0 || r.h<=0)
     return;
+  if(hedin.on()) {
+    // NB fix 104: the background of Hedin's inventory, with its own frame
+    p.setBrush(Brush(Color(0.f,0.f,0.f,0.45f)));
+    p.drawRect(int(r.x)+4,int(r.y)+6,int(r.w),int(r.h));
+    p.setBrush(*hedin.panel);
+    p.drawRect(int(r.x),int(r.y),int(r.w),int(r.h),0,0,hedin.panel->w(),hedin.panel->h());
+    return;
+    }
   const float H     = float(h());
   const float outer = std::max(3.f,H*0.009f);
   const float inner = std::max(1.f,H*0.0025f);
@@ -1220,6 +1258,20 @@ void InventoryMenu::drawScrollHints(Painter& p, const Page& inv, const PageLocal
   const float a    = side*0.14f;
   const float cx   = r.x+r.w/2;
 
+  if(hedin.up!=nullptr && hedin.down!=nullptr) {
+    // NB fix 104: the arrows of Hedin's inventory
+    const float s = side*0.42f;
+    if(sel.scrollPx<touchMaxScroll(inv)-1.f) {
+      p.setBrush(*hedin.down);
+      p.drawRect(int(cx-s/2),int(r.y+r.h-s*0.9f),int(s),int(s),0,0,hedin.down->w(),hedin.down->h());
+      }
+    if(sel.scrollPx>1.f) {
+      p.setBrush(*hedin.up);
+      p.drawRect(int(cx-s/2),int(r.y-s*0.1f),int(s),int(s),0,0,hedin.up->w(),hedin.up->h());
+      }
+    return;
+    }
+
   p.setBrush(Brush(Color(1.f,1.f,1.f,0.75f)));
   if(sel.scrollPx<touchMaxScroll(inv)-1.f) {
     const float y = r.y+r.h-side*0.16f;
@@ -1251,8 +1303,11 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
   const int   x0   = int(r.x)+cpad;
   const int   x1   = int(r.x+r.w)-cpad;
 
-  auto book = [](float sc) -> const GthFont& {
+  const bool dark = hedin.on();   // NB fix 104: the dark card of Hedin - the white font of the game
+  auto book = [dark](float sc) -> const GthFont& {
     sc = std::max(0.5f,std::floor(sc*20.f)/20.f);   // a font is cached per scale
+    if(dark)
+      return Resources::font(sc);
     return Resources::font("FONT_10_BOOK.TGA",Resources::FontType::Normal,sc);
     };
 

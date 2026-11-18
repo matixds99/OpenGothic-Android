@@ -931,6 +931,19 @@ void AndroidInput::Controller::paintInventoryButton(Painter& p, Font& font, size
   if(b.special>=Mobile::Special::FirstCategory) {
     // The selected tab is lit
     const bool selected = b.special-Mobile::Special::FirstCategory==hud.inventoryCategory;
+    // NB fix 104: the icons of Hedin's Advanced Inventory (Hedin_Union_Adv_Inventory.vdf in Data), when it is there
+    static const char* hedinTab[Mobile::CategoryCount] = {
+      "INV_ALL", "INV_WEAPON", "INV_ARMOR", "INV_MAGIC", "INV_MAGIC_RUNE", "INV_FOOD", "INV_POTIONS", "INV_DOC", "INV_OTHER"
+      };
+    const int cat = b.special-Mobile::Special::FirstCategory;
+    if(0<=cat && cat<Mobile::CategoryCount) {
+      const std::string name = std::string(hedinTab[cat])+(selected || active ? "_SELECT.TGA" : "_NOT_SELECT.TGA");
+      if(auto* t = Resources::loadTexture(name)) {
+        p.setBrush(Brush(*t,Color(1.f,1.f,1.f,alpha)));
+        p.drawRect(r.x,r.y,r.w,r.h,0.f,0.f,float(t->w()),float(t->h()));
+        return;
+        }
+      }
     frame(p,r,border,active || selected,true);
     if(selected)
       fill(p,{r.x+border,r.y+border,r.w-2*border,r.h-2*border},Color(0.16f,0.20f,0.25f,0.97f));

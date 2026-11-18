@@ -125,6 +125,17 @@ class InventoryMenu : public Tempest::Widget {
     const Tempest::Texture2d* slot=nullptr;
     const Tempest::Texture2d* selT=nullptr;
     const Tempest::Texture2d* selU=nullptr;
+    // NB fix 104: the look of Hedin's Advanced Inventory (Hedin_Union_Adv_Inventory.vdf in Data), when it is there
+    struct Hedin {
+      const Tempest::Texture2d* slot     = nullptr;   // INV_NEW_SLOT
+      const Tempest::Texture2d* sel      = nullptr;   // INV_NEW_SLOT_HIGHLIGHTED
+      const Tempest::Texture2d* equip    = nullptr;   // INV_NEW_SLOT_EQUIPPED
+      const Tempest::Texture2d* selEquip = nullptr;   // INV_NEW_SLOT_H_SELECT
+      const Tempest::Texture2d* panel    = nullptr;   // INV_SIMPLE_BG_ITEM_1
+      const Tempest::Texture2d* up       = nullptr;   // INV_ARROW_UP
+      const Tempest::Texture2d* down     = nullptr;   // INV_ARROW_DOWN
+      bool on() const { return slot!=nullptr && panel!=nullptr; }
+      } hedin;
 
     State                     state      =State::Closed;
     Npc*                      player     =nullptr;
