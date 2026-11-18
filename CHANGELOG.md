@@ -253,18 +253,20 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Strzałki przewijania: `INV_ARROW_UP`/`INV_ARROW_DOWN`.
 - **Test (18.11):** z VDF-em w `Data` weszły tylko ikony kategorii; pola, tła i strzałki Hedina się nie wczytały (wczytywane w konstruktorze, za wcześnie). Gracz woli tak zostawić: ikony Hedina + ramki i pergamin z 99 („czuję się jak na PC”). Wczytywanie pól/teł/strzałek wyłączone w kodzie (struktura `hedin` została, opis w komentarzu).
 
-### 103. Szybki atak u maga – 🧪 (18.11.2026)
+### 103. Szybki atak u maga – ✅ (18.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`QuickSpellSpeed`), `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.h`
 - **Zgłoszenie:** QUICK ma działać też z magią w ręku, ale wolniej niż w walce wręcz. Przy okazji: w walce wręcz jednak 2,5× (2,2× za wolno).
 - **Poprawka:** przycisk QUICK jest widoczny także z runą/zwojem w ręku (gdy jest mana). Dotknięcie rzuca czar z ręki `QuickHits` = 3 razy pod rząd, bohater zwrócony do celu. Czary ładowane wychodzą od razu na pierwszym poziomie. Animacje są przyspieszone `QuickSpellSpeed = 1.3f` (walka wręcz `QuickSpeed = 2.5f`). Limit to 4 s, a prędkość wraca do 1 po skończeniu ostatniego czaru. Brak many kończy serię.
 - **Do sprawdzenia:** QUICK z runą – 3 czary szybciej niż normalnie. Tempo do ustawienia w `playercontrol.h` (`QuickSpellSpeed`: 1.0 = normalnie).
+- **Test (18.11):** działa – czary nie co 2 sekundy, a tempo nie za wolne; `QuickSpellSpeed = 1.3f` zostaje.
 
-### 102. Runa z bliska nie trafia – 🧪 (18.11.2026)
+### 102. Runa z bliska nie trafia – ✅ (18.11.2026)
 - **Pliki:** `common/world/bullet.cpp` (`tickHoming`)
 - **Zgłoszenie (film 342714):** czar z runy rzucony z bliska nie trafia: pocisk krąży nad celem.
 - **Przyczyna:** naprowadzanie z poprawki 84 kieruje pocisk co klatkę w środek celu. Z bliska pocisk startuje w ciele celu albo do niego dolatuje, a fizyka sprawdza trafienie promieniem, który ze środka ciała niczego nie trafia. Pocisk kręcił się wokół środka, aż przeleciał 100 m.
 - **Poprawka:** gdy naprowadzany pocisk jest bliżej środka celu niż ok. 70% połowy szerokości ciała (40–150 cm), trafienie liczone jest od razu (obrażenia, efekt uderzenia) i pocisk się zatrzymuje.
 - **Do sprawdzenia:** runy z bliska (wróg tuż przy bohaterze) – trafiają za pierwszym razem; z daleka bez zmian.
+- **Test (18.11):** działa – runa z bliska trafia.
 
 ### 101. Kruk i nieaktywne fazy bossów: RX_IsWaiting, RX_Stop_AI_Wait, UpdateSpeed, przywołańcy – 🧪 (17.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp/.h` (`nbSpeed`, `nbIsWaiting`, `nbStopWait`)
@@ -396,7 +398,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `RX_PrintCutscene` wyłączone – pisało „Pomiń, wciśnij G lub R”, a pominięcie wymaga `RX_KeyPressed`, którego nie ma.
 - **Jeszcze nie ma:** liczników wampira, Full SnC+, umiejętności karmy i spowolnienia czasu, „Dzień: …” w lewym górnym rogu.
 
-### 68. Okno sprzedaży NB (Hanna, Kardif, Halvor, Kreol, Xardas…) – 🧪 (15.11.2026)
+### 68. Okno sprzedaży NB (Hanna, Kardif, Halvor, Kreol, Xardas…) – ✅ (15.11.2026)
 - **Pliki:** 🆕 `common/ui/nbsalesmenu.cpp`, 🆕 `common/ui/nbsalesmenu.h`, `common/game/gamescript.cpp`, `common/gothic.h`, `common/mainwindow.cpp`, `common/mainwindow.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.h`, `CMakeLists.txt` (`CONFIGURE_DEPENDS` – nowe pliki .cpp trafiają do buildu same)
 - **Zgłoszenie:** u Hanny (klejnoty, szkatułki), Kardifa (surowe mięso), Halvora (perły, muszle, kosztowności), Kreola i Xardasa-nekromanty po wybraniu „sprzedaj” nic się nie otwiera.
 - **Przyczyna:** NB robi to oknem pluginu: skrypt czyści listę (`RX_Craft_PlayerSales_ClearProductList`), dodaje przedmioty z ceną za sztukę (`RX_Craft_PlayerSales_AddToProductList("ItMi_Ruby", 350)`, 126 wywołań) i otwiera okno (`RX_OpenCraft_PlayerSales(npc)` – UNION_ABI.DLL 0x1017EC40: okno rzemiosła pluginu w trybie 13). Żadnej z tych funkcji nie było.
@@ -406,6 +408,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - **po teście 23:39:** krzyżyk nie zamykał okna. Dodany przycisk „wstecz” nakładki w prawym górnym rogu (Escape – zamyka okno, nie otwiera menu gry), większe pole dotyku krzyżyka i wpis w logu przy każdym dotknięciu okna (`NB sales window: tap x,y …`) – do sprawdzenia, czemu krzyżyk nie łapał. Pod oknem nie są już rysowane napisy NB (strzały, karma, liczniki), które prześwitywały przez wiersze.
 - W logu `[ctx] sales window: N items`.
 - **To samo okno w pluginie robi rzemiosło** (`RX_OpenCraft` z `CRAFT_ALCHEMY`, `CRAFT_SMITH`, `CRAFT_RUNE`, `CRAFT_FORCEARMOR`, `CRAFT_BOWS`, `CRAFT_JEWELRY`, `CRAFT_FOOD`, `CRAFT_PIE`, `CRAFT_SOUP_COMPOTE`, `CRAFT_SCROLLS`, `CRAFT_ORE_SMELTING`, `CRAFT_SKINS_ARMOR`, `CRAFT_DEMONRUNE`). Przepisy są tam zaszyte w kodzie pluginu (nie w skryptach) – na razie zostają stare menu dialogowe z poprawki 2; to okno jest pod nie przygotowane.
+- **Test (18.11):** działa u wszystkich – handel w nowym oknie.
 
 ### 69. Okno sprzedaży u Constantino i Alfreda, napis „Złoto” w ekwipunku – ✅ (16.11.2026, sprawdzone 17.11)
 - **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`, `common/game/nbtexts.h`
@@ -444,7 +447,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Nie ma:** mikstur `ItPo_ASNC_POTION_*` (w skryptach NB nie ma takich przedmiotów); przy „rzece dusz” i proszkach plugin sprawdza jeszcze coś w silniku Gothica – tu tylko zmienne skryptów.
 - **Sprawdzone (23:32):** zakładka Alkohole (czysty alkohol z kilku przepisów, x9 naraz), po X bohater odchodzi od stołu.
 
-### 71. Okno rzemiosła NB przy wszystkich stołach – 🧪 (16.11.2026)
+### 71. Okno rzemiosła NB przy wszystkich stołach – ✅ (16.11.2026)
 - **Pliki:** `common/game/nbcraft.h`, `common/ui/nbcraftmenu.cpp/.h`, `common/game/gamescript.cpp`, `common/game/gamescript.h`
 - **Co:** to samo okno co alchemia (poprawka 70) przy każdym stole, który w skryptach woła `RX_OpenCraft`:
   | Stół (skrypt) | `CRAFT_*` | Przepisy | Zakładki | Umiejętność u góry |
@@ -470,6 +473,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - „Umiejętność tworzenia run: N” wchodziło pod X – za długi napis dostaje mniejszą czcionkę.
 - Kocioł, zbroje i ciasta były puste, bo bohater nie zna jeszcze tych przepisów (potwierdzone 23:59). **Do sprawdzenia później**, gdy się ich nauczy.
 - **Kocioł pusty mimo znanych przepisów (17.11)** – to jednak był błąd, poprawka 77.
+- **Test (18.11):** działa.
 
 ### 72. Odpowiedzi w dialogach jak na PC, kamera przy menu bohatera (runa teleportu) – ✅ (17.11.2026)
 - **Sprawdzone (zrzut 00:15):** pergamin z odpowiedziami przy runie teleportu, kamera za bohaterem.
