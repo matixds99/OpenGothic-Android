@@ -1,6 +1,7 @@
 #include "playercontrol.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <vector>
 
@@ -381,6 +382,21 @@ void PlayerControl::tickFocus() {
     emptyFocus();
   }
 
+// NB fix 115: the tempo of QUICK by the overlay of the fighting style that New Balance put on the hero
+// (RX_ApplyAnim_Weapons): the sabre - HUMANS_1HDEXST1..3, the rapier - HUMANS_RAPIER_ST1..3
+float PlayerControl::quickMeleeSpeed(const Npc& pl) {
+  for(auto& n:pl.overlayNames()) {
+    std::string s = n;
+    for(auto& c:s)
+      c = char(std::toupper(static_cast<unsigned char>(c)));
+    if(s.find("RAPIER")!=std::string::npos)
+      return QuickSpeedRapier;
+    if(s.find("1HDEXST")!=std::string::npos)
+      return QuickSpeedSaber;
+    }
+  return QuickSpeed;
+  }
+
 void PlayerControl::quickAttack() {
   // NB fix 96, 98: QUICK of the touch screen - the forward blows of the sword button, faster and reset after each hit
   auto w  = Gothic::inst().world();
@@ -389,7 +405,8 @@ void PlayerControl::quickAttack() {
     return;
   const auto ws = pl->weaponState();
   if(ws==WeaponState::W1H || ws==WeaponState::W2H) {
-    quickPending = 1;   // NB fix 114: one tap - one blow
+    quickPending  = 1;                     // NB fix 114: one tap - one blow
+    quickSpeedNow = quickMeleeSpeed(*pl);   // NB fix 115: the tempo of the fighting style
     return;
     }
   if(ws!=WeaponState::Mage || quickUntil!=0)
@@ -906,7 +923,7 @@ void PlayerControl::implMove(uint64_t dt) {
       quickActive  = false;
       Npc::nbQuickSpeed = 1.f;
       } else {
-      Npc::nbQuickSpeed = QuickSpeed;
+      Npc::nbQuickSpeed = quickSpeedNow;   // NB fix 115: by the fighting style
       if(auto other = pl.target()) {
         auto dp = other->centerPosition()-pl.centerPosition();
         pl.turnTo(dp.x,dp.z,true,dt);

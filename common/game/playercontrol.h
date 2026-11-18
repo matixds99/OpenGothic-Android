@@ -42,6 +42,13 @@ class PlayerControl final {
     // off (the reset) and starts the next blow
     int            quickPending = 0;   // the taps not done yet (at most 1)
     bool           quickActive  = false;  // a blow of QUICK is playing (faster)
+    // NB fix 115: the speed of QUICK by the fighting style of New Balance. The animations of the styles have their own
+    // tempo: the sabre (HUMANS_1HDEXST*) is fast by itself, the rapier (HUMANS_RAPIER_ST*) slow; the orcish weapons and
+    // the other styles keep QuickSpeed
+    static constexpr float    QuickSpeedSaber  = QuickSpeed*0.5f;   // 1.15
+    static constexpr float    QuickSpeedRapier = QuickSpeed*1.5f;   // 3.45
+    float          quickSpeedNow = QuickSpeed;
+    static float   quickMeleeSpeed(const Npc& pl);
 
     void  onKeyPressed (KeyCodec::Action a, Tempest::Event::KeyType key, KeyCodec::Mapping mapping);
     void  onKeyReleased(KeyCodec::Action a, KeyCodec::Mapping mapping);
