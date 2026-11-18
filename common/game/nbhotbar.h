@@ -79,7 +79,7 @@ inline int toggle(Npc& pl, const Item& it) {
 
 }
 
-// NB fix 111: the wheel of the quick choice (the second hotbar, as the weapon wheel of GTA 5): 8 slots for a weapon, a
+// NB fix 111: the wheel of the quick choice (the second hotbar): 8 slots for a weapon, a
 // potion, a plant (9 slots, fix 112). [MOBILE_WHEEL] slotN - the name of the instance.
 namespace NbWheel {
 

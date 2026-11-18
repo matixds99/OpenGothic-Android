@@ -94,7 +94,7 @@ class Controller {
       std::array<int,9>         wheelCount{};
       };
 
-    /// NB fix 111: the wheel of the quick choice (GTA 5): open, the places of the models of its slots, the choice
+    /// NB fix 111: the wheel of the quick choice: open, the places of the models of its slots, the choice
     bool         wheelOpen() const { return wheel.open; }
     Mobile::Rect wheelSlot(int k) const;
     std::function<void(int,bool)> wheelPick;   // slot, a long press

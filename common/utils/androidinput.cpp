@@ -615,7 +615,7 @@ void AndroidInput::Controller::paintWheel(Painter& p, Font& font) {
   const float R  = screenH*0.42f, r = screenH*0.15f;
   fill(p,{0,0,screenW,screenH},Color(0.f,0.f,0.f,0.45f));
 
-  // NB fix 112: the sectors - a ring cut in 9, the chosen one is blue (as in GTA). The painter puts the corners on whole
+  // NB fix 112: the sectors - a ring cut in 9, the chosen one is blue. The painter puts the corners on whole
   // pixels: the small triangles of a sector overlap a little and the colors are not transparent, else lines show
   // between them; the gaps between the sectors are drawn as dark lines over them
   constexpr int   steps = 12;
