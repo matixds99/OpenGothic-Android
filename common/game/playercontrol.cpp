@@ -385,10 +385,14 @@ void PlayerControl::quickAttack() {
   // NB fix 96, 98: QUICK of the touch screen - the forward blows of the sword button, faster and reset after each hit
   auto w  = Gothic::inst().world();
   auto pl = w!=nullptr ? w->player() : nullptr;
-  if(pl==nullptr || quickUntil!=0)
+  if(pl==nullptr)
     return;
   const auto ws = pl->weaponState();
-  if(ws!=WeaponState::W1H && ws!=WeaponState::W2H && ws!=WeaponState::Mage)
+  if(ws==WeaponState::W1H || ws==WeaponState::W2H) {
+    quickPending = 1;   // NB fix 114: one tap - one blow
+    return;
+    }
+  if(ws!=WeaponState::Mage || quickUntil!=0)
     return;
   quickCount   = 0;
   quickSwingAt = 0;
@@ -886,21 +890,43 @@ void PlayerControl::implMove(uint64_t dt) {
         }
       return;
       } else {
+      // melee: done below (NB fix 114)
+      quickUntil = 0;
+      }
+    }
+
+  // NB fix 114: QUICK with a melee weapon - one tap, one blow, faster (QuickSpeed). A tap during a blow waits for its hit,
+  // cuts the rest of it (the reset of the position, as W on the PC) and starts the next blow. Without a new tap the blow
+  // plays to its end, then the speed goes back.
+  if(quickPending>0 || quickActive) {
+    auto*      wr  = Gothic::inst().world();
+    const auto now = wr!=nullptr ? wr->tickCount() : 0;
+    if(wr==nullptr || (ws!=WeaponState::W1H && ws!=WeaponState::W2H) || pl.isDead() || pl.isDown()) {
+      quickPending = 0;
+      quickActive  = false;
+      Npc::nbQuickSpeed = 1.f;
+      } else {
       Npc::nbQuickSpeed = QuickSpeed;
       if(auto other = pl.target()) {
         auto dp = other->centerPosition()-pl.centerPosition();
         pl.turnTo(dp.x,dp.z,true,dt);
         }
-      if(pl.isAttackAnim()) {
-        if(pl.resetAttack())   // only after the hit of the blow
-          ++quickCount;
-        } else
-      if(now>=quickSwingAt && quickCount<QuickHits) {
-        // the blow starts a few frames later: swingSword in every frame until then gave a whole combo of blows
-        pl.swingSword();
-        quickSwingAt = now+400;
+      bool attacking = pl.isAttackAnim();
+      if(quickPending>0) {
+        if(attacking && now>=quickSwingAt && pl.resetAttack())   // only after the hit of the blow
+          attacking = false;
+        if(!attacking && now>=quickSwingAt) {
+          pl.swingSword();
+          quickPending = 0;
+          quickActive  = true;
+          quickSwingAt = now+200;   // the blow starts a few frames later
+          }
+        return;
         }
-      return;
+      if(attacking || now<quickSwingAt)
+        return;
+      quickActive = false;
+      Npc::nbQuickSpeed = 1.f;
       }
     }
 

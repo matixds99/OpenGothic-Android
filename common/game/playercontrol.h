@@ -38,6 +38,10 @@ class PlayerControl final {
     static constexpr float    QuickSpellSpeed = 1.3f;   // NB fix 103: the magic - slower than the blows
     int            quickCount = 0;
     uint64_t       quickSwingAt = 0;   // the next blow of QUICK may start (one blow, not one in every frame)
+    // NB fix 114: QUICK with a melee weapon - one tap, one blow; a tap during a blow waits for its hit, cuts the rest
+    // off (the reset) and starts the next blow
+    int            quickPending = 0;   // the taps not done yet (at most 1)
+    bool           quickActive  = false;  // a blow of QUICK is playing (faster)
 
     void  onKeyPressed (KeyCodec::Action a, Tempest::Event::KeyType key, KeyCodec::Mapping mapping);
     void  onKeyReleased(KeyCodec::Action a, KeyCodec::Mapping mapping);

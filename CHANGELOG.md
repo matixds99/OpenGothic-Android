@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **114**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **115**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -411,6 +411,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Zaraz po klatce uderzenia każdy cios jest ucinany (`Npc::resetAttack`, „reset pozycji”) i od razu wchodzi następny.
   - Na czas serii animacje bohatera są przyspieszone (zegar modelu × `QuickSpeed`). Potem prędkość wraca do 1.
   - Liczby w `playercontrol.h`: `QuickHits = 1` cios na dotknięcie, `QuickTime = 2000` ms limitu, `QuickSpeed = 2.3f`, `QuickSpellSpeed = 1.3f` (magia, poprawka 103). Historia tempa: 1,5× za wolno, 2,2× za wolno, 2,5× (18.11), 2,3× (19.11, przy jednym ciosie). Ciosy w serii: 3 → 1 (19.11).
+  - **19.11 (poprawka 114) – jedno dotknięcie = jeden cios:** QUICK z bronią białą nie liczy już serii. Dotknięcie zleca jeden cios (×2,3), który gra do końca, potem tempo wraca do 1. Dotknięcie w trakcie ciosu czeka na trafienie, ucina resztę ciosu (reset pozycji jak W na PC) i zaczyna następny – więc kolejne dotknięcia dają kolejne ciosy. Magia bez zmian (`QuickHits`, `QuickSpellSpeed`).
   - **19.11 – kilka ciosów zamiast jednego:** cios rusza kilka klatek po `swingSword`, a QUICK wołał `swingSword` w każdej klatce, aż ruszył – zbierało się kilka zleceń i wychodziła seria. Teraz cios zlecany raz, następny najwcześniej po 0,4 s (`quickSwingAt`).
 - **Droga do tego (85–97, w skrócie):**
   - 85–94: QUICK udawał klawisze PC w różnych kolejnościach i czasach: A/D → W → Ctrl, Ctrl + A/D + W, cios w bok osobnym klawiszem, sterowanie Gothic 1 na czas serii. Nic nie dawało tego co na PC. Ekran dotykowy ma sterowanie Gothic 2, gdzie A/D/W przy Ctrl to zwykły ruch, a oryginalny silnik czyta trzymane klawisze co klatkę.
