@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **106**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **107**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -236,6 +236,26 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 106. Obrażenia w czasie (na ekranie po lewej), obrażenia NB od broni bohatera, obrażenia obszarowe (splash) – 🧪 (18.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h` (`nbCallDamage`, `nbSplash`, `nbDotTick`, `RX_ApplyDotDamage*`, `RX_ClearAllDots`), `common/world/objects/npc.cpp/.h` (`nbSplashPct`)
+- **Zgłoszenie:** obrażenia w czasie mają działać i być widoczne na ekranie po lewej: od ognia żółte, od trucizny zielone. Do tego obrażenia obszarowe: na PC cios mieczem (i czar) rani też cel obok.
+- **Przyczyny (UNION_ABI.DLL):**
+  - `RX_ApplyDotDamage(cel, napastnik, ile razy, obrażenia, DAM_*, co ile ms, odnów)` i `RX_ApplyDotDamageNotKill` nie były zrobione – smoki, deszcz ognia bossów, duchy, płonące i zatrute bronie nic nie robiły (31 wywołań).
+  - Plugin przy każdym trafieniu bohatera woła `RX_CallDamage` (`0x10314430`) → `RX_MainDamageFunc`: premie z wytrzymałości i pancerza, procy run, efekty broni (`RX_WeaponDamage` – ponad 160 broni NB: ogień, trucizna, specjalne ciosy). Dodatkowe obrażenia wracają w `RX_GlobalAddDamage`. W OpenGothic tego w ogóle nie było.
+  - Splash (`0x100BAA70`): cios bronią do walki wręcz rani też wrogów obok celu – w zasięgu broni i przed bohaterem. Kąt i część obrażeń zależą od rodzaju broni, a część rośnie z umiejętnością broni.
+- **Poprawka:**
+  - Obrażenia w czasie: lista „tików” (co `interval` ms, `ile razy`), obrażenia minus ochrona danego rodzaju (co najmniej 1/10), wersja NotKill zostawia 1 HP, „odnów” podmienia ten sam efekt zamiast dokładać drugi. `RX_ClearAllDots` czyści listę.
+  - Na ekranie po lewej (od 33% wysokości, do 6 linii po 3 s) każdy tik na bohaterze albo zadany przez bohatera: „Ogień: -N” żółty, „Trucizna: -N” zielony, „Magia: -N” niebieski, inne czerwone; przy wrogu jego imię w nawiasie.
+  - `RX_CallDamage` przy każdym trafieniu bohatera (miecz, łuk, czar) z `RX_LastDamageWasSpell`, `RX_LastSpellId`, `isSplashDamage`. `RX_GlobalAddDamage` dodawane do ciosu.
+  - Splash: wrogowie (wrogie nastawienie albo walczący z bohaterem, bez przywołańców) w zasięgu ciosu i w kącie przed bohaterem:
+    - miecz 1H – 42° i 45%;
+    - topór 1H – 75° i 75%;
+    - miecz 2H – 70° i 75%;
+    - topór 2H – 80° i 85%.
+    Z umiejętnością: 10% + (część − 10%) × umiejętność/100. Liczba trafionych idzie do logu (`splash: …`).
+- **Jeszcze nie:** splash czarów (plugin robi go osobno przy zderzeniu czaru; czary z `NONSPLASH` w nazwie efektu go nie mają), koszt wytrzymałości splasha, dokładne tabele kątów pluginu dla wszystkich rodzajów broni (wzięte najczęstsze).
+- **Do sprawdzenia:** walka z kilkoma wrogami mieczem/toporem – sąsiedni wróg też traci życie; płonąca/zatruta broń i ataki smoków/bossów – linie po lewej w kolorach.
 
 ### 105. Marvin: `add lp N` – punkty nauki do testów – ❌ (18.11.2026)
 - **Pliki:** `common/marvin.cpp/.h` (`C_AddLp`)
@@ -627,7 +647,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - [ ] Mieszek i torba na bohaterze (`EXT_PutInSlot`, `ActivateZSSlot`) – opcje z poprawki 5.
 - [ ] Znikanie pustych ciał (opcja optymalizacji NB).
 - [x] Funkcje bossów wołane przez plugin: `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…` – poprawki 100–101 (do testu).
-- [ ] Obrażenia w czasie i trucizny (`RX_ApplyDotDamage`, `RX_ClearAllDots`, `RX_ApplyPoison`), `AI_PlayEffect`.
+- [x] Obrażenia w czasie (`RX_ApplyDotDamage`, `RX_ClearAllDots`) – poprawka 106 (do testu).
+- [ ] Trucizna na broń (`RX_ApplyPoison`), `AI_PlayEffect`, splash czarów.
 - [ ] Efekty perków bohatera (`RX_HeroProcs`).
 - [ ] Marvin `add lp` nie działa (poprawka 105).
 - [ ] System karmy pluginu (`UpdateKarma`, 130 wywołań – wydarzenia, znaki, osiągnięcia); samo wyświetlanie karmy działa (poprawka 62).

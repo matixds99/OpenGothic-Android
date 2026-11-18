@@ -2598,6 +2598,8 @@ void Npc::takeDamage(Npc &other, const Bullet* b) {
 
   if(!(isBlock || isJumpb) || b!=nullptr) {
     takeDamage(other,b,COLL_DOEVERYTHING,0,false);
+    if(b==nullptr && nbSplashPct==0)
+      owner.script().nbSplash(*this,other);   // NB fix 106: the blow hits the characters next to the target
     } else {
     if(invent.activeWeapon()!=nullptr)
       visual.emitBlockEffect(*this,other);
@@ -2660,6 +2662,14 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
   hitResult = DamageCalculator::damageValue(other,*this,b,isSpell,dmg,bMask);
   owner.script().dmaDamageEnd(*this,dmaDamage);
   dontKill = dmaDamage.dontKill;
+  // NB fix 106: the damage of New Balance (RX_CallDamage: the bonuses and the effects of the weapons of the hero - fire,
+  // poison, the special weapons) and the splash (a part of the blow for the characters next to the target)
+  if(hitResult.hasHit) {
+    if(nbSplashPct>0)
+      hitResult.value = std::max(1,hitResult.value*nbSplashPct/100);
+    if(other.isPlayer() && !isPlayer())
+      hitResult.value = std::max(0,hitResult.value+owner.script().nbCallDamage(*this,other,isSpell,splId,nbSplashPct>0));
+    }
   if(!isSpell && !isDown() && hitResult.hasHit) {
     owner.addWeaponHitEffect(other,b,*this).play();
     if(hitResult.value>0)

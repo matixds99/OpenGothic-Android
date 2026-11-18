@@ -374,6 +374,7 @@ class Npc final {
     bool      resetAttack();   // NB fix 95: the attack after its blow goes back to the stance of the fight
     static inline float nbQuickSpeed = 1.f;   // NB fix 98: the speed of the animations of the player during QUICK
     float     nbSpeed = 1.f;                     // NB fix 101: UpdateSpeed of the plugin (the bosses are faster)
+    static inline int32_t nbSplashPct = 0;       // NB fix 106: the blow of the splash - the percent of its damage
     bool      nbIsWaiting() const;               // NB fix 101: RX_IsWaiting - AI_Wait goes on
     void      nbStopWait();                      // NB fix 101: RX_Stop_AI_Wait
     bool      isPrehit() const;

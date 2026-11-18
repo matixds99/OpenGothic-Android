@@ -216,6 +216,9 @@ class GameScript final {
     void             nbBossTick();                             // NB fix 100: AI_OnTick_, AI_OnBreak_ every second
     zenkit::DaedalusSymbol* nbInstanceFunc(std::string_view prefix, Npc& npc);
     void             nbCallInstanceFunc(zenkit::DaedalusSymbol* fn, Npc& self, Npc* other, int32_t* arg);
+    int32_t          nbCallDamage(Npc& victim, Npc& hero, bool isSpell, int32_t splId, bool splash); // NB fix 106
+    void             nbSplash(Npc& target, Npc& hero);         // NB fix 106: the blow hits the characters next to it
+    void             nbDotTick();                              // NB fix 106: the damage over time
     void             nbOnDamage(Npc& target, Npc& attacker);   // NB fix 82, 83: RX_OnDamage - the music of the bosses, the knock down
     void             nbBeforeHit(Npc& target, Npc& attacker);  // NB fix 83: RX_OnDamage - the stagger   // NB fix 81: RX_IsSummonNpc (aivar[91]==RX_SUMMON_ID)
     void             nbBreakLock(Npc& hero, Interactive& mob, int32_t mode);

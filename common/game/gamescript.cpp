@@ -22,6 +22,8 @@
 #include "game/serialize.h"
 #include "utils/string_frm.h"
 #include "world/objects/npc.h"
+#include "game/fightalgo.h"
+#include "utils/gthfont.h"
 #include "world/objects/item.h"
 #include "world/objects/interactive.h"
 #include "world/focus.h"
@@ -191,6 +193,23 @@ struct NbState {
   std::vector<std::weak_ptr<zenkit::INpc>>    bossFight;
   uint64_t                                    nextBossTick  = 0;
   bool                                        bossFightLoaded = false;
+  // NB fix 106: the damage over time of the plugin (RX_ApplyDotDamage): the burning, the poison, the magic
+  struct Dot {
+    std::weak_ptr<zenkit::INpc> target, attacker;
+    int32_t  ticks    = 0;
+    int32_t  damage   = 0;
+    int32_t  type     = 0;      // DAM_FIRE 8, DAM_MAGIC 32, DAM_POISON 5 of NB...
+    uint64_t interval = 1000;
+    uint64_t next     = 0;
+    bool     notKill  = false;
+    };
+  std::vector<Dot>                            dots;
+  struct DotLine {
+    std::string text;
+    int32_t     type  = 0;
+    uint64_t    until = 0;
+    };
+  std::vector<DotLine>                        dotLines;   // on the left of the screen, 3 s each
   // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
   std::weak_ptr<zenkit::INpc>                 wispBody;
   std::unordered_map<const zenkit::INpc*,uint64_t> wispBodySkip;
@@ -2633,6 +2652,48 @@ void GameScript::initCommon() {
       // ITEM_SWD (1<<14) or ITEM_AXE (1<<15) of the melee weapons of one hand
       return itm!=nullptr && (uint32_t(itm->flags) & ((1u<<14)|(1u<<15)))!=0 ? 1 : 0;
       });
+    // NB fix 106: the damage over time - (target, attacker, ticks, damage of a tick, DAM_*, interval in ms, TRUE: renew
+    // the same one instead of a second one); NotKill leaves 1 point of health
+    const auto addDot = [this](std::shared_ptr<zenkit::INpc> target, std::shared_ptr<zenkit::INpc> attacker, int32_t ticks,
+                               int32_t damage, int32_t type, int32_t interval, int32_t renew, bool notKill) {
+      auto nb = nbStates.find(this);
+      if(nb==nbStates.end() || target==nullptr || ticks<=0 || damage<=0)
+        return;
+      auto& dots = nb->second.dots;
+      NbState::Dot d;
+      d.target   = target;
+      d.attacker = attacker;
+      d.ticks    = ticks;
+      d.damage   = damage;
+      d.type     = type;
+      d.interval = uint64_t(std::clamp(interval,100,60000));
+      d.next     = tickCount()+d.interval;
+      d.notKill  = notKill;
+      if(renew!=0) {
+        for(auto& o:dots) {
+          if(o.target.lock()==target && o.attacker.lock()==attacker && o.type==type) {
+            o = d;
+            return;
+            }
+          }
+        }
+      if(dots.size()<200)
+        dots.push_back(d);
+      };
+    bindNb("RX_APPLYDOTDAMAGE", [addDot](std::shared_ptr<zenkit::INpc> t, std::shared_ptr<zenkit::INpc> a, int32_t ticks,
+                                         int32_t dmg, int32_t type, int32_t interval, int32_t renew) {
+      addDot(t,a,ticks,dmg,type,interval,renew,false);
+      });
+    bindNb("RX_APPLYDOTDAMAGENOTKILL", [addDot](std::shared_ptr<zenkit::INpc> t, std::shared_ptr<zenkit::INpc> a, int32_t ticks,
+                                                int32_t dmg, int32_t type, int32_t interval, int32_t renew) {
+      addDot(t,a,ticks,dmg,type,interval,renew,true);
+      });
+    bindNb("RX_CLEARALLDOTS", [this]() {
+      auto nb = nbStates.find(this);
+      if(nb!=nbStates.end())
+        nb->second.dots.clear();
+      });
+
     // NB fix 100: the bosses call their helpers - the character at the point, and it attacks the hero at once
     bindNb("WLD_INSERTNPCANDATTACKENEMY", [this](int32_t instance, std::string_view point) {
       if(instance<=0)
@@ -4270,6 +4331,7 @@ void GameScript::tick(uint64_t dt) {
       Gothic::inst().onOpenPlayerSales(*hero,*npc,st.salesList);
     }
   nbBossTick();   // NB fix 100: the phases of the bosses
+  nbDotTick();    // NB fix 106: the damage over time
   // NB fix 82: the music of a boss fight plays again from the start; it ends 45 s after the last blow of the fight (the
   // player has run away) or with the death of the player, as the death of the boss does (RX_StopBossMusic)
   if(Gothic::inst().isBossMusic()) {
@@ -4359,6 +4421,22 @@ void GameScript::tick(uint64_t dt) {
       for(size_t i=0; i<st.wispLines.size(); ++i)
         Gothic::inst().onPrintScreen(st.wispLines[i].first,2,57+int(i)*3,1,lst);
       }
+    // NB fix 106: the damage over time on the left: the fire yellow, the poison green, the magic blue
+    {
+      static const GthFont fire   = Resources::font("FONT_OLD_10_WHITE.TGA",Resources::FontType::Normal,1.f).tinted(Color(1.f,0.85f,0.15f));
+      static const GthFont poison = Resources::font("FONT_OLD_10_WHITE.TGA",Resources::FontType::Normal,1.f).tinted(Color(0.25f,0.95f,0.25f));
+      static const GthFont magic  = Resources::font("FONT_OLD_10_WHITE.TGA",Resources::FontType::Normal,1.f).tinted(Color(0.45f,0.65f,1.f));
+      static const GthFont other  = Resources::font("FONT_OLD_10_WHITE.TGA",Resources::FontType::Normal,1.f).tinted(Color(1.f,0.35f,0.3f));
+      st.dotLines.erase(std::remove_if(st.dotLines.begin(),st.dotLines.end(),
+                        [this](const NbState::DotLine& l){ return l.until<tickCount(); }),st.dotLines.end());
+      while(st.dotLines.size()>6)
+        st.dotLines.erase(st.dotLines.begin());
+      for(size_t i=0; i<st.dotLines.size(); ++i) {
+        const auto& l = st.dotLines[i];
+        const GthFont& f = l.type==8 ? fire : l.type==5 ? poison : l.type==32 ? magic : other;
+        Gothic::inst().onPrintScreen(l.text,2,33+int(i)*3,1,f);
+        }
+    }
     }
 
   // NB fix 61: the search of the wisp. The scripts of NB do not look for the items (B_MM_WispDetect is never called -
@@ -7594,5 +7672,149 @@ void GameScript::nbBossTick() {
     timer = timer>=300 ? 1 : timer+1;
     int32_t arg = timer;
     nbCallInstanceFunc(fn,*npc,nullptr,&arg);
+    }
+  }
+
+/// NB fix 106: RX_CallDamage of the plugin (UNION_ABI.DLL 0x10314430: at every damage of the hero) - RX_MainDamageFunc:
+/// the bonus of the stamina and the armor, the runes, the effects of the weapons (RX_WeaponDamage: fire, poison - with the
+/// damage over time, the special weapons). The extra damage comes back in RX_GlobalAddDamage (B_MagicHurtNpc).
+int32_t GameScript::nbCallDamage(Npc& victim, Npc& hero, bool isSpell, int32_t splId, bool splash) {
+  if(nbStates.find(this)==nbStates.end())
+    return 0;
+  auto* fn = vm.find_symbol_by_name("RX_CALLDAMAGE");
+  if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+    return 0;
+  auto var = [this](std::string_view name) -> zenkit::DaedalusSymbol* {
+    auto* s = vm.find_symbol_by_name(name);
+    return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member() ? s : nullptr;
+    };
+  auto* add = var("RX_GLOBALADDDAMAGE");
+  if(add==nullptr)
+    return 0;
+  add->set_int(0);
+  if(auto* s = var("RX_LASTDAMAGEWASSPELL"))
+    s->set_int(isSpell ? 1 : 0);
+  if(auto* s = var("ISSPLASHDAMAGE"))
+    s->set_int(splash ? 1 : 0);
+  if(isSpell) {
+    if(auto* s = var("RX_LASTSPELLID"))
+      s->set_int(splId);
+    }
+  ScopeVar sv(*vm.global_self(),  hero.handlePtr());
+  ScopeVar ov(*vm.global_other(), victim.handlePtr());
+  try {
+    if(fn->has_return())
+      (void)vm.call_function<int>(fn); else
+      vm.call_function<void>(fn);
+    }
+  catch(const std::exception& e) {
+    Log::e("NB: RX_CallDamage failed: ",e.what());
+    return 0;
+    }
+  return std::max(0,add->get_int());
+  }
+
+/// NB fix 106: the splash of the plugin (UNION_ABI.DLL 0x100BAA70): a blow of the hero with a melee weapon also hits the
+/// enemies next to the target - in the reach of the weapon and in front of the hero (the angle and the part of the damage
+/// by the kind of the weapon), more with the skill of the weapon: 10% + (part-10%) * skill/100
+void GameScript::nbSplash(Npc& target, Npc& hero) {
+  if(nbStates.find(this)==nbStates.end() || !hero.isPlayer() || target.isPlayer())
+    return;
+  const auto ws = hero.weaponState();
+  if(ws!=WeaponState::W1H && ws!=WeaponState::W2H)
+    return;
+  auto* weapon = hero.inventory().activeWeapon();
+  if(weapon==nullptr)
+    return;
+  const int32_t flags = weapon->itemFlag();
+  int32_t pct = 45;      // a sword of one hand
+  float   ang = 42.f;
+  if(flags & (1<<17)) {        // an axe of two hands
+    pct = 85; ang = 80.f;
+    } else
+  if(flags & (1<<16)) {        // a sword of two hands
+    pct = 75; ang = 70.f;
+    } else
+  if(flags & (1<<15)) {        // an axe of one hand
+    pct = 75; ang = 75.f;
+    }
+  const int32_t talent = std::clamp(hero.handle().hitchance[ws==WeaponState::W2H ? 2 : 1],0,120);
+  const int32_t eff    = 10+(pct-10)*talent/100;
+  const FightAlgo fa;   // the reach (the preferred distance of the attack, as the hits of OpenGothic) and the angle
+
+  std::vector<Npc*> list;
+  world().detectNpc(hero.position(),600.f,[&](Npc& n) {
+    if(&n==&hero || &n==&target || n.isDead() || n.isDown() || n.isPlayer() || nbIsSummon(n))
+      return;
+    if(personAttitude(n,hero)!=ATT_HOSTILE && n.target()!=&hero)
+      return;
+    if(!fa.isInWRange(hero,n,*this) || !fa.isInFocusAngle(hero,n,ang))
+      return;
+    list.push_back(&n);
+    });
+  if(list.empty())
+    return;
+  nbCtx("splash: ",int(list.size())," more, ",eff,"% of the blow");
+  Npc::nbSplashPct = std::max(1,eff);
+  for(auto* n:list)
+    n->takeDamage(hero,nullptr);
+  Npc::nbSplashPct = 0;
+  }
+
+/// NB fix 106: the ticks of the damage over time: the damage less the protection of its kind (at least a tenth), NotKill
+/// leaves 1 point of health; the ticks on the hero or done by the hero are written on the left of the screen
+void GameScript::nbDotTick() {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end() || nb->second.dots.empty())
+    return;
+  auto&          st   = nb->second;
+  const uint64_t now  = tickCount();
+  auto*          hero = world().player();
+  auto           list = st.dots;   // a tick may add new ones
+  st.dots.clear();
+  for(auto& d:list) {
+    auto  tRef = d.target.lock();
+    auto* t    = tRef!=nullptr ? findNpcRaw(tRef) : nullptr;
+    if(t==nullptr || t->isDead())
+      continue;
+    if(d.next>now) {
+      st.dots.push_back(d);
+      continue;
+      }
+    auto  aRef = d.attacker.lock();
+    auto* a    = aRef!=nullptr ? findNpcRaw(aRef) : nullptr;
+
+    int32_t prot = 0;
+    switch(d.type) {
+      case 2:  prot = t->protection(PROT_BLUNT); break;
+      case 4:  prot = t->protection(PROT_EDGE);  break;
+      case 8:  prot = t->protection(PROT_FIRE);  break;
+      case 32: prot = t->protection(PROT_MAGIC); break;
+      case 64: prot = t->protection(PROT_POINT); break;
+      default: break;
+      }
+    if(prot<0)   // immune
+      prot = d.damage;
+    int32_t dmg = std::max(d.damage-prot,(d.damage+9)/10);
+    if(d.notKill)
+      dmg = std::min(dmg,t->attribute(ATR_HITPOINTS)-1);
+    if(dmg>0) {
+      if(a!=nullptr && !t->isPlayer() && !t->isTalk())
+        t->setOther(a);
+      t->changeAttribute(ATR_HITPOINTS,-dmg,false);
+      if(hero!=nullptr && (t==hero || a==hero)) {
+        const char* kind = d.type==8 ? "Ogie\xF1" : d.type==5 ? "Trucizna" : d.type==32 ? "Magia" : "Obra\xBF""enia";
+        std::string txt = std::string(kind)+": -"+std::to_string(dmg);
+        if(t!=hero)
+          txt += " ("+std::string(t->displayName())+")";
+        st.dotLines.push_back({txt,d.type,now+3000});
+        }
+      }
+    if(--d.ticks>0 && !t->isDead()) {
+      d.next += d.interval;
+      if(d.next<now)
+        d.next = now+d.interval;
+      st.dots.push_back(d);
+      }
     }
   }
