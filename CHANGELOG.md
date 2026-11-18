@@ -147,11 +147,11 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - W logu `android: the window goes away (background)`.
 - **Uwaga:** jeśli w tle zabraknie pamięci, Android i tak może ubić grę (to system, nie błąd gry) – wtedy pomaga zapis przed wyjściem.
 - **Do sprawdzenia:** wyjście do ekranu głównego i powrót, otwarcie wiadomości z powiadomienia, przełączenie na inną aplikację i z powrotem; czy obraz wraca i czy dotyk działa.
-- **Test (17.11):** gra już się nie zamyka, ale po powrocie był czarny ekran, a ikona w launcherze „świrowała” – poprawione w 74.
+- **Test (17.11):** gra już się nie zamyka, ale po powrocie był czarny ekran, a animacja ikony w launcherze się nie kończyła – poprawione w 74.
 
 ### 74. Czarny ekran po powrocie z tła – ✅ (17.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `patches/tempest-opengothic.patch` (Tempest: `androidapi.cpp/.h`, `vswapchain.cpp/.h`), `patches/README.md`
-- **Zgłoszenie:** po powrocie do gry czarny ekran, ikona gry w launcherze „świruje” (animacja otwierania się nie kończy). W logu 4× `android: the window goes away (background)` i nic więcej.
+- **Zgłoszenie:** po powrocie do gry czarny ekran, animacja otwierania gry w launcherze się nie kończy. W logu 4× `android: the window goes away (background)` i nic więcej.
 - **Przyczyna:** nowe okno po powrocie ma ten sam rozmiar, więc widżet okna nie wysyłał zdarzenia zmiany rozmiaru – swapchain nie był robiony od nowa i gra rysowała dalej na starej, martwej powierzchni. Do tego stary swapchain zostawał na powierzchni, którą Android już zabrał.
 - **Poprawka:**
   - przy wyjściu w tło (`APP_CMD_TERM_WINDOW`) gra od razu czeka na GPU i niszczy swapchain z powierzchnią – zanim Android ją zabierze (nowy `AndroidApi::setWindowLostHandler`);
@@ -184,7 +184,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - nowy przycisk **kłódki** na HUD (nad przyciskiem celu, da się go przesunąć/ukryć w edytorze HUD, id `lockpick`) – widoczny, gdy w fokusie jest zamknięta skrzynia z zamkiem do wyważenia, a bohater nie ma broni w ręku;
   - jeden przycisk zamiast dwóch klawiszy – sposób wybierany sam: magia (runa i ≥ 75 many) albo siła (gdy jej wystarczy) → klawisz Y; inaczej wytrychy → Shift+Y; gdy nic nie zadziała, skrypt mówi dlaczego (za mało many/siły/zręczności, brak talentu, brak wytrychów). Potem `HandleEvent` jak na PC.
 - Zwykłe otwieranie wytrychami (minigra lewo/prawo przyciskiem akcji) bez zmian.
-- **Test (17.11):** gracz woli interakcję jak na PC/z NPC (wyciągnięta broń/runa, skrzynia w fokusie, przycisk akcji) – kłódka usunięta, zostały funkcje pluginu → poprawka 80.
+- **Test (17.11):** lepsza interakcja jak na PC/z NPC (wyciągnięta broń/runa, skrzynia w fokusie, przycisk akcji) – kłódka usunięta, zostały funkcje pluginu → poprawka 80.
 
 ### 80. Otwieranie zamków NB jako interakcja: broń, runa, wytrychy + przycisk akcji – ✅ (17.11.2026)
 - **Pliki:** `common/world/world.cpp`, `common/world/worldobjects.cpp/.h`, `common/game/playercontrol.cpp`, `common/game/gamescript.cpp/.h`; usunięte: przycisk kłódki i `lockpick.png` z 79
@@ -330,7 +330,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Pliki:** `common/marvin.cpp/.h` (`C_AddLp`)
 - **Zgłoszenie:** do testu akrobatyki (86) bohater musi się jej nauczyć, a brakuje punktów nauki. Zręczność dało się dodać przez Marvina, punktów nauki nie (`set var` nie zmienia pól postaci, tylko zmienne skryptu).
 - **Poprawka:** nowe polecenie konsoli Marvina `add lp 50` dodaje bohaterowi punkty nauki i wypisuje, ile ma teraz (liczba może być ujemna).
-- **Test (18.11):** „nie działa” – szczegóły przy następnym teście (czy konsola przyjmuje polecenie, czy punkty nie przybywają). Test akrobatyki (86) przełożony.
+- **Test (18.11):** polecenie nie zadziałało – do sprawdzenia przy następnym teście (czy konsola przyjmuje polecenie, czy punkty nie przybywają). Test akrobatyki (86) przełożony.
 
 ### 104. Ekwipunek: ikony kategorii z Hedin's Advanced Inventory (z pliku VDF gracza) – ✅ (18.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h` (`hedin`), `common/utils/androidinput.cpp` (kafelki kategorii)
@@ -346,7 +346,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Kategorie: Wszystko `INV_ALL`, Broń `INV_WEAPON`, Pancerze `INV_ARMOR`, Biżuteria `INV_MAGIC` (pierścień), Magia `INV_MAGIC_RUNE`, Jedzenie `INV_FOOD`, Mikstury `INV_POTIONS`, Dokumenty `INV_DOC`, Inne `INV_OTHER`. Wybrana kategoria czerwona (`_SELECT`).
   - Ramki listy i karty przedmiotu: tło `INV_SIMPLE_BG_ITEM_1` (ciemne, z własną ramką), na karcie biała czcionka gry zamiast czcionki książek.
   - Strzałki przewijania: `INV_ARROW_UP`/`INV_ARROW_DOWN`.
-- **Test (18.11):** z VDF-em w `Data` weszły tylko ikony kategorii; pola, tła i strzałki Hedina się nie wczytały (wczytywane w konstruktorze, za wcześnie). Gracz woli tak zostawić: ikony Hedina + ramki i pergamin z 99 („czuję się jak na PC”). Wczytywanie pól/teł/strzałek wyłączone w kodzie (struktura `hedin` została, opis w komentarzu).
+- **Test (18.11):** z VDF-em w `Data` weszły tylko ikony kategorii; pola, tła i strzałki Hedina się nie wczytały (wczytywane w konstruktorze, za wcześnie). Zostaje tak: ikony Hedina + ramki i pergamin z 99. Wczytywanie pól/teł/strzałek wyłączone w kodzie (struktura `hedin` została, opis w komentarzu).
 
 ### 103. Szybki atak u maga – ✅ (18.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`QuickSpellSpeed`), `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.h`
@@ -400,7 +400,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Nagłówek: „Złoto: N” po lewej, nazwa kategorii (ze skryptów moda, bez nich polska/angielska) i liczba przedmiotów po prawej.
   - Karta: nazwa czcionką książek (`FONT_10_BOOK`), obrazek w ciemnym polu po prawej u góry, właściwości po lewej obrazka i pod nim (łamane po słowach, zmniejszane, gdy się nie mieszczą). Na dole przyciski z napisami: ZAŁÓŻ/ZDEJMIJ/UŻYJ/CZYTAJ, WYRZUĆ; przy skrzyni i handlu WEŹ/SCHOWAJ/KUP/SPRZEDAJ i PRZENIEŚ; obok mały przycisk „cały stos”. W NB napisy po polsku, w innych grach po angielsku.
 - **Zrzut 342710 (17.11):** wygląda dobrze, ale opis ma za mało miejsca – w samym ekwipunku lista i karta przedmiotu dostały po połowie ekranu (było 34% na kartę).
-- **Test (17.11, zrzut z Magią):** okej wg gracza – więcej widać naraz niż przy 3 kolumnach, zostaje tak. Możliwe drobne poprawki później: większa czcionka opisu, ramka zamiast plamy na wybranym polu, pasek życia nad ramką, czerwone numery skrótów.
+- **Test (17.11):** działa – więcej widać naraz niż przy 3 kolumnach, zostaje tak. Możliwe drobne poprawki później: większa czcionka opisu, ramka zamiast plamy na wybranym polu, pasek życia nad ramką, czerwone numery skrótów.
 
 ### 85–98. Szybki atak – przycisk QUICK – ✅ (17.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp/.h` (`quickAttack`, stałe `QuickHits`/`QuickTime`/`QuickSpeed`), `common/world/objects/npc.cpp/.h` (`resetAttack`, `nbQuickSpeed`), `common/mainwindow.cpp`, `common/utils/androidinput.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `android/assets/touch-icons/quick_attack.png`
@@ -418,7 +418,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - 96: ciosy w bok wykonywane bezpośrednio z resetem.
   - 97: QUICK naciskał przyciski ekranu „< STEP” i miecz razem; przy żadnych czasach atak nie wchodził.
   - 98: gracz zauważył, że sam przycisk miecza robi właściwy cios, tylko za wolno. Przyspieszenie animacji i reset po trafieniu dały szybki atak jak na PC.
-- **Test (17.11–18.11):** działa wg gracza; ostatecznie tempo jak na PC przy 2,5×.
+- **Test (17.11–19.11):** działa; tempo dopasowane do PC.
 - **Pozostałości w kodzie:** `PlayerControl::quickCombo` (94) i `pendingReset` (95) są już nieużywane (zawsze wyłączone), a sekwencer klawiszy `combo` w `androidinput` jest pusty. Do usunięcia przy sprzątaniu.
 
 ### 86. Ustawienie: akrobatyka NB (przewrotki) – 🧪 (17.11.2026)
