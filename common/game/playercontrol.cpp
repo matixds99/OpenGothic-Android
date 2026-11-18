@@ -390,7 +390,8 @@ void PlayerControl::quickAttack() {
   const auto ws = pl->weaponState();
   if(ws!=WeaponState::W1H && ws!=WeaponState::W2H && ws!=WeaponState::Mage)
     return;
-  quickCount = 0;
+  quickCount   = 0;
+  quickSwingAt = 0;
   quickUntil = w->tickCount()+(ws==WeaponState::Mage ? 2*QuickTime : QuickTime);   // NB fix 103: the spells are longer
   }
 
@@ -893,8 +894,11 @@ void PlayerControl::implMove(uint64_t dt) {
       if(pl.isAttackAnim()) {
         if(pl.resetAttack())   // only after the hit of the blow
           ++quickCount;
-        } else {
+        } else
+      if(now>=quickSwingAt && quickCount<QuickHits) {
+        // the blow starts a few frames later: swingSword in every frame until then gave a whole combo of blows
         pl.swingSword();
+        quickSwingAt = now+400;
         }
       return;
       }
