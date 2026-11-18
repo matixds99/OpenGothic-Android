@@ -172,21 +172,29 @@ struct Option {
 // the rest of the menu of the plugin changes things that only the plugin does
 // (not here: AutoAIM - the scripts set it back to 0 themselves; bShowStaminaWhenInvOpen - the inventory of the plugin)
 inline constexpr Option shown[] = {
+  // NB fix 108: only the switches that work in OpenGothic, by the categories of the plugin (RX_MENU_CAT_*)
+  // the interface
   {"SHOW_GODS_KARMA", "AST", "bShowKarma", 0},
   {"SHOW_BUFFS", "AST", "bShowBuffInfo", 0},   // NB fix 62: the list of the effects (game/gamescript.cpp)
   {"SHOW_HUNGER", "AST", "bHFTStatus", 0},
   {"SHOW_PLACES_NAMES", "AST", "bShowNotice", 0},
-  {"SHOW_HERO_POCKET", "AST", "bShowPocket", 0},
-  {"SHOW_HERO_BAG", "AST", "bShowBag", 0},
-  {"SHOW_SKIP_LOGO", "AST", "bSkipLogo", 0},
-  {"SHOW_SCALE_NPC", "AST", "bScaleStr", 0},
-  {"SHOW_DEATH_SCREEN", "AST", "bShowDeadScreen", 0},
-  {"SHOW_HIDE_NPC_POCKETS", "AST", "bHidePocketsNpc", 0},
-  {"SHOW_PAL_UNDEAD_PROC", "AST", "bShowEffectPalUndeadProc", 0},
+  {"SHOW_DEATH_SCREEN", "AST", "bShowDeadScreen", 0},   // NB fix 108: YOU_DIE.TGA (mainwindow.cpp) and the music
   {"SHOW_POISON_HERO", "AST", "bShowPoisonHero", 0},
+  {"SHOW_PAL_UNDEAD_PROC", "AST", "bShowEffectPalUndeadProc", 0},
+  {"SHOW_SKIP_LOGO", "AST", "bSkipLogo", 0},
+  // the gameplay
   {"GAMEPLAY_HARDBOSSES", "AST", "bToggleHardBosses", 2},
   {"GAMEPLAY_SAVES", "AST", "bCanSaveLeg", 2},
   {"GAMEPLAY_HERO_REACTIONS", "AST", "bToggleHeroVoice", 2},
+  {"GAMEPLAY_MUSIC_BOSS", "AST", "bToggleBossMusic", 2},             // NB fix 108: RX_CheckMusicBoss
+  {"GAMEPLAY_MUSIC_BOSS_ANIMAL", "AST", "bToggleMusicAnimalBoss", 2},
+  {"GAMEPLAY_PARTY_SPRINT", "AST", "bTogglePartySprint", 2},         // NB fix 108: RX_RestoreSprint
+  // NB fix 108: the acrobatics of the touch screen (NB fix 86) - here instead of the settings of the touch screen
+  {"OG_ACROBATIC", "MOBILE", "acrobatic", 2, "Akrobatyka (przewrotki na A/D)"},
+  // the details
+  {"SHOW_SCALE_NPC", "AST", "bScaleStr", 3},
+  {"SHOW_HIDE_NPC_POCKETS", "AST", "bHidePocketsNpc", 3},
+  // the rage of Beliar
   {"BR_SPAWN_MONSTERS", "BELIARS_RAGE", "RX_BeliarRage_Opt_SpawnMonsters", 4},
   {"BR_HARD_CURSE", "BELIARS_RAGE", "RX_BeliarRage_Opt_HardCurse", 4},
   {"BR_STAMINA_REDUCE", "BELIARS_RAGE", "RX_BeliarRage_Opt_StaminaReduce", 4},
@@ -194,7 +202,9 @@ inline constexpr Option shown[] = {
   {"BR_REGEN_ENEMIES", "BELIARS_RAGE", "RX_BeliarRage_Opt_RegenEnemies", 4},
   // NB fix 53: not of the plugin - the light of the day also at night (graphics/sky/sky.cpp), for testing the mod
   {"OG_NIGHT_AS_DAY", "NB_OG", "bNightAsDay", 0, "Jasna noc (do test\xF3w)"},
+  // not here: bShowPocket, bShowBag - the models on the hero are not done yet (EXT_PutInSlot)
   };
+
 
 /// writes the default value of every option that is not in Gothic.ini yet (as zCOption::ReadInt does)
 inline void ensureDefaults() {

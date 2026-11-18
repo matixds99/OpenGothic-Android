@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **108**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **109**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,21 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 108. Ustawienia NB: osobne strony, tylko działające przełączniki, akrobatyka, ekran śmierci – 🧪 (18.11.2026)
+- **Pliki:** `common/ui/gamemenu.cpp`, `common/game/nboptions.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/mainwindow.cpp`
+- **Zgłoszenie (zrzuty 18.11):** „Ustawienia gry” i „Sterowanie dodatkowe” pokazują tę samą listę przełączników NB. Prośba: przełączniki, które działają na Androidzie; akrobatyka w tym menu zamiast ustawień ekranu dotykowego; naprawić ekran śmierci.
+- **Przyczyna duplikatu:** strona NB (`MENU_OPT_CONTROLS_NEWOPTIONS`) była rozpoznawana po dwóch pierwszych pozycjach menu, a strona klawiszy dodatkowych (`MENU_OPT_CONTROLS_EXTKEYS`) zaczyna się tak samo. Teraz NB tylko na stronie, która ma te dwie pozycje i nic więcej.
+- **Co czytają skrypty (`Menu_ReadInt`, 204 wywołania):** z przełączników menu pluginu skrypty same używają m.in. `bShowKarma`, `bHFTStatus`, `bShowNotice`, `bShowDeadScreen` (PerFrame: muzyka śmierci), `bShowPoisonHero`, `bShowEffectPalUndeadProc`, `bSkipLogo`, `bToggleHardBosses`, `bCanSaveLeg`, `bToggleHeroVoice`, `bToggleBossMusic`, `bToggleMusicAnimalBoss`, `bTogglePartySprint`, `bScaleStr`, `bHidePocketsNpc` i 7 opcji Gniewu Beliara. Reszta menu pluginu zmienia rzeczy, które robi tylko sam plugin.
+- **Lista przełączników (kolejność kategorii pluginu):**
+  - interfejs: karma, efekty, głód, nazwy lokacji, **ekran śmierci**, zatrucie, efekt Paladyna, pomijanie logo;
+  - rozgrywka: trudniejsi bossowie, zapis wszędzie, okrzyki bohatera, **muzyka bossów**, **muzyka bossów-zwierząt**, **sprint drużyny**, **akrobatyka**;
+  - detale: skalowanie od siły, sakiewki NPC;
+  - Gniew Beliara (5);
+  - jasna noc (test).
+  - Usunięte z listy: mieszek i torba (modeli na bohaterze jeszcze nie ma). Akrobatyka zniknęła z ustawień ekranu dotykowego (to samo ustawienie `MOBILE/acrobatic`).
+- **Ekran śmierci:** plugin (`0x10222E00`) przy martwym bohaterze i `bShowDeadScreen` kładzie `YOU_DIE.TGA` na cały ekran. Teraz to samo, z rozjaśnieniem przez 2 s, aż do wczytania gry (tekstura z danych NB; bez niej nic się nie rysuje).
+- **Do sprawdzenia:** strona NB i „Sterowanie dodatkowe” różne; przełączniki zapisują się; akrobatyka z menu działa; śmierć bohatera – obrazek NB.
 
 ### 107. Książka/list czytany z ekwipunku pod ramkami ekwipunku – 🧪 (18.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp`

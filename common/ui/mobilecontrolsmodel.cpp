@@ -369,6 +369,8 @@ void Controls::buildSettings(const Anchor& a) {
   for(int i=0; i<SettingCount; ++i) {
     if(i==SettingSpeed && !featureSpeed)
       continue;
+    if(i==SettingAcrobatic)
+      continue;   // NB fix 108: in the menu of the game, the page "Ustawienia gry i sterowanie"
     rows.push_back(i);
     }
   // the last row opens the editor of the HUD

@@ -814,7 +814,8 @@ void GameMenu::initItems() {
   // Returning New Balance: "Ustawienia gry" (MENU_OPT_CONTROLS_NEWOPTIONS) is an empty page in MENU.DAT,
   // its Union plugin fills it. Here: the switches of the plugin that the scripts read (Menu_ReadInt).
   if(vm->find_symbol_by_name("MENU_OPT_CONTROLS_NEWOPTIONS")!=nullptr &&
-     menu->items[0]=="MENU_ITEM_CHG_EXTKEYS_HEADLINE" && menu->items[1]=="MENU_ITEM_KEY_STAMINA") {
+     menu->items[0]=="MENU_ITEM_CHG_EXTKEYS_HEADLINE" && menu->items[1]=="MENU_ITEM_KEY_STAMINA" &&
+     menu->items[2].empty()) {   // NB fix 108: MENU_OPT_CONTROLS_EXTKEYS starts with the same two items
     NbOptions::ensureDefaults();
     for(auto& i:hItems)
       i = Item();

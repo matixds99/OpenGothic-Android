@@ -310,6 +310,24 @@ void MainWindow::paintEvent(PaintEvent& event) {
     world->globalFx()->scrBlend(p,Rect(0,0,w(),h()));
     }
 
+  // NB fix 108: the screen of the death of New Balance (UNION_ABI.DLL 0x10222E00: bShowDeadScreen, YOU_DIE.TGA over the
+  // whole screen while the hero is dead), it comes up in 2 s
+  {
+    static uint64_t deadSince = 0;
+    auto* pl = Gothic::inst().player();
+    if(world!=nullptr && pl!=nullptr && pl->isDead() && Gothic::settingsGetI("AST","bShowDeadScreen")!=0) {
+      if(deadSince==0)
+        deadSince = Application::tickCount();
+      if(auto* tex = Resources::loadTexture("YOU_DIE.TGA")) {
+        const float a = std::min(1.f,float(Application::tickCount()-deadSince)/2000.f);
+        p.setBrush(Brush(*tex,Color(1.f,1.f,1.f,a)));
+        p.drawRect(0,0,w(),h(),0,0,tex->w(),tex->h());
+        }
+      } else {
+      deadSince = 0;
+      }
+  }
+
   if(st!=Gothic::LoadState::Idle && st!=Gothic::LoadState::Finalize) {
     if(st==Gothic::LoadState::Saving) {
       drawSaving(p);
