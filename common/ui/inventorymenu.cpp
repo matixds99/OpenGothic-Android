@@ -134,15 +134,10 @@ InventoryMenu::InventoryMenu(const KeyCodec& key)
   slot = Resources::loadTexture("INV_SLOT.TGA");
   selT = Resources::loadTexture("INV_SLOT_HIGHLIGHTED.TGA");
   selU = Resources::loadTexture("INV_SLOT_EQUIPPED.TGA");
-#ifdef OPENGOTHIC_TOUCH_UI
-  hedin.slot     = Resources::loadTexture("INV_NEW_SLOT.TGA");
-  hedin.sel      = Resources::loadTexture("INV_NEW_SLOT_HIGHLIGHTED.TGA");
-  hedin.equip    = Resources::loadTexture("INV_NEW_SLOT_EQUIPPED.TGA");
-  hedin.selEquip = Resources::loadTexture("INV_NEW_SLOT_H_SELECT.TGA");
-  hedin.panel    = Resources::loadTexture("INV_SIMPLE_BG_ITEM_1.TGA");
-  hedin.up       = Resources::loadTexture("INV_ARROW_UP.TGA");
-  hedin.down     = Resources::loadTexture("INV_ARROW_DOWN.TGA");
-#endif
+  // NB fix 104: the slots, the backgrounds and the arrows of Hedin's inventory (struct hedin) stay off - the player keeps
+  // the frames and the parchment of fix 99 with the icons of the categories of Hedin (AndroidInput). To turn them on:
+  // load INV_NEW_SLOT, INV_NEW_SLOT_HIGHLIGHTED, INV_NEW_SLOT_EQUIPPED, INV_NEW_SLOT_H_SELECT, INV_SIMPLE_BG_ITEM_1,
+  // INV_ARROW_UP/DOWN into hedin at the first drawing (not here: the textures were not found this early)
   tex  = Resources::loadTexture("INV_BACK.TGA"); // INV_TITEL.TGA
 
 
