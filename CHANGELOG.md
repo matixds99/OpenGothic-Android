@@ -237,6 +237,11 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 105. Marvin: `add lp N` – punkty nauki do testów – 🧪 (18.11.2026)
+- **Pliki:** `common/marvin.cpp/.h` (`C_AddLp`)
+- **Zgłoszenie:** do testu akrobatyki (86) bohater musi się jej nauczyć, a brakuje punktów nauki. Zręczność dało się dodać przez Marvina, punktów nauki nie (`set var` nie zmienia pól postaci, tylko zmienne skryptu).
+- **Poprawka:** nowe polecenie konsoli Marvina `add lp 50` dodaje bohaterowi punkty nauki i wypisuje, ile ma teraz (liczba może być ujemna).
+
 ### 104. Ekwipunek: ikony kategorii z Hedin's Advanced Inventory (z pliku VDF gracza) – ✅ (18.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h` (`hedin`), `common/utils/androidinput.cpp` (kafelki kategorii)
 - **Zgłoszenie:** z `Hedin_Union_Adv_Inventory.vdf` (z niego jest wzór ze zdjęcia 342701) wziąć ikonki i wygląd ekwipunku.

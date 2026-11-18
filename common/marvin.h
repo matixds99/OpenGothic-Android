@@ -40,6 +40,7 @@ class Marvin {
       C_CheatFull,
       C_CheatGod,
       C_Kill,
+      C_AddLp,   // NB fix 105
       // camera
       C_CamAutoswitch,
       C_CamMode,

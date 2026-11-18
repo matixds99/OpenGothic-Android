@@ -131,6 +131,7 @@ Marvin::Marvin() {
     {"cheat full",                 C_CheatFull},
     {"cheat god",                  C_CheatGod},
     {"kill",                       C_Kill},
+    {"add lp %d",                  C_AddLp},   // NB fix 105: learning points for the hero (tests)
 
     {"aigoto %s",                  C_AiGoTo},
     {"goto waypoint %s",           C_GoToWayPoint},
@@ -278,6 +279,16 @@ bool Marvin::exec(std::string_view v) {
         Gothic::inst().setGodMode(true);
         Gothic::inst().onPrintScreen("Godmode on",2,4,1,fnt);
         }
+      return true;
+      }
+    case C_AddLp: {
+      // NB fix 105: "add lp 50" - learning points for the hero
+      Npc* player = Gothic::inst().player();
+      int  lp     = 0;
+      if(player==nullptr || !fromString(ret.argv[0],lp))
+        return false;
+      player->handle().lp += lp;
+      print("lp: "+std::to_string(player->handle().lp));
       return true;
       }
     case C_Kill: {
