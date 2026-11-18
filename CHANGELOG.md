@@ -255,9 +255,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Przycisk: czarne kółko, górna strzałka w prawo, dolna w lewo.
 - **Do sprawdzenia:** równe 9 pól, podświetlenie, nowy przycisk.
 
-### 111. Koło szybkiego wyboru (drugi pasek, jak w GTA 5) – 🧪 (18.11.2026)
+### 111. Koło szybkiego wyboru (drugi pasek) – 🧪 (18.11.2026)
 - **Pliki:** `common/game/nbhotbar.h` (`NbWheel`), `common/utils/androidinput.cpp/.h` (koło: dotyk, rysowanie), `common/ui/mobilecontrolsmodel.cpp/.h` (przycisk `wheel`, `Special::Wheel` = 27), `common/ui/inventorymenu.cpp/.h`, `common/mainwindow.cpp`
-- **Zgłoszenie (zrzuty 342740, 342739):** drugi pasek szybkiego wyboru: broń, mikstury, rośliny. Przycisk z kółkiem obok paska otwiera koło jak w GTA 5, a przedmioty można przypisać i tu (pasek), i tam (koło).
+- **Zgłoszenie (zrzuty 342740, 342739):** drugi pasek szybkiego wyboru: broń, mikstury, rośliny. Przycisk z kółkiem obok paska otwiera koło, a przedmioty można przypisać i tu (pasek), i tam (koło).
 - **Poprawka:**
   - Nowy przycisk HUD (białe kółko, id `wheel`, obok plecaka; można go przesunąć w edytorze HUD).
   - Dotknięcie otwiera koło na środku ekranu: 8 pól z modelami przedmiotów i liczbą sztuk; gra jest wstrzymana. Palec można przesuwać po polach (niebieskie podświetlenie), wybór następuje przy puszczeniu; na środku nazwa przedmiotu z pola pod palcem; puszczenie na środku zamyka koło.
