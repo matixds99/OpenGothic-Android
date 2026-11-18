@@ -510,7 +510,9 @@ size_t InventoryMenu::rowsCount() const {
   }
 
 void InventoryMenu::paintEvent(PaintEvent &e) {
-  if(player==nullptr || state==State::Closed)
+  // NB fix 107: a document read from the inventory (a book, a letter) is shown over it - the frames of the inventory
+  // were drawn over the document
+  if(player==nullptr || state==State::Closed || covered)
     return;
   renderer.reset();
 
@@ -519,7 +521,7 @@ void InventoryMenu::paintEvent(PaintEvent &e) {
   }
 
 void InventoryMenu::paintNumOverlay(PaintEvent& e) {
-  if(player==nullptr || state==State::Closed)
+  if(player==nullptr || state==State::Closed || covered)
     return;
 
   Painter p(e);
