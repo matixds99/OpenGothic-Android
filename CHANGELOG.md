@@ -410,7 +410,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Jedno dotknięcie daje serię ciosów do przodu, jak z przycisku miecza (`swingSword`). Bohater obraca się do celu.
   - Zaraz po klatce uderzenia każdy cios jest ucinany (`Npc::resetAttack`, „reset pozycji”) i od razu wchodzi następny.
   - Na czas serii animacje bohatera są przyspieszone (zegar modelu × `QuickSpeed`). Potem prędkość wraca do 1.
-  - Liczby w `playercontrol.h`: `QuickHits = 3` ciosy, `QuickTime = 2000` ms limitu, `QuickSpeed = 2.5f`. Przy 1,5× było za wolno; 2,2× też okazało się za wolne (18.11), więc wróciło 2,5×.
+  - Liczby w `playercontrol.h`: `QuickHits = 1` cios na dotknięcie, `QuickTime = 2000` ms limitu, `QuickSpeed = 2.3f`, `QuickSpellSpeed = 1.3f` (magia, poprawka 103). Historia tempa: 1,5× za wolno, 2,2× za wolno, 2,5× (18.11), 2,3× (19.11, przy jednym ciosie). Ciosy w serii: 3 → 1 (19.11).
+  - **19.11 – kilka ciosów zamiast jednego:** cios rusza kilka klatek po `swingSword`, a QUICK wołał `swingSword` w każdej klatce, aż ruszył – zbierało się kilka zleceń i wychodziła seria. Teraz cios zlecany raz, następny najwcześniej po 0,4 s (`quickSwingAt`).
 - **Droga do tego (85–97, w skrócie):**
   - 85–94: QUICK udawał klawisze PC w różnych kolejnościach i czasach: A/D → W → Ctrl, Ctrl + A/D + W, cios w bok osobnym klawiszem, sterowanie Gothic 1 na czas serii. Nic nie dawało tego co na PC. Ekran dotykowy ma sterowanie Gothic 2, gdzie A/D/W przy Ctrl to zwykły ruch, a oryginalny silnik czyta trzymane klawisze co klatkę.
   - 95: odkryty „reset pozycji” po ciosie (`resetAttack`).
