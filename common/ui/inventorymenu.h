@@ -121,6 +121,10 @@ class InventoryMenu : public Tempest::Widget {
     // moved in an open inventory is not new); the set of the documents is in GameSession (in the save-game)
     std::unordered_map<size_t,size_t> nbSeen;
     uint32_t                          nbSeenWorld = 0;   // World::serialNumber of nbSeen, 0 - none
+    // NB fix 123: the other new items (weapons, rings, scrolls...) - for this game only, not in the save-game; the mark
+    // goes when the item is chosen
+    std::unordered_set<size_t>        nbFresh;
+    uint32_t                          nbSession   = 0;
     uint64_t                          nbNextLook  = 0;
     bool                              nbMarkOn    = true;
     bool                              nbMarkPl    = false;   // the text of the mark in Polish (New Balance)

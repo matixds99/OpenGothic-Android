@@ -283,6 +283,12 @@ void InventoryMenu::onWorldChanged() {
   // NB fix 121, 122: the counts of the player of the new world - the items of the start of a new game and of a save are
   // not new (the unread documents of a save come with it, GameSession::nbNewDocs)
   nbSeenWorld = 0;
+  // NB fix 123: the marks of the other items stay after a change of the world; a new game or a loaded save has none
+  if(auto* gs = Gothic::inst().gameSession()) {
+    if(gs->serialNumber()!=nbSession)
+      nbFresh.clear();
+    nbSession = gs->serialNumber();
+    }
   if(auto* pl = Gothic::inst().player())
     nbSnapshot(*pl);
   }
@@ -310,6 +316,11 @@ void InventoryMenu::nbSnapshot(Npc& pl) {
   for(auto it=pl.inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it)
     nbSeen[it->clsId()] += it.count();
   nbSeenWorld = pl.world().serialNumber();
+  for(auto i=nbFresh.begin(); i!=nbFresh.end();) {
+    if(nbSeen.find(*i)==nbSeen.end())
+      i = nbFresh.erase(i); else
+      ++i;
+    }
   // the documents that the player has not any more
   if(auto* docs = nbDocs()) {
     for(auto i=docs->begin(); i!=docs->end();) {
@@ -330,11 +341,14 @@ void InventoryMenu::nbFindNew(Npc& pl) {
       n.second  = &(*it);
       }
     for(auto& [cls,n]:now) {
-      if(docs->find(cls)!=docs->end())
+      if(docs->find(cls)!=docs->end() || nbFresh.find(cls)!=nbFresh.end())
         continue;
       auto was = nbSeen.find(cls);
-      if(n.first>(was==nbSeen.end() ? 0 : was->second) && nbIsDocument(*n.second))
-        docs->insert(cls);
+      if(n.first<=(was==nbSeen.end() ? 0 : was->second))
+        continue;
+      if(nbIsDocument(*n.second))
+        docs->insert(cls); else
+        nbFresh.insert(cls);   // NB fix 123
       }
     }
   nbSnapshot(pl);
@@ -342,11 +356,14 @@ void InventoryMenu::nbFindNew(Npc& pl) {
 
 /// NB fix 122: a document that cannot be read (no function of use) stops being new when the player chooses it
 void InventoryMenu::nbSeeSelected() {
-  auto* docs = nbDocs();
-  if(docs==nullptr || docs->empty() || pagePl==nullptr || &activePage()!=pagePl.get())
+  if(pagePl==nullptr || &activePage()!=pagePl.get())
     return;
   auto it = activePage().get(activePageSel().sel);
-  if(it.isValid() && it->handle().on_state[0]==0)
+  if(!it.isValid())
+    return;
+  nbFresh.erase(it->clsId());   // NB fix 123: the other items - chosen, seen
+  auto* docs = nbDocs();
+  if(docs!=nullptr && it->handle().on_state[0]==0)
     docs->erase(it->clsId());
   }
 
@@ -357,8 +374,10 @@ void InventoryMenu::nbRead(size_t cls) {
   }
 
 bool InventoryMenu::nbIsNew(const Page& page, const Item& item) const {
-  if(!nbMarkOn || &page!=pagePl.get() || page.category!=CatDocuments)
+  if(!nbMarkOn || &page!=pagePl.get())
     return false;
+  if(nbFresh.find(item.clsId())!=nbFresh.end())
+    return true;
   auto* docs = nbDocs();
   return docs!=nullptr && docs->find(item.clsId())!=docs->end();
   }
@@ -367,12 +386,27 @@ uint32_t InventoryMenu::nbNewCategories() const {
   if(!nbMarkOn || player==nullptr || state==State::Closed || state==State::LockPicking)
     return 0;
   auto* docs = nbDocs();
-  if(docs==nullptr || docs->empty())
+  if(nbFresh.empty() && (docs==nullptr || docs->empty()))
     return 0;
-  for(auto it=player->inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it)
-    if(docs->find(it->clsId())!=docs->end())
-      return 1u<<uint32_t(CatDocuments);   // only the tab of the documents
-  return 0;
+  // NB fix 123: the tab of the category of every new item (not "all")
+  Page tab[CatCount];
+  auto& script = player->world().script();
+  for(int i=0; i<int(CatCount); ++i) {
+    tab[i].category = Category(i);
+    for(int k=0; k<int(CatCount); ++k)
+      if(CategoryOrder[k]==Category(i))
+        tab[i].scriptMask = script.inventoryCategoryMask(k);
+    }
+  uint32_t ret = 0;
+  for(auto it=player->inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it) {
+    const size_t cls = it->clsId();
+    if(nbFresh.find(cls)==nbFresh.end() && (docs==nullptr || docs->find(cls)==docs->end()))
+      continue;
+    for(int i=0; i<int(CatCount); ++i)
+      if(Category(i)!=CatAll && tab[i].matches(*it))
+        ret |= (1u<<i);
+    }
+  return ret;
   }
 
 void InventoryMenu::tick(uint64_t /*dt*/) {

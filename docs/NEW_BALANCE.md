@@ -13,7 +13,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 
 | Nowy plik | Gdzie go wrzucić | Kto go potrzebuje | Od poprawki |
 |---|---|---|---|
-| `common/game/nboptions.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp`, `ui/gamemenu.cpp`; przełącznik „Oznaczanie nowych dokumentów w ekwipunku” (`NB_OG`/`bNewItems`, domyślnie wł.) | 5, 44, 49, 53, 62, 121, 122 |
+| `common/game/nboptions.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp`, `ui/gamemenu.cpp`; przełącznik „Oznaczanie nowych przedmiotów w ekwipunku” (`NB_OG`/`bNewItems`, domyślnie wł.) | 5, 44, 49, 53, 62, 121, 122, 123 |
 | 🆕 `common/game/nbtexts.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp` | 62, 69 |
 | 🆕 `common/game/nbcraft.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.h`, `ui/nbcraftmenu.h` (przepisy stołów rzemiosła z UNION_ABI.DLL) | 70, 71 |
 | `common/game/nbiteminfo.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp` | 12, 13 |
@@ -66,7 +66,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |
 | `patches/tempest-opengothic.patch` (+ `patches/README.md`) | Tempest: gra nie zamyka się, gdy idzie w tło (wiadomość, ekran główny) – nowa powierzchnia Vulkana po powrocie, swapchain niszczony przy wyjściu w tło | 73, 74 |
 | `common/ui/dialogmenu.cpp` / `.h` | odpowiedzi w dialogach na pergaminie jak na PC (dotyk, przewijanie); menu bohatera bez kamery dialogu | 72 |
-| `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N”; nowy wygląd ekwipunku: ramki, siatka 9 kolumn, kategorie w rzędzie, karta przedmiotu na pergaminie z przyciskami; tekstury Hedin's Advanced Inventory z `Hedin_Union_Adv_Inventory.vdf` w `Data`, gdy jest; znacznik „NOWY” na nieprzeczytanych dokumentach w zakładce dokumentów (znika po przeczytaniu) | 12, 69, 99, 104, 121, 122 |
+| `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N”; nowy wygląd ekwipunku: ramki, siatka 9 kolumn, kategorie w rzędzie, karta przedmiotu na pergaminie z przyciskami; tekstury Hedin's Advanced Inventory z `Hedin_Union_Adv_Inventory.vdf` w `Data`, gdy jest; znacznik „NOWY”: nieprzeczytane dokumenty (w zapisie, znika po przeczytaniu) i inne nowe przedmioty (bez zapisu, znika po wybraniu) | 12, 69, 99, 104, 121, 122, 123 |
 | 🆕 `common/ui/nbsalesmenu.cpp` | okno sprzedaży NB (jak okno pluginu, dotykowe) | 68, 69 |
 | 🆕 `common/ui/nbsalesmenu.h` | j.w. | 68, 69 |
 | 🆕 `common/ui/nbcraftmenu.cpp` | okno rzemiosła NB (jak okno pluginu na PC, dotykowe) – wszystkie stoły | 70, 71 |

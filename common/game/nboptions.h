@@ -185,7 +185,7 @@ inline constexpr Option shown[] = {
   {"SHOW_PAL_UNDEAD_PROC", "AST", "bShowEffectPalUndeadProc", 0},
   {"SHOW_SKIP_LOGO", "AST", "bSkipLogo", 0},
   // NB fix 121, 122: the marks of the unread documents in the inventory (ui/inventorymenu.cpp), on by default
-  {"OG_NEW_ITEMS", "NB_OG", "bNewItems", 0, "Oznaczanie nowych dokument\xF3w w ekwipunku"},
+  {"OG_NEW_ITEMS", "NB_OG", "bNewItems", 0, "Oznaczanie nowych przedmiot\xF3w w ekwipunku"},
   // the gameplay
   {"GAMEPLAY_HARDBOSSES", "AST", "bToggleHardBosses", 2},
   {"GAMEPLAY_SAVES", "AST", "bCanSaveLeg", 2},
