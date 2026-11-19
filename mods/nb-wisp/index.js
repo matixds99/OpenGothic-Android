@@ -3,9 +3,9 @@
 // of the wisp; the scripts have only the character and its AI (ZS_MM_Rtn_Summoned). The mod calls the wisp; the search
 // for the items and bringing them (the plugin in NB) is in the engine (NB fix 61, common/game/gamescript.cpp).
 //
-// NB fix 117: a new game and a loaded save start without the wisp. Every wisp found then is sent away (the wisp of the
-// save and the ones that the earlier loads left - there were 4 after a few saves). It comes only when the player calls
-// it (Shift+F5, the tab "Ognik", the command "ognik"), and there is never more than one.
+// NB fix 117, 118: a new game starts without the wisp; a loaded save keeps its own wisp, but only one (the ones that the
+// earlier loads left go - there were 4 after a few saves). The mod does not call it by itself at the start: only the
+// player (Shift+F5, the tab "Ognik", the command "ognik"), and there is never more than one.
 
 const WISP     = "WISP_DETECTOR";
 const AMULETS  = ["ITAM_ADDON_WISPDETECTORNEW", "ITAM_ADDON_WISPDETECTOR"];
@@ -113,17 +113,21 @@ console.registerCommand("ognik", (cmd) => {
     else                               toggleWisp();
 }, "ognik [on|off] - przywołuje albo odsyła wędrującego ognika");
 
-// --- NB fix 117: a new object of the world. A new game or a loaded save: no wisp (all of them are sent away). A change
-// of the world in the same game: the wisp comes with the hero, as with the plugin, if the player had called it
+// --- NB fix 117, 118: a new object of the world.
+// A new game or a loaded save (newGame): the wisp of the save stays, the others go. A new game has no wisp, nothing calls
+// it there. A change of the world in the same game: the wisp comes with the hero, as with the plugin, if it was called
 events.on("world:load", ({ newGame }) => {
     wisp = null;
-    const removed = removeWisps(null);
-    if (removed > 0)
-        console.log("ognik: odesłano " + removed + " (nowy świat)");
     if (newGame) {
-        summoned = false;
+        const kept    = allWisps().find(w => !w.dead) || null;
+        const removed = removeWisps(kept);
+        if (removed > 0)
+            console.log("ognik: odesłano nadmiarowe: " + removed);
+        wisp     = kept;
+        summoned = !!kept;
         return;
     }
+    removeWisps(null);
     if (summoned)
         setTimeout(() => { if (summoned && !findWisp()) spawnWisp(true); }, 1500);
 });
