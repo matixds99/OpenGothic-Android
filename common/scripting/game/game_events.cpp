@@ -1,6 +1,7 @@
 #include "scripting/gameapi.h"
 
 #include "game/constants.h"
+#include "game/gamesession.h"
 #include "gothic.h"
 #include "scripting/modutil.h"
 #include "world/objects/npc.h"
@@ -19,6 +20,8 @@ struct Watch {
   std::string world;
   int32_t     health     = -1;
   bool        dead       = false;
+  uint32_t    worldSerial   = 0;   // NB fix 117: the object of the world of the last world:load
+  uint32_t    sessionSerial = 0;   // and its game
   const World* filterWorld = nullptr;   // the world that has the hidden visuals of VisualFilter
   uint32_t    filterRev  = 0;
   };
@@ -73,6 +76,22 @@ void game::tick() {
       JSValue o = JS_NewObject(ctx);
       JS_SetPropertyStr(ctx,o,"from",from.empty() ? JS_NULL : JS_NewString(ctx,from.c_str()));
       JS_SetPropertyStr(ctx,o,"to",  name.empty() ? JS_NULL : JS_NewString(ctx,name.c_str()));
+      return o;
+      });
+    }
+
+  // NB fix 117: world:load - another object of the world: a new game or a loaded save (newGame: true), or a change of
+  // the world. world:change comes only with another name, so a save of the same world had no event
+  if(world!=nullptr && world->serialNumber()!=w.worldSerial) {
+    const auto*    gs      = Gothic::inst().gameSession();
+    const uint32_t session = gs!=nullptr ? gs->serialNumber() : 0;
+    const bool     newGame = session!=w.sessionSerial;
+    w.worldSerial   = world->serialNumber();
+    w.sessionSerial = session;
+    host.emit("world:load",[&](JSContext* ctx) {
+      JSValue o = JS_NewObject(ctx);
+      JS_SetPropertyStr(ctx,o,"world",  JS_NewString(ctx,name.c_str()));
+      JS_SetPropertyStr(ctx,o,"newGame",JS_NewBool(ctx,newGame));
       return o;
       });
     }

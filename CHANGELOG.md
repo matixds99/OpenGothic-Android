@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **117**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **118**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 117. Ognik przywołany od startu gry, kilka ogników po kolejnych zapisach – 🧪 (19.11.2026)
+- **Pliki:** `mods/nb-wisp/index.js`, `manifest.json` (wersja 1.1.0), gotowy `mods/nb-wisp.zip`; `common/scripting/game/game_events.cpp` (`world:load`), `common/scripting/game/game_npcs.cpp` (`npcs.all`), `common/world/world.h`, `common/game/gamesession.h` (`serialNumber`), `docs/MODS.md`
+- **Zgłoszenie:** na starcie gry ognik jest już przywołany, a po kilku zapisach i wczytaniach są 4 ogniki. Potrzebne sprawdzenie, które od razu odsyła ognika, ale tak, żeby dało się go potem przywołać modem JS.
+- **Przyczyna:** mod pamiętał „ognik włączony” na stałe (`storage`, poza zapisem gry), więc przywoływał go w każdej nowej grze. Ognik zapisuje się też w zapisie gry. Po wczytaniu mod szukał go przez `npcs.find`, które daje tylko pierwszą postać tej instancji – gdy pierwszy był martwy albo jeszcze go nie znalazł, dokładał nowego. Każde wczytanie dodawało jednego ognika. Do tego wczytanie zapisu tego samego świata nie dawało modom żadnego zdarzenia (`world:change` przychodzi tylko przy innej nazwie świata).
+- **Poprawka:**
+  - Nowe zdarzenie modów `world:load` (`{world, newGame}`) przy każdym nowym świecie: nowa gra, wczytany zapis (także tego samego świata), zmiana świata. Rozróżnia je numer obiektu świata i numer gry.
+  - Nowe `npcs.all(instance)` – wszystkie postacie danej instancji w świecie, także martwe.
+  - Mod przy `world:load` odsyła wszystkie ogniki. Po nowej grze i wczytaniu zapisu ognika nie ma, dopóki gracz go nie przywoła (Shift+F5, zakładka „Ognik”, komenda `ognik`). Po zmianie świata w tej samej grze wraca, jeśli był przywołany (jak w pluginie).
+  - Przywołanie najpierw odsyła inne ogniki, a co 3 s mod usuwa nadmiarowe – nigdy nie ma więcej niż jednego.
+  - Komenda `ognik on` / `ognik off` (oprócz samego `ognik`, który przełącza) – do wołania z innych skryptów i z konsoli (`nb-wisp.ognik on`).
+- **Instalacja:** nowy `mods/nb-wisp.zip` trzeba dodać w launcherze (**Mods → Add a mod (.zip)**) – zastąpi starą wersję. Zdarzenie `world:load` i `npcs.all` są w silniku, więc potrzebny też nowy build.
+- **Do sprawdzenia:** wczytanie zapisu z kilkoma ognikami – wszystkie znikają, w konsoli modów `ognik: odesłano N`; przywołanie daje jednego; zapis → wczytanie – ognika nie ma, Shift+F5/przycisk przywołuje go znowu.
 
 ### 116. Muzyka gry nie cichnie przy muzyce bossa – 🧪 (19.11.2026)
 - **Pliki:** `common/gamemusic.cpp/.h` (`setScriptMute`, `applyEnabled`), `common/game/gamescript.cpp` (`RX_MusicOff`, `RX_MusicOn`, `RX_StartBossMusic`, `RX_UpdateBossMusicCoords`)
@@ -699,7 +712,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Sprawdzone (15.11.2026):** ognik lata, szuka, przynosi przedmioty i łup z ciał, uczy się umiejętności, nie wywala gry.
 - **Przyczyna:** w NB całego ognika (`WISP_DETECTOR`) prowadzi plugin Union: przywołanie pod L-Shift+F5, szukanie i zbieranie (UNION_ABI.DLL 0x102740c0), latanie wokół bohatera. Skrypty mają tylko postać, umiejętności i dialog; `B_MM_WispDetect` nie jest nigdzie wywoływane, a `ZS_MM_Rtn_Summoned` prowadzi do bohatera wszystkie przywołane stwory oprócz ognika.
 - **Jak działa teraz:**
-  - **przywołanie (mod JS):** z amuletem wędrującego ognika – **Shift+F5**, przycisk w zakładce **„Ognik”** menu modów albo komenda `ognik`; po zmianie świata i wczytaniu gry wraca;
+  - **przywołanie (mod JS):** z amuletem wędrującego ognika – **Shift+F5**, przycisk w zakładce **„Ognik”** menu modów albo komenda `ognik`; po zmianie świata wraca, nowa gra i wczytany zapis zaczynają bez ognika (poprawka 117);
   - **latanie:** nie trzyma się bohatera, tylko lata i szuka; leci prosto (8 m/s, z umiejętnością szybkości 15 m/s); bez zajęcia wraca do bohatera, gdy jest dalej niż 8 m; dalej niż 40 m – staje od razu obok;
   - **szukanie:** co 0,1 s najbliższy przedmiot w promieniu 10 m od bohatera (20 m z umiejętnością obszaru), nie wyżej/niżej niż 5 m; wszystko do 3,5 m od ognika trafia do ekwipunku od razu (do 5 naraz); gdy nic nie leży – łup z najbliższego martwego (z umiejętnością „Zbieranie przedmiotów z przeciwników”);
   - **umiejętności** (dialog ognika „Umiejętności zbierania przedmiotów”, zmienne skryptów `WISPSKILL0..9`): 0 – łup z ciał, 1 – broń i amunicja, 2 – mikstury i kamienne tablice, 3 – jedzenie i rośliny, 4 – pancerze, 5 – pierścienie i amulety, 6 – runy i zwoje, 7 – dokumenty (od początku gry), 8 – większy obszar, 9 – szybkość. Rzeczy bez kategorii (mieszki, złoto, ruda, trofea, wytrychy…) zbiera zawsze. Wartości obszaru i szybkości dobrane na oko (pluginu nie da się w tym odczytać);

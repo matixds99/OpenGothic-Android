@@ -3,6 +3,7 @@
 #include <Tempest/Sound>
 #include <Tempest/SoundDevice>
 #include <memory>
+#include <atomic>
 
 #include "game/gamescript.h"
 #include "camera.h"
@@ -27,6 +28,9 @@ class GameSession final {
     GameSession(const GameSession&)=delete;
     GameSession(std::string file);
     GameSession(Serialize&  fin);
+    /// NB fix 117: the number of this game: a new one for a new game and a loaded save, the same after a change of the
+    /// world
+    uint32_t     serialNumber() const { return serial; }
     GameSession(const OriginalSave& src);
     ~GameSession();
 
@@ -77,6 +81,8 @@ class GameSession final {
     bool         isInDialog() const;
 
   private:
+    static inline std::atomic<uint32_t> serialCounter{0};
+    const uint32_t                      serial = ++serialCounter;   // NB fix 117
     struct ChWorld {
       std::string zen, wp;
       };

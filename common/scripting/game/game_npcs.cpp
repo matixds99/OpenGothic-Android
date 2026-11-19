@@ -66,6 +66,26 @@ JSValue find(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
   return JS_NULL;
   }
 
+/// npcs.all(instance): every character of an instance in this world, the dead ones too (NB fix 117: the wisps of NB that
+/// the earlier loads have left)
+JSValue all(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+  JSValue arr   = JS_NewArray(ctx);
+  auto*   world = Gothic::inst().world();
+  if(world==nullptr || argc<1)
+    return arr;
+  const auto id = game::findInstance(*world,js::str(ctx,argv[0]));
+  if(id==size_t(-1))
+    return arr;
+  uint32_t n = 0;
+  for(size_t i=0; ; ++i) {
+    auto* npc = world->findNpcByInstance(id,i);
+    if(npc==nullptr)
+      break;
+    push(ctx,arr,n,*npc);
+    }
+  return arr;
+  }
+
 /// npcs.byId(id): a character by its id, null if it is not in this world
 JSValue byId(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
   auto* world = Gothic::inst().world();
@@ -207,6 +227,7 @@ void game::installNpcs(JSContext* ctx) {
   JSValue npcs   = JS_NewObject(ctx);
   js::fn(ctx,npcs,"nearby",nearby,1);
   js::fn(ctx,npcs,"find",  find,1);
+  js::fn(ctx,npcs,"all",   all,1);
   js::fn(ctx,npcs,"count", count,0);
   js::fn(ctx,npcs,"byId",  byId,1);
   js::fn(ctx,npcs,"spawn", spawn,5);

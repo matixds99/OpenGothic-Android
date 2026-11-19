@@ -6,6 +6,7 @@
 #include <string>
 #include <functional>
 #include <unordered_map>
+#include <atomic>
 
 #include <zenkit/World.hh>
 
@@ -124,6 +125,9 @@ class World final {
     auto                 takeHero() -> std::unique_ptr<Npc>;
     Npc*                 player() const { return npcPlayer; }
     Npc*                 findNpcByInstance(size_t instance, size_t n = 0);
+    /// NB fix 117: the number of this object of the world - a new one for a new game, a loaded save and a change of
+    /// the world (the mods see that the world is another one, even when its name is the same)
+    uint32_t             serialNumber() const { return serial; }
     Item*                findItemByInstance(size_t instance, size_t n = 0);
     std::string_view     roomAt(const Tempest::Vec3& arr);
 
@@ -215,6 +219,8 @@ class World final {
     bool                 vobPosition  (std::string_view name, Tempest::Vec3& pos) const;
 
   private:
+    static inline std::atomic<uint32_t> serialCounter{0};
+    const uint32_t                      serial = ++serialCounter;   // NB fix 117
     const zenkit::IFocus& searchPolicy(const Npc& pl, TargetCollect& collAlgo, TargetType& collType, WorldObjects::SearchFlg& opt) const;
     std::string                           wname;
     GameSession&                          game;

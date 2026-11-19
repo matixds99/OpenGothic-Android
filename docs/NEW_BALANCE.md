@@ -49,6 +49,11 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/world/objects/npc.cpp` | `takeDamage` → `nbBeforeHit`/`nbOnDamage` (muzyka bossów, zachwianie, obalenie NB); `commitSpell` – pocisk czaru gracza leci za celem; `resetAttack`, `nbQuickSpeed` (szybki atak); `RX_CallDamage` i splash w `takeDamage` (`nbSplashPct`) | 82, 83, 84, 95, 98, 106 |
 | `common/world/bullet.cpp` (+ `.h`) | `setHoming`/`tickHoming` – pocisk czaru gracza skręca do celu; z bliska trafia od razu | 84, 102 |
 | `common/world/world.cpp` | fokus: zamknięta skrzynia z bronią w ręku (siła) albo z runą otwierania (magia) | 80 |
+| `common/world/world.h` | numer obiektu świata (`serialNumber`) – mody widzą wczytanie zapisu tego samego świata | 117 |
+| `common/game/gamesession.h` | numer gry (`serialNumber`) – nowa gra/wczytany zapis a zmiana świata | 117 |
+| `common/scripting/game/game_events.cpp` | zdarzenie modów `world:load` (`{world, newGame}`) | 117 |
+| `common/scripting/game/game_npcs.cpp` | `npcs.all(instance)` – wszystkie postacie danej instancji w świecie | 117 |
+| `docs/MODS.md` | opis `world:load` i `npcs.all` | 117 |
 | `common/game/playercontrol.cpp` (+ `.h`) | przycisk akcji na zamkniętej skrzyni w fokusie: otwieranie zamka NB (siła/magia/wytrychy); `quickCombo` – szybki atak czytany jak sterowanie Gothic 1, W resetuje pozycję po ciosie; `quickAttack` – szybkie ciosy do przodu z resetem (`QuickHits`, `QuickTime`, `QuickSpeed` w `.h`), jedno dotknięcie = jeden cios, tempo zależne od stylu walki (szabla/rapier, `quickMeleeSpeed`) | 80, 94, 95, 98, 114, 115 |
 | `common/utils/androidinput.h` | j.w. (`IconSprint`, `hud.sprint`, `hudPlaces`, `stamina`) | 40, 42 |
 | `common/gothic.cpp` | ekran wczytywania: obrazki moda `LOADING_<ŚWIAT>_<numer>` | 3, 3a |
@@ -76,7 +81,7 @@ Mody w JavaScripcie dla systemu modów projektu borsuczyny (`docs/MODS.md`). Ins
 
 | Mod | Plik do zainstalowania | Co robi | Poprawka |
 |---|---|---|---|
-| `mods/nb-wisp` | `mods/nb-wisp.zip` | wędrujący ognik od Vatrasa: Shift+F5, przycisk w zakładce „Ognik” menu modów albo komenda `ognik` | 11 |
+| `mods/nb-wisp` | `mods/nb-wisp.zip` (wersja 1.1.0) | wędrujący ognik od Vatrasa: Shift+F5, przycisk w zakładce „Ognik” menu modów albo komenda `ognik` (`ognik on`/`ognik off`); nowa gra i wczytany zapis bez ognika, nigdy więcej niż jeden | 11, 117 |
 | `mods/test-umiejetnosci-broni` | `index.js` do folderu moda „Test umiejętności broni” (podmienić) | test poziomów broni pod NB: procent trafienia jak u nauczyciela, animacje zakłada skrypt NB | 48 |
 
 ---

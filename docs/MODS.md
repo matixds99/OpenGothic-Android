@@ -71,6 +71,7 @@ A script that works for longer than 400 ms in one call (or 4 s at the start) is 
 | `shutdown` | the mod stops or is reset | - |
 | `tick` | every frame | `{dt, time}` (ms) |
 | `world:change` | another world | `{from, to}` |
+| `world:load` | a new world in play: a new game, a loaded save (also of the same world, where `world:change` does not come), a change of the world | `{world, newGame}` (`newGame`: a new game or a loaded save, `false` after a change of the world) |
 | `player:damage` | the health of the player fell | `{damage, health, maxHealth}` |
 | `player:death` | the player died | - |
 | `key:down`, `key:up` | the keyboard | `{key}`, like `"A"`, `"F1"`, `"Space"`, `"Return"`, `"Up"` |
@@ -104,7 +105,7 @@ A puppet can play what the owner of the character plays: `setAnimation(layers)` 
 **Talks and finishing.** A talk needs the script and the AI of the character, so when a player starts to talk to a puppet, `takeInteraction()` returns `true` once: the mod should give the character back (`setPuppet(false)`) and leave it to the game until the talk is over (`talking`). When a player finishes off an unconscious puppet, `takeFinish()` returns `true` once, and the owner of the character does it with `finish()`.
 
 ### `npcs`
-`npcs.find(instance)` → a character or `null`, `npcs.nearby(radius = 2000)` → an array, the nearest first, `npcs.count()`, `npcs.byId(id)` → a character or `null`, `npcs.spawn(instance, x, y, z, rotation, options)` → a new character or `null` (`options.puppet`: a puppet from the start, its script of insert and its AI never run; `options.id`: the number of the character, to make the one that exists in another game, `null` if the number is in the world already), `npcs.snapshot(radius, centers)` → the state of the characters near the centers (an array of `{x, y, z}`, the player by default): `[id, instanceId, x, y, z, rotation, health, maxHealth, animation, weaponState, weaponItem, overlays, armor, unconscious, rangedItem]` for each, without the player and the puppets.
+`npcs.find(instance)` → a character or `null`, `npcs.all(instance)` → every character of the instance in this world, the dead ones too, `npcs.nearby(radius = 2000)` → an array, the nearest first, `npcs.count()`, `npcs.byId(id)` → a character or `null`, `npcs.spawn(instance, x, y, z, rotation, options)` → a new character or `null` (`options.puppet`: a puppet from the start, its script of insert and its AI never run; `options.id`: the number of the character, to make the one that exists in another game, `null` if the number is in the world already), `npcs.snapshot(radius, centers)` → the state of the characters near the centers (an array of `{x, y, z}`, the player by default): `[id, instanceId, x, y, z, rotation, health, maxHealth, animation, weaponState, weaponItem, overlays, armor, unconscious, rangedItem]` for each, without the player and the puppets.
 
 ### `net`
 Connections with the games of other players (TCP). Nothing blocks, the answers come as events. A message is a text: a string is sent as it is, other values as JSON. Messages are whole (a big one, up to 4 MB, is not cut in pieces) and keep their order. Every mod has connections of its own, they are closed when the mod stops. On Android the game needs the network, the permission is in the manifest.
