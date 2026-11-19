@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **122**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **123**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -238,17 +238,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 121. Nowe przedmioty oznaczone w ekwipunku – 🧪 (19.11.2026)
-- **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`, `common/game/nboptions.h`
-- **Zgłoszenie:** po podniesieniu przedmiotu (np. dokumentu) trudno go znaleźć w ekwipunku. Potrzebne oznaczenie, co zostało dodane, z przełącznikiem w ustawieniach.
+### 121, 122. Nowe dokumenty oznaczone w ekwipunku – 🧪 (19.11.2026)
+- **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/game/gamesession.cpp/.h` (zapis), `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`, `common/game/nboptions.h`
+- **Zgłoszenie:** po podniesieniu dokumentu trudno go znaleźć w ekwipunku – szukanie wśród listów i notatek jest męczące. Oznaczenie tylko w zakładce dokumentów, zachowane po wczytaniu gry, zdejmowane dopiero po przeczytaniu. Przełącznik w ustawieniach.
 - **Jak działa:**
-  - Przedmiot, który przybył od ostatniego zamknięcia ekwipunku (podniesiony, przyniesiony przez ognika, dany w dialogu, kupiony w oknie sprzedaży NB…), ma w rogu pola żółty znacznik **NOWY**.
-  - Zakładka kategorii, w której jest nowy przedmiot, ma złoty kwadracik w rogu – od razu widać, gdzie szukać.
-  - Znacznik znika po wybraniu przedmiotu (dotknięcie albo strzałki) albo gdy przedmiotu już nie ma.
-  - Nie są oznaczane: wyposażenie z początku nowej gry, przedmioty z wczytanego zapisu, przedmioty przeniesione przy otwartym ekwipunku (skrzynia, handel, łup z ciała).
-  - Znaczniki zostają po zmianie świata. Nowa gra i wczytany zapis zaczynają bez znaczników (nie są zapisywane).
-- **Ustawienie:** Ustawienia NB, strona interfejsu: **„Oznaczanie nowych przedmiotów w ekwipunku”** (`Gothic.ini`, `[NB_OG] bNewItems`, domyślnie włączone).
-- **Do sprawdzenia:** podnieść dokument – w ekwipunku zakładka dokumentów ma kwadracik, dokument ma znacznik NOWY; dotknięcie dokumentu – znacznik znika; wyłączony przełącznik – brak znaczników.
+  - Dokument, który trafił do ekwipunku (podniesiony, przyniesiony przez ognika, dany w dialogu, kupiony…), ma w zakładce dokumentów żółty znacznik **NOWY** w rogu pola.
+  - Zakładka dokumentów ma złoty kwadracik, gdy jest w niej nieprzeczytany dokument. Inne zakładki i inne przedmioty nie są oznaczane.
+  - Znacznik znika po przeczytaniu dokumentu (CZYTAJ). Dokument, którego nie da się przeczytać, traci znacznik po wybraniu.
+  - Nieprzeczytane dokumenty są w zapisie gry (wpis `game/nb_newdocs`, nazwy instancji) – po wczytaniu i po ponownym włączeniu gry znaczniki dalej są. Starsze zapisy nie mają tego wpisu i zaczynają bez znaczników.
+  - Nie są oznaczane: wyposażenie z początku nowej gry, rzeczy z wczytanego zapisu (poza zapisanymi znacznikami), przedmioty przeniesione przy otwartym ekwipunku (skrzynia, handel, łup z ciała).
+- **Ustawienie:** Ustawienia NB, strona interfejsu: **„Oznaczanie nowych dokumentów w ekwipunku”** (`Gothic.ini`, `[NB_OG] bNewItems`, domyślnie włączone).
+- **Po drodze:** 121 – znaczniki na wszystkich nowych przedmiotach i zakładkach, zdejmowane po wybraniu, bez zapisu; 122 – tylko dokumenty, zdejmowane po przeczytaniu, zapisywane w zapisie gry.
+- **Do sprawdzenia:** podnieść dokument – zakładka dokumentów ma kwadracik, dokument ma znacznik NOWY; zapis, wyjście z gry, wczytanie – znacznik dalej jest; przeczytanie – znacznik znika; wyłączony przełącznik – brak znaczników.
 
 ### 117–120. Ognik przywołany od startu gry, kilka ogników po kolejnych zapisach – 🧪 (19.11.2026)
 - **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json` (wersja 1.2.1), gotowy `mods/nb-wisp.zip`; `common/scripting/game/game_events.cpp` (`world:load`), `common/scripting/game/game_npcs.cpp` (`npcs.all`), `common/world/world.h`, `common/game/gamesession.h` (`serialNumber`), `docs/MODS.md`

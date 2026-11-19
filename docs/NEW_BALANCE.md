@@ -13,7 +13,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 
 | Nowy plik | Gdzie go wrzucić | Kto go potrzebuje | Od poprawki |
 |---|---|---|---|
-| `common/game/nboptions.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp`, `ui/gamemenu.cpp`; przełącznik „Oznaczanie nowych przedmiotów w ekwipunku” (`NB_OG`/`bNewItems`, domyślnie wł.) | 5, 44, 49, 53, 62, 121 |
+| `common/game/nboptions.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp`, `ui/gamemenu.cpp`; przełącznik „Oznaczanie nowych dokumentów w ekwipunku” (`NB_OG`/`bNewItems`, domyślnie wł.) | 5, 44, 49, 53, 62, 121, 122 |
 | 🆕 `common/game/nbtexts.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp` | 62, 69 |
 | 🆕 `common/game/nbcraft.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.h`, `ui/nbcraftmenu.h` (przepisy stołów rzemiosła z UNION_ABI.DLL) | 70, 71 |
 | `common/game/nbiteminfo.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp` | 12, 13 |
@@ -40,17 +40,18 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/graphics/sky/sky.cpp` | jasna noc do testów: światło i niebo między 8:00 a 18:00 (`[NB_OG] bNightAsDay`) | 53 |
 | `common/game/inventory.cpp` | osobne miejsce na hełm (zbroja z `WEAR_HEAD`), stare zapisy: hełm z miejsca zbroi na swoje | 39 |
 | `common/game/inventory.h` | j.w. (`currentHelmet`, `isHelmet`) | 39 |
-| `common/mainwindow.cpp` | sprint NB: klawisz `~` i przycisk na nakładce wywołują `B_Hotkey_Sprint`; pasek wytrzymałości NB, paski w miejscach i rozmiarach z edytora HUD, okno sprzedaży NB (widżet, tryb menu nakładki, dotyk i klawisze), okno alchemii NB (to samo); Android: swapchain od nowa po powrocie z tła; skrzynia w fokusie dla funkcji zamków NB (`nbSetFocusMob`); kolory nazw w fokusie (`focusColor`); zakładki kategorii z nowymi przedmiotami (`hud.inventoryNew`) | 40, 41, 42, 45, 49, 68, 69, 70, 74, 79, 81, 121 |
+| `common/mainwindow.cpp` | sprint NB: klawisz `~` i przycisk na nakładce wywołują `B_Hotkey_Sprint`; pasek wytrzymałości NB, paski w miejscach i rozmiarach z edytora HUD, okno sprzedaży NB (widżet, tryb menu nakładki, dotyk i klawisze), okno alchemii NB (to samo); Android: swapchain od nowa po powrocie z tła; skrzynia w fokusie dla funkcji zamków NB (`nbSetFocusMob`); kolory nazw w fokusie (`focusColor`); zakładka dokumentów z nieprzeczytanym dokumentem (`hud.inventoryNew`) | 40, 41, 42, 45, 49, 68, 69, 70, 74, 79, 81, 121 |
 | `common/ui/mobilecontrolsmodel.cpp` | przycisk sprintu na nakładce (obok chodu), da się go przesuwać i ukryć w edytorze HUD; paski życia/wytrzymałości/many w edytorze HUD; ustawienie „Peaceful targets”; przycisk szybkiego ataku (`Special::QuickAttack`, id `quickattack`); ustawienie „Acrobatics” | 40, 42, 78, 85, 86 |
 | `common/ui/mobilecontrolsmodel.h` | j.w. (`Special::Sprint`, `sprint()`, id `sprint`, `hudBarRect`, id `bar_*`, `SettingPeaceful`) | 40, 42, 78 |
-| `common/utils/androidinput.cpp` (+ `.h`) | ikona sprintu, podświetlenie, gdy sprint włączony; ramki pasków w edytorze HUD; ustawienie `peacefulfocus` (wersja ustawień 8); szybki atak – sekwencja klawiszy A/D, W, Ctrl, ikona `quick_attack.png`; ustawienie `acrobatic` (wersja ustawień 9); QUICK = „< STEP” + ACTION naciśnięte razem; znacznik nowego przedmiotu na zakładce kategorii | 40, 42, 78, 85, 86, 97, 121 |
+| `common/utils/androidinput.cpp` (+ `.h`) | ikona sprintu, podświetlenie, gdy sprint włączony; ramki pasków w edytorze HUD; ustawienie `peacefulfocus` (wersja ustawień 8); szybki atak – sekwencja klawiszy A/D, W, Ctrl, ikona `quick_attack.png`; ustawienie `acrobatic` (wersja ustawień 9); QUICK = „< STEP” + ACTION naciśnięte razem; znacznik nieprzeczytanego dokumentu na zakładce dokumentów | 40, 42, 78, 85, 86, 97, 121 |
 | `common/world/worldobjects.cpp` (+ `.h`) | ustawienie „Target peaceful creatures: OFF” – niewrogie stworzenia (ognik, przywołańce, owce, króliki, żółwie) poza celowaniem gracza; `findLockedChest` – zamknięte skrzynie w fokusie z bronią/runą; `tickHoming` pocisków | 78, 80, 84 |
 | `common/gothic.cpp` (+ `.h`) | muzyka walki z bossem NB (`playBossMusic`, `stopBossMusic`, `tickBossMusic`) | 82 |
 | `common/world/objects/npc.cpp` | `takeDamage` → `nbBeforeHit`/`nbOnDamage` (muzyka bossów, zachwianie, obalenie NB); `commitSpell` – pocisk czaru gracza leci za celem; `resetAttack`, `nbQuickSpeed` (szybki atak); `RX_CallDamage` i splash w `takeDamage` (`nbSplashPct`) | 82, 83, 84, 95, 98, 106 |
 | `common/world/bullet.cpp` (+ `.h`) | `setHoming`/`tickHoming` – pocisk czaru gracza skręca do celu; z bliska trafia od razu | 84, 102 |
 | `common/world/world.cpp` | fokus: zamknięta skrzynia z bronią w ręku (siła) albo z runą otwierania (magia) | 80 |
 | `common/world/world.h` | numer obiektu świata (`serialNumber`) – mody widzą wczytanie zapisu tego samego świata | 117 |
-| `common/game/gamesession.h` | numer gry (`serialNumber`) – nowa gra/wczytany zapis a zmiana świata | 117 |
+| `common/game/gamesession.h` | numer gry (`serialNumber`) – nowa gra/wczytany zapis a zmiana świata; nieprzeczytane dokumenty (`nbNewDocs`) | 117, 122 |
+| `common/game/gamesession.cpp` | zapis i wczytanie nieprzeczytanych dokumentów (wpis `game/nb_newdocs`) | 122 |
 | `common/scripting/game/game_events.cpp` | zdarzenie modów `world:load` (`{world, newGame}`) | 117 |
 | `common/scripting/game/game_npcs.cpp` | `npcs.all(instance)` – wszystkie postacie danej instancji w świecie | 117 |
 | `docs/MODS.md` | opis `world:load` i `npcs.all` | 117 |
@@ -65,7 +66,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |
 | `patches/tempest-opengothic.patch` (+ `patches/README.md`) | Tempest: gra nie zamyka się, gdy idzie w tło (wiadomość, ekran główny) – nowa powierzchnia Vulkana po powrocie, swapchain niszczony przy wyjściu w tło | 73, 74 |
 | `common/ui/dialogmenu.cpp` / `.h` | odpowiedzi w dialogach na pergaminie jak na PC (dotyk, przewijanie); menu bohatera bez kamery dialogu | 72 |
-| `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N”; nowy wygląd ekwipunku: ramki, siatka 9 kolumn, kategorie w rzędzie, karta przedmiotu na pergaminie z przyciskami; tekstury Hedin's Advanced Inventory z `Hedin_Union_Adv_Inventory.vdf` w `Data`, gdy jest; znacznik „NOWY” na przedmiotach dodanych od ostatniego otwarcia ekwipunku (znika po wybraniu przedmiotu) | 12, 69, 99, 104, 121 |
+| `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N”; nowy wygląd ekwipunku: ramki, siatka 9 kolumn, kategorie w rzędzie, karta przedmiotu na pergaminie z przyciskami; tekstury Hedin's Advanced Inventory z `Hedin_Union_Adv_Inventory.vdf` w `Data`, gdy jest; znacznik „NOWY” na nieprzeczytanych dokumentach w zakładce dokumentów (znika po przeczytaniu) | 12, 69, 99, 104, 121, 122 |
 | 🆕 `common/ui/nbsalesmenu.cpp` | okno sprzedaży NB (jak okno pluginu, dotykowe) | 68, 69 |
 | 🆕 `common/ui/nbsalesmenu.h` | j.w. | 68, 69 |
 | 🆕 `common/ui/nbcraftmenu.cpp` | okno rzemiosła NB (jak okno pluginu na PC, dotykowe) – wszystkie stoły | 70, 71 |

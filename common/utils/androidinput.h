@@ -84,7 +84,7 @@ class Controller {
       int   active = -1;
       Icon  actionIcon = IconInteract;
       int   inventoryCategory = 0;
-      uint32_t inventoryNew = 0;      // NB fix 121: the tabs of the categories with a new item (a bit for each)
+      uint32_t inventoryNew = 0;      // NB fix 121, 122: the tab of the documents with an unread one (a bit for each tab)
       bool  inventoryTransfer = false;
       std::string useLabel;           // action of the selected item in the inventory
       bool  targetLocked = false;

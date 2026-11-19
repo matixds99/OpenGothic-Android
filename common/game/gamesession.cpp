@@ -179,6 +179,20 @@ GameSession::GameSession(Serialize &fin) {
   fin.requireEntry("game/daedalus");
   vm->loadVar(fin);
 
+  // NB fix 122: the unread documents (older save-games do not have them)
+  fin.setStage("game/nb_newdocs");
+  if(fin.setEntry("game/nb_newdocs")) {
+    uint32_t count = 0;
+    fin.read(count);
+    for(uint32_t i=0; i<count; ++i) {
+      std::string name;
+      fin.read(name);
+      const size_t id = vm->findSymbolIndex(name);
+      if(id!=size_t(-1))
+        newDocs.insert(id);
+      }
+    }
+
   if(auto hero = wrld->player())
     vm->setInstanceNPC("HERO",*hero);
 
@@ -266,6 +280,18 @@ void GameSession::save(Serialize &fout, std::string_view name, const Pixmap& scr
   fout.setEntry("game/daedalus");
   vm->saveVar(fout);
   vm->dmaSave(fout);
+
+  // NB fix 122: the unread documents, by the names of their instances (a program without it skips the entry)
+  {
+  std::vector<std::string> names;
+  for(auto cls:newDocs)
+    if(auto* sym = vm->findSymbol(cls))
+      names.emplace_back(sym->name());
+  fout.setEntry("game/nb_newdocs");
+  fout.write(uint32_t(names.size()));
+  for(auto& n:names)
+    fout.write(n);
+  }
   Gothic::inst().setLoadingProgress(80);
   }
 

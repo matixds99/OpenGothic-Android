@@ -4,6 +4,7 @@
 #include <Tempest/SoundDevice>
 #include <memory>
 #include <atomic>
+#include <unordered_set>
 
 #include "game/gamescript.h"
 #include "camera.h"
@@ -31,6 +32,9 @@ class GameSession final {
     /// NB fix 117: the number of this game: a new one for a new game and a loaded save, the same after a change of the
     /// world
     uint32_t     serialNumber() const { return serial; }
+    /// NB fix 122: the documents that the player has not read yet (the mark NOWY in the inventory): the instances of the
+    /// items, kept in the save-game (the entry game/nb_newdocs, by the names of the instances)
+    std::unordered_set<size_t>& nbNewDocs() { return newDocs; }
     GameSession(const OriginalSave& src);
     ~GameSession();
 
@@ -81,6 +85,7 @@ class GameSession final {
     bool         isInDialog() const;
 
   private:
+    std::unordered_set<size_t>          newDocs;   // NB fix 122
     static inline std::atomic<uint32_t> serialCounter{0};
     const uint32_t                      serial = ++serialCounter;   // NB fix 117
     struct ChWorld {

@@ -115,18 +115,21 @@ class InventoryMenu : public Tempest::Widget {
     void  mouseWheelEvent(Tempest::MouseEvent& event) override;
 
   private:
-    // NB fix 121: the items that came into the inventory of the player since he saw it last - a mark on the slot and on
-    // the tab of the category, until the item is chosen. nbSeen: the counts of the items when the inventory was last
-    // closed (or the world loaded); nbFresh: the instances of the new items (kept for one game, not in the save)
+    // NB fix 121, 122: the documents that came into the inventory of the player and are not read yet - a mark on the
+    // slot and on the tab of the documents, until the document is read (or chosen, when it cannot be read). nbSeen: the
+    // counts of the items at the last look (every 0.5 s while the inventory is closed, and when it closes - what is
+    // moved in an open inventory is not new); the set of the documents is in GameSession (in the save-game)
     std::unordered_map<size_t,size_t> nbSeen;
-    std::unordered_set<size_t>        nbFresh;
-    uint32_t                          nbSession   = 0;
-    bool                              nbSeenValid = false;
+    uint32_t                          nbSeenWorld = 0;   // World::serialNumber of nbSeen, 0 - none
+    uint64_t                          nbNextLook  = 0;
     bool                              nbMarkOn    = true;
     bool                              nbMarkPl    = false;   // the text of the mark in Polish (New Balance)
-    void   nbSnapshot(const Npc& pl);
-    void   nbFindNew (const Npc& pl);
+    void   nbSnapshot(Npc& pl);
+    void   nbFindNew (Npc& pl);
     void   nbSeeSelected();
+    void   nbRead(size_t cls);
+    bool   nbIsDocument(const Item& item) const;
+    static std::unordered_set<size_t>* nbDocs();
 
     struct Page;
     bool   nbIsNew(const Page& page, const Item& item) const;   // NB fix 121

@@ -3,6 +3,7 @@
 
 #include <Tempest/Painter>
 #include <Tempest/SoundEffect>
+#include <Tempest/Application>
 #include <cmath>
 
 #include "utils/string_frm.h"
@@ -279,77 +280,99 @@ void InventoryMenu::onWorldChanged() {
   player = nullptr;
   trader = nullptr;
   chest  = nullptr;
-  // NB fix 121: the counts of the player of the new world (the items of the start of a new game and of a save are not
-  // new); the marks stay after a change of the world, a new game or a loaded save has none
-  nbSeenValid = false;
-  if(auto* gs = Gothic::inst().gameSession()) {
-    if(gs->serialNumber()!=nbSession)
-      nbFresh.clear();
-    nbSession = gs->serialNumber();
-    }
+  // NB fix 121, 122: the counts of the player of the new world - the items of the start of a new game and of a save are
+  // not new (the unread documents of a save come with it, GameSession::nbNewDocs)
+  nbSeenWorld = 0;
   if(auto* pl = Gothic::inst().player())
     nbSnapshot(*pl);
   }
 
-void InventoryMenu::nbSnapshot(const Npc& pl) {
+std::unordered_set<size_t>* InventoryMenu::nbDocs() {
+  auto* gs = Gothic::inst().gameSession();
+  return gs!=nullptr ? &gs->nbNewDocs() : nullptr;
+  }
+
+/// NB fix 122: a document - an item of the tab of the documents (the groups of the categories of the mod, or ITM_CAT_DOCS)
+bool InventoryMenu::nbIsDocument(const Item& item) const {
+  Page docs;
+  docs.category = CatDocuments;
+  if(player!=nullptr || Gothic::inst().world()!=nullptr) {
+    auto& script = player!=nullptr ? player->world().script() : Gothic::inst().world()->script();
+    for(int k=0; k<int(CatCount); ++k)
+      if(CategoryOrder[k]==CatDocuments)
+        docs.scriptMask = script.inventoryCategoryMask(k);
+    }
+  return docs.matches(item);
+  }
+
+void InventoryMenu::nbSnapshot(Npc& pl) {
   nbSeen.clear();
   for(auto it=pl.inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it)
     nbSeen[it->clsId()] += it.count();
-  for(auto i=nbFresh.begin(); i!=nbFresh.end();) {
-    if(nbSeen.find(*i)==nbSeen.end())
-      i = nbFresh.erase(i); else
-      ++i;
+  nbSeenWorld = pl.world().serialNumber();
+  // the documents that the player has not any more
+  if(auto* docs = nbDocs()) {
+    for(auto i=docs->begin(); i!=docs->end();) {
+      if(nbSeen.find(*i)==nbSeen.end())
+        i = docs->erase(i); else
+        ++i;
+      }
     }
-  nbSeenValid = true;
   }
 
-void InventoryMenu::nbFindNew(const Npc& pl) {
-  if(nbSeenValid) {
-    std::unordered_map<size_t,size_t> now;
-    for(auto it=pl.inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it)
-      now[it->clsId()] += it.count();
-    for(auto& [cls,count]:now) {
+void InventoryMenu::nbFindNew(Npc& pl) {
+  auto* docs = nbDocs();
+  if(docs!=nullptr && nbSeenWorld==pl.world().serialNumber()) {
+    std::unordered_map<size_t,std::pair<size_t,const Item*>> now;
+    for(auto it=pl.inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it) {
+      auto& n = now[it->clsId()];
+      n.first  += it.count();
+      n.second  = &(*it);
+      }
+    for(auto& [cls,n]:now) {
+      if(docs->find(cls)!=docs->end())
+        continue;
       auto was = nbSeen.find(cls);
-      if(count>(was==nbSeen.end() ? 0 : was->second))
-        nbFresh.insert(cls);
+      if(n.first>(was==nbSeen.end() ? 0 : was->second) && nbIsDocument(*n.second))
+        docs->insert(cls);
       }
     }
   nbSnapshot(pl);
   }
 
-/// NB fix 121: the item that the player has chosen (a tap, the arrows) is not new any more
+/// NB fix 122: a document that cannot be read (no function of use) stops being new when the player chooses it
 void InventoryMenu::nbSeeSelected() {
-  if(nbFresh.empty() || pagePl==nullptr || &activePage()!=pagePl.get())
+  auto* docs = nbDocs();
+  if(docs==nullptr || docs->empty() || pagePl==nullptr || &activePage()!=pagePl.get())
     return;
   auto it = activePage().get(activePageSel().sel);
-  if(it.isValid())
-    nbFresh.erase(it->clsId());
+  if(it.isValid() && it->handle().on_state[0]==0)
+    docs->erase(it->clsId());
+  }
+
+/// NB fix 122: the document is read
+void InventoryMenu::nbRead(size_t cls) {
+  if(auto* docs = nbDocs())
+    docs->erase(cls);
   }
 
 bool InventoryMenu::nbIsNew(const Page& page, const Item& item) const {
-  return nbMarkOn && &page==pagePl.get() && nbFresh.find(item.clsId())!=nbFresh.end();
+  if(!nbMarkOn || &page!=pagePl.get() || page.category!=CatDocuments)
+    return false;
+  auto* docs = nbDocs();
+  return docs!=nullptr && docs->find(item.clsId())!=docs->end();
   }
 
 uint32_t InventoryMenu::nbNewCategories() const {
-  if(!nbMarkOn || nbFresh.empty() || player==nullptr || state==State::Closed || state==State::LockPicking)
+  if(!nbMarkOn || player==nullptr || state==State::Closed || state==State::LockPicking)
     return 0;
-  Page tab[CatCount];
-  auto& script = player->world().script();
-  for(int i=0; i<int(CatCount); ++i) {
-    tab[i].category   = Category(i);
-    for(int k=0; k<int(CatCount); ++k)
-      if(CategoryOrder[k]==Category(i))
-        tab[i].scriptMask = script.inventoryCategoryMask(k);
-    }
-  uint32_t ret = 0;
-  for(auto it=player->inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it) {
-    if(nbFresh.find(it->clsId())==nbFresh.end())
-      continue;
-    for(int i=0; i<int(CatCount); ++i)
-      if(tab[i].matches(*it))
-        ret |= (1u<<i);
-    }
-  return ret;
+  auto* docs = nbDocs();
+  if(docs==nullptr || docs->empty())
+    return 0;
+  for(auto it=player->inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it)
+    if(docs->find(it->clsId())!=docs->end())
+      return 1u<<uint32_t(CatDocuments);   // only the tab of the documents
+  return 0;
   }
 
 void InventoryMenu::tick(uint64_t /*dt*/) {
@@ -357,6 +380,12 @@ void InventoryMenu::tick(uint64_t /*dt*/) {
   nbMarkOn = Gothic::settingsGetI("NB_OG","bNewItems")!=0;
   if(auto w = Gothic::inst().world())
     nbMarkPl = NbItemInfo::isNb(w->script().getVm());
+  // NB fix 122: the documents that come while the inventory is closed (so they are in the set before a save)
+  if(state==State::Closed && Application::tickCount()>=nbNextLook) {
+    nbNextLook = Application::tickCount()+500;
+    if(auto* pl = Gothic::inst().player())
+      nbFindNew(*pl);
+    }
   if(state!=State::Closed && state!=State::LockPicking)
     syncScriptCategory(false);
   if(player!=nullptr && (player->isDown() || player->bodyStateMasked()==BS_UNCONSCIOUS)) {
@@ -721,6 +750,7 @@ void InventoryMenu::onItemAction(uint8_t slotHint) {
 
   if(state==State::Equip) {
     const size_t clsId = it->clsId();
+    nbRead(clsId);   // NB fix 122: a document is read with this action
     if(it.isEquipped() && slotHint==Item::NSLOT) {
       player->unequipItem(clsId);
       } else {

@@ -158,7 +158,7 @@ inline constexpr Default defaults[] = {
   {"BELIARS_RAGE", "RX_BeliarRage_Opt_RegenEnemies", 1},
   {"BELIARS_RAGE", "bSoundActive", 1},
   {"BELIARS_RAGE", "RX_BeliarRage_ShowVisualPos", 1},
-  {"NB_OG", "bNewItems", 1},   // NB fix 121: the marks of the new items in the inventory
+  {"NB_OG", "bNewItems", 1},   // NB fix 121, 122: the marks of the unread documents in the inventory
   };
 
 struct Option {
@@ -184,8 +184,8 @@ inline constexpr Option shown[] = {
   {"SHOW_POISON_HERO", "AST", "bShowPoisonHero", 0},
   {"SHOW_PAL_UNDEAD_PROC", "AST", "bShowEffectPalUndeadProc", 0},
   {"SHOW_SKIP_LOGO", "AST", "bSkipLogo", 0},
-  // NB fix 121: the marks of the new items in the inventory (ui/inventorymenu.cpp), on by default
-  {"OG_NEW_ITEMS", "NB_OG", "bNewItems", 0, "Oznaczanie nowych przedmiot\xF3w w ekwipunku"},
+  // NB fix 121, 122: the marks of the unread documents in the inventory (ui/inventorymenu.cpp), on by default
+  {"OG_NEW_ITEMS", "NB_OG", "bNewItems", 0, "Oznaczanie nowych dokument\xF3w w ekwipunku"},
   // the gameplay
   {"GAMEPLAY_HARDBOSSES", "AST", "bToggleHardBosses", 2},
   {"GAMEPLAY_SAVES", "AST", "bCanSaveLeg", 2},
