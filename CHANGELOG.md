@@ -238,19 +238,10 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 121–123. Nowe przedmioty i dokumenty oznaczone w ekwipunku – 🧪 (19.11.2026)
-- **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/game/gamesession.cpp/.h` (zapis), `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`, `common/game/nboptions.h`
-- **Zgłoszenie:** po podniesieniu dokumentu trudno go znaleźć w ekwipunku – szukanie wśród listów i notatek jest męczące. Oznaczenie tylko w zakładce dokumentów, zachowane po wczytaniu gry, zdejmowane dopiero po przeczytaniu. Przełącznik w ustawieniach.
-- **Jak działa:**
-  - Dokument, który trafił do ekwipunku (podniesiony, przyniesiony przez ognika, dany w dialogu, kupiony…), ma w zakładce dokumentów żółty znacznik **NOWY** w rogu pola.
-  - Zakładka dokumentów ma złoty kwadracik, gdy jest w niej nieprzeczytany dokument. Inne zakładki i inne przedmioty nie są oznaczane.
-  - Znacznik znika po przeczytaniu dokumentu (CZYTAJ). Dokument, którego nie da się przeczytać, traci znacznik po wybraniu.
-  - Nieprzeczytane dokumenty są w zapisie gry (wpis `game/nb_newdocs`, nazwy instancji) – po wczytaniu i po ponownym włączeniu gry znaczniki dalej są. Starsze zapisy nie mają tego wpisu i zaczynają bez znaczników.
-  - **Inne nowe przedmioty (123):** broń, pierścienie, zwoje, mikstury itd. też mają znacznik **NOWY**, a ich zakładka kwadracik. Znacznik znika po wybraniu przedmiotu. Te znaczniki nie trafiają do zapisu – po wczytaniu gry ich nie ma; w zapisie są tylko nieprzeczytane dokumenty.
-  - Nie są oznaczane: wyposażenie z początku nowej gry, rzeczy z wczytanego zapisu (poza zapisanymi znacznikami), przedmioty przeniesione przy otwartym ekwipunku (skrzynia, handel, łup z ciała).
-- **Ustawienie:** Ustawienia NB, strona interfejsu: **„Oznaczanie nowych przedmiotów w ekwipunku”** (`Gothic.ini`, `[NB_OG] bNewItems`, domyślnie włączone).
-- **Po drodze:** 121 – znaczniki na wszystkich nowych przedmiotach i zakładkach, zdejmowane po wybraniu, bez zapisu; 122 – tylko dokumenty, zdejmowane po przeczytaniu, zapisywane w zapisie gry; 123 – wróciły znaczniki innych przedmiotów, ale bez zapisu.
-- **Do sprawdzenia:** podnieść dokument – zakładka dokumentów ma kwadracik, dokument ma znacznik NOWY; zapis, wyjście z gry, wczytanie – znacznik dalej jest; przeczytanie – znacznik znika; wyłączony przełącznik – brak znaczników.
+### 121–123. Oznaczanie nowych przedmiotów w ekwipunku – 🧪 (19.11.2026)
+- **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/game/gamesession.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`, `common/game/nboptions.h`
+- Dodano oznaczanie nowych przedmiotów w ekwipunku: znacznik **NOWY** na przedmiocie i złoty kwadracik na zakładce jego kategorii. Nieprzeczytane dokumenty są zapamiętywane w zapisie gry, a znacznik znika po ich przeczytaniu. Pozostałe przedmioty tracą znacznik po wybraniu i nie są zapamiętywane w zapisie.
+- **Ustawienie:** Ustawienia NB → „Oznaczanie nowych przedmiotów w ekwipunku” (domyślnie włączone).
 
 ### 117–120. Ognik przywołany od startu gry, kilka ogników po kolejnych zapisach – 🧪 (19.11.2026)
 - **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json` (wersja 1.2.1), gotowy `mods/nb-wisp.zip`; `common/scripting/game/game_events.cpp` (`world:load`), `common/scripting/game/game_npcs.cpp` (`npcs.all`), `common/world/world.h`, `common/game/gamesession.h` (`serialNumber`), `docs/MODS.md`
