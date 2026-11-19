@@ -239,19 +239,25 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
 ### 117–119. Ognik przywołany od startu gry, kilka ogników po kolejnych zapisach – 🧪 (19.11.2026)
-- **Pliki:** `mods/nb-wisp/index.js`, `manifest.json` (wersja 1.1.0), gotowy `mods/nb-wisp.zip`; `common/scripting/game/game_events.cpp` (`world:load`), `common/scripting/game/game_npcs.cpp` (`npcs.all`), `common/world/world.h`, `common/game/gamesession.h` (`serialNumber`), `docs/MODS.md`
-- **Zgłoszenie:** na starcie gry ognik jest już przywołany, a po kilku zapisach i wczytaniach są 4 ogniki. Potrzebne sprawdzenie, które od razu odsyła ognika, ale tak, żeby dało się go potem przywołać modem JS.
-- **Przyczyna:** mod pamiętał „ognik włączony” na stałe (`storage`, poza zapisem gry), więc przywoływał go w każdej nowej grze. Ognik zapisuje się też w zapisie gry. Po wczytaniu mod szukał go przez `npcs.find`, które daje tylko pierwszą postać tej instancji – gdy pierwszy był martwy albo jeszcze go nie znalazł, dokładał nowego. Każde wczytanie dodawało jednego ognika. Do tego wczytanie zapisu tego samego świata nie dawało modom żadnego zdarzenia (`world:change` przychodzi tylko przy innej nazwie świata).
-- **Poprawka:**
-  - Nowe zdarzenie modów `world:load` (`{world, newGame}`) przy każdym nowym świecie: nowa gra, wczytany zapis (także tego samego świata), zmiana świata. Rozróżnia je numer obiektu świata i numer gry.
-  - Nowe `npcs.all(instance)` – wszystkie postacie danej instancji w świecie, także martwe.
-  - Mod sam nie przywołuje ognika na starcie gry – tylko gracz (Shift+F5, zakładka „Ognik”, komenda `ognik`). Po zmianie świata w tej samej grze ognik wraca, jeśli był przywołany (jak w pluginie).
-  - **(118, 19.11)** Pierwsza wersja odsyłała ognika także przy wczytaniu zapisu. Wtedy wczytany zapis zostawiał swojego ognika (usuwane tylko nadmiarowe).
-  - **(119, 19.11) – ognik na jedną sesję gry:** pierwsze wczytanie (albo nowa gra) po włączeniu gry jest bez ognika, także gdy był w zapisie – zamknięcie gry go odesłało. Przywołany ognik zostaje przy kolejnych wczytaniach i zmianach świata, aż do zamknięcia gry albo odesłania. Odesłany – nie wraca też z wczytanego zapisu. Zawsze najwyżej jeden.
-  - Przywołanie najpierw odsyła inne ogniki, a co 3 s mod usuwa nadmiarowe – nigdy nie ma więcej niż jednego.
-  - Komenda `ognik on` / `ognik off` (oprócz samego `ognik`, który przełącza) – do wołania z innych skryptów i z konsoli (`nb-wisp.ognik on`).
-- **Instalacja:** nowy `mods/nb-wisp.zip` (wersja 1.2.0) trzeba dodać w launcherze (**Mods → Add a mod (.zip)**) – zastąpi starą wersję. Zdarzenie `world:load` i `npcs.all` są w silniku, więc potrzebny też nowy build.
-- **Do sprawdzenia:** włączenie gry i wczytanie zapisu z ognikiem – ognika nie ma (`ognik: odesłano N` w konsoli modów); przywołanie z menu – jest jeden; kolejne wczytanie – nadal jest jeden; zamknięcie gry, włączenie i wczytanie – znowu bez ognika.
+- **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json` (wersja 1.2.0), gotowy `mods/nb-wisp.zip`; `common/scripting/game/game_events.cpp` (`world:load`), `common/scripting/game/game_npcs.cpp` (`npcs.all`), `common/world/world.h`, `common/game/gamesession.h` (`serialNumber`), `docs/MODS.md`
+- **Zgłoszenie:** na starcie gry ognik jest już przywołany, a po kilku zapisach i wczytaniach są 4 ogniki. Ognik ma być od razu odsyłany, ale tak, żeby dało się go potem przywołać modem JS.
+- **Przyczyna:**
+  - Mod pamiętał „ognik włączony” na stałe (`storage`, poza zapisem gry), więc przywoływał go przy każdym starcie gry.
+  - Ognik zapisuje się też w zapisie gry. Po wczytaniu mod szukał go przez `npcs.find`, które daje tylko pierwszą postać tej instancji. Gdy ta była martwa albo jej nie znalazł, dokładał nowego ognika – każde wczytanie dodawało jednego.
+  - Wczytanie zapisu tego samego świata nie dawało modom żadnego zdarzenia (`world:change` przychodzi tylko przy innej nazwie świata).
+- **Jak działa teraz – ognik na jedną sesję gry:**
+  - Pierwsze wczytanie zapisu (albo nowa gra) po włączeniu gry jest bez ognika, także gdy ognik był w zapisie – zamknięcie gry go odesłało.
+  - Ognika przywołuje tylko gracz: Shift+F5, zakładka „Ognik” w menu modów albo komenda `ognik`.
+  - Przywołany ognik zostaje przy kolejnych wczytaniach i zmianach świata, aż do zamknięcia gry albo odesłania. Gdy wczytany zapis nie ma ognika, mod przywołuje go obok bohatera.
+  - Odesłany ognik nie wraca też z wczytanego zapisu, w którym był.
+  - Zawsze najwyżej jeden ognik: przywołanie najpierw odsyła inne, a co 3 s mod usuwa nadmiarowe.
+  - Komendy `ognik on` / `ognik off` (samo `ognik` przełącza) – także dla innych skryptów i konsoli (`nb-wisp.ognik on`).
+- **Zmiany w silniku dla modów:**
+  - Zdarzenie `world:load` (`{world, newGame}`) przy każdym nowym świecie: nowa gra, wczytany zapis (także tego samego świata), zmiana świata. Rozróżnia je numer obiektu świata i numer gry (`serialNumber`).
+  - `npcs.all(instance)` – wszystkie postacie danej instancji w świecie, także martwe.
+- **Po drodze:** 117 – odsyłanie ognika przy nowej grze i każdym wczytaniu; 118 – wczytany zapis zostawiał swojego ognika; 119 – ostatecznie ognik na jedną sesję gry, jak wyżej.
+- **Instalacja:** nowy build (zdarzenie `world:load` i `npcs.all` są w silniku) oraz nowy `mods/nb-wisp.zip` w launcherze (**Mods → Add a mod (.zip)**) – zastąpi starą wersję.
+- **Do sprawdzenia:** włączenie gry i wczytanie zapisu z ognikiem – ognika nie ma (w konsoli modów `ognik: odesłano N`); przywołanie z menu – jest jeden; kolejne wczytanie – nadal jest jeden; zamknięcie gry, włączenie i wczytanie – znowu bez ognika.
 
 ### 116. Muzyka gry nie cichnie przy muzyce bossa – 🧪 (19.11.2026)
 - **Pliki:** `common/gamemusic.cpp/.h` (`setScriptMute`, `applyEnabled`), `common/game/gamescript.cpp` (`RX_MusicOff`, `RX_MusicOn`, `RX_StartBossMusic`, `RX_UpdateBossMusicCoords`)
