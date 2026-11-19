@@ -3,15 +3,17 @@
 // of the wisp; the scripts have only the character and its AI (ZS_MM_Rtn_Summoned). The mod calls the wisp; the search
 // for the items and bringing them (the plugin in NB) is in the engine (NB fix 61, common/game/gamescript.cpp).
 //
-// NB fix 117, 118: a new game starts without the wisp; a loaded save keeps its own wisp, but only one (the ones that the
-// earlier loads left go - there were 4 after a few saves). The mod does not call it by itself at the start: only the
-// player (Shift+F5, the tab "Ognik", the command "ognik"), and there is never more than one.
+// NB fix 117-119: the wisp lives for one session of the game. The first world after the game is started (a loaded save
+// or a new game) has no wisp - the end of the session has sent it away, also the one in the save. When the player calls
+// it (Shift+F5, the tab "Ognik", the command "ognik"), it stays with the next loads and changes of the world until the
+// game is closed or the player sends it away. There is never more than one (there were 4 after a few saves).
 
 const WISP     = "WISP_DETECTOR";
 const AMULETS  = ["ITAM_ADDON_WISPDETECTORNEW", "ITAM_ADDON_WISPDETECTOR"];
 
 let wisp     = null;    // the character of the wisp that this mod has called
-let summoned = false;   // the player has called the wisp in this game (not kept in a save)
+let summoned = false;   // the player has called the wisp in this session (not kept in a save, nor between sessions)
+let started  = false;   // the first world of this session has come
 let shift    = false;
 
 function hasAmulet() {
@@ -113,22 +115,27 @@ console.registerCommand("ognik", (cmd) => {
     else                               toggleWisp();
 }, "ognik [on|off] - przywołuje albo odsyła wędrującego ognika");
 
-// --- NB fix 117, 118: a new object of the world.
-// A new game or a loaded save (newGame): the wisp of the save stays, the others go. A new game has no wisp, nothing calls
-// it there. A change of the world in the same game: the wisp comes with the hero, as with the plugin, if it was called
-events.on("world:load", ({ newGame }) => {
+// --- NB fix 117-119: a new object of the world (a new game, a loaded save, a change of the world).
+// The first one of the session: no wisp. Later: as the player has chosen in this session - called: one wisp (the one of
+// the save, or a new one next to the hero), sent away: none
+events.on("world:load", () => {
     wisp = null;
-    if (newGame) {
-        const kept    = allWisps().find(w => !w.dead) || null;
-        const removed = removeWisps(kept);
+    if (!started) {
+        started  = true;
+        summoned = false;
+    }
+    if (!summoned) {
+        const removed = removeWisps(null);
         if (removed > 0)
-            console.log("ognik: odesłano nadmiarowe: " + removed);
-        wisp     = kept;
-        summoned = !!kept;
+            console.log("ognik: odesłano " + removed);
         return;
     }
-    removeWisps(null);
-    if (summoned)
+    const kept    = allWisps().find(w => !w.dead) || null;
+    const removed = removeWisps(kept);
+    if (removed > 0)
+        console.log("ognik: odesłano nadmiarowe: " + removed);
+    wisp = kept;
+    if (!kept)
         setTimeout(() => { if (summoned && !findWisp()) spawnWisp(true); }, 1500);
 });
 
