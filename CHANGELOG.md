@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **120**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **122**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -238,8 +238,20 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 117–119. Ognik przywołany od startu gry, kilka ogników po kolejnych zapisach – 🧪 (19.11.2026)
-- **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json` (wersja 1.2.0), gotowy `mods/nb-wisp.zip`; `common/scripting/game/game_events.cpp` (`world:load`), `common/scripting/game/game_npcs.cpp` (`npcs.all`), `common/world/world.h`, `common/game/gamesession.h` (`serialNumber`), `docs/MODS.md`
+### 121. Nowe przedmioty oznaczone w ekwipunku – 🧪 (19.11.2026)
+- **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`, `common/game/nboptions.h`
+- **Zgłoszenie:** po podniesieniu przedmiotu (np. dokumentu) trudno go znaleźć w ekwipunku. Potrzebne oznaczenie, co zostało dodane, z przełącznikiem w ustawieniach.
+- **Jak działa:**
+  - Przedmiot, który przybył od ostatniego zamknięcia ekwipunku (podniesiony, przyniesiony przez ognika, dany w dialogu, kupiony w oknie sprzedaży NB…), ma w rogu pola żółty znacznik **NOWY**.
+  - Zakładka kategorii, w której jest nowy przedmiot, ma złoty kwadracik w rogu – od razu widać, gdzie szukać.
+  - Znacznik znika po wybraniu przedmiotu (dotknięcie albo strzałki) albo gdy przedmiotu już nie ma.
+  - Nie są oznaczane: wyposażenie z początku nowej gry, przedmioty z wczytanego zapisu, przedmioty przeniesione przy otwartym ekwipunku (skrzynia, handel, łup z ciała).
+  - Znaczniki zostają po zmianie świata. Nowa gra i wczytany zapis zaczynają bez znaczników (nie są zapisywane).
+- **Ustawienie:** Ustawienia NB, strona interfejsu: **„Oznaczanie nowych przedmiotów w ekwipunku”** (`Gothic.ini`, `[NB_OG] bNewItems`, domyślnie włączone).
+- **Do sprawdzenia:** podnieść dokument – w ekwipunku zakładka dokumentów ma kwadracik, dokument ma znacznik NOWY; dotknięcie dokumentu – znacznik znika; wyłączony przełącznik – brak znaczników.
+
+### 117–120. Ognik przywołany od startu gry, kilka ogników po kolejnych zapisach – 🧪 (19.11.2026)
+- **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json` (wersja 1.2.1), gotowy `mods/nb-wisp.zip`; `common/scripting/game/game_events.cpp` (`world:load`), `common/scripting/game/game_npcs.cpp` (`npcs.all`), `common/world/world.h`, `common/game/gamesession.h` (`serialNumber`), `docs/MODS.md`
 - **Zgłoszenie:** na starcie gry ognik jest już przywołany, a po kilku zapisach i wczytaniach są 4 ogniki. Ognik ma być od razu odsyłany, ale tak, żeby dało się go potem przywołać modem JS.
 - **Przyczyna:**
   - Mod pamiętał „ognik włączony” na stałe (`storage`, poza zapisem gry), więc przywoływał go przy każdym starcie gry.
@@ -250,14 +262,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Ognika przywołuje tylko gracz: Shift+F5, zakładka „Ognik” w menu modów albo komenda `ognik`.
   - Przywołany ognik zostaje przy kolejnych wczytaniach i zmianach świata, aż do zamknięcia gry albo odesłania. Gdy wczytany zapis nie ma ognika, mod przywołuje go obok bohatera.
   - Odesłany ognik nie wraca też z wczytanego zapisu, w którym był.
+  - Przywołany ognik, którego nie ma (zginął, bohater zginął, wczytany zapis bez ognika), wraca obok bohatera w ciągu 3 s – w konsoli modów `ognik: przywołany ponownie` (poprawka 120).
   - Zawsze najwyżej jeden ognik: przywołanie najpierw odsyła inne, a co 3 s mod usuwa nadmiarowe.
   - Komendy `ognik on` / `ognik off` (samo `ognik` przełącza) – także dla innych skryptów i konsoli (`nb-wisp.ognik on`).
 - **Zmiany w silniku dla modów:**
   - Zdarzenie `world:load` (`{world, newGame}`) przy każdym nowym świecie: nowa gra, wczytany zapis (także tego samego świata), zmiana świata. Rozróżnia je numer obiektu świata i numer gry (`serialNumber`).
   - `npcs.all(instance)` – wszystkie postacie danej instancji w świecie, także martwe.
-- **Po drodze:** 117 – odsyłanie ognika przy nowej grze i każdym wczytaniu; 118 – wczytany zapis zostawiał swojego ognika; 119 – ostatecznie ognik na jedną sesję gry, jak wyżej.
+- **Po drodze:** 117 – odsyłanie ognika przy nowej grze i każdym wczytaniu; 118 – wczytany zapis zostawiał swojego ognika; 119 – ognik na jedną sesję gry, jak wyżej; 120 – po śmierci bohatera i wczytaniu zapisu bez ognika trzeba go było przywołać jeszcze raz, teraz wraca sam, dopóki jest przywołany.
 - **Instalacja:** nowy build (zdarzenie `world:load` i `npcs.all` są w silniku) oraz nowy `mods/nb-wisp.zip` w launcherze (**Mods → Add a mod (.zip)**) – zastąpi starą wersję.
-- **Do sprawdzenia:** włączenie gry i wczytanie zapisu z ognikiem – ognika nie ma (w konsoli modów `ognik: odesłano N`); przywołanie z menu – jest jeden; kolejne wczytanie – nadal jest jeden; zamknięcie gry, włączenie i wczytanie – znowu bez ognika.
+- **Do sprawdzenia:** włączenie gry i wczytanie zapisu z ognikiem – ognika nie ma (w konsoli modów `ognik: odesłano N`); przywołanie z menu – jest jeden; śmierć i wczytanie – ognik wraca po chwili; kolejne wczytanie – nadal jest jeden; zamknięcie gry, włączenie i wczytanie – znowu bez ognika.
 
 ### 116. Muzyka gry nie cichnie przy muzyce bossa – 🧪 (19.11.2026)
 - **Pliki:** `common/gamemusic.cpp/.h` (`setScriptMute`, `applyEnabled`), `common/game/gamescript.cpp` (`RX_MusicOff`, `RX_MusicOn`, `RX_StartBossMusic`, `RX_UpdateBossMusicCoords`)

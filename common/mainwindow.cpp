@@ -2479,6 +2479,7 @@ void MainWindow::updateMobileOverlay() {
   auto& hud = androidControls.hud;
   hud = {};
   hud.inventoryCategory = inventory.category();
+  hud.inventoryNew      = inventory.nbNewCategories();   // NB fix 121
   hud.inventoryTransfer = inventory.isOpen()!=InventoryMenu::State::Equip;
   hud.targetLocked = player.hasLock();
   hud.fastForward  = fastForward;

@@ -17,6 +17,7 @@
 #include "game/nbiteminfo.h"
 #include "game/nbtexts.h"
 #include "game/nbhotbar.h"
+#include "game/gamesession.h"
 
 using namespace Tempest;
 
@@ -160,6 +161,8 @@ InventoryMenu::~InventoryMenu() {
 
 void InventoryMenu::close() {
   infoItem.reset();
+  if(state!=State::Closed && player!=nullptr)
+    nbSnapshot(*player);   // NB fix 121: what the player has seen
   if(state!=State::Closed) {
     if(state==State::Trade)
       Gothic::inst().emitGlobalSound("TRADE_CLOSE"); else
@@ -187,6 +190,7 @@ void InventoryMenu::open(Npc &pl) {
   page   = 0;
   pagePl .reset(new InvPage  (pl.inventory()));
   pageOth.reset();
+  nbFindNew(pl);   // NB fix 121
   syncScriptCategory(false);
   adjustScroll();
   update();
@@ -207,6 +211,7 @@ void InventoryMenu::trade(Npc &pl, Npc &tr) {
   page   = 0;
   pagePl .reset(new InvPage  (pl.inventory()));
   pageOth.reset(new TradePage(tr.inventory()));
+  nbFindNew(pl);   // NB fix 121
   syncScriptCategory(true);
   adjustScroll();
   update();
@@ -227,6 +232,7 @@ bool InventoryMenu::ransack(Npc &pl, Npc &tr) {
   page   = 0;
   pagePl .reset(new InvPage    (pl.inventory()));
   pageOth.reset(new RansackPage(tr.inventory()));
+  nbFindNew(pl);   // NB fix 121
   syncScriptCategory(true);
   adjustScroll();
   update();
@@ -254,6 +260,7 @@ void InventoryMenu::open(Npc &pl, Interactive &ch) {
   page   = 0;
   pagePl .reset(new InvPage(pl.inventory()));
   pageOth.reset(new InvPage(ch.inventory()));
+  nbFindNew(pl);   // NB fix 121
   syncScriptCategory(true);
   adjustScroll();
   update();
@@ -272,9 +279,84 @@ void InventoryMenu::onWorldChanged() {
   player = nullptr;
   trader = nullptr;
   chest  = nullptr;
+  // NB fix 121: the counts of the player of the new world (the items of the start of a new game and of a save are not
+  // new); the marks stay after a change of the world, a new game or a loaded save has none
+  nbSeenValid = false;
+  if(auto* gs = Gothic::inst().gameSession()) {
+    if(gs->serialNumber()!=nbSession)
+      nbFresh.clear();
+    nbSession = gs->serialNumber();
+    }
+  if(auto* pl = Gothic::inst().player())
+    nbSnapshot(*pl);
+  }
+
+void InventoryMenu::nbSnapshot(const Npc& pl) {
+  nbSeen.clear();
+  for(auto it=pl.inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it)
+    nbSeen[it->clsId()] += it.count();
+  for(auto i=nbFresh.begin(); i!=nbFresh.end();) {
+    if(nbSeen.find(*i)==nbSeen.end())
+      i = nbFresh.erase(i); else
+      ++i;
+    }
+  nbSeenValid = true;
+  }
+
+void InventoryMenu::nbFindNew(const Npc& pl) {
+  if(nbSeenValid) {
+    std::unordered_map<size_t,size_t> now;
+    for(auto it=pl.inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it)
+      now[it->clsId()] += it.count();
+    for(auto& [cls,count]:now) {
+      auto was = nbSeen.find(cls);
+      if(count>(was==nbSeen.end() ? 0 : was->second))
+        nbFresh.insert(cls);
+      }
+    }
+  nbSnapshot(pl);
+  }
+
+/// NB fix 121: the item that the player has chosen (a tap, the arrows) is not new any more
+void InventoryMenu::nbSeeSelected() {
+  if(nbFresh.empty() || pagePl==nullptr || &activePage()!=pagePl.get())
+    return;
+  auto it = activePage().get(activePageSel().sel);
+  if(it.isValid())
+    nbFresh.erase(it->clsId());
+  }
+
+bool InventoryMenu::nbIsNew(const Page& page, const Item& item) const {
+  return nbMarkOn && &page==pagePl.get() && nbFresh.find(item.clsId())!=nbFresh.end();
+  }
+
+uint32_t InventoryMenu::nbNewCategories() const {
+  if(!nbMarkOn || nbFresh.empty() || player==nullptr || state==State::Closed || state==State::LockPicking)
+    return 0;
+  Page tab[CatCount];
+  auto& script = player->world().script();
+  for(int i=0; i<int(CatCount); ++i) {
+    tab[i].category   = Category(i);
+    for(int k=0; k<int(CatCount); ++k)
+      if(CategoryOrder[k]==Category(i))
+        tab[i].scriptMask = script.inventoryCategoryMask(k);
+    }
+  uint32_t ret = 0;
+  for(auto it=player->inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it) {
+    if(nbFresh.find(it->clsId())==nbFresh.end())
+      continue;
+    for(int i=0; i<int(CatCount); ++i)
+      if(tab[i].matches(*it))
+        ret |= (1u<<i);
+    }
+  return ret;
   }
 
 void InventoryMenu::tick(uint64_t /*dt*/) {
+  // NB fix 121: the marks of the new items (the settings of New Balance in OpenGothic)
+  nbMarkOn = Gothic::settingsGetI("NB_OG","bNewItems")!=0;
+  if(auto w = Gothic::inst().world())
+    nbMarkPl = NbItemInfo::isNb(w->script().getVm());
   if(state!=State::Closed && state!=State::LockPicking)
     syncScriptCategory(false);
   if(player!=nullptr && (player->isDown() || player->bodyStateMasked()==BS_UNCONSCIOUS)) {
@@ -340,6 +422,7 @@ void InventoryMenu::moveLeft(bool usePage) {
     page--;
   else if(sel.sel>0)
     sel.sel--;
+  nbSeeSelected();   // NB fix 121
   }
 
 void InventoryMenu::moveRight(bool usePage) {
@@ -351,6 +434,7 @@ void InventoryMenu::moveRight(bool usePage) {
     page++;
   else if(sel.sel+1<pg.size())
     sel.sel++;
+  nbSeeSelected();   // NB fix 121
   }
 
 void InventoryMenu::moveUp() {
@@ -360,6 +444,7 @@ void InventoryMenu::moveUp() {
     sel.sel -= columsCount;
   else
     moveLeft(false);
+  nbSeeSelected();   // NB fix 121
   }
 
 void InventoryMenu::moveDown() {
@@ -370,6 +455,7 @@ void InventoryMenu::moveDown() {
     sel.sel += columsCount;
   else
     moveRight(false);
+  nbSeeSelected();   // NB fix 121
   }
 
 void InventoryMenu::keyDownEvent(KeyEvent &e) {
@@ -895,6 +981,19 @@ void InventoryMenu::drawSlot(Painter &p, DrawPass pass, const Inventory::Iterato
     } else {
     auto fnt = Resources::font(scale);
 
+    // NB fix 121: a new item - a tag in the corner of the slot
+    if(it.isValid() && nbIsNew(page,*it)) {
+      const std::string_view tag = nbMarkPl ? "NOWY" : "NEW";
+      auto&     nf  = Resources::font(Resources::FontType::Yellow, scale*0.8f);
+      const auto ts = nf.textSize(tag);
+      const int pad = std::max(2,int(3.f*scale));
+      p.setBrush(Brush(Color(0.f,0.f,0.f,0.70f)));
+      p.drawRect(x+4,y+4,ts.w+2*pad,ts.h+pad);
+      p.setBrush(Brush(Color(0.95f,0.78f,0.25f,0.95f)));
+      p.drawRect(x+4,y+4,std::max(2,int(2.f*scale)),ts.h+pad);
+      nf.drawText(p,x+4+pad,y+4+ts.h,tag);
+      }
+
     if(it.count()>1) {
       string_frm vint(int(it.count()));
       auto sz = fnt.textSize(vint);
@@ -1057,6 +1156,7 @@ void InventoryMenu::mobileTap(float px, float py) {
   if(selected==nullptr || id>=selected->size())
     return;
   local->sel = id;
+  nbSeeSelected();   // NB fix 121
   adjustScroll();
   update();
   }

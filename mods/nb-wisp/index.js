@@ -139,10 +139,17 @@ events.on("world:load", () => {
         setTimeout(() => { if (summoned && !findWisp()) spawnWisp(true); }, 1500);
 });
 
-// the wisp stays near: if it is lost far away (a teleport), it is called again next to the hero; a second wisp goes
+// the wisp stays near: if it is lost far away (a teleport), it is called again next to the hero; a second wisp goes.
+// NB fix 120: a called wisp that is not there (killed, the hero died, a save without it - also without the event
+// world:load of the engine) comes back next to the hero within 3 s, until the player sends it away
 setInterval(() => {
+    if (!player.valid || player.dead) return;
     const w = findWisp();
-    if (!w || !player.valid) return;
+    if (!w) {
+        if (summoned && spawnWisp(true))
+            console.log("ognik: przywołany ponownie");
+        return;
+    }
     removeWisps(w);
     const a = w.position, b = player.position;
     const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;

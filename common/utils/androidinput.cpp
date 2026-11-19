@@ -1079,11 +1079,20 @@ void AndroidInput::Controller::paintInventoryButton(Painter& p, Font& font, size
       "INV_ALL", "INV_WEAPON", "INV_ARMOR", "INV_MAGIC", "INV_MAGIC_RUNE", "INV_FOOD", "INV_POTIONS", "INV_DOC", "INV_OTHER"
       };
     const int cat = b.special-Mobile::Special::FirstCategory;
+    // NB fix 121: a tab with a new item - a gold mark in its corner
+    const auto newMark = [&]() {
+      if(cat<0 || cat>=32 || ((hud.inventoryNew>>cat)&1u)==0)
+        return;
+      const float s = std::max(6.f,r.w*0.20f);
+      fill(p,{r.x+r.w-s-r.w*0.06f-1.f,r.y+r.h*0.06f-1.f,s+2.f,s+2.f},Color(0.f,0.f,0.f,0.80f*alpha));
+      fill(p,{r.x+r.w-s-r.w*0.06f,r.y+r.h*0.06f,s,s},Color(0.95f,0.78f,0.25f,alpha));
+      };
     if(0<=cat && cat<Mobile::CategoryCount) {
       const std::string name = std::string(hedinTab[cat])+(selected || active ? "_SELECT.TGA" : "_NOT_SELECT.TGA");
       if(auto* t = Resources::loadTexture(name)) {
         p.setBrush(Brush(*t,Color(1.f,1.f,1.f,alpha)));
         p.drawRect(r.x,r.y,r.w,r.h,0.f,0.f,float(t->w()),float(t->h()));
+        newMark();
         return;
         }
       }
@@ -1091,6 +1100,7 @@ void AndroidInput::Controller::paintInventoryButton(Painter& p, Font& font, size
     if(selected)
       fill(p,{r.x+border,r.y+border,r.w-2*border,r.h-2*border},Color(0.16f,0.20f,0.25f,0.97f));
     glyph(Icon(IconCategoryAll+b.special-Mobile::Special::FirstCategory),r,0.82f);
+    newMark();
     return;
     }
 

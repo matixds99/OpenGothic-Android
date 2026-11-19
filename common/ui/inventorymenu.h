@@ -5,6 +5,9 @@
 #include <Tempest/Timer>
 #include <Tempest/Sprite>
 
+#include <unordered_map>
+#include <unordered_set>
+
 #include "graphics/inventoryrenderer.h"
 #include "game/inventory.h"
 #ifdef OPENGOTHIC_TOUCH_UI
@@ -69,6 +72,9 @@ class InventoryMenu : public Tempest::Widget {
 #endif
     int   category() const;
     bool  hasSelectedItem();
+    /// NB fix 121: the categories (a bit for each Category) that have a new item - the marks on the tabs of the touch
+    /// screen; 0 when the marks are off in the settings or the inventory is closed
+    uint32_t nbNewCategories() const;
     void  mobileScroll(float dy);
 #ifdef OPENGOTHIC_TOUCH_UI
     void  mobileTap(float x, float y);
@@ -109,7 +115,21 @@ class InventoryMenu : public Tempest::Widget {
     void  mouseWheelEvent(Tempest::MouseEvent& event) override;
 
   private:
+    // NB fix 121: the items that came into the inventory of the player since he saw it last - a mark on the slot and on
+    // the tab of the category, until the item is chosen. nbSeen: the counts of the items when the inventory was last
+    // closed (or the world loaded); nbFresh: the instances of the new items (kept for one game, not in the save)
+    std::unordered_map<size_t,size_t> nbSeen;
+    std::unordered_set<size_t>        nbFresh;
+    uint32_t                          nbSession   = 0;
+    bool                              nbSeenValid = false;
+    bool                              nbMarkOn    = true;
+    bool                              nbMarkPl    = false;   // the text of the mark in Polish (New Balance)
+    void   nbSnapshot(const Npc& pl);
+    void   nbFindNew (const Npc& pl);
+    void   nbSeeSelected();
+
     struct Page;
+    bool   nbIsNew(const Page& page, const Item& item) const;   // NB fix 121
     struct InvPage;
     struct TradePage;
     struct RansackPage;
