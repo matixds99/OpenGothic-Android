@@ -188,6 +188,7 @@ struct NbState {
   std::string                                 keyPressed;
   // NB fix 82: the music of the boss fight - the last time the fight went on (RX_StartBossMusic, RX_UpdateBossMusicCoords)
   uint64_t                                    bossMusicSeen = 0;
+  bool                                        musicMuteReset = false;   // NB fix 116
   // NB fix 100: the fights of the bosses of the plugin (UNION_ABI.DLL 0x10054220, 0x100546A0): the characters with
   // AI_OnTick_<instance> that fight, their timer goes every second; built again after a load from aivar[95]
   std::vector<std::weak_ptr<zenkit::INpc>>    bossFight;
@@ -2098,8 +2099,11 @@ void GameScript::initCommon() {
       return 1;
       });
     // the music of the plugin (bosses, scenes): off / on / switched, the setting of the player stays as it is
-    bindNb("RX_MUSICOFF",    []() { GameMusic::inst().setEnabled(false); });
-    bindNb("RX_MUSICON",     []() { GameMusic::inst().setEnabled(Gothic::settingsGetI("SOUND","musicEnabled")!=0); });
+    // NB fix 116: RX_MusicOff mutes the music of the game until RX_MusicOn (on the PC it writes musicEnabled into Gothic.ini).
+    // Not by setEnabled: every option written by the scripts (Menu_WriteInt of bCanSaveGame when a fight starts) loaded
+    // the settings again and the music of the game came back over the music of the boss
+    bindNb("RX_MUSICOFF",    []() { GameMusic::inst().setScriptMute(true);  });
+    bindNb("RX_MUSICON",     []() { GameMusic::inst().setScriptMute(false); });
     bindNb("RX_TOGGLEMUSIC", []() { auto& m = GameMusic::inst(); m.setEnabled(!m.isEnabled()); });
     // NB fix 50 (from log.txt): the walk mode as text, the state of the hero, the regeneration of an NPC left behind
     bindNb("GETWALKMODESTRING", [this](std::shared_ptr<zenkit::INpc> npcRef) -> std::string {
@@ -2278,6 +2282,9 @@ void GameScript::initCommon() {
       nbCtx("boss music: ",name);
       if(Gothic::settingsGetI("SOUND","musicEnabled")!=0)
         Gothic::inst().playBossMusic(name);
+      // NB fix 116: no sound of this music - the music of the game is not left muted
+      if(!Gothic::inst().isBossMusic())
+        GameMusic::inst().setScriptMute(false);
       });
     bindNb("RX_UPDATEBOSSMUSICCOORDS", [this]() {
       nbStates[this].bossMusicSeen = Application::tickCount();
@@ -2285,7 +2292,7 @@ void GameScript::initCommon() {
       if(!Gothic::inst().isBossMusic() && Gothic::settingsGetI("SOUND","musicEnabled")!=0)
         if(auto* last = vm.find_symbol_by_name("RX_LASTBOSSMUSIC"); last!=nullptr && last->type()==zenkit::DaedalusDataType::STRING &&
            !last->get_string().empty()) {
-          GameMusic::inst().setEnabled(false);
+          GameMusic::inst().setScriptMute(true);   // NB fix 116
           Gothic::inst().playBossMusic(last->get_string());
           }
       });
@@ -4329,6 +4336,12 @@ void GameScript::tick(uint64_t dt) {
     auto* hero = world().player();
     if(npc!=nullptr && hero!=nullptr && !st.salesList.empty())
       Gothic::inst().onOpenPlayerSales(*hero,*npc,st.salesList);
+    }
+  // NB fix 116: a new game or a loaded save starts without the mute of the scripts (a fight with a boss in the save
+  // mutes it again by RX_UpdateBossMusicCoords)
+  if(!st.musicMuteReset) {
+    st.musicMuteReset = true;
+    GameMusic::inst().setScriptMute(false);
     }
   nbBossTick();   // NB fix 100: the phases of the bosses
   nbDotTick();    // NB fix 106: the damage over time

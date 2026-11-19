@@ -31,6 +31,11 @@ class GameMusic final {
 
     void      setEnabled(bool e);
     bool      isEnabled() const;
+    // NB fix 116: RX_MusicOff/RX_MusicOn of New Balance (the music of the bosses, the concert). The mute stays until the
+    // scripts end it: the options written by the scripts (bCanSaveGame at the start of a fight) do not turn the music
+    // of the game on again
+    void      setScriptMute(bool m);
+    bool      isScriptMuted() const { return scriptMute; }
     void      setMusic(Music m);
     void      setMusic(const zenkit::IMusicTheme &theme, Tags t);
     void      clearZoneMusic();
@@ -46,6 +51,8 @@ class GameMusic final {
 
     void      setupSettings();
     void      playCurrent();
+    void      applyEnabled();
+    bool      isOn() const { return enabled && !scriptMute; }
 
     static GameMusic* instance;
 
@@ -59,6 +66,9 @@ class GameMusic final {
     Tempest::SoundEffect sound;
     MusicProvider*       impl = nullptr;
     bool                 enabled = true;
+    bool                 scriptMute = false;   // NB fix 116
+    bool                 playing    = true;    // the music really plays (enabled and not muted)
+    int                  lastMusicSetting = -1;
     bool                 zoneMusicActive = true;
     Tempest::SoundEffect recordedSound, outgoingSound;
     RecordedMusic*       recordedImpl = nullptr;

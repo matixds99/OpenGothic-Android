@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **115**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **117**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 116. Muzyka gry nie cichnie przy muzyce bossa – 🧪 (19.11.2026)
+- **Pliki:** `common/gamemusic.cpp/.h` (`setScriptMute`, `applyEnabled`), `common/game/gamescript.cpp` (`RX_MusicOff`, `RX_MusicOn`, `RX_StartBossMusic`, `RX_UpdateBossMusicCoords`)
+- **Zgłoszenie:** pierwszy boss (ogar koło jaskini zielarza): muzyka bossa ledwo słychać, bo cały czas gra zwykła muzyka gry, a powinna zostać wyciszona.
+- **Przyczyna:** `RX_MusicOff` wyłączał muzykę tak samo jak opcja w ustawieniach. Na początku walki skrypty NB zapisują opcję `bCanSaveGame` (`Menu_WriteInt`, blokada zapisu w walce). Każdy zapis opcji wczytuje ustawienia od nowa, a razem z nimi „muzyka włączona” z ustawień – muzyka gry wracała zaraz po wyciszeniu.
+- **Jak to działa na PC:** `RX_MusicOff` zapisuje `musicEnabled=0` w Gothic.ini i zatrzymuje muzykę, `RX_MusicOn` włącza ją z powrotem.
+- **Poprawka:**
+  - `RX_MusicOff`/`RX_MusicOn` ustawiają osobne wyciszenie od skryptów. Zapis innych opcji go nie zdejmuje, a opcja muzyki w ustawieniach zostaje nietknięta.
+  - Wyciszenie kończy `RX_MusicOn` (śmierć bossa, ucieczka na 45 s, śmierć bohatera – przez `RX_StopBossMusic`) albo włączenie muzyki w ustawieniach przez gracza.
+  - Nowa gra i wczytanie zapisu zaczynają bez wyciszenia; zapis z walki z bossem wycisza muzykę znowu przy następnym ciosie.
+  - Gdy utworu bossa nie ma w plikach gry, muzyka gry nie zostaje wyciszona.
+- **Do sprawdzenia:** walka z ogarem – słychać tylko muzykę bossa; po zabiciu bossa albo ucieczce wraca zwykła muzyka.
 
 ### 113. Koło szybkiego wyboru nie reaguje na dotyk – 🧪 (18.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp` (`onInput`)

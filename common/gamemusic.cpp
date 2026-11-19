@@ -710,23 +710,37 @@ GameMusic::Tags GameMusic::mkTags(GameMusic::Tags daytime, GameMusic::Tags mode)
   }
 
 void GameMusic::setEnabled(bool e) {
-  const bool wasEnabled = enabled;
   enabled = e;
+  applyEnabled();
+  }
+
+// NB fix 116: the mute of the scripts of New Balance, apart from the option of the music
+void GameMusic::setScriptMute(bool m) {
+  if(scriptMute==m)
+    return;
+  scriptMute = m;
+  applyEnabled();
+  }
+
+void GameMusic::applyEnabled() {
+  const bool on    = isOn();
+  const bool wasOn = playing;
+  playing = on;
   const bool hasMusic = zoneMusicActive || overrideTheme.has_value();
-  impl->setEnabled(e && recordedImpl==nullptr && hasMusic);
+  impl->setEnabled(on && recordedImpl==nullptr && hasMusic);
   // Stop the OpenAL source as well as the legacy provider. Its streaming
   // buffer may still contain samples prepared before the provider was disabled.
-  if(!e || recordedImpl!=nullptr || !hasMusic)
+  if(!on || recordedImpl!=nullptr || !hasMusic)
     sound.pause();
-  else if(!wasEnabled)
+  else if(!wasOn)
     sound.play();
   if(recordedImpl!=nullptr) {
-    if(!e)
+    if(!on)
       recordedSound.pause();
-    else if(!wasEnabled)
+    else if(!wasOn)
       recordedSound.play();
     }
-  if(!e)
+  if(!on)
     outgoingSound.pause();
   }
 
@@ -804,7 +818,7 @@ void GameMusic::playCurrent() {
       recordedSound.setVolume(Gothic::settingsGetF("SOUND","musicVolume"));
       impl->setEnabled(false);
       sound.pause();
-      if(enabled)
+      if(isOn())
         recordedSound.play();
       Log::i("CoM music: playing ",theme.file);
       }
@@ -821,8 +835,8 @@ void GameMusic::playCurrent() {
   recordedImpl = nullptr;
   recordedFile.clear();
   impl->playTheme(theme,currentMusic.tags);
-  impl->setEnabled(enabled);
-  if(enabled)
+  impl->setEnabled(isOn());
+  if(isOn())
     sound.play();
   else
     sound.pause();
@@ -860,6 +874,10 @@ void GameMusic::setupSettings() {
       sound.play();
     }
 
+  // NB fix 116: the player turns the music on in the options - the mute of the scripts ends as well
+  if(musicEnabled!=0 && lastMusicSetting==0)
+    scriptMute = false;
+  lastMusicSetting = musicEnabled;
   setEnabled(musicEnabled != 0);
   sound.setVolume(musicVolume);
   recordedSound.setVolume(musicVolume);

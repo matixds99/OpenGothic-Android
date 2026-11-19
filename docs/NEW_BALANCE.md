@@ -54,7 +54,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/gothic.cpp` | ekran wczytywania: obrazki moda `LOADING_<ŚWIAT>_<numer>` | 3, 3a |
 | `common/mainwindow.cpp` | ekran wczytywania: świat z nagłówka save'a, czarne tło zamiast białego, pasek wczytywania dla tekstur HD | 3, 3a, 14 |
 | `common/ui/gamemenu.cpp` | strona „Ustawienia gry” z przełącznikami NB, okno statystyk postaci (B) z 5 zakładkami, zakładki dziennika (zakończone, bestiariusz), przełącznik „Jasna noc (do testów)” | 5, 8, 10, 15, 53 |
-| `common/gamemusic.cpp` | muzyka: segment motywu ładowany w wątku gry, nie w wątku dźwięku; wyższy priorytet wątku dźwięku na Androidzie, muzyka ładowana w osobnym wątku dla obu silników muzyki (zacinanie na ekranie wczytywania) | 36, 37, 38 |
+| `common/gamemusic.cpp` | muzyka: segment motywu ładowany w wątku gry, nie w wątku dźwięku; wyższy priorytet wątku dźwięku na Androidzie, muzyka ładowana w osobnym wątku dla obu silników muzyki (zacinanie na ekranie wczytywania); wyciszenie muzyki gry przez skrypty NB (`setScriptMute`), którego nie zdejmuje zapis opcji | 36, 37, 38, 116 |
 | `game/main.cpp` | dłuższy bufor dźwięku OpenAL (`alsoft.conf`, 6 × 20 ms); powtarzany błąd ZenKita „Accessing member” raz w logu, potem licznik | 37, 75 |
 | `common/game/playercontrol.cpp` | „lepki” focus przeciwnika w walce wręcz (bohater sam się do niego obraca) | 18 |
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |
