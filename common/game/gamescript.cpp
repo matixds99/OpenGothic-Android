@@ -189,6 +189,7 @@ struct NbState {
   // NB fix 82: the music of the boss fight - the last time the fight went on (RX_StartBossMusic, RX_UpdateBossMusicCoords)
   uint64_t                                    bossMusicSeen = 0;
   bool                                        musicMuteReset = false;   // NB fix 116
+  zenkit::IInfo*                              curInfo = nullptr;        // NB fix 124: the info of the choice that runs
   // NB fix 100: the fights of the bosses of the plugin (UNION_ABI.DLL 0x10054220, 0x100546A0): the characters with
   // AI_OnTick_<instance> that fight, their timer goes every second; built again after a load from aivar[95]
   std::vector<std::weak_ptr<zenkit::INpc>>    bossFight;
@@ -2302,6 +2303,12 @@ void GameScript::initCommon() {
     // RX_TerminateDialog (oCInformationManager::Exit) and RX_ClearInput (zCInput::ClearKeyBuffer) after the teleport
     // of the rune: the scripts call AI_StopProcessInfos before, the dialog closes by it - nothing more here
     bindNb("RX_TERMINATEDIALOG", []() {});
+    // NB fix 124: RX_ClearCurrentDialog (RX_ClearDialog - the choice "...(Wróć)" of the menus of NB: the shrines, the
+    // tables): the choices of the info that runs are cleared, the dialog goes back to its list
+    bindNb("RX_CLEARCURRENTDIALOG", [this]() {
+      if(auto* info = nbStates[this].curInfo)
+        info->choices.clear();
+      });
     bindNb("RX_CLEARINPUT",      []() {});
     bindNb("RX_MULT_SETPARTYNPC",     [](std::shared_ptr<zenkit::INpc>) {});
     bindNb("MDL_SETHEROANIFPS",       [](std::shared_ptr<zenkit::INpc>, std::string_view, float) {});
@@ -3685,7 +3692,21 @@ void GameScript::exec(const GameScript::DlgChoice &dlg, Npc& player, Npc& npc) {
 
   if(auto* fn = vm.find_symbol_by_index(dlg.scriptFn); fn!=nullptr && nbStates.count(this))
     nbCtx("dialog: ",npc.displayName()," -> ",fn->name());
-  vm.call_function(vm.find_symbol_by_index(dlg.scriptFn));
+  // NB fix 124: RX_ClearCurrentDialog (the choice "Wróć" of NB) clears the choices of this info
+  auto* nb       = nbStates.count(this) ? &nbStates[this] : nullptr;
+  auto* prevInfo = nb!=nullptr ? nb->curInfo : nullptr;
+  if(nb!=nullptr)
+    nb->curInfo = &info;
+  try {
+    vm.call_function(vm.find_symbol_by_index(dlg.scriptFn));
+    }
+  catch(...) {
+    if(nb!=nullptr)
+      nb->curInfo = prevInfo;
+    throw;
+    }
+  if(nb!=nullptr)
+    nb->curInfo = prevInfo;
   }
 
 void GameScript::printCannotUseError(Npc& npc, int32_t atr, int32_t nValue) {
