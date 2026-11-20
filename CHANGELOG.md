@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **126**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **127**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 126. Obrażenia czarów rosną z inteligencją (`RX_DamageCalcRunes`) – 🧪 (20.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h` (`nbDamageCalcRunes`), `common/game/definitions/spelldefinitions.cpp/.h` (`refresh`)
+- **Zgłoszenie:** czary nie zadają większych obrażeń po zwiększeniu inteligencji.
+- **Przyczyna:** na PC obrażenia i koszt każdego czaru liczy plugin (UNION_ABI.DLL 0x10083400) – skrypty po zmianie inteligencji wołają tylko `RX_DamageCalcRunes`. Port tej funkcji nie miał. Do tego OpenGothic czytał dane czarów raz, na starcie gry, a oryginalny silnik przy każdym rzucie.
+- **Poprawka:**
+  - Wzory przepisane z DLL dla ok. 140 czarów (`SPL_DAMAGE_*`, `SPL_COST_*`, `STEP_*`): podstawa czaru + część inteligencji. Część zależy od gildii (magowie: 1/4 inteligencji, w szacie maga więcej – do całej) i rośnie wolniej po przekroczeniu progu danego kręgu czaru. Dochodzą: nauczone zaklęcia (`countLearnSpell`, procent), Pełna synchronizacja (−15% części inteligencji), klątwa (−50%), droga szamana (−75%).
+  - Czary paladynów i templariuszy (święty pocisk, odpędzenie zła, uderzenia): podstawa + cała inteligencja, u templariuszy z umiejętnością także siła albo zręczność.
+  - Po każdej zmianie wartości dane czarów są tworzone od nowa – nowe obrażenia działają od następnego rzutu.
+  - Przeliczenie także po wczytaniu gry i co 3 s (szata maga, klątwa, zmiana gildii), bo te wartości nie są w zapisie gry.
+- **Nie ma:** tryb pluginu z inną tabelą (specjalna wersja moda) i karma bogów w obrażeniach czarów (`varNewKarmaEnabled` – nie ma jej w tych skryptach); obrażenia Szponu Beliara jako broni.
+- **Do sprawdzenia:** Damage Numbers – obrażenia np. kuli ognia przed i po dodaniu inteligencji Marvinem; w logu `[ctx] spells: the damage counted again (intelligence N)`.
 
 ### 125. Paczka 5: funkcje pluginu z logu z 20.11 – 🧪 (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/world.cpp/.h`, `common/world/objects/vob.cpp/.h`
@@ -777,7 +789,6 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - [ ] Walka kilku postaci z jednym celem: cel „głupieje” (krąży, nie atakuje) – nagranie z obozu bandytów, Brago.
 - [ ] Style walki szkieletów (`GIL_SKELETON`) – poprawka 35.
 - [ ] Mieszek i torba na bohaterze – `EXT_PutInSlot` działa od poprawki 125, sprawdzić opcje `bShowPocket`/`bShowBag` z poprawki 5.
-- [ ] `RX_DamageCalcRunes` – obrażenia czarów zależne od inteligencji (UNION_ABI.DLL 0x10083400).
 - [ ] Znikanie pustych ciał (opcja optymalizacji NB).
 - [x] Funkcje bossów wołane przez plugin: `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…` – poprawki 100–101 (do testu).
 - [x] Obrażenia w czasie (`RX_ApplyDotDamage`, `RX_ClearAllDots`) – poprawka 106 (do testu).

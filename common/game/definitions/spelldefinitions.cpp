@@ -15,6 +15,20 @@ SpellDefinitions::SpellDefinitions(zenkit::DaedalusVm& vm) : vm(vm) {
 SpellDefinitions::~SpellDefinitions() {
   }
 
+void SpellDefinitions::refresh() {
+  for(auto& i:spl) {
+    auto* sym = vm.find_symbol_by_instance(i);
+    if(sym==nullptr)
+      continue;
+    try {
+      vm.init_instance(i,sym);
+      }
+    catch(const std::exception& e) {
+      Log::e("spell refresh: ",sym->name(),": ",e.what());
+      }
+    }
+  }
+
 const zenkit::ISpell& SpellDefinitions::find(std::string_view instanceName) const {
   string_frm format("SPELL_",instanceName);
   for(auto& i:format)

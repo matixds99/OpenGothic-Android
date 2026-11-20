@@ -196,6 +196,12 @@ struct NbState {
   std::unordered_map<std::string,bool>        vobVisual;
   uint32_t                                    vobVisualWorld = 0;
   std::unordered_map<size_t,std::string>      slotVisual;
+  // NB fix 126: the damage of the spells by the intelligence (RX_DamageCalcRunes); the definitions of the spells are made
+  // again at the next tick when the values changed; the values are counted again after a load
+  bool                                        spellsDirty   = false;
+  uint32_t                                    spellsWorld   = 0;
+  uint64_t                                    spellsNextCheck = 0;
+  uint64_t                                    spellsHash    = 0;
   // NB fix 100: the fights of the bosses of the plugin (UNION_ABI.DLL 0x10054220, 0x100546A0): the characters with
   // AI_OnTick_<instance> that fight, their timer goes every second; built again after a load from aivar[95]
   std::vector<std::weak_ptr<zenkit::INpc>>    bossFight;
@@ -2416,6 +2422,16 @@ void GameScript::initCommon() {
       });
     // RX_SetFXNpc(npc) (0x1017ab90): only remembers the character for the effects of the plugin
     bindNb("RX_SETFXNPC", [](std::shared_ptr<zenkit::INpc>) {});
+    // NB fix 126: RX_DamageCalcRunes() (0x1017bf70 -> 0x10083400): the damage and the cost of the spells by the
+    // intelligence of the hero (RX_ChangeInt, the curses, the heal spells of the paladins)
+    bindNb("RX_DAMAGECALCRUNES", [this]() {
+      auto& st = nbStates[this];
+      const uint64_t h = nbDamageCalcRunes();
+      if(h!=0 && h!=st.spellsHash) {
+        st.spellsHash  = h;
+        st.spellsDirty = true;   // the spells are made again at the next tick, not inside the script
+        }
+      });
     // NB fix 124: RX_ClearCurrentDialog (RX_ClearDialog - the choice "...(Wróć)" of the menus of NB: the shrines, the
     // tables): the choices of the info that runs are cleared, the dialog goes back to its list
     bindNb("RX_CLEARCURRENTDIALOG", [this]() {
@@ -5010,6 +5026,23 @@ void GameScript::tick(uint64_t dt) {
     return;
   st.lastCycleSecond = currentSecond;
   nbVobTreesSync(st,world());
+  // NB fix 126: the damage of the spells - counted again after a load (the constants are not in the save-game) and every
+  // 3 s (the robe, the curse, the guild change it as well); the spells are made again when the values changed
+  if(st.spellsWorld!=world().serialNumber() || tickCount()>=st.spellsNextCheck) {
+    st.spellsWorld     = world().serialNumber();
+    st.spellsNextCheck = tickCount()+3000;
+    const uint64_t h = nbDamageCalcRunes();
+    if(h!=0 && h!=st.spellsHash) {
+      st.spellsHash  = h;
+      st.spellsDirty = true;
+      }
+    }
+  if(st.spellsDirty && spells!=nullptr) {
+    st.spellsDirty = false;
+    spells->refresh();
+    auto* in = vm.find_symbol_by_name("ATR_INTELLECT");
+    nbCtx("spells: the damage counted again (intelligence ",in!=nullptr ? in->get_int() : 0,")");
+    }
   // NB fix 125: the visibility of the vobs that the scripts changed (RX_ToggleVobVisible) - the vobs of a world come
   // from its ZEN file, so it is put again on every new world (a load, a change of the world)
   if(st.vobVisualWorld!=world().serialNumber()) {
@@ -7648,6 +7681,268 @@ void GameScript::nbBreakLock(Npc& hero, Interactive& mob, int32_t mode) {
     runes->set_int(runeWas,99);
   if(mode==2 && forceOk)
     force->set_int(forceWas);
+  }
+
+/// NB fix 126: RX_DamageCalcRunes of UNION_ABI.DLL (0x10083400): SPL_DAMAGE_* and SPL_COST_* of the spells from the
+/// intelligence of the hero (ATR_INTELLECT of the scripts). The value of a spell: f(base, part of the intelligence, the
+/// step of the cap) - the part over the threshold of the step grows slower (0x10082190); the heal and the strikes of the
+/// paladins and the templars: g(base) - the whole intelligence and the strength or the dexterity (0x100823d0).
+/// Not here: the mode of the plugin with the other table (0x10082610, a special version of the mod) and the karma of the
+/// gods (varNewKarmaEnabled, not in these scripts). Returns a hash of the values (to know when they change)
+uint64_t GameScript::nbDamageCalcRunes() {
+  auto* hero = world().player();
+  if(hero==nullptr)
+    return 0;
+  uint64_t hash = 1469598103934665603ull;
+  const auto upper = [](std::string_view n) {
+    std::string s(n);
+    for(auto& c:s)
+      c = char(std::toupper(static_cast<unsigned char>(c)));
+    return s;
+    };
+  const auto get = [&](std::string_view n) -> int32_t {
+    auto* s = vm.find_symbol_by_name(upper(n));
+    return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member() ? s->get_int() : 0;
+    };
+  const auto set = [&](std::string_view n, int32_t v) {
+    hash = (hash ^ uint64_t(uint32_t(v))) * 1099511628211ull;
+    auto* s = vm.find_symbol_by_name(upper(n));
+    if(s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member())
+      s->set_int(v);
+    };
+
+  const int32_t intel  = get("ATR_INTELLECT");
+  const int32_t guild  = int32_t(hero->guild());
+  const int32_t circle = hero->talentSkill(TALENT_MAGE);   // the circle of the magic
+  const bool    robe   = get("MageRobeIsUp")==1;
+  const bool    mage   = guild==19 || guild==14 || guild==4 || guild==15 || guild==18 || guild==17 || guild==5;
+
+  // the parts of the intelligence: a - the most spells, b - the dark and the necromancy, c - the others, d - the water
+  int32_t a = 0, b = 0, c = 0, d = 0;
+  if(mage) {
+    if(robe) {
+      a = int32_t(double(intel)*0.5);
+      c = intel;
+      d = int32_t(float(intel)*0.65f);
+      b = int32_t(float(intel)*0.75f);
+      } else {
+      a = b = c = d = intel/4;
+      }
+    } else {
+    if(robe) {
+      a = intel/8;
+      c = intel/4;
+      b = d = intel/6;
+      } else {
+      a = b = c = d = intel/10;
+      }
+    }
+
+  // the thresholds of the steps (0x100820c0)
+  const bool    g15 = guild==15;
+  const int32_t thr[5] = { g15 ? 60 : 45, g15 ? 90 : 70, g15 ? 185 : 155, g15 ? 420 : 300, g15 ? 750 : 550 };
+  const int32_t div[5] = { 6, 5, 4, 3, 2 };
+  const bool    fullSnc = get("IsFullSnc")==1;
+  const int32_t learn   = get("countLearnSpell");
+  const bool    curse   = get("PlayerIsCurse")!=0;
+  const bool    shaman  = get("RX_IsShamanWay")==0x12f3601;
+
+  const auto f = [&](int32_t base, int32_t x, int32_t step) -> int32_t {
+    if(0<=step && step<5 && x>thr[step])
+      x = thr[step] + (x-thr[step])/div[step];
+    if(fullSnc)
+      x = int32_t(float(x)*0.85f);
+    int32_t v = base + x + (base+x)*learn/100;
+    if(curse)
+      v = v*50/100;
+    if(shaman)
+      v = v*25/100;
+    return v;
+    };
+  const int32_t strDex = std::max(hero->attribute(ATR_STRENGTH),hero->attribute(ATR_DEXTERITY));
+  const bool    palDmg = get("RX_PaladinSkill_MagicDamage")!=0;
+  const bool    tplStr = get("RX_Tpl_Skill_MagicStr")!=0 && guild==16 && get("RX_IsDarkWayWarrior")==0 &&
+                         get("RX_IsDHWay")==0 && get("RX_IsScoutWay")==0 && get("RX_IsVampWay")==0;
+  const auto g = [&](int32_t base) -> int32_t {
+    const int32_t bb = palDmg ? base+200 : base;
+    int32_t v = bb + intel + (bb+intel)*learn/100;
+    if(tplStr)
+      v += strDex;
+    if(curse)
+      v = v*50/100;
+    if(shaman)
+      v = v*25/100;
+    return v;
+    };
+  (void)d;
+
+      set("SPL_DAMAGE_HELPRUNE", f(40, int(float(intel)*0.45f), 0));
+      set("SPL_DAMAGE_FIREBOLT", f(45, a, 1));
+      set("SPL_COST_FIREBOLT", 12);
+      set("SPL_DAMAGE_INSTANTFIREBALL", f(125, a, 2));
+      set("SPL_COST_INSTANTFIREBALL", 25);
+      set("SPL_DAMAGE_FIRELANCE", f(50, a, 2));
+      set("SPL_COST_FIRELANCE", 20);
+      set("SPL_DAMAGE_HOLYFIRE", f(100, int(float(intel)*0.5f), 4));
+      set("SPL_COST_HOLYFIRE", 25);
+      set("SPL_DAMAGE_INSTANTFIRESTORM", f(265, a, 3));
+      set("SPL_COST_INSTANTFIRESTORM", 50);
+      set("SPL_DAMAGE_FIREWAVE", f(650, a, 4));
+      set("SPL_COST_FIREWAVE", 200);
+      set("SPL_DAMAGE_CHARGEFIREBALL", f(135, a, 4));
+      set("STEP_CHARGEFIREBALL", 30);
+      set("SPL_COST_CHARGEFIREBALL", 30);
+      set("SPL_DAMAGE_EXPLOSION", f(500, a, 4));
+      set("SPL_COST_EXPLOSION", 60);
+      set("SPL_DAMAGE_FIRESTORM", f(200, a, 5));
+      set("STEP_FIRESTORM", 45);
+      set("SPL_COST_FIRESTORM", 45);
+      set("SPL_DAMAGE_FIREMETEOR", f(900, a, 6));
+      set("SPL_COST_FIREMETEOR", 100);
+      set("SPL_DAMAGE_FIRERAIN", f(1000, a, 6));
+      set("SPL_COST_FIRERAIN", 350);
+      set("SPL_DAMAGE_MASTEROFDISASTER", f(1500, a, 6));
+      set("SPL_COST_MASTEROFDISASTER", 80);
+      set("SPL_COST_FIRELIGHT", 250);
+      set("SPL_COST_ORCFIREBALL", 50);
+      set("SPL_DAMAGE_ZAP", f(90, a, 1));
+      set("SPL_COST_ZAP", 10);
+      set("SPL_DAMAGE_ICEBOLT", f(85, a, 1));
+      set("SPL_COST_ICEBOLT", 10);
+      set("SPL_DAMAGE_ICELANCE", f(110, a, 2));
+      set("SPL_COST_ICELANCE", 20);
+      set("SPL_DAMAGE_LIGHTNINGFLASH", f(150, a, 2));
+      set("SPL_COST_LIGHTNINGFLASH", 25);
+      set("SPL_DAMAGE_CHARGEZAP", f(155, a, 3));
+      set("SPL_COST_CHARGEZAP", 25);
+      set("STEP_CHARGEZAP", 20);
+      set("SPL_DAMAGE_ICEEXPLOISION", f(230, d, 3));
+      set("SPL_COST_ICEEXPLOISION", 40);
+      set("SPL_DAMAGE_ICECUBE", 0);
+      set("SPL_COST_ICECUBE", 75);
+      set("SPL_DAMAGE_WATERFIST", f(450, d, 4));
+      set("SPL_COST_WATERFIST", 60);
+      set("SPL_DAMAGE_LIGHTNINGSPHERE", f(650, a, 4));
+      set("SPL_COST_LIGHTNINGSPHERE", 70);
+      set("SPL_DAMAGE_GEYSER", f(700, d, 5));
+      set("SPL_COST_GEYSER", 80);
+      set("SPL_DAMAGE_ELECTROWAVE", f(775, d, 5));
+      set("SPL_COST_ELECTROWAVE", 100);
+      set("SPL_DAMAGE_ICEWAVE", 0);
+      set("SPL_COST_ICEWAVE", 250);
+      set("SPL_DAMAGE_THUNDERSTORM", f(1300, a, 6));
+      set("SPL_COST_THUNDERSTORM", 350);
+      set("SPL_DAMAGE_ICERAIN", f(1100, d, 6));
+      set("SPL_COST_ICERAIN", 350);
+      set("SPL_COST_ADANOSBALL", 250);
+      set("SPL_COST_SUMMONSHOAL", 50);
+      set("SPL_COST_RAPIDICEBOLT", 30);
+      set("SPL_DAMAGE_BERZERK", f(65, c, 1));
+      set("SPL_Damage_Windfist", f(70, c, 2));
+      set("SPL_DAMAGE_GREENTENTACLE", f(120, c, 2));
+      set("SPL_DAMAGE_STONEFIRST", f(120, c, 2));
+      set("SPL_DAMAGE_MAGSPHERE", f(190, c, 3));
+      set("SPL_Damage_Extricate", f(350, c, 4));
+      set("SPL_DAMAGE_Acid", f(get("Trophy_MuritanToothIsUp")!=0 ? 450 : 375, c, 4));
+      set("SPL_DAMAGE_GURUMASS", f(300, c, 4));
+      set("SPL_Whirlwind_DAMAGE", f(720, c, 5));
+      set("SPL_DAMAGE_CONCUSSIONBOLT", f(1000, c, 6));
+      set("SPL_DAMAGE_GuruWrath", f(1000, c, 6));
+      set("SPL_DAMAGE_Quake", f(1800, c, 6));
+      set("SPL_COST_ConcussionBolt", 80);
+      set("SPL_COST_GURUWRATH", 80);
+      set("SPL_COST_WINDFIST", 20);
+      set("SPL_COST_SLEEP", 50);
+      set("SPL_COST_BERZERK", 10);
+      set("SPL_COST_TELEKINESIS", 15);
+      set("SPL_COST_CHARM", 100);
+      set("SPL_COST_FEAR", 75);
+      set("SPL_COST_GREENTENTACLE", 50);
+      set("SPL_COST_SEVEREFETIDITY", 50);
+      set("SPL_COST_ACID", 60);
+      set("SPL_COST_CONTROL", 60);
+      set("SPL_COST_WHIRLWIND", 70);
+      set("SPL_COST_GURUWRATH", 100);
+      set("SPL_COST_QUAKE", 300);
+      set("SPL_COST_EXTRICATE", 75);
+      set("SPL_COST_MAGSPHERE", 35);
+      set("SPL_COST_GURUMASS", 60);
+      set("SPL_COST_STONEFIRST", 25);
+      set("SPL_DAMAGE_Deathbolt", f(80, b, 1));
+      set("SPL_Damage_Lacerate", f(140, b, 2));
+      set("SPL_DAMAGE_GREENSTRIKE", f(200, b, 2));
+      set("SPL_Swarm_Damage", f(25, b, 2));
+      set("SPL_DAMAGE_Energyball", f(250, b, 3));
+      set("SPL_DAMAGE_NECROBOLT", f(350, b, 4));
+      set("SPL_DAMAGE_Deathball", f(450, b, 4));
+      set("SPL_Damage_Skull", f(700, b, 5));
+      set("SPL_Damage_MassDeath", f(1000, b, 6));
+      set("SPL_Damage_BLOODRAIN", f(1400, b, 6));
+      set("SPL_DAMAGE_DOT_FIRST", f(30, a, 1));
+      set("SPL_DAMAGE_DOT_SECOND", f(60, a, 2));
+      set("SPL_DAMAGE_DARKBALL", f(160, b, 3));
+      set("SPL_DAMAGE_BIGDARKBALL", f(300, b, 4));
+      set("SPL_DAMAGE_DARKSPEAR", f(450, b, 5));
+      set("SPL_DAMAGE_DARKWAVE", f(1100, b, 6));
+      set("SPL_COST_DEATHBOLT", 10);
+      set("SPL_COST_SWARM", 15);
+      set("SPL_COST_SUMMONGOBLINSKELETON", 50);
+      set("SPL_COST_SUMMONSKELETON", 100);
+      set("SPL_COST_LACERATE", 20);
+      set("SPL_Cost_EnergyBall", 35);
+      set("SPL_COST_SUMMONDEMON", 150);
+      set("SPL_COST_SUMMONZOMBIE", 75);
+      set("SPL_COST_DEATHBALL", 60);
+      set("SPL_COST_ARMYOFDARKNESS", 100);
+      set("SPL_COST_MASSDEATH", 300);
+      set("SPL_COST_NECROBOLT", 75);
+      set("SPL_COST_SKULL", 90);
+      set("SPL_COST_RAGE", 100);
+      set("SPL_COST_BLOODRAIN", 400);
+      set("SPL_DAMAGE_BELIARSRUNE_01", f(130, a, 4));
+      set("SPL_DAMAGE_BELIARSRUNE_02", f(230, a, 4));
+      set("SPL_DAMAGE_BELIARSRUNE_03", f(330, a, 4));
+      set("SPL_DAMAGE_BELIARSRUNE_04", f(430, a, 4));
+      set("SPL_DAMAGE_BELIARSRUNE_05", f(530, a, 4));
+      set("SPL_DAMAGE_BELIARSRUNE_06", f(600, a, 4));
+      set("SPL_DAMAGE_SUPERBELIARSRUNE", f(850, int(float(intel)*0.65f), 5));
+      set("SPL_COST_BELIARSRUNE_SUPER", 85);
+      set("SPL_COST_BELIARSRUNE_06", 85);
+      set("SPL_COST_BELIARSRUNE_05", 75);
+      set("SPL_COST_BELIARSRUNE_04", 60);
+      set("SPL_COST_BELIARSRUNE_03", 45);
+      set("SPL_COST_BELIARSRUNE_02", 30);
+      set("SPL_COST_BELIARSRUNE_01", 100);
+      set("SPL_DAMAGE_DESTROYGUARDIANS", f(3500, c, 6));
+      set("SPL_Damage_BreathOfDeath", f(900, a, 4));
+      set("SPL_Damage_AdanosBall", f(900, a, 6));
+      set("SPL_DAMAGE_ABYSSSPELL", f(550, c, 6));
+      set("SPL_DAMAGE_DESTROYUNDEAD", f(120*circle+700, c, 6));
+      set("SPL_COST_DESTROYUNDEAD", 100);
+      set("SPL_COST_BREATHOFDEATH", 90);
+      set("SPL_COST_LIGHT", 5);
+      set("SPL_COST_SUMMONWOLF", 10);
+      set("SPL_COST_ABYSSSPELL", 100);
+      set("SPL_COST_ADANOSBALL", 100);
+      set("SPL_COST_SHRINK", 150);
+      set("SPL_COST_SUMMONGOLEM", 75);
+      set("STEP_WINDFIST", 20);
+      set("SPL_DAMAGE_PALHOLYBOLT", g(350));
+      set("SPL_DAMAGE_PALREPELEVIL", g(700));
+      set("SPL_DAMAGE_PALDESTROYEVIL", g(1000));
+      set("SPL_DAMAGE_TPLLIGHTSTRIKE", g(90));
+      set("SPL_DAMAGE_TPLMEDIUMSTRIKE", g(225));
+      set("SPL_DAMAGE_TPLHEAVYSTRIKE", g(465));
+      set("SPL_DAMAGE_TPLSUPERSTRIKE", g(800));
+      set("SPL_COST_DARKRUNE_STEAL", get("DarkSkill1")*50);
+      set("SPL_COST_DARKRUNE_DEFENSE", get("DarkSkill2")*50);
+      set("SPL_COST_DARKRUNE_ILLNESS", get("DarkSkill3")*50);
+      set("SPL_COST_DARKRUNE_Absorb", get("DarkSkill5")*50);
+      set("SPL_COST_DARKRUNE_LORD", get("DarkSkill6")*50);
+      set("SPL_COST_DARKSTATSUP", get("DarkSkill7")*50);
+      set("SPL_COST_DARKRUNE_EDEFENSE", get("DarkSkill8")*50);
+
+  return hash;
   }
 
 bool GameScript::nbIsSummon(const Npc& npc) {
