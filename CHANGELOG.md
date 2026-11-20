@@ -238,7 +238,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 126. Obrażenia czarów rosną z inteligencją (`RX_DamageCalcRunes`) – 🧪 (20.11.2026)
+### 126. Obrażenia czarów rosną z inteligencją (`RX_DamageCalcRunes`) – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbDamageCalcRunes`), `common/game/definitions/spelldefinitions.cpp/.h` (`refresh`)
 - **Zgłoszenie:** czary nie zadają większych obrażeń po zwiększeniu inteligencji.
 - **Przyczyna:** na PC obrażenia i koszt każdego czaru liczy plugin (UNION_ABI.DLL 0x10083400) – skrypty po zmianie inteligencji wołają tylko `RX_DamageCalcRunes`. Port tej funkcji nie miał. Do tego OpenGothic czytał dane czarów raz, na starcie gry, a oryginalny silnik przy każdym rzucie.
@@ -249,6 +249,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Przeliczenie także po wczytaniu gry i co 3 s (szata maga, klątwa, zmiana gildii), bo te wartości nie są w zapisie gry.
 - **Nie ma:** tryb pluginu z inną tabelą (specjalna wersja moda) i karma bogów w obrażeniach czarów (`varNewKarmaEnabled` – nie ma jej w tych skryptach); obrażenia Szponu Beliara jako broni.
 - **Do sprawdzenia:** Damage Numbers – obrażenia np. kuli ognia przed i po dodaniu inteligencji Marvinem; w logu `[ctx] spells: the damage counted again (intelligence N)`.
+- **Test (20.11):** działa – runa bez broni magicznej 447 obrażeń, po założeniu broni (+75 inteligencji) 508.
 
 ### 125. Paczka 5: funkcje pluginu z logu z 20.11 – 🧪 (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/world.cpp/.h`, `common/world/objects/vob.cpp/.h`
