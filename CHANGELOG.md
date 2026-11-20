@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **132**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **133**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – 🧪
-2. **130** – trolle: rzut startuje także w trakcie innej animacji, log z przyczyną, gdy troll nie rzuca – 🧪
-3. **129** – przywoływanie stworzeń działa (licznik miejsc nie rośnie bez końca) – ✅
-4. **128** – trolle rzucają kamieniami – 🧪
-5. **127** – bonusy przedmiotów działają (korona królów +15 many, zdrowie ze zbroi i hełmów); manekiny treningowe zawsze do zaznaczenia – ✅
+1. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – 🧪
+2. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
+3. **130** – trolle: rzut startuje także w trakcie innej animacji, log z przyczyną, gdy troll nie rzuca – 🧪
+4. **129** – przywoływanie stworzeń działa (licznik miejsc nie rośnie bez końca) – ✅
+5. **128** – trolle rzucają kamieniami – 🧪
 
 ---
 
@@ -250,7 +250,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 131. Panel przywołańców na ekranie, teleport przywołańców z bohaterem – 🧪 (20.11.2026)
+### 132. Zmiana celu w walce – potwór bił tylko bohatera, choć ranił go przywołaniec – 🧪 (20.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`
+- **Zgłoszenie:** troll atakował tylko bohatera, a przywołany golem bił go i zabrał mu połowę życia.
+- **Przyczyna:** skrypty NB (`B_MM_AssessDamage`, `B_AssessDamage`, `ZS_MM_Attack_Loop`, `ZS_Attack_Loop`) zmieniają cel przez funkcje pluginu `RX_CanReAttack`, `RX_CanReAttackNow`, `RX_SetReAttackNpc`, `RX_HasReAttackNpc`, `RX_GetReAttackNpc` i `RX_ClearReAttackNpc` (UNION_ABI.DLL 0x10183dc0–0x10184050). Port ich nie miał, a domyślne 0 trzymało każdą postać przy pierwszym wrogu.
+- **Poprawka:**
+  - Funkcje działają jak w pluginie. Postać trafiona kolejny raz przez kogoś innego niż jej cel odwraca się do niego od razu. Jeśli akurat zadaje cios, zapamiętuje go i odwraca się po ciosie (pętla ataku).
+  - Dotyczy potworów i ludzi, nie tylko przywołańców.
+- **Do sprawdzenia:**
+  - Walka z trollem razem z golemem: troll po kilku ciosach golema powinien odwrócić się do niego.
+  - W logu `[ctx] reattack: …`.
+
+### 131. Panel przywołańców na ekranie, teleport przywołańców z bohaterem – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/game/gamesession.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp/.h`
 - **Zgłoszenie:** brak sterowania przywołańcami na telefonie; przywołańcy nie przenoszą się z bohaterem po teleporcie.
 - **Poprawka:**
@@ -266,6 +277,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Teleport runą z przywołańcem.
   - Przejście do innego świata.
   - W logu `[ctx] summons: …`.
+- **Test (20.11):** działa – panel, tryby, reset, teleport i zmiana świata.
 
 ### 130. Troll dalej nie rzuca kamieniami – 🧪 (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`nbTrollTick`)

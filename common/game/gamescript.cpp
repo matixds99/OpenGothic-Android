@@ -210,6 +210,9 @@ struct NbState {
   uint64_t                                    trollNextLook = 0;
   uint64_t                                    summonNextCount = 0;   // NB fix 129
   uint32_t                                    followWorld = 0;       // NB fix 131: the world and the place of the hero
+  // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
+  std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
+  int32_t                                     reattackNext = 1;
   Tempest::Vec3                               followPos;             //   in the frame before, for his teleports
   bool                                        spellsDirty   = false;
   uint32_t                                    spellsWorld   = 0;
@@ -2414,6 +2417,73 @@ void GameScript::initCommon() {
       });
     // RX_ResetSummons() (0x1016b020, PerFrame when the hero dies, the change of a pet): the summoned creatures go away,
     // the pets stay (NIXDOG, PET_JINA)
+    // NB fix 132: the change of the target in a fight (UNION_ABI.DLL 0x10183dc0..0x10184050). B_MM_AssessDamage and
+    // B_AssessDamage: a character hit again by another enemy than its target turns to it at once (RX_CanReAttackNow) or
+    // keeps it for later (RX_SetReAttackNpc); ZS_Attack_Loop / ZS_MM_Attack_Loop turn to the kept one. Without them the
+    // default 0 kept every monster on its first enemy - a troll beaten by a golem chased only the hero
+    {
+    const auto slotIndex = [this]() -> int32_t {
+      auto* s = vm.find_symbol_by_name("AIVRX_REATTACK_SLOT");
+      return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT ? s->get_int() : -1;
+      };
+    const auto keptNpc = [this](int32_t key) -> Npc* {
+      auto& st = nbStates[this];
+      auto  it = st.reattack.find(key);
+      if(key<=0 || it==st.reattack.end())
+        return nullptr;
+      auto h = it->second.lock();
+      if(h==nullptr) {
+        st.reattack.erase(it);
+        return nullptr;
+        }
+      return findNpc(h);
+      };
+    bindNb("RX_CANREATTACK", [this,slotIndex,keptNpc](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
+      auto* npc = findNpcRaw(ref);
+      const int32_t slot = slotIndex();
+      if(npc==nullptr || slot<0)
+        return 1;
+      auto* kept = keptNpc(npc->newBalanceGetNpcVar(slot));
+      return kept==nullptr ? 1 : 0;
+      });
+    // at once, unless the character is in the middle of its own blow
+    bindNb("RX_CANREATTACKNOW", [this](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
+      auto* npc = findNpcRaw(ref);
+      return npc!=nullptr && npc->isAttackAnim() ? 0 : 1;
+      });
+    bindNb("RX_HASREATTACKNPC", [this,slotIndex,keptNpc](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
+      auto* npc = findNpcRaw(ref);
+      const int32_t slot = slotIndex();
+      if(npc==nullptr || slot<0)
+        return 0;
+      auto* kept = keptNpc(npc->newBalanceGetNpcVar(slot));
+      return kept!=nullptr && !kept->isDead() ? 1 : 0;
+      });
+    bindNb("RX_SETREATTACKNPC", [this,slotIndex](std::shared_ptr<zenkit::INpc> ref, std::shared_ptr<zenkit::INpc> otherRef) {
+      auto* npc = findNpcRaw(ref);
+      auto* oth = findNpcRaw(otherRef);
+      const int32_t slot = slotIndex();
+      if(npc==nullptr || oth==nullptr || slot<0)
+        return;
+      auto& st  = nbStates[this];
+      int32_t key = npc->newBalanceGetNpcVar(slot);
+      if(key<=0) {
+        key = st.reattackNext++;
+        npc->newBalanceSetNpcVar(slot,key);
+        }
+      st.reattack[key] = oth->handlePtr();
+      nbCtx("reattack: ",npc->displayName()," keeps ",oth->displayName());
+      });
+    bindNb("RX_GETREATTACKNPC", [this,keptNpc](int32_t key) -> std::shared_ptr<zenkit::INpc> {
+      auto* kept = keptNpc(key);
+      if(kept!=nullptr)
+        nbCtx("reattack: turns to ",kept->displayName());
+      return kept!=nullptr ? kept->handlePtr() : nullptr;
+      });
+    bindNb("RX_CLEARREATTACKNPC", [this](int32_t key) {
+      nbStates[this].reattack.erase(key);
+      });
+    }
     bindNb("RX_RESETSUMMONS", [this]() {
       nbResetSummons(false,false);
       });
