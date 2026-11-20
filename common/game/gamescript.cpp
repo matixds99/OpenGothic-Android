@@ -209,6 +209,8 @@ struct NbState {
   std::unordered_map<const zenkit::INpc*,TrollThrow> trolls;
   uint64_t                                    trollNextLook = 0;
   uint64_t                                    summonNextCount = 0;   // NB fix 129
+  uint32_t                                    followWorld = 0;       // NB fix 131: the world and the place of the hero
+  Tempest::Vec3                               followPos;             //   in the frame before, for his teleports
   bool                                        spellsDirty   = false;
   uint32_t                                    spellsWorld   = 0;
   uint64_t                                    spellsNextCheck = 0;
@@ -2413,23 +2415,7 @@ void GameScript::initCommon() {
     // RX_ResetSummons() (0x1016b020, PerFrame when the hero dies, the change of a pet): the summoned creatures go away,
     // the pets stay (NIXDOG, PET_JINA)
     bindNb("RX_RESETSUMMONS", [this]() {
-      auto* hero = world().player();
-      if(hero==nullptr)
-        return;
-      std::vector<Npc*> gone;
-      world().detectNpc(hero->position(),100000.f,[&](Npc& n) {
-        if(n.isPlayer() || !nbIsSummon(n))
-          return;
-        auto* sym = vm.find_symbol_by_index(uint32_t(n.handle().symbol_index()));
-        const std::string_view inst = sym!=nullptr ? std::string_view(sym->name()) : std::string_view();
-        if(inst=="NIXDOG" || inst=="PET_JINA")
-          return;
-        gone.push_back(&n);
-        });
-      for(auto* n:gone)
-        world().removeNpc(*n);
-      if(!gone.empty())
-        nbCtx("summons removed: ",gone.size());
+      nbResetSummons(false,false);
       });
     // RX_SetFXNpc(npc) (0x1017ab90): only remembers the character for the effects of the plugin
     bindNb("RX_SETFXNPC", [](std::shared_ptr<zenkit::INpc>) {});
@@ -5031,6 +5017,8 @@ void GameScript::tick(uint64_t dt) {
         }
       }
   }
+
+  nbSummonsFollowTick();   // NB fix 131
 
   const uint64_t currentSecond = tickCount()/1000;
   if(currentSecond==st.lastCycleSecond)
@@ -7711,6 +7699,8 @@ void GameScript::nbSummonCountTick() {
   st.summonNextCount = tickCount()+500;
   auto* var  = vm.find_symbol_by_name("RX_SUMMONCOUNT");
   auto* hero = world().player();
+  if(hero==nullptr)
+    nbSummonsAlive = 0;
   if(var==nullptr || var->type()!=zenkit::DaedalusDataType::INT || hero==nullptr)
     return;
   static const std::unordered_map<std::string_view,int32_t> places = {
@@ -7763,7 +7753,7 @@ void GameScript::nbSummonCountTick() {
     return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT ? s->get_int() : 0;
     };
   const int32_t golemGuild = intVar("GIL_SUMMONED_GOLEM");
-  int32_t count = 0;
+  int32_t count = 0, alive = 0;
   world().detectNpc(hero->position(),1.0e6f,[&](Npc& n) {
     if(n.isDead() || n.isPlayer() || !nbIsSummon(n))
       return;
@@ -7771,6 +7761,7 @@ void GameScript::nbSummonCountTick() {
     const std::string_view inst = sym!=nullptr ? std::string_view(sym->name()) : std::string_view();
     if(inst=="WISP_DETECTOR" || inst=="NIXDOG" || inst=="PET_JINA" || inst=="HERO_TOTEM_VOB")
       return;
+    ++alive;
     if(inst=="SUMMONED_SKELETONUNIQ") {
       count += intVar("RX_NECROSUMMONERUPSID")!=0 ? 1 : 2;
       return;
@@ -7781,10 +7772,136 @@ void GameScript::nbSummonCountTick() {
       }
     count += (golemGuild!=0 && int32_t(n.guild())==golemGuild) ? 2 : 1;
     });
+  nbSummonsAlive = alive;   // NB fix 131
   if(var->get_int()!=count) {
     nbCtx("summon places: ",var->get_int()," -> ",count);
     var->set_int(count);
     }
+  }
+
+/// NB fix 131: RX_SummonMode of the scripts - 0 the summoned creatures attack (active), 1 they attack nobody (passive)
+bool GameScript::nbSummonsPassive() {
+  auto* mode = vm.find_symbol_by_name("RX_SUMMONMODE");
+  return mode!=nullptr && mode->type()==zenkit::DaedalusDataType::INT && mode->get_int()==1;
+  }
+
+/// NB fix 131: the choice TRYB of the panel - RX_QuickPanel_SummonMode of the scripts switches RX_SummonMode and writes
+/// the mode on the screen (the quick panel of the plugin calls it)
+void GameScript::nbSummonsToggleMode() {
+  auto* fn = vm.find_symbol_by_name("RX_QUICKPANEL_SUMMONMODE");
+  if(fn!=nullptr && fn->type()==zenkit::DaedalusDataType::FUNCTION) {
+    try {
+      vm.call_function<void>(fn);
+      }
+    catch(const std::exception& e) {
+      Log::e("NB: RX_QuickPanel_SummonMode failed: ",e.what());
+      }
+    } else {
+    auto* mode = vm.find_symbol_by_name("RX_SUMMONMODE");
+    if(mode!=nullptr && mode->type()==zenkit::DaedalusDataType::INT)
+      mode->set_int(mode->get_int()==1 ? 0 : 1);
+    }
+  nbCtx("summons: mode ",nbSummonsPassive() ? "passive" : "active");
+  }
+
+/// NB fix 131: the choice ATAK of the panel (RX_Cmd_Enemy of the plugin, which no script calls) - the mode becomes active,
+/// and every fighting summoned creature of the hero attacks the enemy in the focus of the hero
+void GameScript::nbSummonsAttack(Npc& enemy) {
+  auto* hero = world().player();
+  if(hero==nullptr || enemy.isDead())
+    return;
+  if(nbSummonsPassive())
+    nbSummonsToggleMode();
+  auto* sepHum = vm.find_symbol_by_name("GIL_SEPERATOR_HUM");
+  const int32_t sep = sepHum!=nullptr && sepHum->type()==zenkit::DaedalusDataType::INT ? sepHum->get_int() : 16;
+  size_t count = 0;
+  world().detectNpc(hero->position(),1.0e6f,[&](Npc& n) {
+    if(n.isDead() || n.isDown() || n.isPlayer() || &n==&enemy || !nbIsSummon(n))
+      return;
+    auto* sym = vm.find_symbol_by_index(uint32_t(n.handle().symbol_index()));
+    const std::string_view inst = sym!=nullptr ? std::string_view(sym->name()) : std::string_view();
+    if(inst=="WISP_DETECTOR" || inst=="NIXDOG" || inst=="PET_JINA" || inst=="HERO_TOTEM_VOB")
+      return;
+    const ScriptFn st = int32_t(n.guild())<sep ? ZS_Attack : ZS_MM_Attack;
+    if(!st.isValid())
+      return;
+    n.setTarget(&enemy);
+    n.clearAiQueue();
+    n.aiPush(AiQueue::aiStartState(st,0,&enemy,nullptr,""));
+    ++count;
+    });
+  Gothic::inst().onPrint(count>0 ? "Przyzwańce: atak!" : "Przyzwańce: nikt nie może zaatakować");
+  nbCtx("summons: ",count," attack ",enemy.displayName());
+  }
+
+/// NB fix 131: the summoned creatures go away (RX_ResetSummons of the plugin, the choice RESET of the panel, the change of
+/// the world); the pets stay, NIXDOG and PET_JINA
+size_t GameScript::nbResetSummons(bool keepWisp, bool print) {
+  auto* hero = world().player();
+  if(hero==nullptr)
+    return 0;
+  std::vector<Npc*> gone;
+  world().detectNpc(hero->position(),1.0e6f,[&](Npc& n) {
+    if(n.isPlayer() || !nbIsSummon(n))
+      return;
+    auto* sym = vm.find_symbol_by_index(uint32_t(n.handle().symbol_index()));
+    const std::string_view inst = sym!=nullptr ? std::string_view(sym->name()) : std::string_view();
+    if(inst=="NIXDOG" || inst=="PET_JINA" || inst=="HERO_TOTEM_VOB" || (keepWisp && inst=="WISP_DETECTOR"))
+      return;
+    gone.push_back(&n);
+    });
+  for(auto* n:gone)
+    world().removeNpc(*n);
+  nbSummonsAlive = 0;
+  if(auto* var = vm.find_symbol_by_name("RX_SUMMONCOUNT"); var!=nullptr && var->type()==zenkit::DaedalusDataType::INT)
+    var->set_int(0);
+  if(!gone.empty())
+    nbCtx("summons removed: ",gone.size());
+  if(print)
+    Gothic::inst().onPrint(gone.empty() ? "Przyzwańce: brak" : "Przyzwańce odesłane");
+  return gone.size();
+  }
+
+/// NB fix 131: the hero is moved far in a moment (a teleport rune, a teleport stone, the console, the map of the mods) -
+/// his summoned creatures and pets, near the place he left, come with him and stand around him. In another world (ZEN)
+/// they are not taken: GameSession::implChangeWorld sends them away
+void GameScript::nbSummonsFollowTick() {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end())
+    return;
+  auto& st   = nb->second;
+  auto* hero = world().player();
+  if(hero==nullptr)
+    return;
+  const auto pos = hero->position();
+  if(st.followWorld!=world().serialNumber()) {
+    st.followWorld = world().serialNumber();
+    st.followPos   = pos;
+    return;
+    }
+  const auto from = st.followPos;
+  st.followPos = pos;
+  if((pos-from).quadLength()<1200.f*1200.f || hero->isDead())
+    return;
+  std::vector<Npc*> with;
+  world().detectNpc(from,8000.f,[&](Npc& n) {
+    if(n.isDead() || n.isPlayer() || !nbIsSummon(n))
+      return;
+    auto* sym = vm.find_symbol_by_index(uint32_t(n.handle().symbol_index()));
+    const std::string_view inst = sym!=nullptr ? std::string_view(sym->name()) : std::string_view();
+    if(inst=="HERO_TOTEM_VOB")
+      return;
+    with.push_back(&n);
+    });
+  for(size_t i=0; i<with.size(); ++i) {
+    auto&       n = *with[i];
+    const float a = hero->rotationRad()+float(M_PI)+(float(i)-float(with.size()-1)/2.f)*0.7f;   // behind the hero
+    n.clearAiQueue();
+    n.setPosition(pos+Tempest::Vec3(std::cos(a)*250.f,0.f,std::sin(a)*250.f));
+    fixNpcPosition(n,0,0);
+    }
+  if(!with.empty())
+    nbCtx("summons: ",with.size()," teleported with the hero (",int((pos-from).length()/100.f)," m)");
   }
 
 /// NB fix 128: the trolls of New Balance throw stones - the plugin does it, the scripts know nothing of it

@@ -901,7 +901,8 @@ int AndroidInput::Controller::iconFor(const Mobile::Button& b) const {
     case Mobile::Special::QuickAttack:
       return IconQuickAttack;
     default:
-      if(inventory && b.special>=Mobile::Special::FirstCategory)
+      if(inventory && b.special>=Mobile::Special::FirstCategory &&
+         b.special<Mobile::Special::FirstCategory+Mobile::CategoryCount)
         return IconCategoryAll+b.special-Mobile::Special::FirstCategory;
       return NoIcon;
     }
@@ -988,6 +989,42 @@ void AndroidInput::Controller::paintButton(Painter& p, Font& font, size_t index)
     }
 
   const int icon = iconFor(b);
+  // NB fix 131: the button of the summoned creatures - three small figures on a black circle; its choices are words
+  if(b.special==Mobile::Special::Summons) {
+    const float cx = r.x+r.w/2, cy = r.y+r.h/2;
+    const float ro = std::min(r.w,r.h)*0.46f;
+    const float al = (!b.enabled ? 0.3f : active ? 1.f : 0.92f)*(b.dimmed ? 0.3f : 1.f);
+    const auto  disc = [&](float x, float y, float rad, const Color& c) {
+      p.setBrush(Brush(c));
+      for(int i=0; i<24; ++i) {
+        const float t0 = float(i)*float(M_PI)/12.f, t1 = float(i+1)*float(M_PI)/12.f+0.03f;
+        p.drawTriangle(x,y,0.f,0.f, x+std::cos(t0)*rad,y+std::sin(t0)*rad,0.f,0.f, x+std::cos(t1)*rad,y+std::sin(t1)*rad,0.f,0.f);
+        }
+      };
+    disc(cx,cy,ro,Color(0.02f,0.02f,0.02f,0.9f*al));
+    const Color w(0.75f,0.55f,1.f,al);   // violet - the magic of the summoning
+    const float hr = ro*0.13f, br = ro*0.20f;
+    const float px[3] = {cx-ro*0.42f, cx, cx+ro*0.42f};
+    const float py[3] = {cy+ro*0.05f, cy-ro*0.12f, cy+ro*0.05f};
+    for(int i=0; i<3; ++i) {
+      disc(px[i],py[i]-br*1.25f,hr,w);   // the head
+      disc(px[i],py[i]+br*0.55f,br,w);   // the body
+      }
+    return;
+    }
+  if(b.special==Mobile::Special::SummonAttack || b.special==Mobile::Special::SummonMode ||
+     b.special==Mobile::Special::SummonReset) {
+    const float al = (!b.enabled ? 0.35f : 1.f)*(b.dimmed ? 0.3f : 1.f);
+    fill(p,r,active ? Color(0.85f,0.7f,0.42f,0.95f*al) : Color(0.08f,0.06f,0.12f,0.85f*al));
+    const float bd = std::max(1.f,1.5f*s);
+    fill(p,{r.x,r.y,r.w,bd},Color(0.75f,0.55f,1.f,0.9f*al));
+    fill(p,{r.x,r.y+r.h-bd,r.w,bd},Color(0.75f,0.55f,1.f,0.9f*al));
+    std::string label = b.label;
+    if(b.special==Mobile::Special::SummonMode)
+      label = hud.summonPassive ? "PASYWNE" : "AKTYWNE";
+    drawCentered(p,font,r,label);
+    return;
+    }
   if(b.special==Mobile::Special::Wheel) {
     // NB fix 112: the button of the wheel - two arrows in opposite directions (⇄) on a black circle
     const float cx = r.x+r.w/2, cy = r.y+r.h/2;
@@ -1071,7 +1108,7 @@ void AndroidInput::Controller::paintInventoryButton(Painter& p, Font& font, size
     p.drawRect(area.x+(area.w-iw)/2,area.y+(area.h-ih)/2,iw,ih,uv.x,uv.y,uv.x+uv.w,uv.y+uv.h);
     };
 
-  if(b.special>=Mobile::Special::FirstCategory) {
+  if(b.special>=Mobile::Special::FirstCategory && b.special<Mobile::Special::FirstCategory+Mobile::CategoryCount) {
     // The selected tab is lit
     const bool selected = b.special-Mobile::Special::FirstCategory==hud.inventoryCategory;
     // NB fix 104: the icons of Hedin's Advanced Inventory (Hedin_Union_Adv_Inventory.vdf in Data), when it is there

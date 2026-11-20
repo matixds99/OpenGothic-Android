@@ -2331,6 +2331,30 @@ void MainWindow::onMobileAction(int id) {
     return;
   if(id==Mobile::Special::QuickAttack)
     player.quickAttack();   // NB fix 98
+  // NB fix 131: the summoned creatures - the button opens and closes its choices; a choice closes them
+  if(id==Mobile::Special::Summons)
+    summonMenuOpen = !summonMenuOpen;
+  if(id==Mobile::Special::SummonAttack || id==Mobile::Special::SummonMode || id==Mobile::Special::SummonReset) {
+    auto* w  = Gothic::inst().world();
+    auto* pl = Gothic::inst().player();
+    if(w!=nullptr && pl!=nullptr) {
+      auto& vm = w->script();
+      if(id==Mobile::Special::SummonAttack) {
+        Npc* enemy = player.focus().npc;
+        if(enemy==nullptr)
+          enemy = pl->target();
+        if(enemy==nullptr || enemy==pl || enemy->isDead() || vm.nbIsSummon(*enemy))
+          Gothic::inst().onPrint("Przyzwańce: brak celu"); else
+          vm.nbSummonsAttack(*enemy);
+        }
+      if(id==Mobile::Special::SummonMode)
+        vm.nbSummonsToggleMode();
+      if(id==Mobile::Special::SummonReset)
+        vm.nbResetSummons(true,true);
+      }
+    if(id!=Mobile::Special::SummonMode)
+      summonMenuOpen = false;
+    }
   if(id==Mobile::Special::Target)
     player.cycleTarget();
   if(id==Mobile::Special::Spell) {
@@ -2396,6 +2420,14 @@ void MainWindow::updateMobileAvailability() {
   androidControls.playerDead(mode==Mobile::Mode::Game && pl!=nullptr && pl->isDead());
   // NB fix 40: the button of the sprint, when the scripts have it
   androidControls.sprint(nbSprintFn()!=nullptr);
+  // NB fix 131: the button of the summoned creatures, while the hero has some (the wisp and the pets are not counted)
+  {
+  auto* w    = Gothic::inst().world();
+  const bool have = mode==Mobile::Mode::Game && w!=nullptr && w->script().nbHasSummons();
+  if(!have)
+    summonMenuOpen = false;
+  androidControls.summons(have,summonMenuOpen);
+  }
   }
 
   if(mode==Mobile::Mode::Game) {
@@ -2486,6 +2518,8 @@ void MainWindow::updateMobileOverlay() {
   hud.targetLocked = player.hasLock();
   hud.fastForward  = fastForward;
   hud.sprint       = nbSprintActive();
+  if(auto* w = Gothic::inst().world())
+    hud.summonPassive = w->script().nbSummonsPassive();   // NB fix 131
   if(mobileContext()==Mobile::Mode::Inventory)
     hud.useLabel = std::string(inventory.mobileActionLabel());
 

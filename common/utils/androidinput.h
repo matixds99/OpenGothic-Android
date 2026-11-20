@@ -90,6 +90,7 @@ class Controller {
       bool  targetLocked = false;
       bool  fastForward  = false;
       bool  sprint       = false;   // the sprint of New Balance is on (NB fix 40)
+      bool  summonPassive = false;  // NB fix 131: the summoned creatures do not attack (RX_SummonMode)
       // NB fix 111: the wheel of the quick choice - the name (UTF-8) and the number of the item of every slot
       std::array<std::string,9> wheelName;    // NB fix 112: 9 slots
       std::array<int,9>         wheelCount{};
@@ -113,6 +114,7 @@ class Controller {
     void  keyboard(bool on) { controls.showKeyboard(on); }
     void  playerDead(bool on) { controls.playerDead(on); }
     void  sprint(bool available) { controls.sprint(available); }
+    void  summons(bool have, bool open) { controls.summons(have,open); }   // NB fix 131
     void  stamina(bool available) { controls.stamina(available); }
     const std::map<std::string,Mobile::HudPlace>& hudPlaces() const { return controls.hudPlaces(); }
     bool  editingHud() const { return controls.editingHud(); }

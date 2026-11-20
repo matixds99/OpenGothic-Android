@@ -127,6 +127,7 @@ class MainWindow : public Tempest::Window {
     bool     weaponWasDrawn = false;
     void     updateAutoLock();
     bool     fastForward = false;
+    bool     summonMenuOpen = false;   // NB fix 131: the choices of the button of the summoned creatures are open
     uint64_t fastForwardDt(uint64_t dt);
     void     setupMobileControls();
     void     onMobileAction(int id);

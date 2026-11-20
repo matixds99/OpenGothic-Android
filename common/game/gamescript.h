@@ -216,6 +216,14 @@ class GameScript final {
     uint64_t         nbDamageCalcRunes();   // NB fix 126
     void             nbTrollTick();   // NB fix 128
     void             nbSummonCountTick();   // NB fix 129
+    // NB fix 131: the panel of the summoned creatures on the HUD, and their teleport with the hero
+    bool             nbHasSummons() const { return nbSummonsAlive>0; }
+    bool             nbSummonsPassive();
+    void             nbSummonsAttack(Npc& enemy);
+    void             nbSummonsToggleMode();
+    /// the summoned creatures of the hero go away; the pets stay (NIXDOG, PET_JINA), the wisp too when keepWisp
+    size_t           nbResetSummons(bool keepWisp, bool print);
+    void             nbSummonsFollowTick();
     void             nbBossHit(Npc& target, Npc& attacker);    // NB fix 100: AI_OnHit_, AI_OnGetDamage_ of the bosses
     void             nbBossTick();                             // NB fix 100: AI_OnTick_, AI_OnBreak_ every second
     zenkit::DaedalusSymbol* nbInstanceFunc(std::string_view prefix, Npc& npc);
@@ -660,6 +668,7 @@ class GameScript final {
     size_t                                                      ZS_Talk=0;
     size_t                                                      ZS_Attack=0;
     size_t                                                      ZS_MM_Attack=0;
+    int32_t                                                     nbSummonsAlive=0;   // NB fix 131: the fighting summoned creatures of the hero
 
     zenkit::IFocus                                              cFocusNorm,cFocusMelee,cFocusRange,cFocusMage;
     std::shared_ptr<zenkit::IGuildValues>                       cGuildVal;

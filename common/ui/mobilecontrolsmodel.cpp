@@ -195,6 +195,14 @@ void Controls::sprint(bool available) {
   rebuild();
   }
 
+void Controls::summons(bool have, bool open) {
+  if(availableSummons==have && summonMenu==open)
+    return;
+  availableSummons = have;
+  summonMenu       = open && have;
+  applyAvailability();
+  }
+
 void Controls::playerDead(bool value) {
   if(dead==value)
     return;
@@ -531,6 +539,30 @@ void Controls::buildGame(const Anchor&) {
   // NB fix 85: the quick attack (a step to the side, forward and the attack), over the action button, with a melee weapon
   icon("quickattack", right(198), bottom(330),    56, "QUICK",  Key::Enter, false, Special::QuickAttack);
   icon("wheel",     right(150),   bottom(40),     56, "WHEEL",  Key::Enter, false, Special::Wheel);   // NB fix 111
+  // NB fix 131: the summoned creatures (New Balance): the button, and its three choices in a row on its left - attack the
+  // target, active / passive, away. The choices go with the button, when it is moved in the editor
+  if(featureSprint && !dead) {
+    icon("summons", right(372), bottom(310), 56, "SUMMONS", Key::Enter, false, Special::Summons);
+    const Button* sb = nullptr;
+    for(auto& b:layout)
+      if(b.special==Special::Summons)
+        sb = &b;
+    if(sb!=nullptr && !editing) {
+      const Mobile::Rect r  = sb->rect;
+      const float        bw = 118.f, bh = 46.f;
+      const float        gap = 8.f*s;
+      const char*        labels[3]   = {"ATAK", "TRYB", "RESET"};
+      const int          specials[3] = {Special::SummonAttack, Special::SummonMode, Special::SummonReset};
+      float x = r.x-gap;
+      for(int i=0; i<3; ++i) {
+        x -= bw*s;
+        auto& o   = add(x, r.y+r.h/2-bh*s/2, bw, bh, labels[i], Key::Enter);
+        o.special = specials[i];
+        o.id      = std::string("summon")+std::to_string(i);
+        x -= gap;
+        }
+      }
+    }
 
   // NB fix 42: the status bars in the editor: their frames are dragged (the bars are drawn by the window)
   if(editing) {
@@ -1006,8 +1038,12 @@ void Controls::applyAvailability() {
 
   for(auto& b:layout) {
     bool usable = (availableKeys & keyMask(b.key))!=0;
-    if(b.special>=Special::FirstCategory)
+    if(b.special>=Special::FirstCategory && b.special<Special::FirstCategory+CategoryCount)
       usable = true; else
+    if(b.special==Special::Summons)
+      usable = availableSummons && availableMovement; else   // NB fix 131
+    if(b.special==Special::SummonAttack || b.special==Special::SummonMode || b.special==Special::SummonReset)
+      usable = summonMenu && availableSummons && availableMovement; else
     if(b.special==Special::Target)
       usable = availableTarget; else
     if(b.special==Special::Spell)
@@ -1024,7 +1060,8 @@ void Controls::applyAvailability() {
     // The hotbar stays visible while the player can move, other controls hide when unusable
     // Inventory actions disappear when there is no item to act on, the tabs and the close button stay.
     const bool hotbar  = b.key>=Key::One && b.key<=Key::Zero && availableMovement;
-    const bool pinned  = current==Mode::Inventory && (b.special>=Special::FirstCategory || b.key==Key::Escape);
+    const bool pinned  = current==Mode::Inventory && ((b.special>=Special::FirstCategory &&
+                                                       b.special<Special::FirstCategory+CategoryCount) || b.key==Key::Escape);
     b.visible = (pinned || hotbar) ? true : usable;
     b.enabled = usable;
     }

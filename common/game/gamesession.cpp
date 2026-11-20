@@ -455,6 +455,8 @@ auto GameSession::implChangeWorld(std::unique_ptr<GameSession>&& game,
     return std::move(game);
     }
 
+  // NB fix 131: the summoned creatures stay with the old world no more - they go away before it is stored
+  vm->nbResetSummons(false,false);
   HeroStorage hdata;
   if(auto hero = wrld->player())
     hdata.save(*hero);
@@ -488,6 +490,8 @@ auto GameSession::implChangeWorld(std::unique_ptr<GameSession>&& game,
     }
   if(auto hero = wrld->player())
     vm->setInstanceNPC("HERO",*hero);
+  // NB fix 131: and those left in this world by an older save (before fix 131) as well
+  vm->nbResetSummons(false,false);
 
   initScripts(wss.isEmpty());
   wrld->triggerOnStart(wss.isEmpty());

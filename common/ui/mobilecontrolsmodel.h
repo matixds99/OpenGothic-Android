@@ -64,7 +64,12 @@ namespace Special {
     Sprint        = 29,   // NB fix 40: the sprint of New Balance (B_Hotkey_Sprint, the key ~ in the original)
     QuickSave     = 30,   // saves the game to the quick save slot
     LoadSave      = 31,   // the player is dead: loads the newest save (above the settings, below the categories)
-    FirstCategory = 32
+    FirstCategory = 32,
+    // NB fix 131: the summoned creatures - the button and its three choices (after the categories 32..40)
+    Summons       = 48,
+    SummonAttack  = 49,
+    SummonMode    = 50,
+    SummonReset   = 51
     };
   }
 
@@ -228,6 +233,8 @@ class Controls {
     bool  speedAllowed() const { return featureSpeed; }
     /// The scripts have a sprint (New Balance: B_Hotkey_Sprint): its button is on the HUD (NB fix 40)
     void  sprint(bool available);
+    /// NB fix 131: the hero has summoned creatures; the choices of their button are open
+    void  summons(bool have, bool open);
     /// The scripts have a bar of the stamina (New Balance): it is in the editor of the HUD (NB fix 42)
     void  stamina(bool available);
     float buttonsScale() const { return buttonScale; }
@@ -379,6 +386,8 @@ class Controls {
     bool     availableSpells   = true;
     bool     availableQuick    = false;   // NB fix 103: QUICK - a melee weapon or magic in the hands
     bool     availableMovement = true;
+    bool     availableSummons  = false;   // NB fix 131
+    bool     summonMenu        = false;
 
     Rect     stick;
     std::map<int,Finger>                 fingers;
