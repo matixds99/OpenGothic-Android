@@ -269,8 +269,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:**
   - Walka z trollem razem z golemem: troll po kilku ciosach golema powinien odwrócić się do niego.
   - W logu `[ctx] reattack: …`.
-
 - **Test (20.11):** działa – troll odwraca się do golema.
+
 ### 131. Panel przywołańców na ekranie, teleport przywołańców z bohaterem – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/game/gamesession.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp/.h`
 - **Zgłoszenie:** brak sterowania przywołańcami na telefonie; przywołańcy nie przenoszą się z bohaterem po teleporcie.
