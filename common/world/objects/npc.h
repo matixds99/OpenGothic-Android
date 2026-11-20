@@ -205,6 +205,8 @@ class Npc final {
     void       updateTransform();
 
     std::string_view displayName() const;
+    /// NB fix 134: what moves the character - the queue, the walk to a target, the state (the log of the hero who runs alone)
+    std::string      nbMoveDebug() const;
     auto       displayPosition() const -> Tempest::Vec3;
     void       setVisual    (std::string_view visual);
     void       setVisual    (const Skeleton*  visual);

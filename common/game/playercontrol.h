@@ -28,6 +28,7 @@ class PlayerControl final {
     static inline std::atomic<bool> quickCombo{false};
     void  quickAttack();   // NB fix 96: QUICK of the touch screen
     bool  nbReleaseStuckMove(bool forward, bool back);   // NB fix 133
+    std::string nbInputDebug() const;                     // NB fix 134
     uint64_t       pendingReset = 0;   // NB fix 95: W of the quick attack - the reset of the position after the blow
     // NB fix 96: the quick attack of New Balance as on the PC (Ctrl + A/D held, W clicked): blows to the side one after
     // another, each one cut off right after its hit (the reset of W)

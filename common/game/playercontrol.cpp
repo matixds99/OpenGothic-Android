@@ -433,6 +433,17 @@ bool PlayerControl::nbReleaseStuckMove(bool forward, bool back) {
   return ret;
   }
 
+std::string PlayerControl::nbInputDebug() const {
+  std::string ret = "fwd="+std::to_string(int(movement.forwardBackward.value()))+
+                    " side="+std::to_string(int(movement.strafeRightLeft.value()))+
+                    " act="+std::to_string(int(ctrl[KeyCodec::ActionGeneric]))+
+                    " ctrlFwd="+std::to_string(int(ctrl[KeyCodec::Forward]))+" actrl=";
+  for(bool b:actrl)
+    ret += b ? '1' : '0';
+  ret += " quick="+std::to_string(int(quickPending))+std::to_string(int(quickActive))+(quickUntil!=0 ? "u" : "");
+  return ret;
+  }
+
 void PlayerControl::clearFocus() {
   currentFocus = Focus();
   lockedNpc    = nullptr;

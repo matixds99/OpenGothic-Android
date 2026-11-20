@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **134**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **135**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (skutek uboczny 132) – 🧪
-2. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
-3. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
-4. **130** – trolle: rzut startuje także w trakcie innej animacji, log z przyczyną, gdy troll nie rzuca – ✅
-5. **129** – przywoływanie stworzeń działa (licznik miejsc nie rośnie bez końca) – ✅
+1. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – 🧪
+2. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
+3. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
+4. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
+5. **130** – trolle: rzut startuje także w trakcie innej animacji, log z przyczyną, gdy troll nie rzuca – ✅
 
 ---
 
@@ -250,7 +250,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 133. Bohater biegnie sam do przodu i atakuje – 🧪 (20.11.2026)
+### 134. Diagnostyka: co porusza bohatera, który biegnie sam do celu – 🧪 (20.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp/.h`, `common/game/playercontrol.cpp/.h`, `common/mainwindow.cpp`, `common/utils/androidinput.h`
+- **Zgłoszenie:** po poprawce 133 bohater dalej sam biegnie do celu i go atakuje (czar 508 w obywatela, potem w Thorbena), choć ekran nie jest dotykany.
+- **Zmiana:** sam log, bez zmiany zachowania gry. Linijki `[hero-ai]`:
+  - `perception N of the hero: FUNKCJA` – skrypt uruchomiony przez percepcję bohatera (np. trafienie);
+  - `a command for the hero: act=N target=…` – polecenie AI dla bohatera poza przerywnikiem i dialogiem;
+  - `the hero moves by himself (N m/s): …` – co sekundę, gdy bohater przesuwa się o ponad 2 m bez gałki i strzałek. Zawiera kolejkę AI, cel ruchu, stan, cel walki oraz stan sterowania (przód, akcja, szybki atak).
+- **Do sprawdzenia:** powtórzyć sytuację i przesłać log z linijkami `[hero-ai]`.
+
+### 133. Bohater biegnie sam do przodu i atakuje – ⏸ nie pomogło (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/mainwindow.cpp`, `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.h`
 - **Zgłoszenie:** nagranie i log z miasta – po walce bohater biegł sam do strażnika i rzucał w niego czar, choć ekran nie był dotykany.
 - **Przyczyna:** skutek uboczny poprawki 132. Skrypty NB (`B_AssessDamage`) wywołują zmianę celu dla każdej trafionej postaci, także dla bohatera. Gdy bohatera trafił ktoś inny niż jego cel, skrypt uruchamiał na nim stan `ZS_Attack` i bohater był sterowany jak NPC. Na PC silnik nie uruchamia stanów AI na bohaterze, więc tam to nie występuje.
@@ -258,6 +267,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Funkcje zmiany celu (`RX_CanReAttack`, `RX_CanReAttackNow`, `RX_HasReAttackNpc`, `RX_SetReAttackNpc`) nie działają dla bohatera.
   - Dodatkowe zabezpieczenie: co klatkę sprawdzane jest, czy nakładka dotykowa dalej trzyma przód / tył. Jeśli nie, a ruch bohatera jest wciąż włączony, zostaje puszczony. Log: `touch: a movement key without its release was let go (…)`.
 - **Do sprawdzenia:** walka w mieście ze strażnikami – po trafieniu bohater nie rusza się sam.
+- **Test (20.11):** nie pomogło – bohater dalej biegnie do celu. Log nie pokazał zgubionego klawisza, a OpenGothic nie pozwala uruchomić `ZS_Attack` na bohaterze, więc przyczyna jest gdzie indziej (diagnostyka w 134). Zabezpieczenia zostają.
 
 ### 132. Zmiana celu w walce – potwór bił tylko bohatera, choć ranił go przywołaniec – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`

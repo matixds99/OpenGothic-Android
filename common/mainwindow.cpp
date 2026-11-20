@@ -2414,6 +2414,21 @@ void MainWindow::updateMobileControls() {
     if(player.nbReleaseStuckMove(fwd,back))
       Log::i("touch: a movement key without its release was let go (",
              uiKeyUp==nullptr ? "no window" : "a window took the key up",")");
+    // NB fix 134: the hero moves more than 2 m in a second while the stick and the arrows are not held - what moves him
+    static Tempest::Vec3 lastPos;
+    static uint64_t      lastAt = 0;
+    auto* pl = Gothic::inst().player();
+    auto* w  = Gothic::inst().world();
+    if(pl!=nullptr && w!=nullptr && w->tickCount()>=lastAt+1000) {
+      const auto pos   = pl->position();
+      const bool still = fwd && back && !androidControls.held(Mobile::Key::StrafeLeft) &&
+                         !androidControls.held(Mobile::Key::StrafeRight) && !androidControls.stickHeld();
+      if(lastAt!=0 && still && (pos-lastPos).length()>200.f && !pl->isInAir() && w->currentCs()==nullptr)
+        Log::i("[hero-ai] the hero moves by himself (",int((pos-lastPos).length()/100.f)," m/s): ",pl->nbMoveDebug(),
+               " | ",player.nbInputDebug());
+      lastPos = pos;
+      lastAt  = w->tickCount();
+      }
     }
 #endif
   }

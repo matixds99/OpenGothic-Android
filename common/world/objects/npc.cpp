@@ -4466,7 +4466,30 @@ void Npc::setToFistMode() {
   hnpc->weapon  = 1;
   }
 
+std::string Npc::nbMoveDebug() const {
+  std::string ret = "queue:"+aiQueue.describe(6);
+  ret += " go2=";
+  ret += go2.empty() ? "none" : (go2.npc!=nullptr ? std::string(go2.npc->displayName()) : std::string("point"));
+  ret += " state=";
+  ret += aiState.funcIni.isValid() ? std::string(aiState.hint) : std::string("none");
+  ret += " target=";
+  ret += currentTarget!=nullptr ? std::string(currentTarget->displayName()) : std::string("none");
+  ret += " bs="+std::to_string(int(bodyStateMasked()))+" ws="+std::to_string(int(weaponState()));
+  return ret;
+  }
+
 void Npc::aiPush(AiQueue::AiAction&& a) {
+  // NB fix 134: a command of the scripts for the hero outside of a cutscene and a dialog - in the log (the hero who runs alone)
+  if(isPlayer() && owner.currentCs()==nullptr && !isTalk() &&
+     (a.act==AI_GoToNpc || a.act==AI_GoToNextFp || a.act==AI_GoToPoint || a.act==AI_Attack || a.act==AI_StartState ||
+      a.act==AI_TurnToNpc || a.act==AI_WhirlToNpc || a.act==AI_DrawWeaponMelee || a.act==AI_DrawSpell || a.act==AI_Flee)) {
+    static uint64_t last = 0;
+    if(owner.tickCount()>=last+250) {
+      last = owner.tickCount();
+      Log::i("[hero-ai] a command for the hero: act=",int(a.act)," target=",
+             (a.target!=nullptr ? std::string(a.target->displayName()) : std::string("-")));
+      }
+    }
   if(a.act==AI_OutputSvmOverlay)
     aiQueueOverlay.pushBack(std::move(a)); else
     aiQueue.pushBack(std::move(a));
@@ -5551,6 +5574,11 @@ bool Npc::perceptionProcess(Npc &pl, Npc* victim, float quadDist, PercType perc)
     return false;
 
   if(hasPerc(perc)) {
+    if(isPlayer()) {   // NB fix 134: a perception of the hero runs a script - in the log
+      auto* fn = owner.script().findSymbol(perception[perc].func.ptr);
+      Log::i("[hero-ai] perception ",int(perc)," of the hero: ",(fn!=nullptr ? fn->name().c_str() : "?"),
+             " (other: ",pl.displayName().data(),")");
+      }
     owner.script().invokeState(this,&pl,victim,perception[perc].func);
     return true;
     }
