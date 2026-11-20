@@ -2474,7 +2474,7 @@ void GameScript::initCommon() {
       st.reattack[key] = oth->handlePtr();
       nbCtx("reattack: ",npc->displayName()," keeps ",oth->displayName());
       });
-    bindNb("RX_GETREATTACKNPC", [this,keptNpc](int32_t key) -> std::shared_ptr<zenkit::INpc> {
+    bindNb("RX_GETREATTACKNPC", [keptNpc](int32_t key) -> std::shared_ptr<zenkit::INpc> {
       auto* kept = keptNpc(key);
       if(kept!=nullptr)
         nbCtx("reattack: turns to ",kept->displayName());
