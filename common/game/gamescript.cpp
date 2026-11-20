@@ -7945,6 +7945,17 @@ uint64_t GameScript::nbDamageCalcRunes() {
   return hash;
   }
 
+/// NB fix 127: the training dummies of New Balance (AIM, AIM_100/300/600 - Onar's farm, the militia in the city) carry
+/// ID_TRAINING_AIM in aivar[43]
+bool GameScript::nbIsTrainingDummy(const Npc& npc) {
+  auto* id = vm.find_symbol_by_name("ID_TRAINING_AIM");
+  if(id==nullptr || id->type()!=zenkit::DaedalusDataType::INT || id->is_member() || id->get_int()==0)
+    return false;
+  const auto& h = const_cast<Npc&>(npc).handle();
+  constexpr size_t AIV_MM_REAL_ID = 43;
+  return AIV_MM_REAL_ID<std::size(h.aivar) && h.aivar[AIV_MM_REAL_ID]==id->get_int();
+  }
+
 bool GameScript::nbIsSummon(const Npc& npc) {
   // NB fix 81: RX_IsSummonNpc of the scripts - the summoned creatures of New Balance carry RX_SUMMON_ID in aivar[91]
   auto* id = vm.find_symbol_by_name("RX_SUMMON_ID");

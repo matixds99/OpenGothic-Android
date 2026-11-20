@@ -945,6 +945,8 @@ Tempest::Color MainWindow::focusColor(const Focus& focus, const Npc& pl) {
     constexpr size_t AIV_PARTYMEMBER = 15;
     if(npc->handle().aivar[AIV_PARTYMEMBER]!=0 || world->script().nbIsSummon(*npc))
       return cyan;
+    if(world->script().nbIsTrainingDummy(*npc))   // NB fix 127: not "friendly" - a target for the training
+      return white;
     switch(world->script().personAttitude(*npc,pl)) {
       case ATT_HOSTILE:  return red;
       case ATT_ANGRY:    return orange;

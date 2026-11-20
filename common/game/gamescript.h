@@ -212,6 +212,7 @@ class GameScript final {
     /// rune of the unlocking drawn); 3: with lock picks (no weapon, the talent and 100 of dexterity)
     int32_t          nbLockMode(const Npc& pl);
     bool             nbIsSummon(const Npc& npc);
+    bool             nbIsTrainingDummy(const Npc& npc);   // NB fix 127
     uint64_t         nbDamageCalcRunes();   // NB fix 126
     void             nbBossHit(Npc& target, Npc& attacker);    // NB fix 100: AI_OnHit_, AI_OnGetDamage_ of the bosses
     void             nbBossTick();                             // NB fix 100: AI_OnTick_, AI_OnBreak_ every second

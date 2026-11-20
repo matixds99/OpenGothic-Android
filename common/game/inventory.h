@@ -75,6 +75,8 @@ class Inventory final {
     bool   equip  (size_t cls, Npc &owner, bool force);
     bool   unequip(size_t cls, Npc &owner);
     void   unequip(Item*  cls, Npc &owner);
+    /// NB fix 127: the bonuses of all equipped items, once (a save-game of a program that did not give them)
+    void   applyEquippedEffects(Npc& owner);
     void   invalidateCond(Npc &owner);
     void   autoEquipWeapons(Npc &owner);
     void   equipArmor           (int32_t cls, Npc &owner);
@@ -140,6 +142,9 @@ class Inventory final {
     bool   setSlot     (Item*& slot, Item *next, Npc &owner, bool force);
     bool   equipNumSlot(Item *next, uint8_t slotHint, Npc &owner, bool force);
     void   applyArmor  (Item& it, Npc &owner, int32_t sgn);
+    /// NB fix 127: C_Item.change_atr / change_value of an equipped item (oCNpc::AddItemEffects / RemoveItemEffects of the
+    /// original engine) - the bonuses of the armors, the helmets, the weapons, the belts (the crown of the kings: +15 mana)
+    static void applyItemEffects(const Item& it, Npc& owner, int32_t sgn);
 
     Item*  findByClass(size_t cls);
     void   delItem    (Item* it, size_t count, Npc& owner);

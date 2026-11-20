@@ -1262,6 +1262,8 @@ static bool checkPeaceful(Npc& n, const Npc& pl, World& w) {
     return true;
   if(n.target()==&pl)
     return true;
+  if(w.script().nbIsTrainingDummy(n))   // NB fix 127: the dummies are for the training - always a target
+    return true;
   return w.script().personAttitude(n,pl)<ATT_NEUTRAL;
   }
 

@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **127**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **128**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 127. Bonusy przedmiotów (korona królów +15 many) i manekiny treningowe – 🧪 (20.11.2026)
+- **Pliki:** `common/game/inventory.cpp/.h` (`applyItemEffects`), `common/game/gamesession.cpp`, `common/world/objects/npc.h`, `common/game/gamescript.cpp/.h` (`nbIsTrainingDummy`), `common/world/worldobjects.cpp`, `common/mainwindow.cpp`
+- **Zgłoszenie:** korona królów nie dodaje 15 many; sprawdzić bonusy broni, hełmów, pasów, pierścieni i trofeów. Manekiny przy farmie Onara i przy straży miejskiej są „przyjazne” – bez włączonego celowania w pokojowe stworzenia nie da się na nich trenować.
+- **Przyczyna (bonusy):** część przedmiotów ma bonus zapisany w polach `change_atr`/`change_value` – oryginalny silnik dodaje go sam przy zakładaniu (oCNpc::AddItemEffects) i odejmuje przy zdejmowaniu. OpenGothic tego nie robił. W skryptach NB to 183 przedmioty: 159 zbroi i hełmów (np. korona królów `ITAR_SHRECHELM`: +15 maks. many), 20 broni białych, 2 dystansowe, pas i jedno trofeum – głównie maks. zdrowie, 8 z maks. maną. Pierścienie, amulety i większość trofeów (np. kieł Muritana) dają bonusy skryptami przy zakładaniu – te działały.
+- **Poprawka:**
+  - Bonusy `change_atr` dodawane przy zakładaniu i odejmowane przy zdejmowaniu każdego przedmiotu (zbroja, hełm, pas, broń, tarcza, pierścienie, amulet).
+  - Zapisy ze starszej wersji (bez wpisu `game/item_effects`): po wczytaniu bonusy założonych przedmiotów są dodawane raz – bez tego zdjęcie przedmiotu odjęłoby bonus, którego nigdy nie było.
+  - Manekiny (`AIM`, `AIM_100/300/600`, `aivar[43] = ID_TRAINING_AIM`) zawsze dają się zaznaczyć, także przy wyłączonym celowaniu w pokojowe stworzenia; nazwa w fokusie biała zamiast zielonej.
+- **Do sprawdzenia:** korona królów – maks. mana +15 po założeniu, −15 po zdjęciu; zbroja z bonusem zdrowia – maks. HP; manekin przy farmie Onara z wyłączonym celowaniem w pokojowe stworzenia.
 
 ### 126. Obrażenia czarów rosną z inteligencją (`RX_DamageCalcRunes`) – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbDamageCalcRunes`), `common/game/definitions/spelldefinitions.cpp/.h` (`refresh`)

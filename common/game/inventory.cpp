@@ -453,6 +453,8 @@ bool Inventory::setSlot(Item *&slot, Item* next, Npc& owner, bool force) {
 
     applyArmor(*slot,owner,-1);
     if(slot->isEquipped())
+      applyItemEffects(*slot,owner,-1);   // NB fix 127
+    if(slot->isEquipped())
       slot->setAsEquipped(false);
     if(&slot==active)
       applyWeaponStats(owner,*slot,-1);
@@ -482,6 +484,7 @@ bool Inventory::setSlot(Item *&slot, Item* next, Npc& owner, bool force) {
   slot->setAsEquipped(true);
   slot->setSlot(slotId(slot));
   applyArmor(*slot,owner,1);
+  applyItemEffects(*slot,owner,1);   // NB fix 127
 
   updateArmorView (owner);
   updateSwordView (owner);
@@ -911,6 +914,23 @@ bool Inventory::equipNumSlot(Item *next, uint8_t slotHint, Npc &owner, bool forc
       }
     }
   return false;
+  }
+
+void Inventory::applyItemEffects(const Item& it, Npc& owner, int32_t sgn) {
+  auto& h = it.handle();
+  for(size_t i=0; i<std::size(h.change_atr); ++i) {
+    const int32_t atr = h.change_atr[i];
+    const int32_t val = h.change_value[i];
+    if(val==0 || atr<0 || atr>=int32_t(ATR_MAX))
+      continue;
+    owner.changeAttribute(Attribute(atr),val*sgn,false);
+    }
+  }
+
+void Inventory::applyEquippedEffects(Npc& owner) {
+  for(auto& i:items)
+    if(i->isEquipped())
+      applyItemEffects(*i,owner,1);
   }
 
 void Inventory::applyArmor(Item &it, Npc &owner, int32_t sgn) {

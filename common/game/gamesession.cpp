@@ -179,6 +179,17 @@ GameSession::GameSession(Serialize &fin) {
   fin.requireEntry("game/daedalus");
   vm->loadVar(fin);
 
+  // NB fix 127: a save-game of a program that did not give the bonuses of the equipped items (change_atr): they are given
+  // once now, to the characters of this world - later the equipping and the unequipping keep them right
+  if(!fin.setEntry("game/item_effects")) {
+    size_t n = 0;
+    wrld->detectNpc(Tempest::Vec3(),1.0e9f,[&n](Npc& npc) {
+      npc.applyEquippedItemEffects();
+      ++n;
+      });
+    Log::i("the bonuses of the equipped items given once: ",n," characters");
+    }
+
   // NB fix 122: the unread documents (older save-games do not have them)
   fin.setStage("game/nb_newdocs");
   if(fin.setEntry("game/nb_newdocs")) {
@@ -280,6 +291,10 @@ void GameSession::save(Serialize &fout, std::string_view name, const Pixmap& scr
   fout.setEntry("game/daedalus");
   vm->saveVar(fout);
   vm->dmaSave(fout);
+
+  // NB fix 127: the bonuses of the equipped items (change_atr) are in the attributes of this save-game
+  fout.setEntry("game/item_effects");
+  fout.write(uint32_t(1));
 
   // NB fix 122: the unread documents, by the names of their instances (a program without it skips the entry)
   {
