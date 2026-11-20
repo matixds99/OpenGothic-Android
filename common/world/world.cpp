@@ -926,6 +926,16 @@ void World::unregisterVob(std::string_view name, Vob* vob) {
       }
   }
 
+size_t World::setVobVisualTree(std::string_view name, bool show, bool collide) {
+  size_t count = 0;
+  auto   range = vobNames.equal_range(upperName(name));
+  for(auto i=range.first; i!=range.second; ++i) {
+    i->second->setVobVisualTree(show,collide);
+    ++count;
+    }
+  return count;
+  }
+
 size_t World::setVobVisual(std::string_view name, bool show, bool collide) {
   size_t count = 0;
   auto   range = vobNames.equal_range(upperName(name));

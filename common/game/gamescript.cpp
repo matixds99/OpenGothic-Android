@@ -11,6 +11,7 @@
 #include <Tempest/SoundEffect>
 
 #include <algorithm>
+#include <cstdlib>
 #include <array>
 #include <cctype>
 #include <map>
@@ -190,6 +191,11 @@ struct NbState {
   uint64_t                                    bossMusicSeen = 0;
   bool                                        musicMuteReset = false;   // NB fix 116
   zenkit::IInfo*                              curInfo = nullptr;        // NB fix 124: the info of the choice that runs
+  // NB fix 125: RX_ToggleVobVisible - "WORLD|NAME" -> shown (in the save-game, put again on every new world), and the
+  // visuals of the items that Ext_PutInSlot hangs on the bones (by the instance)
+  std::unordered_map<std::string,bool>        vobVisual;
+  uint32_t                                    vobVisualWorld = 0;
+  std::unordered_map<size_t,std::string>      slotVisual;
   // NB fix 100: the fights of the bosses of the plugin (UNION_ABI.DLL 0x10054220, 0x100546A0): the characters with
   // AI_OnTick_<instance> that fight, their timer goes every second; built again after a load from aivar[95]
   std::vector<std::weak_ptr<zenkit::INpc>>    bossFight;
@@ -2303,6 +2309,113 @@ void GameScript::initCommon() {
     // RX_TerminateDialog (oCInformationManager::Exit) and RX_ClearInput (zCInput::ClearKeyBuffer) after the teleport
     // of the rune: the scripts call AI_StopProcessInfos before, the dialog closes by it - nothing more here
     bindNb("RX_TERMINATEDIALOG", []() {});
+
+    // NB fix 125: the package 5 of the functions of the plugin (log of 20.11, "NB missing")
+    // Npc_HasActivePerc(npc, perc) (UNION_ABI.DLL 0x1018bc60): the perception is in the list of the character
+    bindNb("NPC_HASACTIVEPERC", [this](std::shared_ptr<zenkit::INpc> ref, int32_t perc) -> int32_t {
+      auto* npc = findNpcRaw(ref);
+      if(npc==nullptr || perc<0 || perc>=int32_t(PERC_Count))
+        return 0;
+      return npc->hasPerc(PercType(perc)) ? 1 : 0;
+      });
+    // Ext_PutInSlot(npc, slot, item) (0x1015b090): the item made from the instance hangs on the bone - the pouch of gold
+    // (ITSL_GOLDPOCKET on BIP01 SPINE1), the rod of the fishers (ITSE_FANGEL in BIP01 R HAND). Only the look: a decoration
+    // of the model, Ext_RemoveFromSlot takes it away. ActivateZSSlot (0x1015b1d0, oCNpc::CreateInvSlot) is not needed:
+    // the decorations hang on any bone of the model
+    bindNb("EXT_PUTINSLOT", [this](std::shared_ptr<zenkit::INpc> ref, std::string_view slot, int32_t itemInst) {
+      auto* npc = findNpcRaw(ref);
+      if(npc==nullptr || itemInst<=0 || slot.empty())
+        return;
+      auto& cache = nbStates[this].slotVisual;
+      auto  vis   = cache.find(size_t(itemInst));
+      if(vis==cache.end()) {
+        std::string name;
+        auto* sym = vm.find_symbol_by_index(uint32_t(itemInst));
+        if(nbIsItemSymbol(vm,sym))
+          if(auto inst = vm.init_instance<zenkit::IItem>(sym); inst!=nullptr)
+            name = inst->visual;
+        vis = cache.emplace(size_t(itemInst),name).first;
+        }
+      if(vis->second.empty())
+        return;
+      npc->setDecor(npc->world().addView(vis->second),slot);
+      });
+    bindNb("ACTIVATEZSSLOT", [](std::shared_ptr<zenkit::INpc>, std::string_view) {});
+    // RX_CallQuestLoop(name) (0x10198730): while the quest is running (the variable of the name is LOG_RUNNING), the loop
+    // of the quest RX_QuestLoop_<name> is called
+    bindNb("RX_CALLQUESTLOOP", [this](std::string_view name) {
+      std::string up(name);
+      for(auto& c:up)
+        c = char(std::toupper(static_cast<unsigned char>(c)));
+      auto* var = vm.find_symbol_by_name(up);
+      if(var==nullptr || var->type()!=zenkit::DaedalusDataType::INT || var->get_int()!=1)
+        return;
+      auto* fn = vm.find_symbol_by_name("RX_QUESTLOOP_"+up);
+      if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+        return;
+      vm.call_function<void>(fn);
+      });
+    // RX_IsNpcIgnoreTarget(npc, target) (0x1017ff50): the list of the targets that a character ignores - it is filled by
+    // the plugin only (the multiplayer), empty here
+    bindNb("RX_ISNPCIGNORETARGET", [](std::shared_ptr<zenkit::INpc>, std::shared_ptr<zenkit::INpc>) -> int32_t { return 0; });
+    // Mob_ScrambleContainers() (0x1015be10, HERO_POISONED after every load): new combinations of the locks of the chests
+    // - every letter of a combination longer than one is L or R again, at random
+    bindNb("MOB_SCRAMBLECONTAINERS", [this]() {
+      size_t done = 0;
+      for(uint32_t i=0; ; ++i) {
+        auto* mob = world().mobsiById(i);
+        if(mob==nullptr)
+          break;
+        if(!mob->isContainer())
+          continue;
+        std::string code(mob->pickLockCode());
+        if(code.size()<=1)
+          continue;
+        for(auto& c:code)
+          c = (std::rand()%100)<=50 ? 'R' : 'L';
+        mob->setPickLockCode(code);
+        ++done;
+        }
+      nbCtx("lock combinations scrambled: ",done);
+      });
+    // Npc_ModifyBodyState(npc, add, remove) (0x10159db0, oCNpc::ModifyBodyState): the modifiers of the state of the body
+    // (BS_MOD_CONTROLLED in the concerts of In Extremo) - OpenGothic has no such modifiers, nothing changes
+    bindNb("NPC_MODIFYBODYSTATE", [](std::shared_ptr<zenkit::INpc>, int32_t, int32_t) {});
+    // RX_ToggleVobVisible(name, show) (0x1016f9b0): the vob of the name and its children are hidden or shown (the secrets
+    // of the quests, EVT_XARDAS_SECRET_02). The collision follows the visual. Kept in the save-game
+    bindNb("RX_TOGGLEVOBVISIBLE", [this](std::string_view name, int32_t show) {
+      std::string key(world().name());
+      key += '|';
+      key += name;
+      for(auto& c:key)
+        c = char(std::toupper(static_cast<unsigned char>(c)));
+      nbStates[this].vobVisual[key] = show!=0;
+      const size_t n = world().setVobVisualTree(name,show!=0,show!=0);
+      nbCtx("vob ",name,show!=0 ? " shown" : " hidden"," (",n,")");
+      });
+    // RX_ResetSummons() (0x1016b020, PerFrame when the hero dies, the change of a pet): the summoned creatures go away,
+    // the pets stay (NIXDOG, PET_JINA)
+    bindNb("RX_RESETSUMMONS", [this]() {
+      auto* hero = world().player();
+      if(hero==nullptr)
+        return;
+      std::vector<Npc*> gone;
+      world().detectNpc(hero->position(),100000.f,[&](Npc& n) {
+        if(n.isPlayer() || !nbIsSummon(n))
+          return;
+        auto* sym = vm.find_symbol_by_index(uint32_t(n.handle().symbol_index()));
+        const std::string_view inst = sym!=nullptr ? std::string_view(sym->name()) : std::string_view();
+        if(inst=="NIXDOG" || inst=="PET_JINA")
+          return;
+        gone.push_back(&n);
+        });
+      for(auto* n:gone)
+        world().removeNpc(*n);
+      if(!gone.empty())
+        nbCtx("summons removed: ",gone.size());
+      });
+    // RX_SetFXNpc(npc) (0x1017ab90): only remembers the character for the effects of the plugin
+    bindNb("RX_SETFXNPC", [](std::shared_ptr<zenkit::INpc>) {});
     // NB fix 124: RX_ClearCurrentDialog (RX_ClearDialog - the choice "...(Wróć)" of the menus of NB: the shrines, the
     // tables): the choices of the info that runs are cleared, the dialog goes back to its list
     bindNb("RX_CLEARCURRENTDIALOG", [this]() {
@@ -3224,6 +3337,12 @@ void GameScript::saveQuests(Serialize &fout) {
     fout.write(uint32_t(vt.size()));
     for(auto& t:vt)
       fout.write(t.world,t.file);
+    // NB fix 125: the vobs that the scripts have hidden or shown
+    fout.setEntry("nb/vobvisual");
+    auto& vv = it->second.vobVisual;
+    fout.write(uint32_t(vv.size()));
+    for(auto& [key,show]:vv)
+      fout.write(key,uint8_t(show ? 1 : 0));
     }
   }
 
@@ -3250,6 +3369,19 @@ void GameScript::loadQuests(Serialize& fin) {
       st.vobTrees.push_back(std::move(t));
       }
     st.vobWorld = nullptr;   // inserted again at the next tick, into the loaded world
+    }
+  if(fin.setEntry("nb/vobvisual")) {
+    auto& st = nbStates[this];
+    uint32_t cnt = 0;
+    fin.read(cnt);
+    st.vobVisual.clear();
+    for(uint32_t i=0; i<cnt; ++i) {
+      std::string key;
+      uint8_t     show = 1;
+      fin.read(key,show);
+      st.vobVisual[key] = show!=0;
+      }
+    st.vobVisualWorld = 0;   // put again at the next tick
     }
   }
 
@@ -4878,6 +5010,18 @@ void GameScript::tick(uint64_t dt) {
     return;
   st.lastCycleSecond = currentSecond;
   nbVobTreesSync(st,world());
+  // NB fix 125: the visibility of the vobs that the scripts changed (RX_ToggleVobVisible) - the vobs of a world come
+  // from its ZEN file, so it is put again on every new world (a load, a change of the world)
+  if(st.vobVisualWorld!=world().serialNumber()) {
+    st.vobVisualWorld = world().serialNumber();
+    std::string prefix(world().name());
+    for(auto& c:prefix)
+      c = char(std::toupper(static_cast<unsigned char>(c)));
+    prefix += '|';
+    for(auto& [key,show]:st.vobVisual)
+      if(key.compare(0,prefix.size(),prefix)==0)
+        world().setVobVisualTree(std::string_view(key).substr(prefix.size()),show,show);
+    }
   if(st.nextMissingLog>currentSecond+300)
     st.nextMissingLog = 0;   // a loaded save has another time
   if(currentSecond>=st.nextMissingLog) {

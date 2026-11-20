@@ -65,6 +65,8 @@ class World final {
 
     uint32_t             mobsiId(const Interactive* ptr) const;
     Interactive*         mobsiById(uint32_t id);
+    /// NB fix 125: setVobVisual of the vobs of the name and of their children
+    size_t               setVobVisualTree(std::string_view name, bool show, bool collide);
 
     uint32_t             itmId(const void* ptr) const;
     Item*                itmById(uint32_t id);

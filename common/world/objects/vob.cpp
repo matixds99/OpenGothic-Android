@@ -61,6 +61,13 @@ Vob::~Vob() {
     world.unregisterVob(registeredName,this);
   }
 
+void Vob::setVobVisualTree(bool show, bool collideDynamic) {
+  setVobVisual(show,collideDynamic);
+  for(auto& c:child)
+    if(c!=nullptr)
+      c->setVobVisualTree(show,collideDynamic);
+  }
+
 void Vob::setVobVisual(bool, bool) {
   }
 

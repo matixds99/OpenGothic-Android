@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **125**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **126**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -237,6 +237,20 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 125. Paczka 5: funkcje pluginu z logu z 20.11 – 🧪 (20.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/world.cpp/.h`, `common/world/objects/vob.cpp/.h`
+- **Zgłoszenie:** log z 20.11 – „NB missing”: `NPC_HASACTIVEPERC` x234, `RX_CALLQUESTLOOP` x231, `ACTIVATEZSSLOT`/`EXT_PUTINSLOT` x429, `RX_ISNPCIGNORETARGET` x44, `MOB_SCRAMBLECONTAINERS`, `NPC_MODIFYBODYSTATE`, `RX_TOGGLEVOBVISIBLE`, `RX_RESETSUMMONS`, `RX_SETFXNPC`, `RX_DAMAGECALCRUNES`.
+- **Poprawka (działanie odczytane z UNION_ABI.DLL):**
+  - `RX_CallQuestLoop(nazwa)` – gdy zadanie jest w toku, wywołuje pętlę zadania `RX_QuestLoop_<nazwa>` (np. kamienie Yarka w Jarkendarze). Wcześniej te pętle nie działały wcale.
+  - `RX_ToggleVobVisible(nazwa, pokaż)` – ukrywa/pokazuje obiekt świata razem z jego częściami (np. sekret Xardasa w zadaniu psioników). Stan trafia do zapisu gry i wraca po wczytaniu.
+  - `Ext_PutInSlot(postać, kość, przedmiot)` – model przedmiotu na kości postaci: mieszek z monetami (`ITSL_GOLDPOCKET`), wędka rybaków (`ITSE_FANGEL`). `ActivateZSSlot` nie jest potrzebne.
+  - `Npc_HasActivePerc(postać, percepcja)` – czy postać ma włączoną daną percepcję (np. strażnicy-dementorzy).
+  - `Mob_ScrambleContainers()` – po każdym wczytaniu nowe, losowe kombinacje zamków skrzyń (L/R), jak na PC.
+  - `RX_ResetSummons()` – po śmierci bohatera przywołane istoty znikają (zwierzaki NIXDOG i PET_JINA zostają).
+  - `RX_IsNpcIgnoreTarget`, `Npc_ModifyBodyState`, `RX_SetFXNpc` – obsłużone bez skutków (lista celów pluginu jest pusta, OpenGothic nie ma modyfikatorów stanu ciała, sam zapis postaci dla efektów pluginu).
+- **Jeszcze nie ma:** `RX_DamageCalcRunes` – przeliczanie obrażeń czarów po zmianie inteligencji (duża tabela wzorów w DLL, osobna poprawka).
+- **Do sprawdzenia:** zadanie z kamieniami Yarka w Jarkendarze; sekret Xardasa w zadaniu psioników (ściana/obiekt znika i zostaje po wczytaniu); mieszek na pasie, wędki rybaków w porcie; w logu brak tych funkcji w „NB missing”.
 
 ### 124. „Wróć” w menu kapliczek i stołów NB nie działał – 🧪 (19.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
@@ -762,7 +776,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - [ ] Potwory w walce za często odskakują/krążą – problem silnika OpenGothic (widać też w Renovation); `FA_ENEMY_PREHIT` do porównania z oryginałem.
 - [ ] Walka kilku postaci z jednym celem: cel „głupieje” (krąży, nie atakuje) – nagranie z obozu bandytów, Brago.
 - [ ] Style walki szkieletów (`GIL_SKELETON`) – poprawka 35.
-- [ ] Mieszek i torba na bohaterze (`EXT_PutInSlot`, `ActivateZSSlot`) – opcje z poprawki 5.
+- [ ] Mieszek i torba na bohaterze – `EXT_PutInSlot` działa od poprawki 125, sprawdzić opcje `bShowPocket`/`bShowBag` z poprawki 5.
+- [ ] `RX_DamageCalcRunes` – obrażenia czarów zależne od inteligencji (UNION_ABI.DLL 0x10083400).
 - [ ] Znikanie pustych ciał (opcja optymalizacji NB).
 - [x] Funkcje bossów wołane przez plugin: `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…` – poprawki 100–101 (do testu).
 - [x] Obrażenia w czasie (`RX_ApplyDotDamage`, `RX_ClearAllDots`) – poprawka 106 (do testu).

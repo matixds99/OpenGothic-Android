@@ -45,6 +45,8 @@ class Vob {
 
     /// zCVob.showVisual and the dynamic collision, a script of a mod changes them (CHANGEVOBCOLLISION of CoM)
     virtual void  setVobVisual(bool show, bool collideDynamic);
+    /// NB fix 125: setVobVisual for this vob and all its children (RX_ToggleVobVisible of New Balance)
+    void          setVobVisualTree(bool show, bool collideDynamic);
     virtual float extendedSearchRadius() const;
 
     /// The visuals that a mod asks to hide (VisualFilter) are hidden or shown again: this vob and all its children
