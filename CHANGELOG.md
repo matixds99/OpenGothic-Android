@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **136**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **137**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **135** – szybki atak (QUICK): bohater nie biegnie dalej sam w stronę celu – 🧪
-2. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – ✅ wskazał przyczynę
-3. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
-4. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
-5. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
+1. **136** – puste ciała postaci i zwierząt znikają (przełącznik w ustawieniach NB) – 🧪
+2. **135** – szybki atak (QUICK): bohater nie biegnie dalej sam w stronę celu – ✅
+3. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – ✅ wskazał przyczynę
+4. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
+5. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
 
 ---
 
@@ -250,12 +250,27 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 135. Szybki atak: bohater biegł dalej sam w stronę celu – 🧪 (20.11.2026)
+### 136. Usuwanie pustych ciał postaci i zwierząt – 🧪 (20.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h` (`nbBodiesTick`), `common/game/nboptions.h`, `common/mainwindow.cpp`
+- **Zgłoszenie:** trudno odróżnić ciała, które jeszcze coś mają, od pustych (np. gdy ognik nie zebrał łupu z goblina wojownika albo ze szkieletów). Usuwanie pustych ciał pomoże też wydajności.
+- **Zmiana:**
+  - Ciało martwej postaci lub zwierzęcia, z którego nie ma już czego zabrać (przeszukanie nie pokazałoby żadnego przedmiotu), znika po 6 s.
+  - Ciało z przedmiotami zostaje, dopóki nie zostanie opróżnione – wtedy znika po 6 s.
+  - Nic nie znika, gdy otwarty jest ekwipunek, przeszukiwanie, dialog, dokument, okno handlu NB lub rzemiosła, ani w trakcie przerywnika.
+  - Nie dotyczy bohatera ani postaci nieprzytomnych.
+  - Przełącznik „Usuwanie pustych ciał” w ustawieniach NB (rozgrywka), domyślnie włączony.
+- **Do sprawdzenia:**
+  - Zabicie wilka bez umiejętności skórowania (puste ciało) – znika po kilku sekundach.
+  - Zabicie bandyty – ciało zostaje do przeszukania i znika po zabraniu wszystkiego.
+  - W logu `[ctx] bodies: N empty removed`.
+
+### 135. Szybki atak: bohater biegł dalej sam w stronę celu – ✅ (20.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp`
 - **Zgłoszenie:** po serii szybkich ataków (przycisk QUICK, czar lub broń) bohater biegł dalej w stronę celu i atakował kolejne postacie, choć ekran nie był dotykany.
 - **Przyczyna:** log z poprawki 134 pokazał bieg bez żadnego sterowania: pusta kolejka AI, brak stanu, brak wciśniętego ruchu, a w tym czasie trwał szybki atak. Obsługa szybkiego ataku kończy się przed kodem ruchu, więc animacja biegu z chwili dotknięcia QUICK nigdy nie była zatrzymywana. Obrót do celu w tej samej obsłudze kierował bieg prosto na cel. Przy czarach szybki atak czekał przy tym na postawę stojącą, której bieg nie dawał, więc trwał do końca limitu czasu, a kolejne dotknięcia go odnawiały.
 - **Poprawka:** w trakcie szybkiego ataku (czar i broń) bohater bez gałki i strzałek zatrzymuje bieg i stoi. Z wciśniętą gałką dalej biegnie jak dotąd.
 - **Do sprawdzenia:** seria QUICK z czarem i z mieczem w biegu, potem puszczenie gałki – bohater staje i atakuje w miejscu.
+- **Test (20.11):** działa.
 
 ### 134. Diagnostyka: co porusza bohatera, który biegnie sam do celu – ✅ (20.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h`, `common/game/playercontrol.cpp/.h`, `common/mainwindow.cpp`, `common/utils/androidinput.h`

@@ -1979,6 +1979,8 @@ void MainWindow::setFullscreen(bool fs) {
   }
 
 void MainWindow::render(){
+  GameScript::nbUiBusy = inventory.isActive() || dialogs.isActive() || document.isActive() ||
+                         nbSales.isActive() || nbCraft.isActive();   // NB fix 136
   try {
 #ifdef __ANDROID__
     if(!androidWindowCheck())

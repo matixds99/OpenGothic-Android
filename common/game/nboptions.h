@@ -159,6 +159,7 @@ inline constexpr Default defaults[] = {
   {"BELIARS_RAGE", "bSoundActive", 1},
   {"BELIARS_RAGE", "RX_BeliarRage_ShowVisualPos", 1},
   {"NB_OG", "bNewItems", 1},   // NB fix 121, 122: the marks of the unread documents in the inventory
+  {"NB_OG", "bRemoveBodies", 1},   // NB fix 136: the empty bodies go away
   };
 
 struct Option {
@@ -193,6 +194,8 @@ inline constexpr Option shown[] = {
   {"GAMEPLAY_MUSIC_BOSS", "AST", "bToggleBossMusic", 2},             // NB fix 108: RX_CheckMusicBoss
   {"GAMEPLAY_MUSIC_BOSS_ANIMAL", "AST", "bToggleMusicAnimalBoss", 2},
   {"GAMEPLAY_PARTY_SPRINT", "AST", "bTogglePartySprint", 2},         // NB fix 108: RX_RestoreSprint
+  // NB fix 136: the bodies with nothing to take go away (game/gamescript.cpp, nbBodiesTick)
+  {"OG_REMOVE_BODIES", "NB_OG", "bRemoveBodies", 2, "Usuwanie pustych cia³"},
   // NB fix 108: the acrobatics of the touch screen (NB fix 86) - here instead of the settings of the touch screen
   {"OG_ACROBATIC", "MOBILE", "acrobatic", 2, "Akrobatyka (przewrotki na A/D)"},
   // the details

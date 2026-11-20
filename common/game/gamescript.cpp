@@ -212,6 +212,7 @@ struct NbState {
   uint32_t                                    followWorld = 0;       // NB fix 131: the world and the place of the hero
   // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
   std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
+  std::unordered_map<const Npc*,uint64_t>     bodyEmptySince;        // NB fix 136: a dead body found empty, since when
   int32_t                                     reattackNext = 1;
   Tempest::Vec3                               followPos;             //   in the frame before, for his teleports
   bool                                        spellsDirty   = false;
@@ -5103,6 +5104,7 @@ void GameScript::tick(uint64_t dt) {
   nbVobTreesSync(st,world());
   nbTrollTick();         // NB fix 128
   nbSummonCountTick();   // NB fix 129
+  nbBodiesTick();        // NB fix 136
   // NB fix 126: the damage of the spells - counted again after a load (the constants are not in the save-game) and every
   // 3 s (the robe, the curse, the guild change it as well); the spells are made again when the values changed
   if(st.spellsWorld!=world().serialNumber() || tickCount()>=st.spellsNextCheck) {
@@ -7853,6 +7855,45 @@ void GameScript::nbSummonCountTick() {
     nbCtx("summon places: ",var->get_int()," -> ",count);
     var->set_int(count);
     }
+  }
+
+/// NB fix 136: the bodies of the dead characters and animals with nothing to take (no item that the looting shows) go away
+/// after BodyDelay ms - one sees at once which bodies are still worth a look, and the world has less to draw and to think
+/// about. A body with items stays until it is emptied. Nothing goes while the inventory or a dialog is open (the looting of
+/// a body holds its inventory), nor the hero, the unconscious, nor a body in a cutscene. The option "Usuwanie pustych ciał"
+void GameScript::nbBodiesTick() {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end())
+    return;
+  auto& st = nb->second;
+  static constexpr uint64_t BodyDelay = 6000;
+  if(Gothic::settingsGetI("NB_OG","bRemoveBodies")==0 || nbUiBusy || world().currentCs()!=nullptr) {
+    st.bodyEmptySince.clear();
+    return;
+    }
+  auto* hero = world().player();
+  if(hero==nullptr)
+    return;
+  const uint64_t now = tickCount();
+  std::unordered_map<const Npc*,uint64_t> seen;
+  std::vector<Npc*> gone;
+  world().detectNpc(hero->position(),1.0e6f,[&](Npc& n) {
+    if(n.isPlayer() || !n.isDead())
+      return;
+    if(n.inventory().iterator(Inventory::T_Ransack).isValid())
+      return;   // something to take
+    uint64_t since = now;
+    if(auto it = st.bodyEmptySince.find(&n); it!=st.bodyEmptySince.end())
+      since = it->second;
+    if(now>=since+BodyDelay)
+      gone.push_back(&n); else
+      seen[&n] = since;
+    });
+  st.bodyEmptySince = std::move(seen);
+  for(auto* n:gone)
+    world().removeNpc(*n);
+  if(!gone.empty())
+    nbCtx("bodies: ",gone.size()," empty removed");
   }
 
 /// NB fix 131: RX_SummonMode of the scripts - 0 the summoned creatures attack (active), 1 they attack nobody (passive)
