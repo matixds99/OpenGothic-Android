@@ -11,6 +11,18 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 ---
 
+## NOWE
+
+Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
+
+1. **127** – bonusy przedmiotów działają (korona królów +15 many, zdrowie ze zbroi i hełmów); manekiny treningowe zawsze do zaznaczenia – 🧪
+2. **126** – obrażenia czarów rosną z inteligencją – ✅
+3. **125** – paczka 5 funkcji pluginu: pętle zadań, ukrywanie obiektów w zadaniach, przedmioty na postaciach, losowe zamki skrzyń – 🧪
+4. **124** – „Wróć” w menu kapliczek i stołów działa – 🧪
+5. **121–123** – oznaczanie nowych przedmiotów w ekwipunku (dokumenty zapamiętywane w zapisie gry) – 🧪
+
+---
+
 ## Spis
 
 1. [Podstawy: skrypty NB, opcje, pętle pluginu, log](#1-podstawy-skrypty-nb-opcje-pętle-pluginu-log)
