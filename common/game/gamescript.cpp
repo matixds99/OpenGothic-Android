@@ -2438,9 +2438,13 @@ void GameScript::initCommon() {
         }
       return findNpc(h);
       };
+    // NB fix 133: never for the player - the engine of the PC runs no states on the hero (he is steered by the player);
+    // here ZS_Attack started on him, and the hero ran by himself at the one who hit him
     bindNb("RX_CANREATTACK", [this,slotIndex,keptNpc](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
       auto* npc = findNpcRaw(ref);
       const int32_t slot = slotIndex();
+      if(npc!=nullptr && npc->isPlayer())
+        return 0;
       if(npc==nullptr || slot<0)
         return 1;
       auto* kept = keptNpc(npc->newBalanceGetNpcVar(slot));
@@ -2449,12 +2453,14 @@ void GameScript::initCommon() {
     // at once, unless the character is in the middle of its own blow
     bindNb("RX_CANREATTACKNOW", [this](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
       auto* npc = findNpcRaw(ref);
+      if(npc!=nullptr && npc->isPlayer())
+        return 0;   // NB fix 133
       return npc!=nullptr && npc->isAttackAnim() ? 0 : 1;
       });
     bindNb("RX_HASREATTACKNPC", [this,slotIndex,keptNpc](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
       auto* npc = findNpcRaw(ref);
       const int32_t slot = slotIndex();
-      if(npc==nullptr || slot<0)
+      if(npc==nullptr || slot<0 || npc->isPlayer())   // NB fix 133
         return 0;
       auto* kept = keptNpc(npc->newBalanceGetNpcVar(slot));
       return kept!=nullptr && !kept->isDead() ? 1 : 0;
@@ -2463,7 +2469,7 @@ void GameScript::initCommon() {
       auto* npc = findNpcRaw(ref);
       auto* oth = findNpcRaw(otherRef);
       const int32_t slot = slotIndex();
-      if(npc==nullptr || oth==nullptr || slot<0)
+      if(npc==nullptr || oth==nullptr || slot<0 || npc->isPlayer())   // NB fix 133
         return;
       auto& st  = nbStates[this];
       int32_t key = npc->newBalanceGetNpcVar(slot);

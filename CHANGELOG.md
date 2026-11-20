@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **133** – bohater nie biegnie sam do przodu po serii ciosów (zgubione puszczenie gałki) – 🧪
+1. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (skutek uboczny 132) – 🧪
 2. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
 3. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
 4. **130** – trolle: rzut startuje także w trakcie innej animacji, log z przyczyną, gdy troll nie rzuca – ✅
@@ -250,14 +250,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 133. Bohater biegnie sam do przodu po serii ciosów – 🧪 (20.11.2026)
-- **Pliki:** `common/mainwindow.cpp`, `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.h`
-- **Zgłoszenie:** nagranie z miasta – po serii ciosów mieczem bohater biegł dalej do przodu, choć gałka była puszczona, aż wbiegł między strażników.
-- **Przyczyna (prawdopodobna):** puszczenie klawisza ruchu nie dotarło do sterowania bohatera. Okno, które przyjęło wciśnięcie innego klawisza, zabiera też następne puszczenie, a jest jedno wspólne dla wszystkich klawiszy. Ruch do przodu został włączony na stałe.
-- **Poprawka:** na telefonie każdy ruch przychodzi z nakładki dotykowej (gałka, przyciski; klawiatura i pad też przez nią). Co klatkę sprawdzane jest, czy nakładka dalej trzyma przód / tył. Jeśli nie, a bohater wciąż idzie, ruch zostaje puszczony.
-- **Do sprawdzenia:**
-  - Ta sama seria ciosów w biegu, a potem puszczenie gałki – bohater powinien stanąć.
-  - W logu `touch: a movement key without its release was let go (…)` – w nawiasie widać, czy klawisz zabrało okno. To pomoże znaleźć pierwotną przyczynę.
+### 133. Bohater biegnie sam do przodu i atakuje – 🧪 (20.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/mainwindow.cpp`, `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.h`
+- **Zgłoszenie:** nagranie i log z miasta – po walce bohater biegł sam do strażnika i rzucał w niego czar, choć ekran nie był dotykany.
+- **Przyczyna:** skutek uboczny poprawki 132. Skrypty NB (`B_AssessDamage`) wywołują zmianę celu dla każdej trafionej postaci, także dla bohatera. Gdy bohatera trafił ktoś inny niż jego cel, skrypt uruchamiał na nim stan `ZS_Attack` i bohater był sterowany jak NPC. Na PC silnik nie uruchamia stanów AI na bohaterze, więc tam to nie występuje.
+- **Poprawka:**
+  - Funkcje zmiany celu (`RX_CanReAttack`, `RX_CanReAttackNow`, `RX_HasReAttackNpc`, `RX_SetReAttackNpc`) nie działają dla bohatera.
+  - Dodatkowe zabezpieczenie: co klatkę sprawdzane jest, czy nakładka dotykowa dalej trzyma przód / tył. Jeśli nie, a ruch bohatera jest wciąż włączony, zostaje puszczony. Log: `touch: a movement key without its release was let go (…)`.
+- **Do sprawdzenia:** walka w mieście ze strażnikami – po trafieniu bohater nie rusza się sam.
 
 ### 132. Zmiana celu w walce – potwór bił tylko bohatera, choć ranił go przywołaniec – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
