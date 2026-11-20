@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **127** – bonusy przedmiotów działają (korona królów +15 many, zdrowie ze zbroi i hełmów); manekiny treningowe zawsze do zaznaczenia – 🧪
+1. **127** – bonusy przedmiotów działają (korona królów +15 many, zdrowie ze zbroi i hełmów); manekiny treningowe zawsze do zaznaczenia – ✅
 2. **126** – obrażenia czarów rosną z inteligencją – ✅
 3. **125** – paczka 5 funkcji pluginu: pętle zadań, ukrywanie obiektów w zadaniach, przedmioty na postaciach, losowe zamki skrzyń – 🧪
 4. **124** – „Wróć” w menu kapliczek i stołów działa – ✅
-5. **121–123** – oznaczanie nowych przedmiotów w ekwipunku (dokumenty zapamiętywane w zapisie gry) – 🧪
+5. **121–123** – oznaczanie nowych przedmiotów w ekwipunku (dokumenty zapamiętywane w zapisie gry) – ✅
 
 ---
 
@@ -250,7 +250,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 127. Bonusy przedmiotów (korona królów +15 many) i manekiny treningowe – 🧪 (20.11.2026)
+### 127. Bonusy przedmiotów (korona królów +15 many) i manekiny treningowe – ✅ (20.11.2026)
 - **Pliki:** `common/game/inventory.cpp/.h` (`applyItemEffects`), `common/game/gamesession.cpp`, `common/world/objects/npc.h`, `common/game/gamescript.cpp/.h` (`nbIsTrainingDummy`), `common/world/worldobjects.cpp`, `common/mainwindow.cpp`
 - **Zgłoszenie:** korona królów nie dodaje 15 many; sprawdzić bonusy broni, hełmów, pasów, pierścieni i trofeów. Manekiny przy farmie Onara i przy straży miejskiej są „przyjazne” – bez włączonego celowania w pokojowe stworzenia nie da się na nich trenować.
 - **Przyczyna (bonusy):** część przedmiotów ma bonus zapisany w polach `change_atr`/`change_value` – oryginalny silnik dodaje go sam przy zakładaniu (oCNpc::AddItemEffects) i odejmuje przy zdejmowaniu. OpenGothic tego nie robił. W skryptach NB to 183 przedmioty: 159 zbroi i hełmów (np. korona królów `ITAR_SHRECHELM`: +15 maks. many), 20 broni białych, 2 dystansowe, pas i jedno trofeum – głównie maks. zdrowie, 8 z maks. maną. Pierścienie, amulety i większość trofeów (np. kieł Muritana) dają bonusy skryptami przy zakładaniu – te działały.
@@ -259,6 +259,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Zapisy ze starszej wersji (bez wpisu `game/item_effects`): po wczytaniu bonusy założonych przedmiotów są dodawane raz – bez tego zdjęcie przedmiotu odjęłoby bonus, którego nigdy nie było.
   - Manekiny (`AIM`, `AIM_100/300/600`, `aivar[43] = ID_TRAINING_AIM`) zawsze dają się zaznaczyć, także przy wyłączonym celowaniu w pokojowe stworzenia; nazwa w fokusie biała zamiast zielonej.
 - **Do sprawdzenia:** korona królów – maks. mana +15 po założeniu, −15 po zdjęciu; zbroja z bonusem zdrowia – maks. HP; manekin przy farmie Onara z wyłączonym celowaniem w pokojowe stworzenia.
+- **Test (20.11):** działa – korona dodaje manę, manekiny zawsze można zaatakować.
 
 ### 126. Obrażenia czarów rosną z inteligencją (`RX_DamageCalcRunes`) – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbDamageCalcRunes`), `common/game/definitions/spelldefinitions.cpp/.h` (`refresh`)
@@ -295,10 +296,11 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** kapliczka → wymiana karmy → „Wróć” – powrót do listy kapliczki.
 - **Test (20.11):** działa.
 
-### 121–123. Oznaczanie nowych przedmiotów w ekwipunku – 🧪 (19.11.2026)
+### 121–123. Oznaczanie nowych przedmiotów w ekwipunku – ✅ (19.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/game/gamesession.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`, `common/game/nboptions.h`
 - Dodano oznaczanie nowych przedmiotów w ekwipunku: znacznik **NOWY** na przedmiocie i złoty kwadracik na zakładce jego kategorii. Nieprzeczytane dokumenty są zapamiętywane w zapisie gry, a znacznik znika po ich przeczytaniu. Pozostałe przedmioty tracą znacznik po wybraniu i nie są zapamiętywane w zapisie.
 - **Ustawienie:** Ustawienia NB → „Oznaczanie nowych przedmiotów w ekwipunku” (domyślnie włączone).
+- **Test (20.11):** działa – nowe dokumenty są oznaczone także po wczytaniu gry w nowej sesji.
 
 ### 117–120. Ognik przywołany od startu gry, kilka ogników po kolejnych zapisach – 🧪 (19.11.2026)
 - **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json` (wersja 1.2.1), gotowy `mods/nb-wisp.zip`; `common/scripting/game/game_events.cpp` (`world:load`), `common/scripting/game/game_npcs.cpp` (`npcs.all`), `common/world/world.h`, `common/game/gamesession.h` (`serialNumber`), `docs/MODS.md`
