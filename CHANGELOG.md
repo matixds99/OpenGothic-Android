@@ -18,7 +18,7 @@ Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 1. **127** – bonusy przedmiotów działają (korona królów +15 many, zdrowie ze zbroi i hełmów); manekiny treningowe zawsze do zaznaczenia – 🧪
 2. **126** – obrażenia czarów rosną z inteligencją – ✅
 3. **125** – paczka 5 funkcji pluginu: pętle zadań, ukrywanie obiektów w zadaniach, przedmioty na postaciach, losowe zamki skrzyń – 🧪
-4. **124** – „Wróć” w menu kapliczek i stołów działa – 🧪
+4. **124** – „Wróć” w menu kapliczek i stołów działa – ✅
 5. **121–123** – oznaczanie nowych przedmiotów w ekwipunku (dokumenty zapamiętywane w zapisie gry) – 🧪
 
 ---
@@ -287,12 +287,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Jeszcze nie ma:** `RX_DamageCalcRunes` – przeliczanie obrażeń czarów po zmianie inteligencji (duża tabela wzorów w DLL, osobna poprawka).
 - **Do sprawdzenia:** zadanie z kamieniami Yarka w Jarkendarze; sekret Xardasa w zadaniu psioników (ściana/obiekt znika i zostaje po wczytaniu); mieszek na pasie, wędki rybaków w porcie; w logu brak tych funkcji w „NB missing”.
 
-### 124. „Wróć” w menu kapliczek i stołów NB nie działał – 🧪 (19.11.2026)
+### 124. „Wróć” w menu kapliczek i stołów NB nie działał – ✅ (19.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
 - **Zgłoszenie:** przy kapliczce (wymiana karmy na złoto) „...(Wróć)” nie wychodzi z menu – znika, a pozostałe wybory zostają.
 - **Przyczyna:** „Wróć” woła `RX_ClearDialog` → `RX_ClearCurrentDialog` (funkcja pluginu), której port nie miał – wybory nie były czyszczone.
 - **Poprawka:** `RX_ClearCurrentDialog` czyści wybory dialogu, który właśnie się wykonuje, i menu wraca do swojej listy – dotyczy wszystkich menu NB z „Wróć”.
 - **Do sprawdzenia:** kapliczka → wymiana karmy → „Wróć” – powrót do listy kapliczki.
+- **Test (20.11):** działa.
 
 ### 121–123. Oznaczanie nowych przedmiotów w ekwipunku – 🧪 (19.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/game/gamesession.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`, `common/game/nboptions.h`
