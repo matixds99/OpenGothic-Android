@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **135**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **136**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – 🧪
-2. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
-3. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
-4. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
-5. **130** – trolle: rzut startuje także w trakcie innej animacji, log z przyczyną, gdy troll nie rzuca – ✅
+1. **135** – szybki atak (QUICK): bohater nie biegnie dalej sam w stronę celu – 🧪
+2. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – ✅ wskazał przyczynę
+3. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
+4. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
+5. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
 
 ---
 
@@ -250,7 +250,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 134. Diagnostyka: co porusza bohatera, który biegnie sam do celu – 🧪 (20.11.2026)
+### 135. Szybki atak: bohater biegł dalej sam w stronę celu – 🧪 (20.11.2026)
+- **Pliki:** `common/game/playercontrol.cpp`
+- **Zgłoszenie:** po serii szybkich ataków (przycisk QUICK, czar lub broń) bohater biegł dalej w stronę celu i atakował kolejne postacie, choć ekran nie był dotykany.
+- **Przyczyna:** log z poprawki 134 pokazał bieg bez żadnego sterowania: pusta kolejka AI, brak stanu, brak wciśniętego ruchu, a w tym czasie trwał szybki atak. Obsługa szybkiego ataku kończy się przed kodem ruchu, więc animacja biegu z chwili dotknięcia QUICK nigdy nie była zatrzymywana. Obrót do celu w tej samej obsłudze kierował bieg prosto na cel. Przy czarach szybki atak czekał przy tym na postawę stojącą, której bieg nie dawał, więc trwał do końca limitu czasu, a kolejne dotknięcia go odnawiały.
+- **Poprawka:** w trakcie szybkiego ataku (czar i broń) bohater bez gałki i strzałek zatrzymuje bieg i stoi. Z wciśniętą gałką dalej biegnie jak dotąd.
+- **Do sprawdzenia:** seria QUICK z czarem i z mieczem w biegu, potem puszczenie gałki – bohater staje i atakuje w miejscu.
+
+### 134. Diagnostyka: co porusza bohatera, który biegnie sam do celu – ✅ (20.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h`, `common/game/playercontrol.cpp/.h`, `common/mainwindow.cpp`, `common/utils/androidinput.h`
 - **Zgłoszenie:** po poprawce 133 bohater dalej sam biegnie do celu i go atakuje (czar 508 w obywatela, potem w Thorbena), choć ekran nie jest dotykany.
 - **Zmiana:** sam log, bez zmiany zachowania gry. Linijki `[hero-ai]`:
@@ -258,6 +265,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `a command for the hero: act=N target=…` – polecenie AI dla bohatera poza przerywnikiem i dialogiem;
   - `the hero moves by himself (N m/s): …` – co sekundę, gdy bohater przesuwa się o ponad 2 m bez gałki i strzałek. Zawiera kolejkę AI, cel ruchu, stan, cel walki oraz stan sterowania (przód, akcja, szybki atak).
 - **Do sprawdzenia:** powtórzyć sytuację i przesłać log z linijkami `[hero-ai]`.
+- **Test (20.11):** log wskazał przyczynę – bohater biegł (stan ciała BS_RUN) z pustą kolejką AI, bez stanu i bez wciśniętego ruchu, zawsze w trakcie szybkiego ataku (poprawka 135).
 
 ### 133. Bohater biegnie sam do przodu i atakuje – ⏸ nie pomogło (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/mainwindow.cpp`, `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.h`

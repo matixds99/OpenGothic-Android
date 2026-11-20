@@ -902,6 +902,13 @@ void PlayerControl::implMove(uint64_t dt) {
 
   // NB fix 96, 98: the quick attack - the forward blow (the sword button) played faster, cut off right after its hit
   // (the reset of the position) and the next one at once
+  // NB fix 135: the quick attack returns before the movement below - the run the hero had when QUICK was tapped went on by
+  // itself (and the turn to the target steered it at the target). Without the stick the hero stands
+  const bool noMoveInput = !wantsToMoveForward() && !wantsToMoveBackward() && !wantsToStrafeLeft() && !wantsToStrafeRight();
+  const auto quickStand  = [&]() {
+    if(noMoveInput && !pl.isInAir() && !pl.isSwim() && !pl.isDive())
+      pl.setAnim(Npc::Anim::Idle);
+    };
   if(quickUntil!=0) {
     auto*      wr  = Gothic::inst().world();
     const auto now = wr!=nullptr ? wr->tickCount() : 0;
@@ -916,6 +923,7 @@ void PlayerControl::implMove(uint64_t dt) {
     if(mage) {
       // NB fix 103: QUICK with magic - the spell in the hand cast QuickHits times in a row, faster (QuickSpellSpeed)
       Npc::nbQuickSpeed = QuickSpellSpeed;
+      quickStand();   // NB fix 135
       if(auto other = pl.target()) {
         auto dp = other->centerPosition()-pl.centerPosition();
         pl.turnTo(dp.x,dp.z,true,dt);
@@ -952,6 +960,7 @@ void PlayerControl::implMove(uint64_t dt) {
       Npc::nbQuickSpeed = 1.f;
       } else {
       Npc::nbQuickSpeed = quickSpeedNow;   // NB fix 115: by the fighting style
+      quickStand();   // NB fix 135
       if(auto other = pl.target()) {
         auto dp = other->centerPosition()-pl.centerPosition();
         pl.turnTo(dp.x,dp.z,true,dt);
