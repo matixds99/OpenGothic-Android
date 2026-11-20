@@ -214,6 +214,8 @@ class GameScript final {
     bool             nbIsSummon(const Npc& npc);
     bool             nbIsTrainingDummy(const Npc& npc);   // NB fix 127
     uint64_t         nbDamageCalcRunes();   // NB fix 126
+    void             nbTrollTick();   // NB fix 128
+    void             nbSummonCountTick();   // NB fix 129
     void             nbBossHit(Npc& target, Npc& attacker);    // NB fix 100: AI_OnHit_, AI_OnGetDamage_ of the bosses
     void             nbBossTick();                             // NB fix 100: AI_OnTick_, AI_OnBreak_ every second
     zenkit::DaedalusSymbol* nbInstanceFunc(std::string_view prefix, Npc& npc);

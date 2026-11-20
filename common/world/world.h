@@ -187,6 +187,8 @@ class World final {
     size_t               hasItems(std::string_view tag, size_t itemCls);
 
     Bullet&              shootBullet(const Item &itmId, const Npc& npc, const Npc* target, const Interactive* inter);
+    /// NB fix 128: a bullet from a point of the model (the stone of a troll leaves its hand, not its feet)
+    Bullet&              shootBulletFrom(const Item &itmId, const Npc& npc, const Tempest::Vec3& from, const Npc& target);
     Bullet&              shootSpell(const Item &itm, const Npc &npc, const Npc *target);
 
     void                 sendPassivePerc  (Npc& self, Npc& other, int32_t perc);

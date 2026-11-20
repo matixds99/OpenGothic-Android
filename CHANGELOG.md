@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **128**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **130**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **127** – bonusy przedmiotów działają (korona królów +15 many, zdrowie ze zbroi i hełmów); manekiny treningowe zawsze do zaznaczenia – ✅
-2. **126** – obrażenia czarów rosną z inteligencją – ✅
-3. **125** – paczka 5 funkcji pluginu: pętle zadań, ukrywanie obiektów w zadaniach, przedmioty na postaciach, losowe zamki skrzyń – 🧪
-4. **124** – „Wróć” w menu kapliczek i stołów działa – ✅
-5. **121–123** – oznaczanie nowych przedmiotów w ekwipunku (dokumenty zapamiętywane w zapisie gry) – ✅
+1. **129** – przywoływanie stworzeń działa (licznik miejsc nie rośnie bez końca) – 🧪
+2. **128** – trolle rzucają kamieniami – 🧪
+3. **127** – bonusy przedmiotów działają (korona królów +15 many, zdrowie ze zbroi i hełmów); manekiny treningowe zawsze do zaznaczenia – ✅
+4. **126** – obrażenia czarów rosną z inteligencją – ✅
+5. **125** – paczka 5 funkcji pluginu: pętle zadań, ukrywanie obiektów w zadaniach, przedmioty na postaciach, losowe zamki skrzyń – 🧪
 
 ---
 
@@ -249,6 +249,21 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 129. „Nie możesz przywołać więcej stworzeń” – licznik przywołańców tylko rósł – 🧪 (20.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h` (`nbSummonCountTick`)
+- **Zgłoszenie:** przy próbie przywołania kamiennego golema gra pisze, że nie można przywołać więcej stworzeń.
+- **Przyczyna:** skrypty NB przy każdym przywołaniu dodają do `RX_SummonCount` miejsca stworzenia (golem i demon 2, wilk i szkielet 1) i porównują je z limitem. Odejmuje plugin, gdy przywołaniec zginie albo zniknie (UNION_ABI.DLL 0x101384b0). Port tego nie miał – licznik tylko rósł, aż blokował każde przywołanie.
+- **Poprawka:** co 0,5 s licznik liczony od nowa z żywych przywołańców bohatera. Miejsca jak w skryptach (42 rodzaje stworzeń) i w pluginie: zwierzak mrocznego rycerza 4, Sid 1 albo 2, przywołany golem 2, pozostałe 1. Ognik, zwierzaki (NIXDOG, Jina) i totem nie zajmują miejsc. Zawyżony licznik ze starego zapisu poprawia się sam po wczytaniu.
+- **Do sprawdzenia:** przywołanie golema; po jego śmierci kolejne przywołanie; w logu `[ctx] summon places: A -> B`.
+
+### 128. Trolle rzucają kamieniami – 🧪 (20.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h` (`nbTrollTick`), `common/world/world.cpp/.h` (`shootBulletFrom`)
+- **Zgłoszenie:** trolle nie rzucają kamieniami – to mechanika New Balance, na PC robi ją plugin.
+- **Jak to działa na PC (UNION_ABI.DLL 0x103889b0, 0x10389560):** troll (`GIL_TROLL`), który biegnie do wroga dalej niż 8,5 m, czasem staje i gra animację `T_STONETHROW` swojego modelu: dalej niż 12 m z szansą 2% na klatkę, dalej niż 8,5 m z 1%. Po rzucie przerwa 7,5–12,5 s albo 10–16 s. Kamień (`ItTrollStone`) wylatuje z prawej ręki w stronę wroga.
+- **Poprawka:** to samo w silniku – sprawdzane 10 razy na sekundę dla trolli w promieniu 40 m od bohatera, gdy widzą cel (8,5–30 m). Kamień leci jak pocisk z prawej ręki trolla, w połowie animacji, z obrażeniami obuchowymi równymi sile trolla.
+- **Nie ma:** rzutu goblinem (`T_GOBBOTHROW` – troll łapie pobliskiego goblina), zmiany tempa animacji zależnie od odległości i fizyki kamienia z pluginu (toczenie, dźwięk upadku). Moment wypuszczenia kamienia jest przybliżony – OpenGothic nie czyta zdarzeń `TRO_STONETHROW` z animacji.
+- **Do sprawdzenia:** walka z trollem z dystansu (np. łuk) – co kilka sekund rzut kamieniem; w logu `[ctx] troll throws a stone`.
 
 ### 127. Bonusy przedmiotów (korona królów +15 many) i manekiny treningowe – ✅ (20.11.2026)
 - **Pliki:** `common/game/inventory.cpp/.h` (`applyItemEffects`), `common/game/gamesession.cpp`, `common/world/objects/npc.h`, `common/game/gamescript.cpp/.h` (`nbIsTrainingDummy`), `common/world/worldobjects.cpp`, `common/mainwindow.cpp`

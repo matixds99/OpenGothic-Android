@@ -198,6 +198,16 @@ struct NbState {
   std::unordered_map<size_t,std::string>      slotVisual;
   // NB fix 126: the damage of the spells by the intelligence (RX_DamageCalcRunes); the definitions of the spells are made
   // again at the next tick when the values changed; the values are counted again after a load
+  // NB fix 128: the trolls throw stones (UNION_ABI.DLL 0x103889b0 and 0x10389560): the throw that is under way and
+  // the pause after it, for every troll
+  struct TrollThrow {
+    std::weak_ptr<zenkit::INpc> troll, target;
+    uint64_t                    nextTry   = 0;   // no throw before (the pause of the plugin, 7.5-16 s)
+    uint64_t                    releaseAt = 0;   // the stone leaves the hand (0 - no throw now)
+    };
+  std::unordered_map<const zenkit::INpc*,TrollThrow> trolls;
+  uint64_t                                    trollNextLook = 0;
+  uint64_t                                    summonNextCount = 0;   // NB fix 129
   bool                                        spellsDirty   = false;
   uint32_t                                    spellsWorld   = 0;
   uint64_t                                    spellsNextCheck = 0;
@@ -5026,6 +5036,8 @@ void GameScript::tick(uint64_t dt) {
     return;
   st.lastCycleSecond = currentSecond;
   nbVobTreesSync(st,world());
+  nbTrollTick();         // NB fix 128
+  nbSummonCountTick();   // NB fix 129
   // NB fix 126: the damage of the spells - counted again after a load (the constants are not in the save-game) and every
   // 3 s (the robe, the curse, the guild change it as well); the spells are made again when the values changed
   if(st.spellsWorld!=world().serialNumber() || tickCount()>=st.spellsNextCheck) {
@@ -7681,6 +7693,185 @@ void GameScript::nbBreakLock(Npc& hero, Interactive& mob, int32_t mode) {
     runes->set_int(runeWas,99);
   if(mode==2 && forceOk)
     force->set_int(forceWas);
+  }
+
+/// NB fix 129: RX_SummonCount - the places of the summoned creatures of the hero. The scripts add to it when they call a
+/// creature (a golem 2, a wolf 1...) and compare it with GetSummonCountMax; the plugin takes it away when a creature dies
+/// or goes (UNION_ABI.DLL 0x101384b0). Here it is counted again from the living creatures every 0.5 s - the places are the
+/// ones that the scripts add for the instance (DK_Pet 4, Sid 1 or 2, a summoned golem 2, the others 1); the wisp and the
+/// pets take none
+void GameScript::nbSummonCountTick() {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end())
+    return;
+  auto& st = nb->second;
+  if(tickCount()<st.summonNextCount)
+    return;
+  st.summonNextCount = tickCount()+500;
+  auto* var  = vm.find_symbol_by_name("RX_SUMMONCOUNT");
+  auto* hero = world().player();
+  if(var==nullptr || var->type()!=zenkit::DaedalusDataType::INT || hero==nullptr)
+    return;
+  static const std::unordered_map<std::string_view,int32_t> places = {
+    {"DK_PET", 4},
+    {"ELIGOR_DEMON", 2},
+    {"ICEWOLF_SUMMONED", 3},
+    {"SHADOWBEAST_SKELETON_SUMMON", 2},
+    {"SKELETON_SUMMON_SPEAR1", 1},
+    {"SKELETON_SUMMON_SPEAR2", 1},
+    {"SKELETON_SUMMON_SPEAR3", 1},
+    {"SUMKHUBI", 2},
+    {"SUMMONED_DEMON", 2},
+    {"SUMMONED_DEMONLORD", 2},
+    {"SUMMONED_DEMONLORD_UP_01", 2},
+    {"SUMMONED_DEMONLORD_UP_02", 2},
+    {"SUMMONED_DEMON_LOW", 2},
+    {"SUMMONED_DEMON_SCROLL", 2},
+    {"SUMMONED_DEMON_UP_01", 2},
+    {"SUMMONED_DEMON_UP_02", 2},
+    {"SUMMONED_DRAGON", 2},
+    {"SUMMONED_FIREGOLEM", 2},
+    {"SUMMONED_GOBBO_SKELETON", 1},
+    {"SUMMONED_GOBBO_SKELETON_DARK", 1},
+    {"SUMMONED_GOLEM", 2},
+    {"SUMMONED_GUARDIAN", 2},
+    {"SUMMONED_ICEGOLEM", 2},
+    {"SUMMONED_SKELETON", 1},
+    {"SUMMONED_SKELETONADVANCED", 1},
+    {"SUMMONED_SKELETONBOSS", 1},
+    {"SUMMONED_SKELETON_ARCHER_1", 1},
+    {"SUMMONED_SKELETON_ARCHER_2", 1},
+    {"SUMMONED_SKELETON_ARCHER_3", 1},
+    {"SUMMONED_SKELETON_SCROLL", 1},
+    {"SUMMONED_SKELETON_WARRIOR", 1},
+    {"SUMMONED_SKELETON_WARRIORADVANCED", 1},
+    {"SUMMONED_SKELETON_WARRIORBOSS", 1},
+    {"SUMMONED_SWAMPGOLEM", 2},
+    {"SUMMONED_WARG", 1},
+    {"SUMMONED_WARG1", 1},
+    {"SUMMONED_WARG2", 1},
+    {"SUMMONED_WARG3", 1},
+    {"SUMMONED_WARG_SCROLL", 1},
+    {"SUMMONED_ZOMBIE", 1},
+    {"SUMMONED_ZOMBIE_ADVANCED", 1},
+    {"SUMMONED_ZOMBIE_BOSS", 1},
+    {"TREANT", 2}
+    };
+  const auto intVar = [this](std::string_view n) {
+    auto* s = vm.find_symbol_by_name(n);
+    return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT ? s->get_int() : 0;
+    };
+  const int32_t golemGuild = intVar("GIL_SUMMONED_GOLEM");
+  int32_t count = 0;
+  world().detectNpc(hero->position(),1.0e6f,[&](Npc& n) {
+    if(n.isDead() || n.isPlayer() || !nbIsSummon(n))
+      return;
+    auto* sym = vm.find_symbol_by_index(uint32_t(n.handle().symbol_index()));
+    const std::string_view inst = sym!=nullptr ? std::string_view(sym->name()) : std::string_view();
+    if(inst=="WISP_DETECTOR" || inst=="NIXDOG" || inst=="PET_JINA" || inst=="HERO_TOTEM_VOB")
+      return;
+    if(inst=="SUMMONED_SKELETONUNIQ") {
+      count += intVar("RX_NECROSUMMONERUPSID")!=0 ? 1 : 2;
+      return;
+      }
+    if(auto p = places.find(inst); p!=places.end()) {
+      count += p->second;
+      return;
+      }
+    count += (golemGuild!=0 && int32_t(n.guild())==golemGuild) ? 2 : 1;
+    });
+  if(var->get_int()!=count) {
+    nbCtx("summon places: ",var->get_int()," -> ",count);
+    var->set_int(count);
+    }
+  }
+
+/// NB fix 128: the trolls of New Balance throw stones - the plugin does it, the scripts know nothing of it
+/// (UNION_ABI.DLL 0x103889b0). A troll (GIL_TROLL) that runs at its enemy further than 8.5 m stops now and then and plays
+/// T_STONETHROW of its model: further than 12 m with a chance of 2% in a frame of the plugin, further than 8.5 m with 1%;
+/// after the throw a pause of 7.5-12.5 s or 10-16 s. The stone (ItTrollStone) flies from the right hand at the enemy -
+/// the plugin lets it fall by its physics (0x10389560); here it is a bullet with the blunt damage of the strength of the troll.
+/// Not here: the throw of a goblin (T_GOBBOTHROW, a goblin near the troll is thrown) and the speeds of the animation by the
+/// distance
+void GameScript::nbTrollTick() {
+  auto  nb = nbStates.find(this);
+  if(nb==nbStates.end())
+    return;
+  auto&          st   = nb->second;
+  auto*          hero = world().player();
+  const uint64_t now  = tickCount();
+  if(hero==nullptr)
+    return;
+  auto* gilTroll = vm.find_symbol_by_name("GIL_TROLL");
+  if(gilTroll==nullptr || gilTroll->type()!=zenkit::DaedalusDataType::INT)
+    return;
+  const int32_t troll = gilTroll->get_int();
+
+  // the stones in the air: the moment of the throw in the animation
+  for(auto it=st.trolls.begin(); it!=st.trolls.end();) {
+    auto& t   = it->second;
+    auto  tr  = t.troll.lock();
+    auto* npc = tr!=nullptr ? findNpc(tr) : nullptr;
+    if(npc==nullptr) {
+      it = st.trolls.erase(it);
+      continue;
+      }
+    if(t.releaseAt!=0 && now>=t.releaseAt) {
+      t.releaseAt = 0;
+      auto  tg  = t.target.lock();
+      auto* tgt = tg!=nullptr ? findNpc(tg) : nullptr;
+      auto* sym = vm.find_symbol_by_name("ITTROLLSTONE");
+      if(tgt!=nullptr && !tgt->isDead() && !npc->isDead() && !npc->isDown() && sym!=nullptr) {
+        Item  stone(world(),sym->index(),Item::T_Inventory);
+        auto  from = npc->mapBone("BIP01 R HAND");
+        if(from==Tempest::Vec3())
+          from = npc->mapHeadBone();
+        auto& b = world().shootBulletFrom(stone,*npc,from,*tgt);
+        b.setOrigin(npc);
+        DamageCalculator::Damage dmg = {};
+        dmg[zenkit::DamageType::BLUNT] = npc->attribute(ATR_STRENGTH);
+        b.setDamage(dmg);
+        b.setHitChance(1.f);
+        nbCtx("troll throws a stone: ",npc->displayName()," -> ",tgt->displayName());
+        }
+      }
+    ++it;
+    }
+
+  // a new throw, ten times a second
+  if(now<st.trollNextLook)
+    return;
+  st.trollNextLook = now+100;
+  world().detectNpc(hero->position(),4000.f,[&](Npc& npc) {
+    if(npc.isDead() || npc.isDown() || npc.isPlayer() || int32_t(npc.guild())!=troll || npc.isInAir())
+      return;
+    Npc* tgt = npc.target();
+    if(tgt==nullptr || tgt->isDead() || npc.isAttackAnim())
+      return;
+    auto& t = st.trolls[npc.handlePtr().get()];
+    if(t.troll.expired())
+      t.troll = npc.handlePtr();
+    if(t.releaseAt!=0 || now<t.nextTry)
+      return;
+    const float dist = (tgt->position()-npc.position()).length();
+    if(dist<=850.f || dist>3000.f || !npc.canSeeNpc(*tgt,true))
+      return;
+    // the chance of the plugin is in a frame; here every 100 ms: 2% of a frame (60 frames a second) is about 12%
+    const bool far = dist>1200.f;
+    if(rand(100)>=(far ? 12 : 6))
+      return;
+    npc.setDirection(tgt->position());
+    auto* sq = npc.playAnimByName("T_STONETHROW",BS_HIT);
+    if(sq==nullptr) {
+      t.nextTry = now+60000;   // this troll has no such animation
+      return;
+      }
+    // the stone leaves the hand in the middle of the throw (the event TRO_STONETHROW is not read by OpenGothic)
+    const uint64_t len = uint64_t(std::max(400.f,sq->totalTime()));
+    t.target    = tgt->handlePtr();
+    t.releaseAt = now+len*55/100;
+    t.nextTry   = now+len+(far ? 7500+uint64_t(rand(5000)) : 10000+uint64_t(rand(6000)));
+    });
   }
 
 /// NB fix 126: RX_DamageCalcRunes of UNION_ABI.DLL (0x10083400): SPL_DAMAGE_* and SPL_COST_* of the spells from the

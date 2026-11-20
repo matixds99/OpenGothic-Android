@@ -768,6 +768,19 @@ Bullet& World::shootBullet(const Item &itm, const Npc &npc, const Npc *target, c
   return b;
   }
 
+Bullet& World::shootBulletFrom(const Item& itm, const Npc& npc, const Tempest::Vec3& from, const Npc& target) {
+  Tempest::Vec3 dir   = target.collosionCenter() - from;
+  float         lxz   = std::sqrt(dir.x*dir.x+dir.z*dir.z);
+  float         speed = DynamicWorld::bulletSpeed;
+  float         t     = std::max(lxz/speed,0.01f);
+  dir/=t;
+  dir.y += 0.5f*DynamicWorld::gravity*t;
+  auto& b = wobj.shootBullet(itm, from, dir, 0, DynamicWorld::bulletSpeed);
+  wobj.setLastShotOrigin(npc.isPlayer() ? 0xFFFFFFFEu : npc.uid());
+  b.setTarget(&target);
+  return b;
+  }
+
 void World::sendPassivePerc(Npc &self, Npc &other, int32_t perc) {
   wobj.sendPassivePerc(self,other,nullptr,nullptr,perc);
   }
