@@ -204,6 +204,7 @@ struct NbState {
     std::weak_ptr<zenkit::INpc> troll, target;
     uint64_t                    nextTry   = 0;   // no throw before (the pause of the plugin, 7.5-16 s)
     uint64_t                    releaseAt = 0;   // the stone leaves the hand (0 - no throw now)
+    uint64_t                    nextLog   = 0;   // NB fix 130: why it does not throw, in the log every 5 s
     };
   std::unordered_map<const zenkit::INpc*,TrollThrow> trolls;
   uint64_t                                    trollNextLook = 0;
@@ -7843,19 +7844,36 @@ void GameScript::nbTrollTick() {
     return;
   st.trollNextLook = now+100;
   world().detectNpc(hero->position(),4000.f,[&](Npc& npc) {
-    if(npc.isDead() || npc.isDown() || npc.isPlayer() || int32_t(npc.guild())!=troll || npc.isInAir())
-      return;
-    Npc* tgt = npc.target();
-    if(tgt==nullptr || tgt->isDead() || npc.isAttackAnim())
+    if(npc.isDead() || npc.isDown() || npc.isPlayer() || int32_t(npc.guild())!=troll)
       return;
     auto& t = st.trolls[npc.handlePtr().get()];
     if(t.troll.expired())
       t.troll = npc.handlePtr();
-    if(t.releaseAt!=0 || now<t.nextTry)
+    // NB fix 130: the reason, when a troll near the fight does not throw (every 5 s in the log)
+    const auto why = [&](std::string_view r, float d) {
+      if(now<t.nextLog)
+        return;
+      t.nextLog = now+5000;
+      nbCtx("troll ",npc.displayName()," does not throw: ",r," (",int(d/100.f)," m)");
+      };
+    Npc* tgt = npc.target();
+    if(tgt==nullptr || tgt->isDead())
       return;
     const float dist = (tgt->position()-npc.position()).length();
-    if(dist<=850.f || dist>3000.f || !npc.canSeeNpc(*tgt,true))
+    if(t.releaseAt!=0 || now<t.nextTry)
       return;
+    if(npc.isInAir())
+      return why("in the air",dist);
+    if(dist<=850.f)
+      return;   // near: it fights with the fists
+    if(dist>3000.f)
+      return why("the target is too far",dist);
+    if(!npc.canSeeNpc(*tgt,true))
+      return why("does not see the target",dist);
+    if(!npc.hasAnim("T_STONETHROW")) {
+      t.nextTry = now+60000;
+      return why("its model has no T_STONETHROW",dist);
+      }
     // the chance of the plugin is in a frame; here every 100 ms: 2% of a frame (60 frames a second) is about 12%
     const bool far = dist>1200.f;
     if(rand(100)>=(far ? 12 : 6))
@@ -7863,14 +7881,18 @@ void GameScript::nbTrollTick() {
     npc.setDirection(tgt->position());
     auto* sq = npc.playAnimByName("T_STONETHROW",BS_HIT);
     if(sq==nullptr) {
-      t.nextTry = now+60000;   // this troll has no such animation
-      return;
+      // NB fix 130: the animation that plays cannot be cut now (a blow, a turn): the throw starts it over, as the plugin
+      npc.stopAnim("");
+      sq = npc.playAnimByName("T_STONETHROW",BS_HIT);
       }
+    if(sq==nullptr)
+      return why("the animation did not start",dist);
     // the stone leaves the hand in the middle of the throw (the event TRO_STONETHROW is not read by OpenGothic)
     const uint64_t len = uint64_t(std::max(400.f,sq->totalTime()));
     t.target    = tgt->handlePtr();
     t.releaseAt = now+len*55/100;
     t.nextTry   = now+len+(far ? 7500+uint64_t(rand(5000)) : 10000+uint64_t(rand(6000)));
+    nbCtx("troll ",npc.displayName()," starts the throw (",int(dist/100.f)," m)");
     });
   }
 
