@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **133**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **134**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – 🧪
-2. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
-3. **130** – trolle: rzut startuje także w trakcie innej animacji, log z przyczyną, gdy troll nie rzuca – 🧪
-4. **129** – przywoływanie stworzeń działa (licznik miejsc nie rośnie bez końca) – ✅
-5. **128** – trolle rzucają kamieniami – 🧪
+1. **133** – bohater nie biegnie sam do przodu po serii ciosów (zgubione puszczenie gałki) – 🧪
+2. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
+3. **131** – panel przywołańców na ekranie (atak na cel, tryb aktywny/pasywny, odesłanie); przywołańcy teleportują się z bohaterem, przy zmianie świata znikają – ✅
+4. **130** – trolle: rzut startuje także w trakcie innej animacji, log z przyczyną, gdy troll nie rzuca – ✅
+5. **129** – przywoływanie stworzeń działa (licznik miejsc nie rośnie bez końca) – ✅
 
 ---
 
@@ -250,7 +250,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 132. Zmiana celu w walce – potwór bił tylko bohatera, choć ranił go przywołaniec – 🧪 (20.11.2026)
+### 133. Bohater biegnie sam do przodu po serii ciosów – 🧪 (20.11.2026)
+- **Pliki:** `common/mainwindow.cpp`, `common/game/playercontrol.cpp/.h`, `common/utils/androidinput.h`
+- **Zgłoszenie:** nagranie z miasta – po serii ciosów mieczem bohater biegł dalej do przodu, choć gałka była puszczona, aż wbiegł między strażników.
+- **Przyczyna (prawdopodobna):** puszczenie klawisza ruchu nie dotarło do sterowania bohatera. Okno, które przyjęło wciśnięcie innego klawisza, zabiera też następne puszczenie, a jest jedno wspólne dla wszystkich klawiszy. Ruch do przodu został włączony na stałe.
+- **Poprawka:** na telefonie każdy ruch przychodzi z nakładki dotykowej (gałka, przyciski; klawiatura i pad też przez nią). Co klatkę sprawdzane jest, czy nakładka dalej trzyma przód / tył. Jeśli nie, a bohater wciąż idzie, ruch zostaje puszczony.
+- **Do sprawdzenia:**
+  - Ta sama seria ciosów w biegu, a potem puszczenie gałki – bohater powinien stanąć.
+  - W logu `touch: a movement key without its release was let go (…)` – w nawiasie widać, czy klawisz zabrało okno. To pomoże znaleźć pierwotną przyczynę.
+
+### 132. Zmiana celu w walce – potwór bił tylko bohatera, choć ranił go przywołaniec – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
 - **Zgłoszenie:** troll atakował tylko bohatera, a przywołany golem bił go i zabrał mu połowę życia.
 - **Przyczyna:** skrypty NB (`B_MM_AssessDamage`, `B_AssessDamage`, `ZS_MM_Attack_Loop`, `ZS_Attack_Loop`) zmieniają cel przez funkcje pluginu `RX_CanReAttack`, `RX_CanReAttackNow`, `RX_SetReAttackNpc`, `RX_HasReAttackNpc`, `RX_GetReAttackNpc` i `RX_ClearReAttackNpc` (UNION_ABI.DLL 0x10183dc0–0x10184050). Port ich nie miał, a domyślne 0 trzymało każdą postać przy pierwszym wrogu.
@@ -261,6 +270,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Walka z trollem razem z golemem: troll po kilku ciosach golema powinien odwrócić się do niego.
   - W logu `[ctx] reattack: …`.
 
+- **Test (20.11):** działa – troll odwraca się do golema.
 ### 131. Panel przywołańców na ekranie, teleport przywołańców z bohaterem – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/game/gamesession.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp/.h`
 - **Zgłoszenie:** brak sterowania przywołańcami na telefonie; przywołańcy nie przenoszą się z bohaterem po teleporcie.
@@ -279,7 +289,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - W logu `[ctx] summons: …`.
 - **Test (20.11):** działa – panel, tryby, reset, teleport i zmiana świata.
 
-### 130. Troll dalej nie rzuca kamieniami – 🧪 (20.11.2026)
+### 130. Troll dalej nie rzuca kamieniami – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`nbTrollTick`)
 - **Zgłoszenie:** dwa nagrania z telefonu – troll przy jaskini goni bohatera i bije z bliska, ale z dystansu nie rzuca.
 - **Przyczyna (prawdopodobna):** gdy troll był w trakcie animacji, której nie można przerwać (bieg, obrót, cios), start `T_STONETHROW` się nie udawał, a kod brał to za brak animacji w modelu i wstrzymywał tego trolla na minutę.
@@ -287,6 +297,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Brak animacji sprawdzany osobno (`hasAnim`); gdy animacja jest, a nie wystartowała, troll przerywa bieżącą animację i rzuca – jak plugin.
   - Log: `[ctx] troll … starts the throw (N m)` przy rzucie, a co 5 s `[ctx] troll … does not throw: …` z przyczyną (cel za daleko, nie widzi celu, brak animacji w modelu, animacja nie ruszyła).
 - **Do sprawdzenia:** walka z trollem z dystansu 9–30 m; jeśli dalej nie rzuca – log z linijkami `troll`.
+- **Test (20.11):** troll rzuca kamieniami.
 
 ### 129. „Nie możesz przywołać więcej stworzeń” – licznik przywołańców tylko rósł – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbSummonCountTick`)
@@ -296,7 +307,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** przywołanie golema; po jego śmierci kolejne przywołanie; w logu `[ctx] summon places: A -> B`.
 - **Test (20.11):** działa.
 
-### 128. Trolle rzucają kamieniami – 🧪 (20.11.2026)
+### 128. Trolle rzucają kamieniami – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbTrollTick`), `common/world/world.cpp/.h` (`shootBulletFrom`)
 - **Zgłoszenie:** trolle nie rzucają kamieniami – to mechanika New Balance, na PC robi ją plugin.
 - **Jak to działa na PC (UNION_ABI.DLL 0x103889b0, 0x10389560):** troll (`GIL_TROLL`), który biegnie do wroga dalej niż 8,5 m, czasem staje i gra animację `T_STONETHROW` swojego modelu: dalej niż 12 m z szansą 2% na klatkę, dalej niż 8,5 m z 1%. Po rzucie przerwa 7,5–12,5 s albo 10–16 s. Kamień (`ItTrollStone`) wylatuje z prawej ręki w stronę wroga.

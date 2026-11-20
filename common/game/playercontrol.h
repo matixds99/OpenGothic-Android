@@ -27,6 +27,7 @@ class PlayerControl final {
     /// the blow forward (the touch screen has the controls of Gothic 2 otherwise, where only the attack key strikes)
     static inline std::atomic<bool> quickCombo{false};
     void  quickAttack();   // NB fix 96: QUICK of the touch screen
+    bool  nbReleaseStuckMove(bool forward, bool back);   // NB fix 133
     uint64_t       pendingReset = 0;   // NB fix 95: W of the quick attack - the reset of the position after the blow
     // NB fix 96: the quick attack of New Balance as on the PC (Ctrl + A/D held, W clicked): blows to the side one after
     // another, each one cut off right after its hit (the reset of W)
@@ -140,6 +141,8 @@ class PlayerControl final {
           this->main.fill(false);
           this->reverse.fill(false);
           }
+        void releaseMain()    { this->main.fill(false); }      // NB fix 133
+        void releaseReverse() { this->reverse.fill(false); }
 
       private:
         /// Is any key pressed that activates the main direction

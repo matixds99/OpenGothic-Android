@@ -416,6 +416,23 @@ void PlayerControl::quickAttack() {
   quickUntil = w->tickCount()+(ws==WeaponState::Mage ? 2*QuickTime : QuickTime);   // NB fix 103: the spells are longer
   }
 
+/// NB fix 133: the forward / back of the movement are let go, when the touch controls hold them no longer; true when
+/// one of them was still on
+bool PlayerControl::nbReleaseStuckMove(bool forward, bool back) {
+  bool ret = false;
+  if(forward && movement.forwardBackward.value()>0.f) {
+    movement.forwardBackward.releaseMain();
+    ctrl[KeyCodec::Forward] = false;
+    ret = true;
+    }
+  if(back && movement.forwardBackward.value()<0.f) {
+    movement.forwardBackward.releaseReverse();
+    ctrl[KeyCodec::Back] = false;
+    ret = true;
+    }
+  return ret;
+  }
+
 void PlayerControl::clearFocus() {
   currentFocus = Focus();
   lockedNpc    = nullptr;

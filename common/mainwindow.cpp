@@ -2404,6 +2404,18 @@ void MainWindow::updateMobileControls() {
     clearInput();
     dMouse = Point();
     }
+#if defined(__ANDROID__)
+  // NB fix 133: on the phone every key of the movement comes from the touch controls (the stick, the buttons, a keyboard or a
+  // pad through them). A move the controls no longer hold, but the hero still has, lost its release somewhere on the way
+  // (a window took the key up) - the hero ran forward by himself. It is let go here
+  if(mobileContext()==Mobile::Mode::Game) {
+    const bool fwd  = !androidControls.held(Mobile::Key::Up);
+    const bool back = !androidControls.held(Mobile::Key::Down);
+    if(player.nbReleaseStuckMove(fwd,back))
+      Log::i("touch: a movement key without its release was let go (",
+             uiKeyUp==nullptr ? "no window" : "a window took the key up",")");
+    }
+#endif
   }
 
 /// Controls of actions that are not possible at the moment are hidden or disabled

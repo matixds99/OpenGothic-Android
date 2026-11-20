@@ -115,6 +115,7 @@ class Controller {
     void  playerDead(bool on) { controls.playerDead(on); }
     void  sprint(bool available) { controls.sprint(available); }
     void  summons(bool have, bool open) { controls.summons(have,open); }   // NB fix 131
+    bool  held(Mobile::Key key) const { return controls.held(key); }        // NB fix 133
     void  stamina(bool available) { controls.stamina(available); }
     const std::map<std::string,Mobile::HudPlace>& hudPlaces() const { return controls.hudPlaces(); }
     bool  editingHud() const { return controls.editingHud(); }
