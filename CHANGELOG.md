@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – 🧪
+1. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – ✅
 2. **157** – pociski potworów widać w locie: rój golema bagiennego, zombie i mumii, kwas bagiennych trutni – ✅
 3. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – ✅
 4. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – ✅
@@ -250,12 +250,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 158. Pociski potworów lecą prosto, bez naprowadzania – 🧪 (21.11.2026)
+### 158. Pociski potworów lecą prosto, bez naprowadzania – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
 - **Zgłoszenie:** pocisk golema bagiennego (poprawka 157) skręca za bohaterem, aż trafi. W Gothic leci w kierunku, w którym go wystrzelono – krokiem w bok można go uniknąć.
 - **Poprawka:** kierunek jest ustalany raz, w chwili rzutu: z punktu startu do miejsca celu (`emTrjTargetNode` lub środek postaci). Pocisk leci prosto z tą samą prędkością i w każdej klatce sprawdza, czy po drodze nie trafia postaci (innej niż rzucający) albo świata (teren, ściany, obiekty). Trafiona postać dostaje efekt trafienia i obrażenia – także inna niż cel, jeśli stanie na drodze. Ściana lub ziemia: efekt trafienia w świat (`emFXCollStat`), bez obrażeń. Gdy nic nie trafi, gaśnie 15 m za miejscem celu.
 - **Nie zmienione:** zaklęcia bohatera (poprawka 84) dalej podążają za celem – celowanie dotykiem.
 - **Do sprawdzenia:** golem bagienny, zombie lub mumia z daleka – krok w bok w czasie lotu i pocisk przelatuje obok; stojąc w miejscu – trafienie i obrażenia.
+- **Test (21.11):** działa – ataki z daleka można ominąć.
 
 ### 157. Pociski potworów z daleka (rój, kwas) – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/game/gamesession.cpp`
