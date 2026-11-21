@@ -37,7 +37,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/physics/dynamicworld.cpp` | materiały wyłączone przez NB pominięte przy budowie kolizji świata; materiały `NB_MAT_*` w kolizji świata | 139, 141 |
 | `common/world/objects/interactive.h` | nazwa obiektu żyły (zapas rudy) i funkcja stanu dla wydobywania NB | 138 |
 | `common/world/triggers/abstracttrigger.h` | czy punkt stoi na obiekcie (`nbStandsOn`) – postać na łodzi Fregyala | 140 |
-|`common/world/triggers/movetrigger.cpp` (+ `.h`) | postacie stojące na ruchomym obiekcie (łódź, winda) jadą razem z nim; towarzysze bohatera wsiadają z nim | 141, 144 |
+| `common/world/triggers/movetrigger.cpp` (+ `.h`) | postacie stojące na ruchomym obiekcie (łódź, winda) jadą razem z nim; towarzysze bohatera wsiadają z nim | 141, 144 |
 | `common/world/waymatrix.cpp` (+ `.h`) | punkty z części świata dokładanych przez skrypty: bezpieczne w pamięci i w indeksach | 142 |
 | `common/physics/physicmeshshape.cpp` | siatka kolizji obiektu także z samymi materiałami `NB_MAT_*` | 141 |
 | `common/game/gamescript.cpp` (+ `.h`) | fazy bossów: `AI_OnTick_`/`AI_OnHit_`/`AI_OnGetDamage_`/`AI_OnBreak_` po nazwie instancji, licznik walki `aivar[95]`; `Wld_InsertNpcAndAttackEnemy`; `RX_IsWaiting`, `RX_Stop_AI_Wait`, `UpdateSpeed`, `AI_*_Summoned`; obrażenia w czasie (`RX_ApplyDotDamage*`, napisy po lewej), `RX_CallDamage` przy ciosach bohatera, splash | 100, 101, 106 |
