@@ -161,6 +161,7 @@ inline constexpr Default defaults[] = {
   {"NB_OG", "bNewItems", 1},   // NB fix 121, 122: the marks of the unread documents in the inventory
   {"NB_OG", "bRemoveBodies", 1},   // NB fix 136: the empty bodies go away
   {"NB_OG", "bXpBar", 1},          // NB fix 137: the bar of the experience on the HUD
+  {"NB_OG", "bVobsWithWorld", 1},  // NB fix 147: the objects (trees, fences, rocks) are drawn as far as the land
   };
 
 struct Option {
@@ -204,9 +205,10 @@ inline constexpr Option shown[] = {
   // the details
   // NB fix 109: the range of the characters (a slider of the plugin, 3000-7000): drawcommands.cpp, visibility_pass.comp
   {"OG_NPC_DISTANCE", "NB_OG", "npcDistance", 3, "Zasi\xEAg rysowania postaci", "bez limitu|30 m|40 m|50 m|60 m|70 m|100 m"},
-  // NB fix 146: the range of the world (the landscape and the objects), the same setting as "Zasięg widzenia" of the options
-  // of the game (PERFORMANCE/sightValue 0..14 = 50..750 m): here next to the range of the characters
-  {"OG_WORLD_DISTANCE", "PERFORMANCE", "sightValue", 3, "Zasi\xEAg widzenia \x9Cwiata", "50 m|100 m|150 m|200 m|250 m|300 m|350 m|400 m|450 m|500 m|550 m|600 m|650 m|700 m|750 m"},
+  // NB fix 146, 147: "Rysowanie świata" - the range of the land and of the objects on it together (trees, fences, rocks,
+  // shrines: NB_OG/bVobsWithWorld), the same setting as "Zasięg widzenia" of the options of the game
+  // (PERFORMANCE/sightValue 0..14 = 50..750 m)
+  {"OG_WORLD_DISTANCE", "PERFORMANCE", "sightValue", 3, "Rysowanie \x9Cwiata", "50 m|100 m|150 m|200 m|250 m|300 m|350 m|400 m|450 m|500 m|550 m|600 m|650 m|700 m|750 m"},
   {"SHOW_SCALE_NPC", "AST", "bScaleStr", 3},
   {"SHOW_HIDE_NPC_POCKETS", "AST", "bHidePocketsNpc", 3},
   // the rage of Beliar

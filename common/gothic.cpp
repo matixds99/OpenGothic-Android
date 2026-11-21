@@ -228,6 +228,11 @@ Gothic& Gothic::inst() {
   }
 
 float Gothic::settingsObjectDistance() {
+  // NB fix 147: New Balance - the objects of the world as far as the land ("Rysowanie świata"): with the separate range
+  // of the objects (at most 100 m) the trees, the fences and the rocks appeared only a few steps before the hero, on the
+  // land that was drawn to 250 m
+  if(settingsGetI("NB_OG","bVobsWithWorld")!=0)
+    return RenderDistance::landscape(settingsGetI("PERFORMANCE","sightValue"));
   const float value = settingsGetF("ENGINE","zVobFarClipZScale");
   const float scale = RenderDistance::choiceScale(value,instance->objectDistanceChoices);
   return RenderDistance::objects(scale,RenderDistance::landscape(settingsGetI("PERFORMANCE","sightValue")));

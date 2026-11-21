@@ -13,7 +13,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 
 | Nowy plik | Gdzie go wrzucić | Kto go potrzebuje | Od poprawki |
 |---|---|---|---|
-| `common/game/nboptions.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp`, `ui/gamemenu.cpp`; przełącznik „Oznaczanie nowych przedmiotów w ekwipunku” (`NB_OG`/`bNewItems`, domyślnie wł.); opcja „Usuwanie pustych ciał”; opcja „Pasek doświadczenia”; opcja „Zasięg widzenia świata” | 5, 44, 49, 53, 62, 121, 122, 123, 136, 137, 146 |
+| `common/game/nboptions.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp`, `ui/gamemenu.cpp`; przełącznik „Oznaczanie nowych przedmiotów w ekwipunku” (`NB_OG`/`bNewItems`, domyślnie wł.); opcja „Usuwanie pustych ciał”; opcja „Pasek doświadczenia”; opcja „Zasięg widzenia świata”; „Rysowanie świata” (obiekty jak teren) | 5, 44, 49, 53, 62, 121, 122, 123, 136, 137, 146, 147 |
 | 🆕 `common/game/nbtexts.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp` | 62, 69 |
 | 🆕 `common/game/nbcraft.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.h`, `ui/nbcraftmenu.h` (przepisy stołów rzemiosła z UNION_ABI.DLL) | 70, 71 |
 | `common/game/nbiteminfo.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp` | 12, 13 |
@@ -39,6 +39,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/world/triggers/abstracttrigger.h` | czy punkt stoi na obiekcie (`nbStandsOn`) – postać na łodzi Fregyala | 140 |
 | `common/world/triggers/movetrigger.cpp` (+ `.h`) | postacie stojące na ruchomym obiekcie (łódź, winda) jadą razem z nim; towarzysze bohatera wsiadają z nim | 141, 144, 145 |
 | `common/world/waymatrix.cpp` (+ `.h`) | punkty z części świata dokładanych przez skrypty: bezpieczne w pamięci i w indeksach | 142 |
+| `common/gothic.cpp` | zasięg obiektów świata równy zasięgowi terenu przy New Balance (`settingsObjectDistance`) | 147 |
 | `common/world/world.cpp` (+ `.h`) | zasięg rysowania postaci (`nbNpcRangeTick`) | 146 |
 | `common/graphics/mdlvisual.cpp` (+ `.h`), `meshobjects.cpp` (+ `.h`), `visualobjects.cpp` (+ `.h`) | ukrywanie całej postaci (ciało, głowa, zbroja, broń) poza zasięgiem rysowania | 146 |
 | `common/graphics/drawcommands.cpp`, `shader/materials/visibility_pass.comp` | zasięg rysowania postaci w przebiegu widoczności (109), od 146 wyłączony – zasięg liczy `World::nbNpcRangeTick` | 109, 146 |

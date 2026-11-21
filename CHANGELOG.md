@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **147**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **148**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – 🧪
-2. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
-3. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
-4. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅
-5. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – ✅
+1. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – 🧪
+2. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – 🧪
+3. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
+4. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
+5. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅
 
 ---
 
@@ -249,6 +249,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 147. „Rysowanie świata” – obiekty tak daleko jak teren – 🧪 (21.11.2026)
+- **Pliki:** `common/gothic.cpp` (`settingsObjectDistance`), `common/game/nboptions.h`
+- **Zgłoszenie (nagranie):** drzewa, płoty, kamienne stoły i kapliczki pojawiają się dopiero kilkadziesiąt metrów przed bohaterem, a teren za nimi jest pusty. Prośba: połączyć zasięg świata i obiektów w jedno ustawienie „Rysowanie świata”.
+- **Przyczyna:** obiekty świata (voby) mają w OpenGothic osobny zasięg: 100 m razy mnożnik z opcji, nie więcej niż teren. Teren był rysowany do 250 m, a obiekty tylko do 100 m – wyskakiwały w trakcie marszu.
+- **Poprawka:**
+  - Przy New Balance obiekty świata są rysowane tak daleko jak teren (`NB_OG/bVobsWithWorld`, domyślnie włączone).
+  - Opcja z poprawki 146 nazywa się teraz „Rysowanie świata” (50–750 m) i ustawia zasięg terenu i obiektów razem.
+- **Uwaga:** ten sam zasięg dla obiektów to więcej rysowania niż wcześniej (np. 250 m zamiast 100 m). Gdy spadają klatki, zmniejszyć „Rysowanie świata”, np. do 150 m.
+- **Do sprawdzenia:** marsz przez pola i las – drzewa, płoty i kamienie widać od razu z daleka, nic nie wyskakuje. Klatki przy 150 / 250 / 400 m.
 
 ### 146. Zasięg rysowania postaci i świata – 🧪 (21.11.2026)
 - **Pliki:** `common/world/world.cpp/.h` (`nbNpcRangeTick`), `common/world/objects/npc.h`, `common/graphics/mdlvisual.cpp/.h`, `common/graphics/meshobjects.cpp/.h`, `common/graphics/visualobjects.cpp/.h`, `common/graphics/drawcommands.cpp`, `common/game/gamescript.cpp`, `common/game/nboptions.h`
