@@ -57,6 +57,7 @@ void WayMatrix::buildIndex() {
     }
 
   calculateLadderPoints();
+  indexed = true;   // NB fix 142
   }
 
 const WayPoint *WayMatrix::findWayPoint(const Vec3& at, const std::function<bool(const WayPoint&)>& filter) const {
@@ -99,7 +100,23 @@ const WayPoint *WayMatrix::findNextPoint(const Vec3& at) const {
   }
 
 void WayMatrix::addFreePoint(const Vec3& pos, const Vec3& dir, std::string_view name) {
-  freePoints.emplace_back(pos,dir,name,true);
+  if(!indexed) {
+    freePoints.emplace_back(pos,dir,name,true);
+    return;
+    }
+  // NB fix 142: after the index is built (a part of the world of New Balance): kept apart, put in the indices by hand
+  auto& w   = lateFreePoints.emplace_back(pos,dir,name,true);
+  auto  ray = world.physic()->landRay(w.position());
+  w.groundPos = ray.hasCol ? ray.v : w.pos;
+  auto at = std::lower_bound(indexPoints.begin(),indexPoints.end(),&w,[](const WayPoint* a,const WayPoint* b){
+    return a->name<b->name;
+    });
+  indexPoints.insert(at,&w);
+  auto fp = std::lower_bound(fpInd.begin(),fpInd.end(),&w,[](const WayPoint* a,const WayPoint* b){
+    return a->pos.x < b->pos.x;
+    });
+  fpInd.insert(fp,&w);
+  fpIndex.clear();   // the lists by the name are made again with it
   }
 
 void WayMatrix::addStartPoint(const Vec3& pos, const Vec3& dir, std::string_view name) {
@@ -110,6 +127,8 @@ void WayMatrix::forEachPoint(const std::function<void(const WayPoint&)>& f) cons
   for(auto& p:wayPoints)
     f(p);
   for(auto& p:freePoints)
+    f(p);
+  for(auto& p:lateFreePoints)   // NB fix 142
     f(p);
   for(auto& p:startPoints)
     f(p);
@@ -264,6 +283,11 @@ const WayMatrix::FpIndex &WayMatrix::findFpIndex(std::string_view name) const {
   FpIndex id;
   id.key = name;
   for(auto& w:freePoints){
+    if(!w.checkName(name))
+      continue;
+    id.index.push_back(&w);
+    }
+  for(auto& w:lateFreePoints){   // NB fix 142
     if(!w.checkName(name))
       continue;
     id.index.push_back(&w);

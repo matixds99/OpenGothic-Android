@@ -2115,6 +2115,15 @@ void GameScript::initCommon() {
     bindNb("VOB_GETDISTTOVOB", [this](std::shared_ptr<zenkit::INpc> npcRef, std::shared_ptr<zenkit::INpc>, std::string_view point) -> int32_t {
       auto npc = findNpc(npcRef);
       auto wp  = npc!=nullptr ? world().findPoint(point,false) : nullptr;
+      if(wp==nullptr && npc!=nullptr) {
+        // NB fix 142: not a point - an object of this name (a mover, a trigger)
+        int32_t ret = 999999;
+        world().forEachTrigger([&](AbstractTrigger& t) {
+          if(ret==999999 && t.name()==point)
+            ret = int32_t((npc->position()-t.position()).length());
+          });
+        return ret;
+        }
       if(wp==nullptr)
         return 999999;
       const auto d = npc->position()-wp->position();

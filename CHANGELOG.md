@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **142**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **143**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – 🧪
-2. **140** – rozmowa z Fregyalem na łodzi: opcja „Pora odpływać” (sprawdzanie, czy postać stoi na łodzi) – ✅
-3. **139** – łódź druida na Zachodnie Wybrzeże: niewidzialna ściana znika (kolizja materiałów, wejście do lokacji) – 🧪
-4. **138** – wydobywanie żelaza, złota i magicznej rudy działa; żyła z rudą świeci się na zielono, pusta na szaro – 🧪
-5. **137** – osobny pasek doświadczenia: przesuwany w edytorze HUD, włączany w ustawieniach NB – ✅
+1. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – 🧪
+2. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – ✅
+3. **140** – rozmowa z Fregyalem na łodzi: opcja „Pora odpływać” (sprawdzanie, czy postać stoi na łodzi) – ✅
+4. **139** – łódź druida na Zachodnie Wybrzeże: niewidzialna ściana znika (kolizja materiałów, wejście do lokacji) – 🧪
+5. **138** – wydobywanie żelaza, złota i magicznej rudy działa; żyła z rudą świeci się na zielono, pusta na szaro – 🧪
 
 ---
 
@@ -250,7 +250,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 141. Łódź odpływa bez bohatera – postacie nie jechały z ruchomymi obiektami – 🧪 (21.11.2026)
+### 142. Po dopłynięciu łodzi nie wczytuje się Zachodnie Wybrzeże – 🧪 (21.11.2026)
+- **Pliki:** `common/world/waymatrix.cpp/.h`, `common/game/gamescript.cpp` (`Vob_GetDistToVob`)
+- **Zgłoszenie:** łódź dopływa na miejsce i nic się nie dzieje – świat Zachodniego Wybrzeża się nie wczytuje.
+- **Przyczyna:**
+  - `RX_NewWorld_Loop` zmienia świat (`Wld_ChangeLevel_AB` → `ADDON\WESTCOAST.ZEN`), gdy bohater jest bliżej niż 25 m od punktu `FP_DRUID_CHECKBOAT`. Ten punkt pochodzi z części świata dokładanej przez skrypt (`FP_DRUID_CHECKBOAT.ZEN`, `RX_InsertVobTree`).
+  - Punkty dodane po zbudowaniu indeksu punktów świata nie trafiały do indeksu, więc nie dało się ich znaleźć po nazwie i odległość wynosiła zawsze 999999.
+  - Dodatkowo takie punkty trafiały do tablicy, która przy rozrastaniu przenosiła wszystkie punkty w pamięci, a indeks trzymał wskaźniki na stare miejsca. To groziło błędami i zamknięciem gry.
+- **Poprawka:**
+  - Punkty dołożone później są przechowywane osobno, w miejscu, które się nie przesuwa, i dopisywane do indeksów (po nazwie, po położeniu, listy punktów o tej samej nazwie).
+  - `Vob_GetDistToVob` znajduje też ruchome obiekty i wyzwalacze o podanej nazwie, a nie tylko punkty.
+- **Do sprawdzenia:** rejs z Fregyalem – po dopłynięciu wczytuje się Zachodnie Wybrzeże. Zapis zrobiony na łodzi u celu powinien po wczytaniu od razu przenieść na wybrzeże.
+
+### 141. Łódź odpływa bez bohatera – postacie nie jechały z ruchomymi obiektami – ✅ (21.11.2026)
 - **Pliki:** `common/world/triggers/movetrigger.cpp`, `common/physics/physicvbo.cpp/.h`, `common/physics/dynamicworld.cpp`, `common/physics/physicmeshshape.cpp`
 - **Zgłoszenie:** po „Pora odpływać” łódź popłynęła, a bohater i Fregyal zostali na miejscu.
 - **Przyczyna:**
@@ -262,6 +274,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:**
   - Rejs z Fregyalem: bohater i Fregyal płyną z łodzią na Zachodnie Wybrzeże.
   - Windy i ruchome platformy w innych miejscach gry dalej działają.
+- **Test (21.11):** bohater i Fregyal płyną z łodzią. Po dopłynięciu nie wczytywał się nowy świat (poprawka 142).
 
 ### 140. Fregyal na łodzi: brak opcji „Pora odpływać” – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/triggers/abstracttrigger.h`

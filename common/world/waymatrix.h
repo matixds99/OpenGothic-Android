@@ -6,6 +6,7 @@
 #include <zenkit/world/WayNet.hh>
 
 #include <vector>
+#include <deque>
 #include <functional>
 
 #include "waypath.h"
@@ -59,6 +60,10 @@ class WayMatrix final {
     std::vector<WayPoint>  wayPoints;
     std::vector<WayPoint>  freePoints, startPoints;
     std::vector<WayPoint*> indexPoints;
+    // NB fix 142: the free points of the parts of the world put in later (RX_InsertVobTree): a vector of them would move
+    // its points when it grows, and the indices keep pointers - these never move
+    std::deque<WayPoint>   lateFreePoints;
+    bool                   indexed = false;
 
     std::vector<WayPoint*> fpInd;
 
