@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – 🧪
+1. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – ✅
 2. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
 3. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
 4. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
@@ -250,7 +250,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 153. Czerwony dym na Zachodnim Wybrzeżu – 🧪 (21.11.2026)
+### 153. Czerwony dym na Zachodnim Wybrzeżu – ✅ (21.11.2026)
 - **Pliki:** `common/world/triggers/movetrigger.cpp/.h`, `common/game/gamescript.cpp` (`RX_RemoveVobTree`)
 - **Zgłoszenie (nagrania z PC):** w drodze z Fregyalem do Kormaka i przy drugim miejscu w lesie przelatuje czerwony dym („W lesie zauważyliśmy dziwny, czerwony dym...”). W porcie go nie ma.
 - **Przyczyna:**
@@ -262,6 +262,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `RX_RemoveVobTree` z nazwą obiektu świata (nie pliku `.ZEN`) chowa ten obiekt razem z dziećmi, jak `RX_ToggleVobVisible`, i zapisuje to w zapisie gry.
 - **Log:** `[ctx] object of the world removed (hidden): EVT_SMOKE_01 (1)`.
 - **Do sprawdzenia:** czerwony dym przelatuje w obu miejscach, po kilkunastu sekundach znika; brak `unable to load mesh "SMOKE_SOUL_FOG.pfx"` w logu.
+- **Test (21.11, nagranie):** czerwony dym przelatuje przez las razem z wpisem do dziennika.
 
 ### 152. Walka z kilkoma przeciwnikami naraz – 🧪 (21.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h` (`nbReactToHit`)
