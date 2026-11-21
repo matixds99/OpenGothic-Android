@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **145**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **146**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda (Fregyal na Zachodnim Wybrzeżu) – 🧪
-2. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅; Fregyal dalej nie płynął (poprawka 144)
-3. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – ✅
-4. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – ✅
-5. **140** – rozmowa z Fregyalem na łodzi: opcja „Pora odpływać” (sprawdzanie, czy postać stoi na łodzi) – ✅
+1. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – 🧪
+2. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda (Fregyal na Zachodnim Wybrzeżu) – ⏸ nie pomogło
+3. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅; Fregyal dalej nie płynął (poprawka 144)
+4. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – ✅
+5. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – ✅
 
 ---
 
@@ -250,7 +250,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 144. Towarzysze wsiadają z bohaterem na ruchomy obiekt – Fregyal zostawał na Zachodnim Wybrzeżu – 🧪 (21.11.2026)
+### 145. Fregyal obok bohatera na łodzi na Zachodnim Wybrzeżu – 🧪 (21.11.2026)
+- **Pliki:** `common/game/gamescript.cpp` (`AI_Teleport`), `common/world/triggers/movetrigger.cpp`
+- **Zgłoszenie:** po poprawce 144 Fregyala dalej nie ma przy bohaterze. Propozycja: niech pojawia się obok bohatera.
+- **Z logu:** łódź rusza z samym bohaterem (`riders 1`), a w promieniu 50 m nie ma żadnego towarzysza – punkt `WP_START_000`, na który skrypt przenosi Fregyala (`AI_Teleport`), leży w tym świecie daleko od łodzi.
+- **Poprawka:**
+  - `AI_Teleport` postaci na `WP_START_000` na Zachodnim Wybrzeżu (skrypt `RX_WestCoast_Loop` tuż przed odpłynięciem) stawia ją obok bohatera na pokładzie.
+  - Gdy łódź lub winda rusza z bohaterem, na pokład wsiadają wszyscy jego towarzysze w tym świecie, nie tylko ci w promieniu 50 m. W logu jest ich lista z odległością.
+- **Do sprawdzenia:** rejs na Zachodnie Wybrzeże – Fregyal stoi obok bohatera na łodzi i dopływa z nim do brzegu. W logu `[ctx] AI_Teleport: Fregyal -> next to the hero`.
+
+### 144. Towarzysze wsiadają z bohaterem na ruchomy obiekt – Fregyal zostawał na Zachodnim Wybrzeżu – ⏸ nie pomogło (21.11.2026)
 - **Pliki:** `common/world/triggers/movetrigger.cpp/.h`
 - **Zgłoszenie:** po wczytaniu Zachodniego Wybrzeża łódź płynie z bohaterem do brzegu, ale Fregyala przy nim nie ma.
 - **Z logu:** Fregyal jest wstawiany na punkcie `WP_START_000`, który nie leży nad łodzią (port przesunął go o 1,5 m na wolne miejsce), a tuż przed odpłynięciem skrypt przenosi go na ten sam punkt (`AI_Teleport`). Łódź rusza bez niego. Skrypt w tej samej chwili robi go towarzyszem bohatera (`AIV_PartyMember`).
@@ -258,6 +267,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:**
   - Rejs na Zachodnie Wybrzeże (także po „POMIŃ”): Fregyal stoi obok bohatera na łodzi i dopływa z nim do brzegu.
   - W logu `[ctx] mover EVT_DRUIDBOAT_WC starts with the hero, companions on board: Fregyal`.
+- **Test (21.11):** nie pomogło – w logu `starts with the hero, riders 1`: w promieniu 50 m nie było żadnego towarzysza (poprawka 145).
 
 ### 143. Pomijanie rejsu łodzią („POMIŃ”), Fregyal na łodzi na Zachodnim Wybrzeżu – ✅ / Fregyal ⏸ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`

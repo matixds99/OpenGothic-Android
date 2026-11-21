@@ -400,9 +400,9 @@ void MoveTrigger::updateFrame() {
       riders.push_back(&n);
     });
 
-  // NB fix 144: a ride of the hero starts - his companions (AIV_PARTYMEMBER) around him board with him. The scripts put
-  // them next to the boat (Fregyal on the West Coast: Wld_InsertNpc, AI_Teleport), and a character a step off the deck
-  // was left behind
+  // NB fix 144, 145: a ride of the hero starts - his companions (AIV_PARTYMEMBER) board with him, wherever they are in
+  // this world: the scripts put Fregyal on the West Coast at WP_START_000 (Wld_InsertNpc, AI_Teleport), far from the
+  // boat, and he was left behind
   const uint64_t now   = world.tickCount();
   const bool     start = nbLastMove==0 || now>nbLastMove+500;
   nbLastMove = now;
@@ -410,17 +410,17 @@ void MoveTrigger::updateFrame() {
   if(start && hero!=nullptr && std::find(riders.begin(),riders.end(),hero)!=riders.end()) {
     std::string log;
     float       side = 1.f;
-    world.detectNpc(hero->position(),5000.f,[&](Npc& n) {
+    world.detectNpc(hero->position(),1.0e6f,[&](Npc& n) {
       constexpr size_t AIV_PARTYMEMBER = 15;
-      if(&n==hero || n.isDead() || std::find(riders.begin(),riders.end(),&n)!=riders.end())
+      if(&n==hero || n.isDead() || n.isDown() || std::find(riders.begin(),riders.end(),&n)!=riders.end())
         return;
       if(n.handle().aivar[AIV_PARTYMEMBER]==0)
         return;
+      log += " "+std::string(n.displayName())+"("+std::to_string(int((n.position()-hero->position()).length()/100.f))+" m)";
       const float a = hero->rotationRad()+side*float(M_PI)*0.5f;   // to the side of the hero, on the deck
       side = -side;
       n.setPosition(hero->position()+Tempest::Vec3(std::cos(a)*80.f,20.f,std::sin(a)*80.f));
       riders.push_back(&n);
-      log += " "+std::string(n.displayName());
       });
     Tempest::Log::i("[ctx] mover ",name()," starts with the hero",log.empty() ? "" : ", companions on board:",log,
                     ", riders ",int(riders.size()));

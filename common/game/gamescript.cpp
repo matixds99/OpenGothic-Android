@@ -7034,6 +7034,23 @@ bool GameScript::ai_usemob(std::shared_ptr<zenkit::INpc> npcRef, std::string_vie
 void GameScript::ai_teleport(std::shared_ptr<zenkit::INpc> npcRef, std::string_view tg) {
   auto npc = findNpc(npcRef);
   auto pt  = world().findPoint(tg);
+  // NB fix 145: RX_WestCoast_Loop puts Fregyal on the boat of the West Coast just before it sails (AI_Teleport to
+  // WP_START_000); in this world the point is not on the boat, where the hero arrives (FP_START_000) - he is put next to
+  // the hero instead, on the deck
+  if(npc!=nullptr && !npc->isPlayer() && tg=="WP_START_000") {
+    std::string wn(world().name());
+    for(auto& ch:wn)
+      ch = char(std::toupper(uint8_t(ch)));
+    auto* hero = world().player();
+    if(hero!=nullptr && wn.find("WESTCOAST")!=std::string::npos) {
+      const float a = hero->rotationRad()+float(M_PI)*0.5f;
+      npc->clearAiQueue();
+      npc->setPosition(hero->position()+Tempest::Vec3(std::cos(a)*80.f,20.f,std::sin(a)*80.f));
+      npc->updateTransform();
+      nbCtx("AI_Teleport: ",npc->displayName()," -> next to the hero (instead of ",tg,")");
+      return;
+      }
+    }
   if(npc!=nullptr && pt!=nullptr)
     npc->aiPush(AiQueue::aiTeleport(*pt));
   if(npc!=nullptr && !npc->isPlayer())   // NB fix 143: where the companions go (the voyage to the West Coast)
