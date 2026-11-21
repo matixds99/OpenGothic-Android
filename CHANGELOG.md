@@ -261,6 +261,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Uwaga:** odcienie kolorów i stopnie intensywności są dobrane w przybliżeniu – plugin liczy je w swoim kodzie rysowania.
 - **Log:** `[ctx] Gallahad: Starożytne Ostrze <- NB_VIS_MELEE_FIRE_USUAL:3:4`.
 - **Do sprawdzenia:** zaklęcie wyglądu u Gallahada – efekt od razu na broni, po wczytaniu zapisu nadal jest; zmiana koloru i intensywności.
+- **Test (21.11):** działa w przybliżeniu – ogień zielony, iskry fioletowe, magia niebieska; cząsteczki widać przy broni na biodrze. Do porównania z PC: położenie i wielkość efektu przy dobytej broni.
 
 ### 150. Efekty przedmiotów (C_Item.effect) na broniach i w świecie – 🧪 (21.11.2026)
 - **Pliki:** `common/graphics/mdlvisual.cpp/.h`, `common/graphics/effect.cpp/.h`, `common/graphics/pfx/pfxbucket.cpp`, `common/world/objects/pfxemitter.cpp`, `common/world/objects/item.cpp/.h`, `common/world/objects/npc.cpp/.h`, `common/game/inventory.cpp`, `common/game/gamescript.cpp`
@@ -298,6 +299,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:**
   - Rozmowa z Fregyalem na Zachodnim Wybrzeżu – są jego tematy.
   - Kormak w walce rzuca wodną pięść.
+- **Test (21.11, log):** Kormak dostaje runę wodnej pięści (`rune for the spell 72: ITRU_WATERFIST`) i walczy czarem.
   - Wyłamywanie zamków i kradzież bez `not implemented call` w logu.
 
 ### 148. Młot Adanosa przeciw kamiennym strażnikom – 🧪 (21.11.2026)
