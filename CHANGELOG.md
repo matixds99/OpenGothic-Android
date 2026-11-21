@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko; log miejsc bez celownika (skarby) – 🧪
-2. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – ✅
-3. **157** – pociski potworów widać w locie: rój golema bagiennego, zombie i mumii, kwas bagiennych trutni – ✅
-4. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – ✅
-5. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – ✅
+1. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – 🧪
+2. **160** – skarb z notatki martwego pirata (Zachodnie Wybrzeże): miejsce kopania wstawiane w starszych zapisach – 🧪
+3. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko; log miejsc bez celownika (skarby) – 🧪
+4. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – ✅
+5. **157** – pociski potworów widać w locie: rój golema bagiennego, zombie i mumii, kwas bagiennych trutni – ✅
 
 ---
 
@@ -251,6 +251,23 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 161. Towarzysze teleportują się z bohaterem – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`
+- **Zgłoszenie:** gdy bohater ma towarzyszy, po teleporcie powinni pojawić się razem z nim (jak na PC).
+- **Poprawka:** port co klatkę porównuje pozycję bohatera. Skok o ponad 30 m w tym samym świecie to teleport (runa, zwój, skrypt). Wtedy towarzysze (`AIV_PARTYMEMBER`) i przywołane stworzenia, które były do 30 m od miejsca, z którego bohater zniknął, stają za nim w półkolu (1,5 m od niego); ich kolejka AI jest czyszczona, dalej idą za bohaterem jak zwykle. Kto czeka gdzie indziej (dalej niż 30 m), zostaje. W logu: `[ctx] teleport: N companions with the hero (… m)`.
+- **Nie obejmuje:** zmiany świata (inny plik ZEN) – tam towarzysze zostają, jak w Gothic 2.
+- **Do sprawdzenia:** z towarzyszem (np. Blizna) i przywołańcem teleport runą – obaj obok bohatera.
+
+### 160. Skarb z notatki martwego pirata: miejsce kopania – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`
+- **Zgłoszenie:** skarbu przy krzyżu (niebieskie iskry) nie da się wykopać – nie ma celownika ani ikony.
+- **Log (poprawka 159):** `[ctx] mob near (no focus): none in 5 m` – w tym miejscu nie ma żadnego obiektu do użycia.
+- **Skrypty NB:** obiekt kopania nie jest częścią świata. `RX_WestCoast_Loop` wstawia go (`RX_InsertVobTree("VOBTREE/VOBTREE_WC_TREASURE_QUEST.ZEN")`) po przeczytaniu notatki martwego pirata (`RX_WC_DeadPirateNote` 1 → 2), jeden raz. Jeśli to się stało, zanim port obsługiwał `RX_InsertVobTree` (poprawka 56), albo pliku nie znalazł, flaga jest już 2, a obiektu nie ma – i skrypt nie wstawi go nigdy więcej.
+- **Poprawka:**
+  - Wstawianie części świata wydzielone do `nbInsertVobTree`.
+  - Naprawa co 5 s: na Zachodnim Wybrzeżu, gdy `RX_WC_DeadPirateNote` = 2, a tej części świata nie ma – wstawiana teraz (raz; w logu `NB: the part of the world "…" was not inserted … - inserted now`). Brak pliku – błąd w logu, bez ponawiania.
+- **Do sprawdzenia:** wczytanie zapisu na Zachodnim Wybrzeżu po przeczytaniu notatki – przy krzyżu obiekt do kopania. Jeśli notatka nie była czytana, skrypt wstawi go sam po jej przeczytaniu.
 
 ### 159. Szybki łup (przytrzymanie przycisku akcji); log miejsc bez celownika – 🧪 (21.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/world/objects/interactive.h`
@@ -522,7 +539,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - W logu `[ctx] enter location: RX_ONENTERLOC_NEWWORLD` i `[ctx] material NB_MAT_WC_BOAT_ALPHA collision off`.
 - **Test (21.11):** na łódź da się wejść, ale brakowało opcji odpłynięcia w rozmowie z Fregyalem (poprawka 140). W logu materiał osłony nie został znaleziony w żadnej siatce kolizji („no mesh has it now”) – do obserwacji przy rejsie.
 
-### 138. Wydobywanie żelaza, złota i magicznej rudy; kolor żyły w celowniku – 🧪 (21.11.2026)
+### 138. Wydobywanie żelaza, złota i magicznej rudy; kolor żyły w celowniku – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/interactive.h`, `common/mainwindow.cpp` (`focusColor`)
 - **Zgłoszenie:** wydobywanie surowców nie działa. Żyła z rudą ma mieć zieloną nazwę, pusta – białą lub szarą.
 - **Przyczyna:** skrypty NB (`PC_IronHacken_Addon_Hour_Info`, `PC_OreHacken…`, `PC_GoldHacken…`) pytają plugin, ile rudy udało się wydobyć (`RX_InteractMobOre`). Port nie miał tej funkcji i zwracał 0 – nic się nie wydobywało.
@@ -534,6 +551,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Kopanie żyły żelaza, złota i magicznej rudy – ruda trafia do ekwipunku, aż żyła się wyczerpie.
   - Kolor nazwy przed i po wyczerpaniu.
   - W logu `[ctx] ore: …`.
+- **Test (22.11):** działa – żyła na zielono, po wydobyciu biała/szara.
 
 ### 137. Osobny pasek doświadczenia – ✅ (21.11.2026)
 - **Pliki:** `common/mainwindow.cpp` (`drawTouchBars`), `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.h`, `common/game/nboptions.h`

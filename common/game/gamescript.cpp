@@ -313,6 +313,10 @@ struct NbState {
     uint64_t                      until  = 0;
     };
   std::vector<Shot>                           shots;
+  uint64_t                                    nextVobRepair = 0;   // NB fix 160
+  // NB fix 161: the companions go with the hero when he teleports (a jump of his position in the same world)
+  const World*                                partyWorld    = nullptr;
+  Tempest::Vec3                               partyHeroPos;
   };
 
 static bool nbEqualsNoCase(std::string_view a, std::string_view b) {
@@ -2892,23 +2896,7 @@ void GameScript::initCommon() {
     bindNb("GAME_PLAY3DSOUND", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view file) { snd_play3d(npcRef,file); });
     // NB fix 56 (batch 4): the world. RX_InsertVobTree puts the objects of a .ZEN into the world (137 calls: beds, chests,
     // decorations, items of the quests), RX_RemoveVobTree takes them away again
-    bindNb("RX_INSERTVOBTREE", [this](std::string_view path) {
-      auto& st   = nbStates[this];
-      auto& wrld = world();
-      nbVobTreesSync(st,wrld);
-      const auto file = nbFileName(path);
-      for(auto& t:st.vobTrees)
-        if(t.world==wrld.name() && t.file==file)
-          return;
-      NbState::VobTree t;
-      t.world = std::string(wrld.name());
-      t.file  = file;
-      t.vobs  = nbLoadVobTree(wrld,file,Vob::Startup);
-      if(t.vobs==nullptr)
-        return;
-      nbCtx("part of the world: ",file," (",int(t.vobs->size())," objects)");
-      st.vobTrees.push_back(std::move(t));
-      });
+    bindNb("RX_INSERTVOBTREE", [this](std::string_view path) { nbInsertVobTree(path); });
     bindNb("RX_REMOVEVOBTREE", [this](std::string_view path) {
       auto& st   = nbStates[this];
       auto& wrld = world();
@@ -4873,6 +4861,11 @@ void GameScript::tick(uint64_t dt) {
   nbBossTick();   // NB fix 100: the phases of the bosses
   nbDotTick();    // NB fix 106: the damage over time
   nbShotsTick(dt); // NB fix 157: the projectiles of the monsters
+  nbPartyTeleportTick();   // NB fix 161
+  if(tickCount()>=nb->second.nextVobRepair) {
+    nb->second.nextVobRepair = tickCount()+5000;
+    nbRepairVobTrees();   // NB fix 160
+    }
   // NB fix 82: the music of a boss fight plays again from the start; it ends 45 s after the last blow of the fight (the
   // player has run away) or with the death of the player, as the death of the boss does (RX_StopBossMusic)
   if(Gothic::inst().isBossMusic()) {
@@ -8472,6 +8465,94 @@ void GameScript::nbClearShots() {
   auto nb = nbStates.find(this);
   if(nb!=nbStates.end())
     nb->second.shots.clear();
+  }
+
+// NB fix 161: the companions of the hero (AIV_PARTYMEMBER) and his summoned creatures go with him when he teleports (a
+// rune, a scroll, a script): his position jumps by more than 30 m from one frame to the next in the same world. Only those
+// that were with him (up to 30 m from where he was) come; who waits somewhere else stays there
+void GameScript::nbPartyTeleportTick() {
+  auto& st   = nbStates[this];
+  auto* hero = world().player();
+  if(hero==nullptr)
+    return;
+  const auto pos = hero->position();
+  if(st.partyWorld!=&world()) {
+    st.partyWorld   = &world();
+    st.partyHeroPos = pos;
+    return;
+    }
+  const auto from = st.partyHeroPos;
+  st.partyHeroPos = pos;
+  if((pos-from).length()<3000.f || hero->isDead())
+    return;
+
+  constexpr size_t AIV_PARTYMEMBER = 15;
+  std::vector<Npc*> party;
+  world().detectNpc(from,3000.f,[&](Npc& n) {
+    if(&n==hero || n.isDead() || n.isDown())
+      return;
+    if(n.handle().aivar[AIV_PARTYMEMBER]!=0 || nbIsSummon(n))
+      party.push_back(&n);
+    });
+  if(party.empty())
+    return;
+  const float base = hero->rotationRad()+float(M_PI);   // behind the hero, in a half circle
+  for(size_t i=0; i<party.size(); ++i) {
+    auto&       n = *party[i];
+    const float a = base+(float(i)-float(party.size()-1)*0.5f)*0.6f;
+    n.clearAiQueue();
+    n.setPosition(pos+Tempest::Vec3(std::cos(a)*150.f,20.f,std::sin(a)*150.f));
+    n.updateTransform();
+    }
+  nbCtx("teleport: ",int(party.size())," companions with the hero (",int((pos-from).length()/100.f)," m)");
+  }
+
+void GameScript::nbInsertVobTree(std::string_view path) {
+  auto& st   = nbStates[this];
+  auto& wrld = world();
+  nbVobTreesSync(st,wrld);
+  const auto file = nbFileName(path);
+  for(auto& t:st.vobTrees)
+    if(t.world==wrld.name() && t.file==file)
+      return;
+  NbState::VobTree t;
+  t.world = std::string(wrld.name());
+  t.file  = file;
+  t.vobs  = nbLoadVobTree(wrld,file,Vob::Startup);
+  if(t.vobs==nullptr)
+    return;
+  nbCtx("part of the world: ",file," (",int(t.vobs->size())," objects)");
+  st.vobTrees.push_back(std::move(t));
+  }
+
+// NB fix 160: the parts of the world that the scripts inserted when the port did not have RX_InsertVobTree yet (before
+// fix 56) or did not find: the flag of the script is set, the objects are not there - the dig place of the treasure of the
+// note of the dead pirate on the West Coast (RX_WestCoast_Loop: RX_WC_DeadPirateNote 1 -> 2 and the tree)
+void GameScript::nbRepairVobTrees() {
+  struct Repair { const char* level; const char* flag; int32_t value; const char* tree; };
+  static const Repair all[] = {
+    {"WESTCOAST_ZEN","RX_WC_DEADPIRATENOTE",2,"VOBTREE/VOBTREE_WC_TREASURE_QUEST.ZEN"},
+    };
+  auto var = [this](const char* name) -> int32_t {
+    auto* s = vm.find_symbol_by_name(name);
+    return (s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member()) ? s->get_int() : -1;
+    };
+  auto& st = nbStates[this];
+  nbVobTreesSync(st,world());
+  for(auto& r:all) {
+    if(var("CURRENTLEVEL")!=var(r.level) || var(r.flag)!=r.value)
+      continue;
+    const auto file = nbFileName(r.tree);
+    bool has = false;
+    for(auto& t:st.vobTrees)
+      if(t.world==world().name() && t.file==file)
+        has = true;
+    static std::set<std::string> tried;   // once in a world: a missing file is not looked for again and again
+    if(has || !tried.insert(std::to_string(reinterpret_cast<uintptr_t>(this))+"/"+std::string(world().name())+"/"+file).second)
+      continue;
+    Log::i("NB: the part of the world \"",file,"\" was not inserted (",r.flag,"=",r.value,") - inserted now");
+    nbInsertVobTree(r.tree);
+    }
   }
 
 size_t GameScript::nbResetSummons(bool keepWisp, bool print) {
