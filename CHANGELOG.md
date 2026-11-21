@@ -15,8 +15,8 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **157** – pociski potworów widać w locie: rój golema bagiennego, zombie i mumii, kwas bagiennych trutni – 🧪
-2. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – 🧪
+1. **157** – pociski potworów widać w locie: rój golema bagiennego, zombie i mumii, kwas bagiennych trutni – ✅
+2. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – ✅
 3. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – ✅
 4. **154** – ognik nie znika i nie pojawia się nagle; przywołańce nie wracają po wczytaniu zapisu – ✅
 5. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – ✅
@@ -250,15 +250,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 157. Pociski potworów z daleka (rój, kwas) – 🧪 (21.11.2026)
+### 157. Pociski potworów z daleka (rój, kwas) – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/game/gamesession.cpp`
 - **Zgłoszenie:** golem bagienny strzela czymś, gdy bohater jest daleko, i tego nie widać. To samo robią bagienne trutnie, zombie i mumie.
 - **Skrypty NB (`ZS_MM_Attack_Loop`):** gdy cel jest dalej (np. 400–3000 cm u zombie, mumii i golema), potwór gra `T_WARN` i woła `Wld_PlayEffect_Vec("SPELLFX_SWARM", self, other, 2, obrażenia, DAM_MAGIC, TRUE)`; bagienne trutnie – `SPELLFX_ACID`. Ostatni argument (`bIsProjectile`) oznacza pocisk lecący do celu.
 - **Przyczyna:** port uruchamiał efekt od razu z kluczem `CAST`, którego trajektoria `TARGET` stawia go na celu – nie było lotu, a obrażenia przychodziły w tej samej chwili.
 - **Poprawka:** przy `bIsProjectile` efekt jest pociskiem: startuje z `emTrjOriginNode` potwora (lub ze środka postaci), leci do `emTrjTargetNode` celu z prędkością `emTrjEaseVel` klucza `CAST` i podąża za celem. Po dotarciu: efekt trafienia (`emFXCollDyn`), postrzeżenie magii i obrażenia (jak dotąd: minus ochrona przed rodzajem, co najmniej `NPC_MINIMAL_DAMAGE`). Bez celu (zniknął, zginął) lub po 6 s pocisk gaśnie z efektem `emFXCollStat`. Pociski w locie znikają przy zmianie świata i wyjściu z gry. Wywołania bez `bIsProjectile` działają jak dotąd.
 - **Do sprawdzenia:** golem bagienny, zombie, mumia i bagienny truteń z daleka – widoczny lecący pocisk, obrażenia przy trafieniu.
+- **Test (21.11):** działa – pocisk golema bagiennego widać w locie.
 
-### 156. Karta przedmiotu w ekwipunku: wielkość napisów, zdobyte bonusy – 🧪 (21.11.2026)
+### 156. Karta przedmiotu w ekwipunku: wielkość napisów, zdobyte bonusy – ✅ (21.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`
 - **Zgłoszenie:** napisy na karcie przedmiotu (prawa strona ekwipunku) są za duże (uwaga borsuczyny). Pomysł: zmniejszyć je i w wolnym miejscu pokazywać bonusy z jedzenia. Na zrzucie zakładka wszystkich przedmiotów nazywa się „Other (481)”.
 - **Poprawka:**
@@ -268,6 +269,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** zjedzenie przedmiotu ze stałym bonusem (np. gulasz, eliksir umysłu) – zielony napis z bonusem; czytelność mniejszych napisów; nazwa pierwszej zakładki.
 - **Test (21.11):** działa – po wypiciu eliksiru zręczności pod nazwą pojawia się „Zręczność +2”.
 - **Zmiana po teście:** napis był prawie czarny (kolor nakładał się na ciemną czcionkę książkową) i ściśnięty pod nazwą. Teraz bonus to pływające powiadomienie na środku ekranu: unosi się i znika w 2,5 s, zielone przy zysku, czerwone przy stracie, z cieniem dla czytelności. Kilka bonusów naraz – jeden pod drugim, z małym odstępem w czasie. Zmiana, która przychodzi później (efekt po animacji jedzenia), daje nowe powiadomienie; wartości są obserwowane 6 s od użycia.
+- **Test 2 (21.11):** działa – po eliksirze siły na środku ekranu „Siła +2”.
 
 ### 155. Obrażenia z kilkoma rodzajami naraz (kamienny golem) – ✅ (21.11.2026)
 - **Pliki:** `common/game/damagecalculator.cpp`
