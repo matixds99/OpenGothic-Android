@@ -163,6 +163,9 @@ class MainWindow : public Tempest::Window {
 
 #ifdef OPENGOTHIC_TOUCH_UI
     AndroidInput::Controller   androidControls;
+    int                        nbQuickLootTarget() const;   // NB fix 159
+    void                       nbQuickLoot();
+    void                       nbLogNearMobs();
     InventoryRenderer          mobileItems[Resources::MaxFramesInFlight];
     std::string                mobileItemStamp[Resources::MaxFramesInFlight];
     Tempest::VectorImage       touchLayer;

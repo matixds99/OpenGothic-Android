@@ -10,6 +10,7 @@
 #include <Tempest/Layout>
 #include <Tempest/Application>
 #include <Tempest/Log>
+#include <set>
 
 #include <algorithm>
 
@@ -2272,6 +2273,13 @@ void MainWindow::setupMobileControls() {
   androidControls.action = [this](int id) {
     onMobileAction(id);
     };
+  // NB fix 159: the quick loot (the key of NB on PC: KEY_QUICKLOOT) - a long press of the action button
+  androidControls.lootFocus = [this]() {
+    if(!player.focus())
+      nbLogNearMobs();   // NB fix 159: the diagnostics of the places that cannot be used (the treasures)
+    return nbQuickLootTarget()!=0;
+    };
+  androidControls.quickLoot = [this]() { nbQuickLoot(); };
   // NB fix 111: a slot of the wheel: the item is used; an empty slot opens the inventory (to put something there);
   // a long press on a slot takes its item off the wheel
   androidControls.wheelPick = [this](int slot, bool held) {
@@ -2699,5 +2707,94 @@ void MainWindow::updateMobileOverlay() {
     androidControls.paint(p);
   }
   touchMesh[cmdId].update(device,touchLayer);
+  }
+#endif
+
+#ifdef OPENGOTHIC_TOUCH_UI
+// NB fix 159: what the long press of the action button can loot: 1 - a dead body, 2 - a plain chest, 0 - nothing
+int MainWindow::nbQuickLootTarget() const {
+  auto* pl = Gothic::inst().player();
+  if(pl==nullptr || pl->isDown() || pl->weaponState()!=WeaponState::NoWeapon || inventory.isActive())
+    return 0;
+  const auto focus = player.focus();
+  if(focus.npc!=nullptr && focus.npc->isDead())
+    return 1;
+  if(focus.interactive!=nullptr && focus.interactive->nbPlainChest())
+    return 2;
+  return 0;
+  }
+
+// NB fix 159 (diagnostics): the action button without a focus - the interactive objects up to 5 m, once each
+void MainWindow::nbLogNearMobs() {
+  auto* pl = Gothic::inst().player();
+  auto* w  = Gothic::inst().world();
+  if(pl==nullptr || w==nullptr)
+    return;
+  static const World*        seenWorld = nullptr;
+  static std::set<uint32_t>  seen;
+  if(seenWorld!=w) {
+    seenWorld = w;
+    seen.clear();
+    }
+  size_t near = 0;
+  for(uint32_t i=0; auto* m = w->mobsiById(i); ++i) {
+    const float d = (m->position()-pl->position()).length();
+    if(d>500.f)
+      continue;
+    ++near;
+    if(!seen.insert(i).second)
+      continue;
+    Tempest::Log::i("[ctx] mob near (no focus): \"",m->tag(),"\" focus=\"",m->focusName(),"\" name=\"",m->displayName(),
+                    "\" scheme=",m->schemeName()," state=",m->nbOnStateFunc()," dist=",int(d),
+                    " container=",int(m->isContainer()));
+    }
+  if(near==0 && seen.insert(uint32_t(-1)).second)
+    Tempest::Log::i("[ctx] mob near (no focus): none in 5 m");
+  }
+
+void MainWindow::nbQuickLoot() {
+  auto* pl = Gothic::inst().player();
+  auto* w  = Gothic::inst().world();
+  const int kind = nbQuickLootTarget();
+  if(pl==nullptr || w==nullptr || kind==0)
+    return;
+  const auto& fnt = Resources::font(1.f);
+  // as in NB: not with enemies around (RX_Warn_QuickLoot_EnemiesNearby)
+  bool enemies = false;
+  w->detectNpc(pl->position(),1500.f,[&](Npc& n) {
+    if(&n!=pl && !n.isDown() && n.target()==pl && n.isAttack())
+      enemies = true;
+    });
+  if(enemies) {
+    Gothic::inst().onPrintScreen("Wrogowie w pobli\xBF" "u!",-1,70,2,fnt);
+    return;
+    }
+
+  const auto  focus = player.focus();
+  const Inventory& inv   = kind==1 ? focus.npc->inventory() : focus.interactive->inventory();
+  struct Taken { size_t cls; size_t count; std::string name; };
+  std::vector<Taken> taken;
+  for(auto it = inv.iterator(kind==1 ? Inventory::T_Ransack : Inventory::T_Inventory); it.isValid(); ++it)
+    taken.push_back({it->clsId(),it.count(),std::string(it->displayName())});
+  if(taken.empty()) {
+    Gothic::inst().onPrintScreen("Nic tu nie ma",-1,70,2,fnt);
+    return;
+    }
+  for(auto& t:taken) {
+    if(kind==1)
+      pl->addItem(t.cls,*focus.npc,t.count); else
+      pl->addItem(t.cls,*focus.interactive,t.count);
+    }
+  Gothic::inst().emitGlobalSound("INV_OPEN");
+  // what was taken: a line for each item, under the middle of the screen
+  const size_t maxLines = 6;
+  for(size_t i=0; i<taken.size() && i<maxLines; ++i) {
+    std::string line = taken[i].name;
+    if(taken[i].count>1)
+      line += " x"+std::to_string(taken[i].count);
+    if(i+1==maxLines && taken.size()>maxLines)
+      line = "... i jeszcze "+std::to_string(taken.size()-maxLines+1);
+    Gothic::inst().onPrintScreen(line,-1,int(56+i*4),3,fnt);
+    }
   }
 #endif

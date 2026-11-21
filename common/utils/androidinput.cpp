@@ -737,6 +737,17 @@ bool AndroidInput::Controller::update(Window& window, Mobile::Mode mode) {
     }
   for(const auto& input:controls.drain())
     dispatch(window,mode,input);
+  // NB fix 159: the action button held for 500 ms on a corpse or a chest - the quick loot, without the normal action
+  if(lootPress.state==LootPress::Waiting) {
+    if(mode!=Mobile::Mode::Game) {
+      lootPress.state = LootPress::Idle;
+      } else
+    if(Application::tickCount()>=lootPress.downAt+500) {
+      lootPress.state = LootPress::Fired;   // its release is not sent
+      if(quickLoot)
+        quickLoot();
+      }
+    }
   // NB fix 85, 97: the keys of the quick attack that are due now
   if(!combo.empty()) {
     const uint64_t now = Application::tickCount();
@@ -788,6 +799,29 @@ void AndroidInput::Controller::dispatch(Window& window, Mobile::Mode mode, const
     case Mobile::Event::Up: {
       const auto key  = keyType(input.key);
       const auto code = Mobile::KeyCodeBase+uint32_t(input.key);
+      // NB fix 159: the action on a corpse or a chest waits for the release (a tap) or for the long press (update)
+      if(input.key==Mobile::Key::Action) {
+        if(input.kind==Mobile::Event::Down && mode==Mobile::Mode::Game && lootFocus && lootFocus()) {
+          lootPress.state  = LootPress::Waiting;
+          lootPress.downAt = Application::tickCount();
+          break;
+          }
+        if(input.kind==Mobile::Event::Up && lootPress.state!=LootPress::Idle) {
+          const bool tap = lootPress.state==LootPress::Waiting;
+          lootPress.state = LootPress::Idle;
+          if(tap) {
+            // a tap: the normal action now; its release a little later (the game reads the press in its next tick)
+            KeyEvent down(key,code,Event::M_NoModifier,Event::KeyDown);
+            Dispatch::dispatchKeyDown(window,down,code);
+            ComboKey rel;
+            rel.at   = Application::tickCount()+100;
+            rel.key  = Mobile::Key::Action;
+            rel.down = false;
+            combo.push_back(rel);
+            }
+          break;
+          }
+        }
       if(input.kind==Mobile::Event::Down) {
         KeyEvent event(key,code,Event::M_NoModifier,Event::KeyDown);
         Dispatch::dispatchKeyDown(window,event,code);

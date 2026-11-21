@@ -149,6 +149,9 @@ class Controller {
     std::function<void(float,float)>     menuTap;
     std::function<void(float)>           menuScroll;
     std::function<void(int)>             action;
+    /// NB fix 159: the quick loot - a long press of the action button on a corpse or a chest takes all of it
+    std::function<bool()>                lootFocus;   // the focus can be looted by the long press
+    std::function<void()>                quickLoot;
 
   private:
 #ifdef __ANDROID__
@@ -197,6 +200,11 @@ class Controller {
       bool        down = false;
       };
     std::vector<ComboKey> combo;
+    // NB fix 159: the press of the action button that waits: a tap (the normal action) or a long press (the quick loot)
+    struct LootPress {
+      enum : uint8_t { Idle, Waiting, Fired } state = Idle;
+      uint64_t downAt = 0;
+      } lootPress;
 
     std::array<Tempest::Sprite,IconCount> icons;
     std::array<float,IconCount>           iconPx{}; // side of the icon in pixels

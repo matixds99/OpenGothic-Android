@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – ✅
-2. **157** – pociski potworów widać w locie: rój golema bagiennego, zombie i mumii, kwas bagiennych trutni – ✅
-3. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – ✅
-4. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – ✅
-5. **154** – ognik nie znika i nie pojawia się nagle; przywołańce nie wracają po wczytaniu zapisu – ✅
+1. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko; log miejsc bez celownika (skarby) – 🧪
+2. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – ✅
+3. **157** – pociski potworów widać w locie: rój golema bagiennego, zombie i mumii, kwas bagiennych trutni – ✅
+4. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – ✅
+5. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – ✅
 
 ---
 
@@ -251,6 +251,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 159. Szybki łup (przytrzymanie przycisku akcji); log miejsc bez celownika – 🧪 (21.11.2026)
+- **Pliki:** `common/mainwindow.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/world/objects/interactive.h`
+- **Zgłoszenie:** NB na PC ma szybki łup (klawisz `KEY_QUICKLOOT`: zwłoki, skrzynie, przedmioty na ziemi), port – nie. Bez nowego przycisku na ekranie. Drugie zgłoszenie: skarbu do wykopania (miejsce z niebieskimi iskrami przy krzyżu) nie da się użyć – nie ma celownika ani ikony.
+- **Szybki łup:**
+  - Krótkie dotknięcie przycisku akcji działa jak dotąd (otwiera skrzynię, przeszukuje zwłoki). Przytrzymanie przez 0,5 s na zwłokach albo skrzyni zabiera od razu całą zawartość.
+  - Skrzynie: tylko otwarte (bez zamka lub z otwartym zamkiem), bez właściciela, bez funkcji skryptu i bez wyzwalacza – ich otwarcie robi coś więcej niż daje przedmioty, więc zostaje zwykłe otwieranie. Zwłoki: tylko martwe postacie, z tym, co pokazuje przeszukiwanie.
+  - Jak w NB: nie przy wrogach w pobliżu (15 m, ktoś atakuje bohatera) – napis „Wrogowie w pobliżu!”. Pusto – „Nic tu nie ma”.
+  - Zabrane przedmioty: napisy na środku ekranu (nazwa i liczba, do 6 wierszy), dźwięk ekwipunku. Bez broni w ręku.
+- **Skarby (diagnostyka):** dotknięcie przycisku akcji bez celownika zapisuje w logu obiekty do użycia w promieniu 5 m: `[ctx] mob near (no focus): …` (nazwa, nazwa celownika, schemat, funkcja stanu, odległość) albo `none in 5 m`. Skrypty NB: kopanie skarbów (`HIDDENFIND`) to obiekt z kilofem, oknem „Kop.” i skarbem wstawianym w ziemię – log pokaże, czy port go w ogóle ma.
+- **Do sprawdzenia:** przytrzymanie na zwłokach i na otwartej skrzyni – wszystko w ekwipunku, napisy; krótkie dotknięcie – zwykłe otwarcie; przy skarbie dotknięcie przycisku akcji i log.
 
 ### 158. Pociski potworów lecą prosto, bez naprowadzania – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`

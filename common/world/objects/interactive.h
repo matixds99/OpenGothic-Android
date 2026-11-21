@@ -68,6 +68,9 @@ class Interactive : public Vob {
     std::string_view    nbVobName() const { return vobName; }
     void                nbSetVobName(std::string_view s) { vobName = s; }
     std::string_view    nbOnStateFunc() const { return onStateFunc; }
+    /// NB fix 159: a chest for the quick loot - no script, no trigger, no owner (its opening would do more than give)
+    bool                nbPlainChest() const { return isContainer() && !isLocked() && conditionFunc.empty() &&
+                                                      onStateFunc.empty() && triggerTarget.empty() && owner.empty(); }
     std::string_view    keyName() const { return keyInstance; }
     void                setAsCracked(bool c) { isLockCracked = c; }
     void                setPickLockCode(std::string_view s) { pickLockStr = s; }
