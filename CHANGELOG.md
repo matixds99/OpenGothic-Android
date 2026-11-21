@@ -253,7 +253,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 ### 152. Walka z kilkoma przeciwnikami naraz – 🧪 (21.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h` (`nbReactToHit`)
 - **Zgłoszenie:** towarzysz (Blizna) na farmie Oswalda zaatakowany przez dwa zębacze nie walczył – krążył i obracał się, bez pomocy bohatera by zginął. To samo przy kilku bandytach na jedną postać (obóz bandytów, Brago).
-- **Przyczyna:** po każdym trafieniu bohater-NPC porzucał plan walki: kolejka ruchów była czyszczona, a następny ruch brany z `MY_W_STRAFE` (krok w bok, parada). Dwa zębacze gryzą na zmianę mniej więcej co pół sekundy, więc postać przez cały czas tylko reagowała na trafienia, obracała się między nimi i nie zdążyła zaatakować.
+- **Przyczyna:** po każdym trafieniu postać (nie bohater) porzucała plan walki: kolejka ruchów była czyszczona, a następny ruch brany z `MY_W_STRAFE` (krok w bok, parada). Dwa zębacze gryzą na zmianę mniej więcej co pół sekundy, więc postać przez cały czas tylko reagowała na trafienia, obracała się między nimi i nie zdążyła zaatakować.
 - **Poprawka:**
   - Reakcję na trafienie wywołuje tylko cios własnego celu postaci (albo dowolny cios, gdy postać nie ma celu lub jej cel leży).
   - Najwyżej raz na 1,5 s.
