@@ -746,6 +746,15 @@ void MainWindow::keyDownEvent(KeyEvent &event) {
     }
   uiKeyUp=nullptr;
 
+  // NB fix 143: G or R skip a scene of New Balance, as the plugin does
+  if(event.key==Event::K_G || event.key==Event::K_R) {
+    if(auto* w = Gothic::inst().world(); w!=nullptr && !dialogs.isActive() && w->script().nbCutsceneActive()) {
+      w->script().nbSkipCutscene();
+      event.accept();
+      return;
+      }
+    }
+
   // NB fix 40: ~ switches the sprint of New Balance, as in the original
   if((event.code=='`' || event.code=='~') && nbToggleSprint()) {
     event.accept();
@@ -2363,6 +2372,10 @@ void MainWindow::onMobileAction(int id) {
   // NB fix 131: the summoned creatures - the button opens and closes its choices; a choice closes them
   if(id==Mobile::Special::Summons)
     summonMenuOpen = !summonMenuOpen;
+  if(id==Mobile::Special::SkipScene) {   // NB fix 143
+    if(auto* w = Gothic::inst().world(); w!=nullptr && w->script().nbCutsceneActive())
+      w->script().nbSkipCutscene();
+    }
   if(id==Mobile::Special::SummonAttack || id==Mobile::Special::SummonMode || id==Mobile::Special::SummonReset) {
     auto* w  = Gothic::inst().world();
     auto* pl = Gothic::inst().player();
@@ -2483,6 +2496,8 @@ void MainWindow::updateMobileAvailability() {
   if(!have)
     summonMenuOpen = false;
   androidControls.summons(have,summonMenuOpen);
+  // NB fix 143: the button "POMIŃ" while a scene of New Balance can be skipped
+  androidControls.skipScene(mode==Mobile::Mode::Game && w!=nullptr && w->script().nbCutsceneActive());
   }
   }
 

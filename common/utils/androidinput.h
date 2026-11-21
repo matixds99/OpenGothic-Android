@@ -115,6 +115,7 @@ class Controller {
     void  playerDead(bool on) { controls.playerDead(on); }
     void  sprint(bool available) { controls.sprint(available); }
     void  summons(bool have, bool open) { controls.summons(have,open); }   // NB fix 131
+    void  skipScene(bool available) { controls.skipScene(available); }    // NB fix 143
     bool  held(Mobile::Key key) const { return controls.held(key); }        // NB fix 133
     bool  stickHeld() const { return controls.stickActive(); }              // NB fix 134
     void  stamina(bool available) { controls.stamina(available); }

@@ -69,7 +69,8 @@ namespace Special {
     Summons       = 48,
     SummonAttack  = 49,
     SummonMode    = 50,
-    SummonReset   = 51
+    SummonReset   = 51,
+    SkipScene     = 52   // NB fix 143: "POMIŃ" - the scenes of New Balance (the voyage of the boat, the concerts)
     };
   }
 
@@ -238,6 +239,7 @@ class Controls {
     void  sprint(bool available);
     /// NB fix 131: the hero has summoned creatures; the choices of their button are open
     void  summons(bool have, bool open);
+    void  skipScene(bool available);   // NB fix 143
     /// The scripts have a bar of the stamina (New Balance): it is in the editor of the HUD (NB fix 42)
     void  stamina(bool available);
     void  xpBar(bool available);   // NB fix 137: the bar of the experience is on (the option of the game)
@@ -393,6 +395,7 @@ class Controls {
     bool     availableMovement = true;
     bool     availableSummons  = false;   // NB fix 131
     bool     summonMenu        = false;
+    bool     availableSkip     = false;   // NB fix 143
 
     Rect     stick;
     std::map<int,Finger>                 fingers;

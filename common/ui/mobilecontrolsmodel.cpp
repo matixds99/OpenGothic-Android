@@ -205,6 +205,13 @@ void Controls::sprint(bool available) {
   rebuild();
   }
 
+void Controls::skipScene(bool available) {
+  if(availableSkip==available)
+    return;
+  availableSkip = available;
+  applyAvailability();
+  }
+
 void Controls::summons(bool have, bool open) {
   if(availableSummons==have && summonMenu==open)
     return;
@@ -574,6 +581,15 @@ void Controls::buildGame(const Anchor&) {
         x -= gap;
         }
       }
+    }
+
+  // NB fix 143: "POMIŃ" in the middle under the top row - while a scene of New Balance can be skipped (the keys G and R of
+  // the plugin: Script_Use_Button_Cutscene)
+  if(featureSprint && !dead && !editing) {
+    const float bw = 150.f, bh = 46.f;
+    auto& b   = add(width/2-bw*s/2, top(80)-bh*s/2, bw, bh, "POMIŃ", Key::Enter);
+    b.special = Special::SkipScene;
+    b.id      = "skipscene";
     }
 
   // NB fix 42: the status bars in the editor: their frames are dragged (the bars are drawn by the window)
@@ -1058,6 +1074,8 @@ void Controls::applyAvailability() {
       usable = availableSummons && availableMovement; else   // NB fix 131
     if(b.special==Special::SummonAttack || b.special==Special::SummonMode || b.special==Special::SummonReset)
       usable = summonMenu && availableSummons && availableMovement; else
+    if(b.special==Special::SkipScene)
+      usable = availableSkip; else   // NB fix 143
     if(b.special==Special::Target)
       usable = availableTarget; else
     if(b.special==Special::Spell)

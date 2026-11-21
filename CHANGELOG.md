@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **143**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **144**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – 🧪
-2. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – ✅
-3. **140** – rozmowa z Fregyalem na łodzi: opcja „Pora odpływać” (sprawdzanie, czy postać stoi na łodzi) – ✅
-4. **139** – łódź druida na Zachodnie Wybrzeże: niewidzialna ściana znika (kolizja materiałów, wejście do lokacji) – 🧪
-5. **138** – wydobywanie żelaza, złota i magicznej rudy działa; żyła z rudą świeci się na zielono, pusta na szaro – 🧪
+1. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią); Fregyal nie spada z łodzi po wstawieniu – 🧪
+2. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – ✅
+3. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – ✅
+4. **140** – rozmowa z Fregyalem na łodzi: opcja „Pora odpływać” (sprawdzanie, czy postać stoi na łodzi) – ✅
+5. **139** – łódź druida na Zachodnie Wybrzeże: niewidzialna ściana znika (kolizja materiałów, wejście do lokacji) – 🧪
 
 ---
 
@@ -250,7 +250,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 142. Po dopłynięciu łodzi nie wczytuje się Zachodnie Wybrzeże – 🧪 (21.11.2026)
+### 143. Pomijanie rejsu łodzią („POMIŃ”), Fregyal na łodzi na Zachodnim Wybrzeżu – 🧪 (21.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`
+- **Zgłoszenie:** brakuje sposobu na pominięcie rejsu, a po wczytaniu Zachodniego Wybrzeża na łodzi nie ma Fregyala.
+- **Jak to działa na PC (UNION_ABI.DLL 0x100bcd90, 0x10235530):** plugin pyta skrypt `RX_IsCutsceneActive`, czy trwa scena do pominięcia (rejs łodzią, koncerty, więzienie). Klawisz G lub R wywołuje wtedy `Script_Use_Button_Cutscene` – przy rejsie od razu przenosi na Zachodnie Wybrzeże.
+- **Poprawka:**
+  - Przycisk „POMIŃ” na środku ekranu pod górnym rzędem, widoczny tylko w czasie takiej sceny. Klawisze G i R działają tak samo (klawiatura, pad).
+  - Postać wstawiana przez skrypt (`Wld_InsertNpc`) na punkcie nad ruchomym obiektem zostaje na punkcie. Wcześniej szukanie wolnego miejsca wokół punktu mogło zrzucić ją z pokładu do morza – tak mógł zniknąć Fregyal, wstawiany na łodzi na Zachodnim Wybrzeżu.
+  - Log: `[ctx] insert: … moved N cm`, `[ctx] AI_Teleport: … -> …`, `[ctx] scene skipped`.
+- **Do sprawdzenia:**
+  - Rejs z Fregyalem: przycisk „POMIŃ” w czasie rejsu przenosi na Zachodnie Wybrzeże.
+  - Fregyal jest na łodzi na Zachodnim Wybrzeżu i płynie z bohaterem do brzegu. Jeśli go nie ma – log z linijkami `insert` i `AI_Teleport`.
+
+### 142. Po dopłynięciu łodzi nie wczytuje się Zachodnie Wybrzeże – ✅ (21.11.2026)
 - **Pliki:** `common/world/waymatrix.cpp/.h`, `common/game/gamescript.cpp` (`Vob_GetDistToVob`)
 - **Zgłoszenie:** łódź dopływa na miejsce i nic się nie dzieje – świat Zachodniego Wybrzeża się nie wczytuje.
 - **Przyczyna:**
@@ -261,6 +273,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Punkty dołożone później są przechowywane osobno, w miejscu, które się nie przesuwa, i dopisywane do indeksów (po nazwie, po położeniu, listy punktów o tej samej nazwie).
   - `Vob_GetDistToVob` znajduje też ruchome obiekty i wyzwalacze o podanej nazwie, a nie tylko punkty.
 - **Do sprawdzenia:** rejs z Fregyalem – po dopłynięciu wczytuje się Zachodnie Wybrzeże. Zapis zrobiony na łodzi u celu powinien po wczytaniu od razu przenieść na wybrzeże.
+- **Test (21.11):** Zachodnie Wybrzeże się wczytuje. Na łodzi brakowało Fregyala i możliwości pominięcia rejsu (poprawka 143).
 
 ### 141. Łódź odpływa bez bohatera – postacie nie jechały z ruchomymi obiektami – ✅ (21.11.2026)
 - **Pliki:** `common/world/triggers/movetrigger.cpp`, `common/physics/physicvbo.cpp/.h`, `common/physics/dynamicworld.cpp`, `common/physics/physicmeshshape.cpp`

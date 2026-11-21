@@ -224,6 +224,9 @@ class GameScript final {
     /// the summoned creatures of the hero go away; the pets stay (NIXDOG, PET_JINA), the wisp too when keepWisp
     size_t           nbResetSummons(bool keepWisp, bool print);
     void             nbSummonsFollowTick();
+    /// NB fix 143: a scene of New Balance can be skipped now (RX_IsCutsceneActive), and its skip (Script_Use_Button_Cutscene)
+    bool             nbCutsceneActive();
+    void             nbSkipCutscene();
     void             nbBodiesTick();   // NB fix 136: the empty bodies go away
     /// NB fix 138: the ore that is left in a vein (iron, gold, magic ore); -1 - not a vein. A vein not touched yet is full
     int32_t          nbOreStock(const Interactive& mob) const;

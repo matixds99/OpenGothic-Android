@@ -248,6 +248,8 @@ struct NbState {
   bool                                        spellsDirty   = false;
   uint32_t                                    spellsWorld   = 0;
   uint32_t                                    enterLocWorld = 0;   // NB fix 139: RX_OnEnterLoc_* called for this world
+  uint64_t                                    cutsceneNextCheck = 0;   // NB fix 143
+  bool                                        cutsceneActive    = false;
   uint64_t                                    spellsNextCheck = 0;
   uint64_t                                    spellsHash    = 0;
   // NB fix 100: the fights of the bosses of the plugin (UNION_ABI.DLL 0x10054220, 0x100546A0): the characters with
@@ -5816,8 +5818,23 @@ void GameScript::wld_insertnpc(int npcInstance, std::string_view spawnpoint) {
     return;
 
   auto npc = world().addNpc(size_t(npcInstance),spawnpoint);
-  if(npc!=nullptr)
-    fixNpcPosition(*npc,0,150);
+  if(npc==nullptr)
+    return;
+  // NB fix 143: a character put on a mover (Fregyal on the boat to the West Coast) stays where the point is: the search of
+  // a free place around it took him off the deck, into the sea
+  bool onMover = false;
+  const auto pos0 = npc->position();
+  world().forEachTrigger([&](AbstractTrigger& t) {
+    if(!onMover && dynamic_cast<MoveTrigger*>(&t)!=nullptr && t.nbStandsOn(pos0))
+      onMover = true;
+    });
+  if(onMover) {
+    nbCtx("insert: ",npc->displayName()," at ",spawnpoint," - on a mover, kept at the point");
+    return;
+    }
+  fixNpcPosition(*npc,0,150);
+  if((npc->position()-pos0).length()>100.f)
+    nbCtx("insert: ",npc->displayName()," at ",spawnpoint," moved ",int((npc->position()-pos0).length())," cm to a free place");
   }
 
 void GameScript::wld_removenpc(int npcInstance) {
@@ -7019,6 +7036,8 @@ void GameScript::ai_teleport(std::shared_ptr<zenkit::INpc> npcRef, std::string_v
   auto pt  = world().findPoint(tg);
   if(npc!=nullptr && pt!=nullptr)
     npc->aiPush(AiQueue::aiTeleport(*pt));
+  if(npc!=nullptr && !npc->isPlayer())   // NB fix 143: where the companions go (the voyage to the West Coast)
+    nbCtx("AI_Teleport: ",npc->displayName()," -> ",tg,pt==nullptr ? " (no such point)" : "");
   }
 
 void GameScript::ai_stoppointat(std::shared_ptr<zenkit::INpc> npcRef) {
@@ -8044,6 +8063,45 @@ void GameScript::nbBodiesTick() {
     world().removeNpc(*n);
   if(!gone.empty())
     nbCtx("bodies: ",gone.size()," empty removed");
+  }
+
+/// NB fix 143: the plugin asks RX_IsCutsceneActive every frame and, on the keys G or R, calls Script_Use_Button_Cutscene
+/// (UNION_ABI.DLL 0x100bcd90, 0x10235530): the voyage of the boat of the druid, the concerts, the jail. Asked here 4 times
+/// a second, for the button "POMIŃ" of the touch screen
+bool GameScript::nbCutsceneActive() {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end())
+    return false;
+  auto& st = nb->second;
+  if(tickCount()<st.cutsceneNextCheck)
+    return st.cutsceneActive;
+  st.cutsceneNextCheck = tickCount()+250;
+  st.cutsceneActive    = false;
+  auto* fn = vm.find_symbol_by_name("RX_ISCUTSCENEACTIVE");
+  if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION || world().player()==nullptr)
+    return false;
+  try {
+    st.cutsceneActive = vm.call_function<int32_t>(fn)!=0;
+    }
+  catch(const std::exception& e) {
+    Log::e("NB: RX_IsCutsceneActive failed: ",e.what());
+    }
+  return st.cutsceneActive;
+  }
+
+void GameScript::nbSkipCutscene() {
+  auto* fn = vm.find_symbol_by_name("SCRIPT_USE_BUTTON_CUTSCENE");
+  if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+    return;
+  nbCtx("scene skipped (Script_Use_Button_Cutscene)");
+  try {
+    vm.call_function<void>(fn);
+    }
+  catch(const std::exception& e) {
+    Log::e("NB: Script_Use_Button_Cutscene failed: ",e.what());
+    }
+  if(auto nb = nbStates.find(this); nb!=nbStates.end())
+    nb->second.cutsceneNextCheck = 0;
   }
 
 /// NB fix 131: RX_SummonMode of the scripts - 0 the summoned creatures attack (active), 1 they attack nobody (passive)

@@ -1013,7 +1013,7 @@ void AndroidInput::Controller::paintButton(Painter& p, Font& font, size_t index)
     return;
     }
   if(b.special==Mobile::Special::SummonAttack || b.special==Mobile::Special::SummonMode ||
-     b.special==Mobile::Special::SummonReset) {
+     b.special==Mobile::Special::SummonReset || b.special==Mobile::Special::SkipScene) {
     const float al = (!b.enabled ? 0.35f : 1.f)*(b.dimmed ? 0.3f : 1.f);
     fill(p,r,active ? Color(0.85f,0.7f,0.42f,0.95f*al) : Color(0.08f,0.06f,0.12f,0.85f*al));
     const float bd = std::max(1.f,1.5f*s);
