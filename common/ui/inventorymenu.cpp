@@ -1411,7 +1411,7 @@ void InventoryMenu::nbDrawGains(Painter& p) {
     const auto  fnt   = fb.tinted(c);
     const auto  sz    = fnt.textSize(f.text);
     const int   x     = (w()-sz.w)/2;
-    const int   y     = int(H*0.5f - t*H*0.12f) + n*int(fb.pixelSize()*1.2f);
+    const int   y     = int(H*0.5f - t*H*0.12f) + n*int(float(fb.pixelSize())*1.2f);
     // a dark shadow under the letters, for the light ground
     const auto  sh    = fb.tinted(Color(0.f,0.f,0.f,alpha*0.8f));
     sh.drawText(p,x+2,y+2,f.text);
