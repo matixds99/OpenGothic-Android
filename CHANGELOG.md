@@ -15,8 +15,8 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – 🧪
-2. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – 🧪
+1. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
+2. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – ✅
 3. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
 4. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
 5. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅
@@ -250,7 +250,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 147. „Rysowanie świata” – obiekty tak daleko jak teren – 🧪 (21.11.2026)
+### 147. „Rysowanie świata” – obiekty tak daleko jak teren – ✅ (21.11.2026)
 - **Pliki:** `common/gothic.cpp` (`settingsObjectDistance`), `common/game/nboptions.h`
 - **Zgłoszenie (nagranie):** drzewa, płoty, kamienne stoły i kapliczki pojawiają się dopiero kilkadziesiąt metrów przed bohaterem, a teren za nimi jest pusty. Prośba: połączyć zasięg świata i obiektów w jedno ustawienie „Rysowanie świata”.
 - **Przyczyna:** obiekty świata (voby) mają w OpenGothic osobny zasięg: 100 m razy mnożnik z opcji, nie więcej niż teren. Teren był rysowany do 250 m, a obiekty tylko do 100 m – wyskakiwały w trakcie marszu.
@@ -259,8 +259,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Opcja z poprawki 146 nazywa się teraz „Rysowanie świata” (50–750 m) i ustawia zasięg terenu i obiektów razem.
 - **Uwaga:** ten sam zasięg dla obiektów to więcej rysowania niż wcześniej (np. 250 m zamiast 100 m). Gdy spadają klatki, zmniejszyć „Rysowanie świata”, np. do 150 m.
 - **Do sprawdzenia:** marsz przez pola i las – drzewa, płoty i kamienie widać od razu z daleka, nic nie wyskakuje. Klatki przy 150 / 250 / 400 m.
+- **Test (21.11):** działa, przy ustawieniu 100 wszystko widać lepiej.
 
-### 146. Zasięg rysowania postaci i świata – 🧪 (21.11.2026)
+### 146. Zasięg rysowania postaci i świata – ✅ (21.11.2026)
 - **Pliki:** `common/world/world.cpp/.h` (`nbNpcRangeTick`), `common/world/objects/npc.h`, `common/graphics/mdlvisual.cpp/.h`, `common/graphics/meshobjects.cpp/.h`, `common/graphics/visualobjects.cpp/.h`, `common/graphics/drawcommands.cpp`, `common/game/gamescript.cpp`, `common/game/nboptions.h`
 - **Zgłoszenie:** ustawienie „Zasięg rysowania postaci” (30/70/100 m) chyba nie działa. Prośba o lepszą kontrolę nad rysowaniem świata, postaci i zwierząt.
 - **Przyczyna:** poprawka 109 odcinała w przebiegu widoczności GPU tylko części ze szkieletem (ciało). Głowa (siatka z mimiką), hełm, broń i przedmioty na kościach to osobne siatki – zostawały narysowane. Zysk był mały, a daleko mogły wisieć same głowy i broń.
@@ -272,6 +273,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Zasięg postaci 30 m w Khorinis: postacie dalej niż 30 m znikają w całości (bez wiszących głów i broni) i pojawiają się po podejściu. Czy przybywa klatek.
   - „Bez limitu” – wszyscy znowu widoczni.
   - Zasięg widzenia świata: mniejszy – bliżej mgła i koniec świata, więcej klatek.
+- **Test (21.11):** działa (razem z 147).
 
 ### 145. Fregyal obok bohatera na łodzi na Zachodnim Wybrzeżu – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`AI_Teleport`), `common/world/triggers/movetrigger.cpp`
