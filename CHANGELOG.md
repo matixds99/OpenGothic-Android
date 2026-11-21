@@ -219,7 +219,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** kolory przy różnych postaciach (strażnik, bandyta, owca, ognik), zamknięta/otwarta/pusta skrzynia, przeszukane ciało.
 - **Test (17.11):** działa – skrzynia: żółta (zamknięta) → zielona (otwarta runą) → szara (opróżniona).
 
-### 82. Muzyka walk z bossami NB – 🧪 (17.11.2026)
+### 82. Muzyka walk z bossami NB – ✅ (17.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/gothic.cpp/.h`, `common/world/objects/npc.cpp`
 - **Zgłoszenie:** przy bossach nie gra ich muzyka (osobna dla postaci, osobna dla potworów). Lista bossów: arkusz `SPIS_NB.xlsx`, zakładka „Bossy” (gałąź `NewBalance`, `nb-docs/`).
 - **Jak to działa na PC:** plugin przy każdym ciosie woła `RX_OnDamage`; gdy gracz albo jego przywołaniec walczy z bossem (`RX_IsBoss`: `aivar[90]` albo PN za zabicie), `RX_CheckMusicBoss` wybiera utwór – własny dla ok. 50 bossów (Xardas, Kreol, Ahiron, Kruk, smoki, Lordowie szkieletów, demony, awatary…) albo losowy z 54 – wyłącza muzykę gry (`RX_MusicOff`) i woła `RX_StartBossMusic("BATTLE_…")` (dźwięk z `SFX.DAT`, plik `BATTLE_*.wav`). Śmierć bossa (`ZS_Dead`) → `RX_StopBossMusic`. Opcje NB: `bToggleBossMusic` (domyślnie wł.), `bToggleMusicAnimalBoss` – bossowie-zwierzęta (domyślnie wył.).
@@ -230,8 +230,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - wyłączona muzyka w ustawieniach (`musicEnabled`) – bez muzyki bossa.
 - Reszta `RX_OnDamage` (zachwianie `RX_ApplyStagger`, efekty `RX_HeroProcs`/`RX_NpcProcs`, taktyki bossów, przyspieszenie bossów) – jeszcze niepodłączona.
 - **Do sprawdzenia:** walka z bossem z listy (np. Mięsożerca, Kamieniołap – to zwierzęta: tylko z opcją `bToggleMusicAnimalBoss`; postacie/demony/szkielety – zawsze), w logu `[ctx] boss music: BATTLE_…`; po zabiciu bossa wraca zwykła muzyka.
+- **Test (21.11):** działa – muzyka bossa w walce.
 
-### 83. Zachwianie i obalenie w walce jak w NB – 🧪 (17.11.2026)
+### 83. Zachwianie i obalenie w walce jak w NB – ✅ (17.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp` (`takeDamage`), `common/game/gamescript.cpp/.h` (`nbBeforeHit`, `nbOnDamage`)
 - **Zgłoszenie:** w walce nie ma zachwiania/obalenia przeciwników jak w oryginale.
 - **Przyczyna:** na PC plugin przy każdym ciosie woła skrypt `RX_OnDamage`; w OpenGothic nikt go nie wołał (82 dodała z niego tylko muzykę).
@@ -241,6 +242,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - licznik walki `BIT_FIGHT_TIMER_STARTED` dla obu stron (inne mechaniki NB z niego korzystają).
 - Efekty perków (`RX_HeroProcs`) i taktyki bossów – nadal później.
 - **Do sprawdzenia:** bandyci/strażnicy przewracają się czasem od ciosu miecza (częściej przy wysokiej umiejętności), słabsi przeciwnicy chwieją się od ciosów, mocni (elitarne orki, szkielety) nie przy niskiej sile.
+- **Test (21.11):** działa – zachwianie i obalenie od ciosów.
 
 ### 84. Magia: pocisk leci za celem – ✅ (17.11.2026)
 - **Pliki:** `common/world/bullet.cpp/.h`, `common/world/worldobjects.cpp`, `common/world/objects/npc.cpp` (`commitSpell`)
@@ -709,7 +711,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Instalacja:** nowy build (zdarzenie `world:load` i `npcs.all` są w silniku) oraz nowy `mods/nb-wisp.zip` w launcherze (**Mods → Add a mod (.zip)**) – zastąpi starą wersję.
 - **Do sprawdzenia:** włączenie gry i wczytanie zapisu z ognikiem – ognika nie ma (w konsoli modów `ognik: odesłano N`); przywołanie z menu – jest jeden; śmierć i wczytanie – ognik wraca po chwili; kolejne wczytanie – nadal jest jeden; zamknięcie gry, włączenie i wczytanie – znowu bez ognika.
 
-### 116. Muzyka gry nie cichnie przy muzyce bossa – 🧪 (19.11.2026)
+### 116. Muzyka gry nie cichnie przy muzyce bossa – ✅ (19.11.2026)
 - **Pliki:** `common/gamemusic.cpp/.h` (`setScriptMute`, `applyEnabled`), `common/game/gamescript.cpp` (`RX_MusicOff`, `RX_MusicOn`, `RX_StartBossMusic`, `RX_UpdateBossMusicCoords`)
 - **Zgłoszenie:** pierwszy boss (ogar koło jaskini zielarza): muzyka bossa ledwo słychać, bo cały czas gra zwykła muzyka gry, a powinna zostać wyciszona.
 - **Przyczyna:** `RX_MusicOff` wyłączał muzykę tak samo jak opcja w ustawieniach. Na początku walki skrypty NB zapisują opcję `bCanSaveGame` (`Menu_WriteInt`, blokada zapisu w walce). Każdy zapis opcji wczytuje ustawienia od nowa, a razem z nimi „muzyka włączona” z ustawień – muzyka gry wracała zaraz po wyciszeniu.
@@ -720,15 +722,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Nowa gra i wczytanie zapisu zaczynają bez wyciszenia; zapis z walki z bossem wycisza muzykę znowu przy następnym ciosie.
   - Gdy utworu bossa nie ma w plikach gry, muzyka gry nie zostaje wyciszona.
 - **Do sprawdzenia:** walka z ogarem – słychać tylko muzykę bossa; po zabiciu bossa albo ucieczce wraca zwykła muzyka.
+- **Test (21.11):** działa – w walce z bossem gra tylko jego muzyka.
 
-### 113. Koło szybkiego wyboru nie reaguje na dotyk – 🧪 (18.11.2026)
+### 113. Koło szybkiego wyboru nie reaguje na dotyk – ✅ (18.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp` (`onInput`)
 - **Zgłoszenie:** z koła nie da się niczego wybrać.
 - **Przyczyna:** na Androidzie dotyk szedł prosto do przycisków (`controls.down/move/up`), z pominięciem `pointerDown/Move/Up`, w których koło (111) przejmuje palce. Koło się otwierało, ale nie widziało żadnego dotknięcia.
 - **Poprawka:** dotyk Androida idzie przez `pointerDown/Move/Up`; anulowanie dotyku czyści też palec koła.
 - **Do sprawdzenia:** dotknięcie pola koła – przedmiot użyty; puste pole – ekwipunek; przytrzymanie – zdjęcie z koła; środek – zamknięcie.
+- **Test (21.11):** działa – koło szybkiego wyboru bez problemów.
 
-### 112. Koło szybkiego wyboru: 9 pól bez prążków, przycisk ze strzałkami ⇄ – 🧪 (18.11.2026)
+### 112. Koło szybkiego wyboru: 9 pól bez prążków, przycisk ze strzałkami ⇄ – ✅ (18.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp/.h`, `common/game/nbhotbar.h`
 - **Zgłoszenie (zrzut 342743, wzór 342745):** koło wygląda, jakby miało za dużo pól – prążki. Ma być 9 pól. Przycisk: dwie strzałki w przeciwnych kierunkach na czarnym kółku.
 - **Przyczyna prążków:** każde pole było złożone z 10 półprzezroczystych trójkątów. Painter zaokrągla wierzchołki do pikseli, więc między trójkątami zostawały szpary. Wyglądało to jak kilkadziesiąt pól.
@@ -737,8 +741,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Trójkąty pola lekko na siebie zachodzą i mają pełny (nieprzezroczysty) kolor; granice między polami to czarne linie.
   - Przycisk: czarne kółko, górna strzałka w prawo, dolna w lewo.
 - **Do sprawdzenia:** równe 9 pól, podświetlenie, nowy przycisk.
+- **Test (21.11):** działa.
 
-### 111. Koło szybkiego wyboru (drugi pasek) – 🧪 (18.11.2026)
+### 111. Koło szybkiego wyboru (drugi pasek) – ✅ (18.11.2026)
 - **Pliki:** `common/game/nbhotbar.h` (`NbWheel`), `common/utils/androidinput.cpp/.h` (koło: dotyk, rysowanie), `common/ui/mobilecontrolsmodel.cpp/.h` (przycisk `wheel`, `Special::Wheel` = 27), `common/ui/inventorymenu.cpp/.h`, `common/mainwindow.cpp`
 - **Zgłoszenie (zrzuty 342740, 342739):** drugi pasek szybkiego wyboru: broń, mikstury, rośliny. Przycisk z kółkiem obok paska otwiera koło, a przedmioty można przypisać i tu (pasek), i tam (koło).
 - **Poprawka:**
@@ -748,8 +753,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Na karcie przedmiotu w ekwipunku dwa przyciski: **NA PASEK / Z PASKA** (poprawka 110) i **NA KOŁO / Z KOŁA**.
   - Zapis: `[MOBILE_WHEEL] slot0..7` w `Gothic.ini`.
 - **Do sprawdzenia:** przypisać mikstury i broń na koło, otworzyć koło w walce – wybór, przytrzymanie, puste pole.
+- **Test (21.11):** działa.
 
-### 110. Własne przedmioty na pasku szybkiego wyboru (broń, mikstury, rośliny) – 🧪 (18.11.2026)
+### 110. Własne przedmioty na pasku szybkiego wyboru (broń, mikstury, rośliny) – ✅ (18.11.2026)
 - **Pliki:** `common/game/nbhotbar.h` 🆕, `common/ui/inventorymenu.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp`, `common/mainwindow.cpp`
 - **Zgłoszenie:** możliwość wkładania broni lub przedmiotu (mikstura, roślina) na pasek szybkiego wyboru.
 - **Poprawka:**
@@ -759,6 +765,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Zapis w `Gothic.ini`, `[MOBILE_HOTBAR] slotN` = nazwa instancji (wspólne dla wszystkich zapisów gry).
 - **Akrobatyka (108):** przełącznik zapisuje `MOBILE/acrobatic` i działa jak w ustawieniach dotyku, ale skrypt `RX_ApplyAcrobatic` zakłada przewrotki tylko bohaterowi, który nauczył się akrobatyki (`NPC_TALENT_ACROBAT`) – bez nauki przełącznik nic nie zmienia.
 - **Do sprawdzenia:** mikstura i roślina na pasek, dotknięcie – używa; druga broń na pasek – zakłada.
+- **Test (21.11):** działa.
 
 ### 109. Zasięg rysowania postaci (jak suwak NB 3000–7000) – ⏸ zastąpione przez 146 (18.11.2026)
 - **Pliki:** `shader/materials/visibility_pass.comp`, `common/graphics/drawcommands.cpp`, `common/game/nboptions.h`, `common/ui/gamemenu.cpp`
@@ -781,15 +788,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Usunięte z listy: mieszek i torba (modeli na bohaterze jeszcze nie ma). Akrobatyka zniknęła z ustawień ekranu dotykowego (to samo ustawienie `MOBILE/acrobatic`).
 - **Ekran śmierci:** plugin (`0x10222E00`) przy martwym bohaterze i `bShowDeadScreen` kładzie `YOU_DIE.TGA` na cały ekran. Teraz to samo, z rozjaśnieniem przez 2 s, aż do wczytania gry (tekstura z danych NB; bez niej nic się nie rysuje).
 - **Do sprawdzenia:** strona NB i „Sterowanie dodatkowe” różne; przełączniki zapisują się; akrobatyka z menu działa; śmierć bohatera – obrazek NB.
+- **Test (21.11):** ekran śmierci NB działa; zapis przełączników i akrobatyka z menu jeszcze niesprawdzone.
 
-### 107. Książka/list czytany z ekwipunku pod ramkami ekwipunku – 🧪 (18.11.2026)
+### 107. Książka/list czytany z ekwipunku pod ramkami ekwipunku – ✅ (18.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp`
 - **Zgłoszenie (zrzut 18.11):** „Czytaj” w ekwipunku – dokument wyświetla się za ekwipunkiem, widać tylko jego skrawek między ramkami (puste pola, karta przedmiotu na wierzchu).
 - **Przyczyna:** gdy dokument jest otwarty, ekwipunek jest „przykryty” (`setCovered`) – chowały się tylko modele przedmiotów, a ramki, pola i karta z poprawki 99 dalej się rysowały nad dokumentem.
 - **Poprawka:** przykryty ekwipunek nic nie rysuje (ani tła, ani liczb); po zamknięciu dokumentu wraca.
 - **Do sprawdzenia:** „Czytaj” na liście/książce w ekwipunku – dokument na całym ekranie, po zamknięciu znowu ekwipunek.
+- **Test (21.11):** działa – czytanie z ekwipunku bez problemów.
 
-### 106. Obrażenia w czasie (na ekranie po lewej), obrażenia NB od broni bohatera, obrażenia obszarowe (splash) – 🧪 (18.11.2026)
+### 106. Obrażenia w czasie (na ekranie po lewej), obrażenia NB od broni bohatera, obrażenia obszarowe (splash) – ✅ (18.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbCallDamage`, `nbSplash`, `nbDotTick`, `RX_ApplyDotDamage*`, `RX_ClearAllDots`), `common/world/objects/npc.cpp/.h` (`nbSplashPct`)
 - **Zgłoszenie:** obrażenia w czasie mają działać i być widoczne na ekranie po lewej: od ognia żółte, od trucizny zielone. Do tego obrażenia obszarowe: na PC cios mieczem (i czar) rani też cel obok.
 - **Przyczyny (UNION_ABI.DLL):**
@@ -808,6 +817,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
     Z umiejętnością: 10% + (część − 10%) × umiejętność/100. Liczba trafionych idzie do logu (`splash: …`).
 - **Jeszcze nie:** splash czarów (plugin robi go osobno przy zderzeniu czaru; czary z `NONSPLASH` w nazwie efektu go nie mają), koszt wytrzymałości splasha, dokładne tabele kątów pluginu dla wszystkich rodzajów broni (wzięte najczęstsze).
 - **Do sprawdzenia:** walka z kilkoma wrogami mieczem/toporem – sąsiedni wróg też traci życie; płonąca/zatruta broń i ataki smoków/bossów – linie po lewej w kolorach.
+- **Test (21.11):** działa – obrażenia NB i obszarowe w walce.
 
 ### 105. Marvin: `add lp N` – punkty nauki do testów – ❌ (18.11.2026)
 - **Pliki:** `common/marvin.cpp/.h` (`C_AddLp`)
