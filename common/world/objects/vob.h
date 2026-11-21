@@ -53,7 +53,6 @@ class Vob {
     void          applyVisualFilter();
     /// Calls f(name of the visual, hidden by the filter) for the static objects of this vob and its children
     void          visitVisuals(const std::function<void(std::string_view,bool)>& f) const;
-    size_t        childCount() const { return child.size(); }   // NB fix 152
 
   protected:
     virtual void  filterVisual();

@@ -23,5 +23,4 @@ class PfxController : public AbstractTrigger {
     uint64_t   killed   = std::numeric_limits<uint64_t>::max();
     uint64_t   lifeTime = 0;
     bool       killWhenDone;
-    std::string pfxName;   // NB fix 152: for the log
   };
