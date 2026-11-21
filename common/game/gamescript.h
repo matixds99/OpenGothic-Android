@@ -224,6 +224,8 @@ class GameScript final {
     void             nbSummonsToggleMode();
     /// the summoned creatures of the hero go away; the pets stay (NIXDOG, PET_JINA), the wisp too when keepWisp
     size_t           nbResetSummons(bool keepWisp, bool print);
+    /// NB fix 157: the projectiles in flight go away with their world (before it is deleted)
+    void             nbClearShots();
     void             nbSummonsFollowTick();
     /// NB fix 143: a scene of New Balance can be skipped now (RX_IsCutsceneActive), and its skip (Script_Use_Button_Cutscene)
     bool             nbCutsceneActive();
@@ -239,6 +241,9 @@ class GameScript final {
     void             nbCallInstanceFunc(zenkit::DaedalusSymbol* fn, Npc& self, Npc* other, int32_t* arg);
     int32_t          nbCallDamage(Npc& victim, Npc& hero, bool isSpell, int32_t splId, bool splash); // NB fix 106
     void             nbSplash(Npc& target, Npc& hero);         // NB fix 106: the blow hits the characters next to it
+    void             nbShotsTick(uint64_t dt);                 // NB fix 157: the projectiles of the monsters
+    void             nbShoot(Npc& src, Npc& dst, const VisualFx& vfx, int32_t damage, int32_t damageType);
+    void             nbVecDamage(Npc& src, Npc& dst, int32_t damage, int32_t damageType);
     void             nbDotTick();                              // NB fix 106: the damage over time
     void             nbOnDamage(Npc& target, Npc& attacker);   // NB fix 82, 83: RX_OnDamage - the music of the bosses, the knock down
     void             nbBeforeHit(Npc& target, Npc& attacker);  // NB fix 83: RX_OnDamage - the stagger   // NB fix 81: RX_IsSummonNpc (aivar[91]==RX_SUMMON_ID)

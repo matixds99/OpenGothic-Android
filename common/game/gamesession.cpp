@@ -227,6 +227,9 @@ GameSession::GameSession(Serialize &fin) {
   }
 
 GameSession::~GameSession() {
+  // NB fix 157: the projectiles in flight before their world (it goes before the scripts)
+  if(vm!=nullptr)
+    vm->nbClearShots();
   }
 
 void GameSession::save(Serialize &fout, std::string_view name, const Pixmap& screen) {
@@ -461,6 +464,7 @@ auto GameSession::implChangeWorld(std::unique_ptr<GameSession>&& game,
 
   // NB fix 131: the summoned creatures stay with the old world no more - they go away before it is stored
   vm->nbResetSummons(false,false);
+  vm->nbClearShots();   // NB fix 157
   HeroStorage hdata;
   if(auto hero = wrld->player())
     hdata.save(*hero);

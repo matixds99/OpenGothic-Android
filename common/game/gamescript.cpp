@@ -298,6 +298,19 @@ struct NbState {
     std::string         name;
     };
   std::unordered_map<const Npc*,Routine>      routines;
+  // NB fix 157: the projectiles of the monsters (Wld_PlayEffect_Vec with bIsProjectile): the effect flies from the
+  // caster to the target, the damage and the effect of the hit come at its arrival
+  struct Shot {
+    Effect                        fx;
+    const VisualFx*               vfx    = nullptr;
+    std::weak_ptr<zenkit::INpc>   src, dst;
+    Tempest::Vec3                 pos;
+    float                         speed  = 1.f;   // cm per ms
+    int32_t                       damage = 0;
+    int32_t                       type   = 0;
+    uint64_t                      until  = 0;
+    };
+  std::vector<Shot>                           shots;
   };
 
 static bool nbEqualsNoCase(std::string_view a, std::string_view b) {
@@ -2114,26 +2127,23 @@ void GameScript::initCommon() {
     // Monsters cast with it (spiders: web, ice lance, fireball, acid): the effect flies from the caster to the target
     // and the damage (less the protection against its type, as a spell) hits the target, who reacts to it.
     bindNb("WLD_PLAYEFFECT_VEC", [this](std::string_view fx, std::shared_ptr<zenkit::INpc> srcRef, std::shared_ptr<zenkit::INpc> dstRef,
-                                        int32_t /*level*/, int32_t damage, int32_t damageType, int32_t /*projectile*/) {
+                                        int32_t /*level*/, int32_t damage, int32_t damageType, int32_t projectile) {
       auto src = findNpc(srcRef);
       auto dst = findNpc(dstRef);
       if(src==nullptr || dst==nullptr)
         return;
-      if(const VisualFx* vfx = Gothic::inst().loadVisualFx(fx))
-        src->startEffect(*dst,*vfx);
-      if(damage<=0 || dst->isDead())
+      const VisualFx* vfx = Gothic::inst().loadVisualFx(fx);
+      if(vfx!=nullptr && projectile!=0 && src!=dst) {
+        // NB fix 157: the effect of the projectile was put at once on the target (its trajectory TARGET): the swarm of
+        // the swamp golem, of the zombies and the mummies, the acid of the swamp drones were not seen
+        nbShoot(*src,*dst,*vfx,damage,damageType);
         return;
-      int32_t prot = 0;
-      for(int i=0; i<int(zenkit::DamageType::NUM); ++i)
-        if(damageType & (1<<i))
-          prot = std::max(prot,dst->protection(Protection(i)));
-      if(prot<0)
-        return;   // immune
-      int32_t minimal = 0;
-      if(auto* m = vm.find_symbol_by_name("NPC_MINIMAL_DAMAGE"); m!=nullptr && m->type()==zenkit::DaedalusDataType::INT && !m->is_member())
-        minimal = m->get_int();
-      dst->hurtBy(*src,std::max(damage-prot,minimal));
+        }
+      if(vfx!=nullptr)
+        src->startEffect(*dst,*vfx);
+      nbVecDamage(*src,*dst,damage,damageType);
       });
+
     // Npc_ClearInv: as Npc_ClearInventory
     bindNb("NPC_CLEARINV", [this](std::shared_ptr<zenkit::INpc> npcRef) {
       npc_clearinventory(npcRef);
@@ -4860,6 +4870,7 @@ void GameScript::tick(uint64_t dt) {
     }
   nbBossTick();   // NB fix 100: the phases of the bosses
   nbDotTick();    // NB fix 106: the damage over time
+  nbShotsTick(dt); // NB fix 157: the projectiles of the monsters
   // NB fix 82: the music of a boss fight plays again from the start; it ends 45 s after the last blow of the fight (the
   // player has run away) or with the death of the player, as the death of the boss does (RX_StopBossMusic)
   if(Gothic::inst().isBossMusic()) {
@@ -8366,6 +8377,88 @@ void GameScript::nbSummonsAttack(Npc& enemy) {
 
 /// NB fix 131: the summoned creatures go away (RX_ResetSummons of the plugin, the choice RESET of the panel, the change of
 /// the world); the pets stay, NIXDOG and PET_JINA
+void GameScript::nbVecDamage(Npc& src, Npc& dst, int32_t damage, int32_t damageType) {
+  if(damage<=0 || dst.isDead())
+    return;
+  int32_t prot = 0;
+  for(int i=0; i<int(zenkit::DamageType::NUM); ++i)
+    if(damageType & (1<<i))
+      prot = std::max(prot,dst.protection(Protection(i)));
+  if(prot<0)
+    return;   // immune
+  int32_t minimal = 0;
+  if(auto* m = vm.find_symbol_by_name("NPC_MINIMAL_DAMAGE"); m!=nullptr && m->type()==zenkit::DaedalusDataType::INT && !m->is_member())
+    minimal = m->get_int();
+  dst.hurtBy(src,std::max(damage-prot,minimal));
+  }
+
+void GameScript::nbShoot(Npc& src, Npc& dst, const VisualFx& vfx, int32_t damage, int32_t damageType) {
+  auto& st = nbStates[this];
+  NbState::Shot sh;
+  sh.vfx    = &vfx;
+  sh.src    = src.handlePtr();
+  sh.dst    = dst.handlePtr();
+  sh.pos    = vfx.emTrjOriginNode.empty() ? src.collosionCenter() : src.mapBone(vfx.emTrjOriginNode);
+  sh.damage = damage;
+  sh.type   = damageType;
+  float vel = vfx.emTrjEaseVel;
+  if(auto* k = vfx.key(SpellFxKey::Cast); k!=nullptr && k->emTrjEaseVel>0)
+    vel = k->emTrjEaseVel;
+  sh.speed  = std::clamp(vel>0 ? vel/1000.f : 1.f, 0.3f, 3.f);
+  sh.until  = tickCount()+6000;
+  sh.fx     = Effect(vfx,world(),sh.pos,SpellFxKey::Cast);
+  sh.fx.setActive(true);
+  sh.fx.setLooped(true);
+  st.shots.push_back(std::move(sh));
+  }
+
+void GameScript::nbShotsTick(uint64_t dt) {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end() || nb->second.shots.empty())
+    return;
+  auto&          shots = nb->second.shots;
+  const uint64_t now   = tickCount();
+  for(size_t i=0; i<shots.size(); ) {
+    auto& sh  = shots[i];
+    Npc*  src = findNpc(sh.src.lock());
+    Npc*  dst = findNpc(sh.dst.lock());
+    bool  hit = false, gone = (dst==nullptr || dst->isDead() || now>sh.until);
+    if(!gone) {
+      const auto tg   = sh.vfx->emTrjTargetNode.empty() ? dst->collosionCenter() : dst->mapBone(sh.vfx->emTrjTargetNode);
+      auto       dir  = tg-sh.pos;
+      const float len = dir.length();
+      const float stp = sh.speed*float(dt);
+      if(len<=std::max(stp,30.f)) {
+        sh.pos = tg;
+        hit    = true;
+        } else {
+        sh.pos += dir*(stp/len);
+        }
+      }
+    Tempest::Matrix4x4 m;
+    m.identity();
+    m.translate(sh.pos);
+    sh.fx.setObjMatrix(m);
+    sh.fx.tick(dt);
+    if(!hit && !gone) {
+      ++i;
+      continue;
+      }
+    // the effect of the hit (emFXCollDyn on the target, emFXCollStat where the target is gone)
+    Effect::onCollide(world(),sh.vfx,sh.pos,hit ? dst : nullptr,src,0);
+    if(hit && src!=nullptr)
+      nbVecDamage(*src,*dst,sh.damage,sh.type);
+    sh.fx.setActive(false);
+    shots.erase(shots.begin()+ptrdiff_t(i));
+    }
+  }
+
+void GameScript::nbClearShots() {
+  auto nb = nbStates.find(this);
+  if(nb!=nbStates.end())
+    nb->second.shots.clear();
+  }
+
 size_t GameScript::nbResetSummons(bool keepWisp, bool print) {
   auto* hero = world().player();
   if(hero==nullptr)
