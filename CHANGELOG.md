@@ -15,9 +15,9 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – 🧪
-2. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – 🧪
-3. **154** – ognik nie znika i nie pojawia się nagle; przywołańce nie wracają po wczytaniu zapisu – 🧪
+1. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – ✅
+2. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – ✅
+3. **154** – ognik nie znika i nie pojawia się nagle; przywołańce nie wracają po wczytaniu zapisu – ✅
 4. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – ✅
 5. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
 
@@ -250,7 +250,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 156. Karta przedmiotu w ekwipunku: wielkość napisów, zdobyte bonusy – 🧪 (21.11.2026)
+### 156. Karta przedmiotu w ekwipunku: wielkość napisów, zdobyte bonusy – ✅ (21.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`
 - **Zgłoszenie:** napisy na karcie przedmiotu (prawa strona ekwipunku) są za duże (uwaga borsuczyny). Pomysł: zmniejszyć je i w wolnym miejscu pokazywać bonusy z jedzenia. Na zrzucie zakładka wszystkich przedmiotów nazywa się „Other (481)”.
 - **Poprawka:**
@@ -258,8 +258,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Po użyciu przedmiotu z ekwipunku (jedzenie, mikstura, zwój…) między nazwą a obrazkiem pojawia się na zielono, co bohater zyskał, np. „Inteligencja +1   Maks. życie +5”. Liczone ze zmiany wartości bohatera: życie, mana, ich maksima, siła, zręczność, inteligencja i maks. wytrzymałość NB. Napis zostaje 6 s od ostatniego użycia, kolejne użycia się sumują.
   - Nazwy zakładek: `TXT_INV_CAT` w NB jest częściowo po angielsku („Other”, „Weapons”, „Potions”), a pierwsza pozycja („Other”) to zakładka wszystkich przedmiotów. Port pokazuje polskie nazwy: Wszystko, Bronie, Mikstury… Polskie nazwy skryptów (Magia, Jedzenie, Dokumenty…) zostają.
 - **Do sprawdzenia:** zjedzenie przedmiotu ze stałym bonusem (np. gulasz, eliksir umysłu) – zielony napis z bonusem; czytelność mniejszych napisów; nazwa pierwszej zakładki.
+- **Test (21.11):** działa – po wypiciu eliksiru zręczności pod nazwą pojawia się „Zręczność +2”.
 
-### 155. Obrażenia z kilkoma rodzajami naraz (kamienny golem) – 🧪 (21.11.2026)
+### 155. Obrażenia z kilkoma rodzajami naraz (kamienny golem) – ✅ (21.11.2026)
 - **Pliki:** `common/game/damagecalculator.cpp`
 - **Zgłoszenie:** kamienny golem zadaje za duże obrażenia (do porównania ze skryptami).
 - **Skrypty NB (`StoneGolem`, `Mst_Default_StoneGolem`):**
@@ -267,9 +268,10 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - obrażenia obuchowe 250 i obrażenia odrzutu 100 (`DAM_BLUNT|DAM_FLY`).
 - **Przyczyna:** OpenGothic dodawał całą siłę do każdego rodzaju obrażeń osobno: 750+250 obuchowych i 750+100 odrzutu, razem ok. 1850 przed pancerzem. W Gothic 2 siła liczy się raz: suma (siła + obrażenia) jest dzielona między rodzaje według ich udziału – u golema ok. 786 obuchowych i 314 odrzutu, razem 1100 przed pancerzem.
 - **Poprawka:** przy kilku rodzajach obrażeń siła jest dodawana raz i dzielona proporcjonalnie (dotyczy też trolli i broni z dwoma rodzajami obrażeń). Przy jednym rodzaju bez zmian.
+- **Test (21.11):** przyzwany golem zadaje obrażenia jak na PC (smoczy zębacz na kilka ciosów, wcześniej na 2).
 - **Do sprawdzenia:** cios golema i trolla – w logu `DMG2: melee attacker='Kamienny golem' ... value=` (przed poprawką ok. 1850 minus pancerz, teraz ok. 1100 minus pancerz); porównanie z PC.
 
-### 154. Ognik i przywołańce po wczytaniu – 🧪 (21.11.2026)
+### 154. Ognik i przywołańce po wczytaniu – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamesession.cpp`, `mods/nb-wisp/index.js` (1.2.2)
 - **Zgłoszenie:**
   1. Ognik znika i pojawia się w losowych momentach.
@@ -281,6 +283,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   1. Ognik dalej niż 15 m od bohatera leci dwa razy szybciej. Przy 40 m silnik stawia go obok bohatera od razu (pozycja i transformacja) i przerywa lot powrotny. Mod ognika usuwa i przywołuje go tylko, gdy zgubi się dalej niż 100 m (np. po teleporcie). Log odległości najwyżej raz na 5 s.
   2. Po wczytaniu zapisu przywołańce są odsyłane (jak `RX_ResetSummons`). Zostają zwierzaki (Nixdog, Jina), totem i ognik.
 - **Do sprawdzenia:** bieg i sprint z ognikiem – leci za bohaterem i nie miga; wczytanie zapisu z przywołańcem – go nie ma.
+- **Test (21.11):** ognik nie gubi się, przyzwany golem znika po wczytaniu.
 
 ### 153. Czerwony dym na Zachodnim Wybrzeżu – ✅ (21.11.2026)
 - **Pliki:** `common/world/triggers/movetrigger.cpp/.h`, `common/game/gamescript.cpp` (`RX_RemoveVobTree`)
