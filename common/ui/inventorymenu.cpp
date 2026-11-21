@@ -809,10 +809,8 @@ void InventoryMenu::onItemAction(uint8_t slotHint) {
       player->unequipItem(clsId);
       } else {
       // NB fix 156: the values before the use - the card shows what the item gave
-      if(nbGainUntil<Application::tickCount()) {
+      if(nbGainUntil<Application::tickCount())
         nbGainBase = nbGainValues(*player);
-        nbGainText.clear();
-        }
       nbGainUntil = Application::tickCount()+6000;
       player->useItem(clsId,slotHint,false);
       auto it2 = page.get(sel.sel);
@@ -1369,6 +1367,58 @@ void InventoryMenu::drawAllTouch(Painter& p, Npc& player, DrawPass pass) {
 
   if(pass==DrawPass::Back)
     drawInfo(p);
+  if(pass==DrawPass::Front)
+    nbDrawGains(p);
+  }
+
+void InventoryMenu::nbDrawGains(Painter& p) {
+  // NB fix 156: what the used item gave (food, potions) - floating notes in the middle of the screen, they go up and
+  // fade in 2.5 s; green - a gain, red - a loss. A change that comes later (the effect after the animation of eating)
+  // makes a new note; the values are watched 6 s after the use
+  const uint64_t now = Application::tickCount();
+  if(player!=nullptr && nbGainUntil>=now) {
+    const auto cur   = nbGainValues(*player);
+    const bool plTxt = touchPolish();
+    static const char* namePl[8] = {"\xAFycie","Maks. \xBFycie","Mana","Maks. mana","Si\xB3""a","Zr\xEA""czno\x9C\xE6","Inteligencja","Maks. wytrzyma\xB3o\x9C\xE6"};
+    static const char* nameEn[8] = {"Life","Max life","Mana","Max mana","Strength","Dexterity","Intelligence","Max stamina"};
+    for(size_t i=0; i<cur.size(); ++i) {
+      const int32_t d = cur[i]-nbGainBase[i];
+      if(d==0)
+        continue;
+      NbFloat f;
+      f.text  = std::string(plTxt ? namePl[i] : nameEn[i])+(d>0 ? " +" : " ")+std::to_string(d);
+      f.loss  = d<0;
+      f.start = now+uint64_t(nbFloats.size()%4)*150;   // a few at once: one after another
+      nbFloats.push_back(std::move(f));
+      }
+    nbGainBase = cur;
+    }
+
+  constexpr uint64_t life = 2500;
+  nbFloats.erase(std::remove_if(nbFloats.begin(),nbFloats.end(),[now](const NbFloat& f){ return now>f.start+life; }),nbFloats.end());
+  if(nbFloats.empty())
+    return;
+
+  const float H  = float(h());
+  auto&       fb = Resources::font(touchTextScale()*1.4f);
+  int         n  = 0;
+  for(auto& f:nbFloats) {
+    if(now<f.start)
+      continue;
+    const float t     = float(now-f.start)/float(life);   // 0..1
+    const float alpha = t<0.6f ? 1.f : std::max(0.f,1.f-(t-0.6f)/0.4f);
+    const Color c     = f.loss ? Color(1.f,0.25f,0.2f,alpha) : Color(0.35f,1.f,0.35f,alpha);
+    const auto  fnt   = fb.tinted(c);
+    const auto  sz    = fnt.textSize(f.text);
+    const int   x     = (w()-sz.w)/2;
+    const int   y     = int(H*0.5f - t*H*0.12f) + n*int(fb.pixelSize()*1.2f);
+    // a dark shadow under the letters, for the light ground
+    const auto  sh    = fb.tinted(Color(0.f,0.f,0.f,alpha*0.8f));
+    sh.drawText(p,x+2,y+2,f.text);
+    fnt.drawText(p,x,y,f.text);
+    ++n;
+    }
+  update();
   }
 
 void InventoryMenu::touchSyncColumns() {
@@ -1626,55 +1676,6 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
   for(auto& l:lines)
     f.drawText(p,x0,l.y,l.text);
 
-  // NB fix 156: what the used item gave - under the properties, on the left, green (a loss: red). The white font of the
-  // game tinted (the dark font of the books stayed almost black with any color)
-  if(player!=nullptr && nbGainUntil>=Application::tickCount()) {
-    const auto now = nbGainValues(*player);
-    const bool plTxt = touchPolish();
-    static const char* namePl[8] = {"\xAFycie","Maks. \xBFycie","Mana","Maks. mana","Si\xB3""a","Zr\xEA""czno\x9C\xE6","Inteligencja","Maks. wytrzyma\xB3o\x9C\xE6"};
-    static const char* nameEn[8] = {"Life","Max life","Mana","Max mana","Strength","Dexterity","Intelligence","Max stamina"};
-    std::vector<std::string> gain;
-    bool loss = false;
-    for(size_t i=0; i<now.size(); ++i) {
-      const int32_t d = now[i]-nbGainBase[i];
-      if(d==0)
-        continue;
-      if(d<0 && i!=0 && i!=2)
-        loss = true;
-      gain.push_back(std::string(plTxt ? namePl[i] : nameEn[i])+(d>0 ? " +" : " ")+std::to_string(d));
-      }
-    if(!gain.empty()) {
-      nbGainText.clear();
-      for(auto& g:gain)
-        nbGainText += (nbGainText.empty() ? "" : "\n")+g;
-      nbGainLoss = loss;
-      }
-    if(!nbGainText.empty()) {
-      const float s = std::max(0.5f,std::floor(rsc*20.f)/20.f);
-      static std::unordered_map<int,GthFont> fonts;
-      const int key = int(s*100.f)*2+(nbGainLoss ? 1 : 0);
-      auto gi = fonts.find(key);
-      if(gi==fonts.end()) {
-        const Color c = nbGainLoss ? Color(0.85f,0.12f,0.08f) : Color(0.10f,0.62f,0.16f);
-        gi = fonts.emplace(key,Resources::font(s).tinted(c)).first;
-        }
-      auto&     gf   = gi->second;
-      const int step = gf.pixelSize()+gf.pixelSize()/5;
-      int       gy   = (lines.empty() ? top : lines.back().y+step/2)+step;
-      size_t    pos  = 0;
-      while(pos<=nbGainText.size()) {
-        size_t nl = nbGainText.find('\n',pos);
-        if(nl==std::string::npos)
-          nl = nbGainText.size();
-        const std::string ln = nbGainText.substr(pos,nl-pos);
-        if(gy>bottom)
-          break;
-        gf.drawText(p,x0,gy,ln);
-        gy  += step;
-        pos  = nl+1;
-        }
-      }
-    }
 
   // the actions
   const bool pl = touchPolish();
