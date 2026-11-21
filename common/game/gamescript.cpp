@@ -1879,6 +1879,23 @@ void GameScript::initCommon() {
     bindNb("RX_GETWEIGHTVALUE", [](std::shared_ptr<zenkit::IItem> itm, int32_t index) -> int32_t {
       return itm!=nullptr ? NbItemInfo::weight(itm->symbol_index(),index) : 0;
       });
+    // NB fix 148: Npc_ChangeAttributeExtra(npc, attr, value) (UNION_ABI.DLL 0x10159C00) - Npc_ChangeAttribute that
+    // ignores the flag of immortality (the flags are 0 for the change and come back if the npc lives). Used by
+    // B_MagicHurtNpc_Immortal: the Hammer of Adanos against the stone guardians (B_MM_AssessDamage, 10000 damage),
+    // the Holy Hammer against the magic golem. Without it these special hits did nothing.
+    bindNb("NPC_CHANGEATTRIBUTEEXTRA", [this](std::shared_ptr<zenkit::INpc> npcRef, int32_t atr, int32_t val) {
+      auto npc = findNpc(npcRef);
+      if(npc==nullptr || atr<0)
+        return;
+      auto& h     = npc->handle();
+      auto  flags = h.flags;
+      h.flags = zenkit::NpcFlag(0);
+      npc->changeAttribute(Attribute(atr),val,false);
+      if(!npc->isDead())
+        h.flags = flags;
+      nbCtx("ChangeAttributeExtra '",npc->displayName(),"' attr=",atr," value=",val,
+            " hp=",npc->attribute(ATR_HITPOINTS),npc->isDead() ? " (dead)" : "");
+      });
     // B_SetFightSkills(npc, percent) for NPCs: the plugin adds percent to the hit chances (1H, 2H, bow,
     // crossbow; 0..100) and gives the matching fighting skill and overlay - ST3 from 90%, ST2 from 60%,
     // ST1 from 30% (bow/crossbow: T2 from 60%, T1 from 30%). Without it every NPC of NB stayed at 0%:

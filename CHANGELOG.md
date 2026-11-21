@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
-2. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – ✅
-3. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
-4. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
-5. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅
+1. **148** – młot Adanosa niszczy kamiennych strażników jednym trafieniem – 🧪
+2. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
+3. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – ✅
+4. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
+5. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
 
 ---
 
@@ -249,6 +249,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 148. Młot Adanosa przeciw kamiennym strażnikom – 🧪 (21.11.2026)
+- **Pliki:** `common/game/gamescript.cpp` (`Npc_ChangeAttributeExtra`)
+- **Zgłoszenie:** młot Adanosa („Skuteczny przeciwko kamiennym strażnikom”) potrzebuje około 5 uderzeń na kamiennego strażnika, a powinien 1–2.
+- **Przyczyna:**
+  - W `B_MM_AssessDamage` skrypt sprawdza broń w ręku bohatera. Przy młocie Adanosa zwykły kamienny strażnik dostaje 10 000 obrażeń, a strażnik-boss 50 000; obrażenia zadaje `B_MagicHurtNpc_Immortal`.
+  - Ta funkcja odejmuje życie przez `Npc_ChangeAttributeExtra` – funkcję z pluginu NB (UNION_ABI.DLL), której w porcie nie było. Specjalne trafienie nic nie robiło i zostawały tylko zwykłe obrażenia młota.
+- **Poprawka:** dodana `Npc_ChangeAttributeExtra` – zmiana atrybutu jak `Npc_ChangeAttribute`, ale z pominięciem nieśmiertelności (jak w pluginie). Gdy postać ginie, zabójcą jest bohater.
+- **Przy okazji:** ta sama funkcja działa dla innych specjalnych broni, np. Świętego Młota przeciw magicznemu golemowi i ognistemu golemowi.
+- **Log:** `[ctx] ChangeAttributeExtra 'Kamienny strażnik' attr=0 value=-10000 hp=0 (dead)`.
+- **Do sprawdzenia:** młot Adanosa w ręku, uderzenie w zwykłego kamiennego strażnika – ginie od pierwszego trafienia.
 
 ### 147. „Rysowanie świata” – obiekty tak daleko jak teren – ✅ (21.11.2026)
 - **Pliki:** `common/gothic.cpp` (`settingsObjectDistance`), `common/game/nboptions.h`
