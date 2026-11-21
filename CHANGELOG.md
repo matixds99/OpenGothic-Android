@@ -259,7 +259,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Opcja z poprawki 146 nazywa się teraz „Rysowanie świata” (50–750 m) i ustawia zasięg terenu i obiektów razem.
 - **Uwaga:** ten sam zasięg dla obiektów to więcej rysowania niż wcześniej (np. 250 m zamiast 100 m). Gdy spadają klatki, zmniejszyć „Rysowanie świata”, np. do 150 m.
 - **Do sprawdzenia:** marsz przez pola i las – drzewa, płoty i kamienie widać od razu z daleka, nic nie wyskakuje. Klatki przy 150 / 250 / 400 m.
-- **Test (21.11):** działa, przy ustawieniu 100 wszystko widać lepiej.
+- **Test (21.11):** działa; „Rysowanie świata” na 100 m rozwiązuje problem wyskakujących obiektów.
 
 ### 146. Zasięg rysowania postaci i świata – ✅ (21.11.2026)
 - **Pliki:** `common/world/world.cpp/.h` (`nbNpcRangeTick`), `common/world/objects/npc.h`, `common/graphics/mdlvisual.cpp/.h`, `common/graphics/meshobjects.cpp/.h`, `common/graphics/visualobjects.cpp/.h`, `common/graphics/drawcommands.cpp`, `common/game/gamescript.cpp`, `common/game/nboptions.h`
