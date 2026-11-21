@@ -5188,7 +5188,7 @@ void GameScript::tick(uint64_t dt) {
       loc.resize(dot);
     for(auto& ch:loc)
       ch = char(std::toupper(uint8_t(ch)));
-    for(const std::string fn : {"RX_ONENTERLOC_"+loc, std::string("RX_ONENTERLOCANY")}) {
+    for(const std::string& fn : {"RX_ONENTERLOC_"+loc, std::string("RX_ONENTERLOCANY")}) {
       auto* sym = vm.find_symbol_by_name(fn);
       if(sym==nullptr || sym->type()!=zenkit::DaedalusDataType::FUNCTION)
         continue;
