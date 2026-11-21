@@ -9,6 +9,7 @@
 #include "utils/versioninfo.h"
 #include "utils/fileext.h"
 #include "utils/dbgpainter.h"
+#include "gothic.h"
 
 using namespace Tempest;
 
@@ -24,6 +25,7 @@ Item::Item(World &owner, size_t itemInstance, Type type)
     visual = world.addView(*hitem);
     if(type==T_WorldDyn)
       setPhysicsEnable(visual);
+    nbSetupFx();
     }
   }
 
@@ -70,6 +72,8 @@ Item::Item(World &owner, Serialize &fin, Type type)
   setLocalTransform(mat);
   visual.setObjMatrix(mat);
   physic.setObjMatrix(mat);
+  if(type!=T_Inventory)
+    nbSetupFx();
   }
 
 Item::Item(Item &&it)
@@ -77,6 +81,8 @@ Item::Item(Item &&it)
     pos(it.pos),equipped(it.equipped),itSlot(it.itSlot),visual(std::move(it.visual)) {
   setLocalTransform(it.localTransform());
   physic = std::move(it.physic);
+  fx     = std::move(it.fx);
+  fx.setItemMesh(&visual);
   hitem->user_ptr = this;
   }
 
@@ -136,6 +142,25 @@ void Item::save(Serialize &fout) const {
 
 void Item::clearView() {
   visual = MeshObjects::Mesh();
+  fx     = Effect();
+  }
+
+void Item::nbSetupFx() {
+  // NB fix 150: oCItem::InsertEffect - the effect of C_Item.effect plays where the item lies (the glow of the magic items,
+  // the fire of the fire bows); the particles of the shape MESH come out of the mesh of the item
+  fx = Effect();
+  if(hitem==nullptr || hitem->effect.empty() || visual.isEmpty())
+    return;
+  const VisualFx* vfx = Gothic::inst().loadVisualFx(hitem->effect);
+  if(vfx==nullptr)
+    return;
+  Effect e(*vfx,world,Tempest::Vec3(),SpellFxKey::Count);
+  e.setPhysicsDisable();
+  e.setLooped(true);
+  e.setActive(true);
+  e.setItemMesh(&visual);
+  e.setObjMatrix(transform());
+  fx = std::move(e);
   }
 
 bool Item::isTorchBurn() const {
@@ -156,6 +181,7 @@ void Item::setObjMatrix(const Tempest::Matrix4x4 &m) {
   pos.z = m.at(3,2);
   setLocalTransform(m);
   visual.setObjMatrix(m);
+  fx.setObjMatrix(m);   // NB fix 150
   }
 
 bool Item::isMission() const {
@@ -380,6 +406,7 @@ void Item::updateMatrix() {
 void Item::moveEvent() {
   visual.setObjMatrix(transform());
   physic.setObjMatrix(transform());
+  fx.setObjMatrix(transform());   // NB fix 150
   if(!isDynamic())
     world.invalidateVobIndex();
   }

@@ -50,6 +50,9 @@ class MdlVisual final {
     void                           setSword      (MeshObjects::Mesh&& sword);
     void                           setRangedWeapon(MeshObjects::Mesh&& bow);
     void                           setShield     (MeshObjects::Mesh&& shield);
+    // NB fix 150: the effect of the item (C_Item.effect: the fire of a sword, the glow of a bow) on the weapon in the
+    // hand or on the body - slot 0 the melee weapon, 1 the ranged weapon, 2 the shield
+    void                           setItemFx     (uint8_t slot, std::string_view effect, World& owner);
     void                           setAmmoItem   (MeshObjects::Mesh&& ammo, std::string_view bone);
     void                           setSlotItem   (MeshObjects::Mesh&& itm,  std::string_view bone);
     void                           setStateItem  (MeshObjects::Mesh&& itm,  std::string_view bone);
@@ -185,6 +188,7 @@ class MdlVisual final {
 
     std::vector<PfxSlot>           effects;
     PfxSlot                        pfx;
+    Effect                         itemFx[3];   // NB fix 150: sword, bow, shield
     bool                           nbHiddenNow = false;   // NB fix 146
 
     TorchSlot                      torch;

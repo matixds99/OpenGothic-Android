@@ -1,5 +1,7 @@
 #include "gamescript.h"
 
+#include <set>
+
 #include <cmath>
 #include <Tempest/Application>
 #include "nboptions.h"
@@ -5574,6 +5576,14 @@ void GameScript::wld_playeffect(std::string_view visual, std::shared_ptr<zenkit:
 
   auto dstItm = findItemById(targetId);
   auto srcItm = findItemById(sourceId);
+
+  // NB fix 150: each effect of the scripts once in the log (where it plays), to find the effects that are not seen
+  if(nbStates.find(this)!=nbStates.end()) {
+    static std::set<std::string> logged;
+    if(logged.insert(std::string(visual)).second)
+      nbCtx("effect: ",visual," on ",srcNpc!=nullptr ? srcNpc->displayName() : (srcItm!=nullptr ? srcItm->displayName() : "?"),
+            srcNpc!=nullptr || srcItm!=nullptr ? "" : " (no npc or item)");
+    }
 
   if(srcNpc!=nullptr && dstNpc!=nullptr) {
     srcNpc->startEffect(*dstNpc,*vfx);

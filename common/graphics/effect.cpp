@@ -249,6 +249,17 @@ void Effect::setMesh(const MeshObjects::Mesh* mesh) {
     pfx.setMesh(meshEmitter,pose);
   }
 
+void Effect::setItemMesh(const MeshObjects::Mesh* mesh) {
+  // NB fix 150: the effects of the items (C_Item.effect) have emAdjustShpToOrigin and the particles of the shape MESH
+  // without a mesh of their own: the mesh of the item (its static vertices) is the shape
+  if(next!=nullptr)
+    next->setItemMesh(mesh);
+  if(root==nullptr || !(root->emAdjustShpToOrigin || root->isMeshEmmiter()))
+    return;   // the particles have their own shape
+  meshEmitter = mesh;
+  pfx.setMesh(meshEmitter,nullptr);
+  }
+
 void Effect::setBullet(Bullet* b, World& owner) {
   if(next!=nullptr)
     next->setBullet(b,owner);

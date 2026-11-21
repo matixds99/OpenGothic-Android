@@ -146,6 +146,8 @@ void PfxEmitter::setLooped(bool loop) {
   }
 
 void PfxEmitter::setMesh(const MeshObjects::Mesh* mesh, const Pose* pose) {
+  if(bucket==nullptr)
+    return;   // NB fix 150: an effect without particles (the effects of the items: light or sound only)
   const PfxEmitterMesh* m = (mesh!=nullptr) ? mesh->toMeshEmitter() : nullptr;
 
   std::lock_guard<std::recursive_mutex> guard(bucket->parent.sync);

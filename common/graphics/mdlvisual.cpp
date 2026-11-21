@@ -3,6 +3,7 @@
 #include <Tempest/Log>
 
 #include <exception>
+#include <type_traits>
 
 #include "graphics/mesh/skeleton.h"
 #include "game/serialize.h"
@@ -172,15 +173,40 @@ void MdlVisual::setSlotAttachment(MeshObjects::Mesh&& itm, std::string_view bone
   }
 
 void MdlVisual::setSword(MeshObjects::Mesh &&s) {
+  itemFx[0] = Effect();   // NB fix 150: the effect of the new weapon is set by the inventory after the mesh
   bind(sword,std::move(s),"ZS_RIGHTHAND");
   }
 
 void MdlVisual::setRangedWeapon(MeshObjects::Mesh &&b) {
+  itemFx[1] = Effect();
   bind(bow,std::move(b),"ZS_BOW");
   }
 
 void MdlVisual::setShield(MeshObjects::Mesh&& s) {
+  itemFx[2] = Effect();
   bind(shield,std::move(s),"ZS_SHIELD");
+  }
+
+void MdlVisual::setItemFx(uint8_t slot, std::string_view effect, World& owner) {
+  // NB fix 150: oCNpc::AddItemEffects of Gothic 2 - the visual effect of C_Item.effect follows the weapon (in the hand or
+  // on the back). With emAdjustShpToOrigin the particles come out of the mesh of the weapon (the fire along the blade),
+  // so a swing leaves its trail of fire
+  if(slot>=3)
+    return;
+  MeshAttach* att[] = {&sword, &bow, &shield};
+  itemFx[slot] = Effect();
+  if(effect.empty() || att[slot]->view.isEmpty())
+    return;
+  const VisualFx* vfx = Gothic::inst().loadVisualFx(effect);
+  if(vfx==nullptr)
+    return;
+  Effect fx(*vfx,owner,Tempest::Vec3(),SpellFxKey::Count);
+  fx.setPhysicsDisable();
+  fx.setLooped(true);
+  fx.setActive(!nbHiddenNow);
+  fx.setItemMesh(&att[slot]->view);
+  itemFx[slot] = std::move(fx);
+  syncAttaches(*att[slot]);
   }
 
 void MdlVisual::setAmmoItem(MeshObjects::Mesh&& a, std::string_view bone) {
@@ -931,6 +957,8 @@ void MdlVisual::nbSetHidden(bool h) {
   // in the hands and on the bones. Called again and again, so the meshes put on later (a new armor) follow
   nbHiddenNow = h;
   view.nbSetHidden(h);
+  for(auto& fx:itemFx)
+    fx.setActive(!h);   // NB fix 150
   for(auto* a : {&head, &sword, &bow, &shield, &ammunition, &stateItm})
     a->view.nbSetHidden(h);
   for(auto& a:item)
@@ -1038,6 +1066,15 @@ void MdlVisual::syncAttaches(Attach<View>& att) {
   if(att.boneId<pose.boneCount())
     p = pose.bone(att.boneId);
   att.view.setObjMatrix(p);
+  // NB fix 150: the effect of the item goes with its weapon
+  if constexpr(std::is_same_v<View,MeshObjects::Mesh>) {
+    if(&att==&sword)
+      itemFx[0].setObjMatrix(p);
+    else if(&att==&bow)
+      itemFx[1].setObjMatrix(p);
+    else if(&att==&shield)
+      itemFx[2].setObjMatrix(p);
+    }
   }
 
 const Animation::Sequence* MdlVisual::startAnimItem(Npc &npc, std::string_view scheme, int state) {

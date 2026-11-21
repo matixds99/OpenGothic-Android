@@ -4,6 +4,7 @@
 
 #include "graphics/objvisual.h"
 #include "graphics/meshobjects.h"
+#include "graphics/effect.h"
 #include "physics/dynamicworld.h"
 #include "vob.h"
 
@@ -97,6 +98,7 @@ class Item : public Vob {
 
   private:
     void                updateMatrix();
+    void                nbSetupFx();   // NB fix 150
 
     std::shared_ptr<zenkit::IItem> hitem={};
     Tempest::Vec3                  pos={};
@@ -107,4 +109,5 @@ class Item : public Vob {
 
     MeshObjects::Mesh              visual;
     DynamicWorld::Item             physic;
+    Effect                         fx;   // NB fix 150: C_Item.effect of the item in the world
   };

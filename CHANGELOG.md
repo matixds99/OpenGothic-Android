@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – 🧪
-2. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
-3. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
-4. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – ✅
-5. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
+1. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
+2. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – 🧪
+3. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
+4. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
+5. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – ✅
 
 ---
 
@@ -249,6 +249,26 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 150. Efekty przedmiotów (C_Item.effect) na broniach i w świecie – 🧪 (21.11.2026)
+- **Pliki:** `common/graphics/mdlvisual.cpp/.h`, `common/graphics/effect.cpp/.h`, `common/graphics/pfx/pfxbucket.cpp`, `common/world/objects/pfxemitter.cpp`, `common/world/objects/item.cpp/.h`, `common/world/objects/npc.cpp/.h`, `common/game/inventory.cpp`, `common/game/gamescript.cpp`
+- **Zgłoszenie:** bronie z efektami (ogniste miecze, ogniste łuki) nie zostawiają śladu przy ciosie, brakuje też innych efektów wizualnych.
+- **Przyczyna:** OpenGothic w ogóle nie odtwarzał efektu przedmiotu (`C_Item.effect`). W Gothic 2 silnik dokłada go do założonej broni (`oCNpc::AddItemEffects`) i do przedmiotu leżącego w świecie (`oCItem::InsertEffect`). W skryptach NB efekt ma ponad 50 przedmiotów, np.:
+  - `SPELLFX_FIREBOW` – ogniste łuki;
+  - `SPELLFX_FIRESWORDBLACK` – czarne ogniste miecze;
+  - `spellfx_swampdragon`, `SPELLFX_STONESPHERE`, `SPELLFX_WATERSPHERE`, `SPELLFX_ENCHANT_ICE`;
+  - `SPELLFX_ITEMGLIMMER` – blask przedmiotów;
+  - świece i pochodnie.
+- **Poprawka:**
+  - Efekt przedmiotu idzie za bronią białą, łukiem lub kuszą i tarczą – w ręku i na plecach. Jest wyłączany razem z postacią poza zasięgiem rysowania (146).
+  - Efekty z `emAdjustShpToOrigin` (np. ogień miecza) wypuszczają cząsteczki z siatki samej broni, wzdłuż ostrza. Przy ciosie zostaje za nią ślad ognia.
+  - Przedmioty leżące w świecie mają swój efekt (blask, ogień) i przesuwa się on razem z nimi.
+  - Cząsteczki emitowane z nieruchomej siatki liczone są w układzie przedmiotu (wcześniej odejmowana była pozycja w świecie).
+  - Log: każdy efekt skryptów (`Wld_PlayEffect`) raz, z postacią, na której gra – `[ctx] effect: NAZWA on POSTAĆ`. Pomaga znaleźć efekty, których nie widać.
+- **Do sprawdzenia:**
+  - Ognisty miecz lub łuk w ręku i na plecach, ciosy (ślad ognia).
+  - Przedmioty z blaskiem leżące na ziemi.
+  - Klatki przy wielu postaciach z takimi broniami.
 
 ### 149. Paczka 6 brakujących funkcji (log z Zachodniego Wybrzeża) – 🧪 (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`

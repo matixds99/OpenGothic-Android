@@ -40,6 +40,7 @@ class Effect final {
     void     setObjMatrix(const Tempest::Matrix4x4& mt);
     void     setKey      (World& owner, SpellFxKey key, int32_t keyLvl=0);
     void     setMesh     (const MeshObjects::Mesh* mesh);
+    void     setItemMesh (const MeshObjects::Mesh* mesh);   // NB fix 150: the emitter of the shape MESH is the item
     void     setBullet   (Bullet* b, World& owner);
     void     setSpellId  (int32_t splId, World& owner);
     bool     isActiveSpell(int32_t id) const { return root!=nullptr && spellAssigned && active && splId==id; }

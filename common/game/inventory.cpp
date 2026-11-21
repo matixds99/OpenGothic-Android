@@ -549,6 +549,7 @@ void Inventory::updateSwordView(Npc &owner) {
 
   auto  vbody  = owner.world().addView(melee->handle());
   owner.setSword(std::move(vbody));
+  owner.setItemFx(0,melee->handle().effect);   // NB fix 150
   }
 
 void Inventory::updateBowView(Npc &owner) {
@@ -561,6 +562,7 @@ void Inventory::updateBowView(Npc &owner) {
   if(flag & ITM_CAT_FF){
     auto  vbody  = owner.world().addView(range->handle());
     owner.setRangedWeapon(std::move(vbody));
+    owner.setItemFx(1,range->handle().effect);   // NB fix 150
     }
   }
 
@@ -574,6 +576,7 @@ void Inventory::updateShieldView(Npc& owner) {
   if(flag & ITM_SHIELD){
     auto  vbody  = owner.world().addView(shield->handle());
     owner.setShield(std::move(vbody));
+    owner.setItemFx(2,shield->handle().effect);   // NB fix 150
     }
   }
 

@@ -264,7 +264,9 @@ void PfxBucket::init(PfxBucket::Block& block, ImplEmitter& emitter, size_t parti
       auto pose = (emitter.mesh!=nullptr) ? emitter.pose : nullptr;
       if(mesh!=nullptr) {
         auto pos = mesh->randCoord(randf(),pose);
-        pos -= emitter.pos;
+        // NB fix 150: the static mesh of an item (no pose) gives its vertices in the space of the item
+        if(emitter.mesh==nullptr || pose!=nullptr)
+          pos -= emitter.pos;
         p.pos = emitter.direction[0]*pos.x +
                 emitter.direction[1]*pos.y +
                 emitter.direction[2]*pos.z;

@@ -1277,6 +1277,10 @@ void Npc::setRangedWeapon(MeshObjects::Mesh&& b) {
   updateWeaponSkeleton();
   }
 
+void Npc::setItemFx(uint8_t slot, std::string_view effect) {
+  visual.setItemFx(slot,effect,owner);
+  }
+
 void Npc::setShield(MeshObjects::Mesh&& s) {
   visual.setShield(std::move(s));
   updateWeaponSkeleton();
