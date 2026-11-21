@@ -50,6 +50,14 @@ class AbstractTrigger : public Vob {
 
     std::string_view             name() const;
     bool                         isEnabled() const;
+    /// NB fix 140: a point stands on this object - over its box (a little wider), up to 2.5 m above its top
+    bool                         nbStandsOn(const Tempest::Vec3& p) const {
+      const auto c = position()+bboxOrigin;
+      if(bboxSize==Tempest::Vec3())
+        return false;
+      return std::abs(p.x-c.x)<=bboxSize.x+50.f && std::abs(p.z-c.z)<=bboxSize.z+50.f &&
+             p.y>=c.y-bboxSize.y-50.f && p.y<=c.y+bboxSize.y+250.f;
+      }
     bool                         hasDelayedEvents() const;
 
     void                         processDelayedEvents();

@@ -2572,6 +2572,34 @@ void GameScript::initCommon() {
         });
       return ret;
       });
+    // NB fix 140: RX_CheckNpcStandsOnVob(npc, name) (0x1017f360 -> 0x10054b40): the plugin looks down from the character
+    // and compares the name of the object under it - here: the character stands over the box of the object (a mover, a
+    // trigger) of this name. The dialog "Pora odpływać" of Fregyal asks it for the hero and for him (EVT_DRUIDBOAT)
+    bindNb("RX_CHECKNPCSTANDSONVOB", [this](std::shared_ptr<zenkit::INpc> ref, std::string_view name) -> int32_t {
+      auto* npc = findNpc(ref);
+      if(npc==nullptr || name.empty())
+        return 0;
+      std::string want(name);
+      for(auto& ch:want)
+        ch = char(std::toupper(uint8_t(ch)));
+      int32_t ret = 0;
+      bool    found = false;
+      const auto pos = npc->position();
+      world().forEachTrigger([&](AbstractTrigger& t) {
+        if(ret!=0)
+          return;
+        std::string n(t.name());
+        for(auto& ch:n)
+          ch = char(std::toupper(uint8_t(ch)));
+        if(n.find(want)==std::string::npos)
+          return;
+        found = true;
+        if(t.nbStandsOn(pos))
+          ret = 1;
+        });
+      nbCtx("stands on ",want,": ",npc->displayName()," ",ret!=0 ? "yes" : "no",found ? "" : " (no object of this name)");
+      return ret;
+      });
     bindNb("RX_RESETSUMMONS", [this]() {
       nbResetSummons(false,false);
       });
