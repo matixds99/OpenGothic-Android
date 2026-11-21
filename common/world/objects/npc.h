@@ -231,6 +231,7 @@ class Npc final {
     void       setRangedWeapon(MeshObjects::Mesh&& bow);
     void       setShield     (MeshObjects::Mesh&& shield);
     void       setItemFx     (uint8_t slot, std::string_view effect);   // NB fix 150
+    bool       nbReactToHit  (const Npc& other);   // NB fix 152
     void       setMagicWeapon(Effect&& spell);
     void       setSlotItem   (MeshObjects::Mesh&& itm, std::string_view slot);
     void       setStateItem  (MeshObjects::Mesh&& itm, std::string_view slot);

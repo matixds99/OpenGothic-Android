@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
-2. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
-3. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
-4. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – ✅
-5. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
+1. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
+2. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
+3. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
+4. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
+5. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – ✅
 
 ---
 
@@ -249,6 +249,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 152. Walka z kilkoma przeciwnikami naraz – 🧪 (21.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp/.h` (`nbReactToHit`)
+- **Zgłoszenie:** towarzysz (Blizna) na farmie Oswalda zaatakowany przez dwa zębacze nie walczył – krążył i obracał się, bez pomocy bohatera by zginął. To samo przy kilku bandytach na jedną postać (obóz bandytów, Brago).
+- **Przyczyna:** po każdym trafieniu bohater-NPC porzucał plan walki: kolejka ruchów była czyszczona, a następny ruch brany z `MY_W_STRAFE` (krok w bok, parada). Dwa zębacze gryzą na zmianę mniej więcej co pół sekundy, więc postać przez cały czas tylko reagowała na trafienia, obracała się między nimi i nie zdążyła zaatakować.
+- **Poprawka:**
+  - Reakcję na trafienie wywołuje tylko cios własnego celu postaci (albo dowolny cios, gdy postać nie ma celu lub jej cel leży).
+  - Najwyżej raz na 1,5 s.
+  - Ciosy pozostałych napastników nie przerywają ataku na cel. Postrzeganie obrażeń (`B_AssessDamage`, zmiana celu przez skrypt) działa jak dotąd.
+  - Bohater bez zmian.
+- **Do sprawdzenia:** towarzysz przeciw 2–3 zwierzętom (zębacze, wilki) – walczy i zadaje ciosy. Jedna postać przeciw jednemu przeciwnikowi nadal robi uniki po trafieniu.
 
 ### 151. Wygląd broni od Gallahada (`RX_ApplyVisualGallahad`) – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/graphics/mdlvisual.cpp`
@@ -1116,19 +1127,4 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 
 ## 9. Do zrobienia
 
-- [ ] **Animacje broni NB:** sprawdzić, czy zestawy rapiera/szabli/włóczni mają w .MDS ciosy, które OpenGothic odtwarza inaczej (kilka pchnięć w animacji, kombinacje, zasięg) – potrzebne nagranie walki rapierem i mieczem; kod wyboru NPC z innymi broniami (ok. 0x1024AE00 w DLL).
-- [ ] Potwory w walce za często odskakują/krążą – problem silnika OpenGothic (widać też w Renovation); `FA_ENEMY_PREHIT` do porównania z oryginałem.
-- [ ] Walka kilku postaci z jednym celem: cel „głupieje” (krąży, nie atakuje) – nagranie z obozu bandytów, Brago.
-- [ ] Style walki szkieletów (`GIL_SKELETON`) – poprawka 35.
-- [ ] Mieszek i torba na bohaterze – `EXT_PutInSlot` działa od poprawki 125, sprawdzić opcje `bShowPocket`/`bShowBag` z poprawki 5.
-- [ ] Znikanie pustych ciał (opcja optymalizacji NB).
-- [x] Funkcje bossów wołane przez plugin: `AI_OnTick_<instancja>`, `AI_OnHit_…`, `AI_OnGetDamage_…`, `AI_OnBreak_…` – poprawki 100–101 (do testu).
-- [x] Obrażenia w czasie (`RX_ApplyDotDamage`, `RX_ClearAllDots`) – poprawka 106 (do testu).
-- [ ] Trucizna na broń (`RX_ApplyPoison`), `AI_PlayEffect`, splash czarów.
-- [ ] Efekty perków bohatera (`RX_HeroProcs`).
-- [ ] Marvin `add lp` nie działa (poprawka 105).
-- [ ] System karmy pluginu (`UpdateKarma`, 130 wywołań – wydarzenia, znaki, osiągnięcia); samo wyświetlanie karmy działa (poprawka 62).
-- [ ] Klawisze skrótów NB (`RX_KeyPressed`, 100 wywołań – mikstury, strzały, pochodnia, pomijanie scenek).
-- [ ] Przywołania (`RX_SummonNpcToTarget`, `RX_ResetSummons`) i okna pluginu (ulepszenia przy kowadle, zaklinanie, poker).
-- [ ] Ognik: pokazywanie rzadkich roślin/tabliczek, „zbieranie w pomieszczeniach” (poprawka 11).
-- [ ] Napisy: „Dzień: …” w lewym górnym rogu, liczniki wampira i Full SnC+ (poprawka 62).
+- [ ] Walka kilku postaci z jednym celem: cel „głupieje” (krąży, nie atakuje) – poprawka 152 do testu; np. towarzysz (Blizna) zaatakowany przez dwa zębacze na farmie Oswalda, obóz bandytów (Brago).

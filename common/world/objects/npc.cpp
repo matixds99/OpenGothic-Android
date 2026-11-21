@@ -2584,6 +2584,23 @@ void Npc::commitDamage() {
   currentTarget->takeDamage(*this,nullptr);
   }
 
+bool Npc::nbReactToHit(const Npc& other) {
+  // NB fix 152: see takeDamage. The player decides by himself; a character without a target reacts as before
+  if(isPlayer())
+    return true;
+  if(currentTarget!=nullptr && currentTarget!=&other && !currentTarget->isDown())
+    return false;
+  static std::unordered_map<const Npc*,uint64_t> lastReact;
+  if(lastReact.size()>4096)
+    lastReact.clear();
+  const uint64_t now = owner.tickCount();
+  auto it = lastReact.find(this);
+  if(it!=lastReact.end() && now<it->second+1500)
+    return false;
+  lastReact[this] = now;
+  return true;
+  }
+
 void Npc::takeDamage(Npc &other, const Bullet* b) {
   if(isDown())
     return;
@@ -2649,8 +2666,14 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
 
   if(!isSpell || splCat==SpellCategory::SPELL_BAD) {
     perceptionProcess(other,this,0,PERC_ASSESSDAMAGE);
-    fghAlgo.onTakeHit();
-    implFaiWait(0);
+    // NB fix 152: the reaction of the fight AI to a hit (the plan is dropped, the next move from MY_W_STRAFE - a step
+    // aside, a parade) came at every blow. Two or three monsters bite in turns, so a character (a companion against
+    // two snappers) only stepped aside and turned between them and never hit back. The reaction is for the blow of
+    // its own target, and at most once in 1.5 s; the blows of the others do not break the attack on the target
+    if(nbReactToHit(other)) {
+      fghAlgo.onTakeHit();
+      implFaiWait(0);
+      }
     }
 
   // mods of Ikarus and LeGo hook oCNpc::OnDamage: they take the armor into account and may forbid to kill
@@ -3056,8 +3079,10 @@ void Npc::hurtBy(Npc& other, int32_t dmg) {
     setOther(&other);
   owner.sendPassivePerc(*this,other,*this,PERC_ASSESSFIGHTSOUND);
   perceptionProcess(other,this,0,PERC_ASSESSDAMAGE);
-  fghAlgo.onTakeHit();
-  implFaiWait(0);
+  if(nbReactToHit(other)) {   // NB fix 152
+    fghAlgo.onTakeHit();
+    implFaiWait(0);
+    }
 
   const auto state = bodyStateMasked();
   if(interactive()==nullptr && ((state&BS_FLAG_INTERRUPTABLE)!=BS_NONE || state==BS_RUN || state==BS_NONE)) {
