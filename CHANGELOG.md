@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
-2. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – 🧪
-3. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
-4. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
-5. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – ✅
+1. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – 🧪
+2. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
+3. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – 🧪
+4. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
+5. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
 
 ---
 
@@ -249,6 +249,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 151. Wygląd broni od Gallahada (`RX_ApplyVisualGallahad`) – 🧪 (21.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/graphics/mdlvisual.cpp`
+- **Zgłoszenie (log 21.11):** po zaklęciu wyglądu broni u Gallahada (ogień niebieski, elektryczność zielona, intensywność bardzo mocna) na broni nie ma żadnego efektu. W logu: `not implemented call [RX_APPLYVISUALGALLAHAD]`.
+- **Przyczyna:** wygląd broni robi plugin (`ItemEffectManager`, UNION_ABI.DLL `0x101843a0`). Kładzie cząsteczki `NB_VIS_<rodzaj>_USUAL` na założoną broń bohatera, w wybranym kolorze i intensywności, i zapamiętuje je przy przedmiocie. W porcie tej funkcji nie było.
+- **Poprawka:**
+  - `RX_ApplyVisualGallahad(typ)` – broń biała (0) albo dystansowa (1, cząsteczki `_RANGE_`) dostaje cząsteczki z `RX_Gallahad_Visual_Type`, kolor z `RX_Gallahad_Visual_Color` (`ITEMEFFECTMANAGER_RED`…`GREY_1`) i intensywność z `RX_Gallahad_Visual_PPS` (5 stopni).
+  - Wygląd jest zapisany w przedmiocie (pole efektu, z zapisem gry) i rysowany na broni w ręku i na plecach, tak jak efekty z poprawki 150.
+  - `RX_RemoveVisualGallahad(typ)` zdejmuje go.
+- **Uwaga:** odcienie kolorów i stopnie intensywności są dobrane w przybliżeniu – plugin liczy je w swoim kodzie rysowania.
+- **Log:** `[ctx] Gallahad: Starożytne Ostrze <- NB_VIS_MELEE_FIRE_USUAL:3:4`.
+- **Do sprawdzenia:** zaklęcie wyglądu u Gallahada – efekt od razu na broni, po wczytaniu zapisu nadal jest; zmiana koloru i intensywności.
 
 ### 150. Efekty przedmiotów (C_Item.effect) na broniach i w świecie – 🧪 (21.11.2026)
 - **Pliki:** `common/graphics/mdlvisual.cpp/.h`, `common/graphics/effect.cpp/.h`, `common/graphics/pfx/pfxbucket.cpp`, `common/world/objects/pfxemitter.cpp`, `common/world/objects/item.cpp/.h`, `common/world/objects/npc.cpp/.h`, `common/game/inventory.cpp`, `common/game/gamescript.cpp`

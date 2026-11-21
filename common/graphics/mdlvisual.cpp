@@ -3,6 +3,9 @@
 #include <Tempest/Log>
 
 #include <exception>
+#include <algorithm>
+#include <memory>
+#include <map>
 #include <type_traits>
 
 #include "graphics/mesh/skeleton.h"
@@ -13,6 +16,7 @@
 #include "world/world.h"
 #include "objvisual.h"
 #include "gothic.h"
+#include "graphics/pfx/particlefx.h"
 
 using namespace Tempest;
 
@@ -187,6 +191,44 @@ void MdlVisual::setShield(MeshObjects::Mesh&& s) {
   bind(shield,std::move(s),"ZS_SHIELD");
   }
 
+// NB fix 151: the visuals of Gallahad (RX_ApplyVisualGallahad): "NB_VIS_<particles>:<color>:<intensity>" in C_Item.effect.
+// The plugin (ItemEffectManager) puts the particles on the weapon, tinted (ITEMEFFECTMANAGER_RED..GREY_1) and with
+// 5 intensities - the copies of the particles are made once and kept
+static const ParticleFx* nbVisDecl(std::string_view effect) {
+  static std::map<std::string,std::unique_ptr<ParticleFx>,std::less<>> cache;
+  if(auto it = cache.find(effect); it!=cache.end())
+    return it->second.get();
+
+  std::string name(effect);
+  int32_t color = 0, pps = 2;
+  if(auto p = name.find(':'); p!=std::string::npos) {
+    auto rest = name.substr(p+1);
+    name.resize(p);
+    color = std::atoi(rest.c_str());
+    if(auto q = rest.find(':'); q!=std::string::npos)
+      pps = std::atoi(rest.c_str()+q+1);
+    }
+  const ParticleFx* base = Gothic::inst().loadParticleFx(name);
+  if(base==nullptr) {
+    cache[std::string(effect)] = nullptr;
+    return nullptr;
+    }
+  auto ret = std::make_unique<ParticleFx>(*base);
+  static const Tempest::Vec3 colors[] = {
+    {0,0,0},       {255,60,40},  {70,255,80},   {60,120,255},  {190,70,255}, {255,225,60}, {150,150,150},
+    {255,255,255}, {255,140,30}, {80,200,255},  {230,240,255}, {255,250,230}, {60,50,60},  {100,100,100},
+    };
+  if(color>0 && color<int32_t(std::size(colors))) {
+    ret->visTexColorStart = colors[color];
+    ret->visTexColorEnd   = colors[color]*0.7f;
+    }
+  static const float ppsScale[] = {0.3f, 0.6f, 1.f, 1.5f, 2.2f};
+  ret->ppsValue *= ppsScale[std::clamp(pps,0,4)];
+  auto* p = ret.get();
+  cache[std::string(effect)] = std::move(ret);
+  return p;
+  }
+
 void MdlVisual::setItemFx(uint8_t slot, std::string_view effect, World& owner) {
   // NB fix 150: oCNpc::AddItemEffects of Gothic 2 - the visual effect of C_Item.effect follows the weapon (in the hand or
   // on the back). With emAdjustShpToOrigin the particles come out of the mesh of the weapon (the fire along the blade),
@@ -197,6 +239,19 @@ void MdlVisual::setItemFx(uint8_t slot, std::string_view effect, World& owner) {
   itemFx[slot] = Effect();
   if(effect.empty() || att[slot]->view.isEmpty())
     return;
+  if(effect.substr(0,7)=="NB_VIS_") {
+    // NB fix 151: the particles of Gallahad on the weapon
+    if(auto* decl = nbVisDecl(effect)) {
+      PfxEmitter e(owner,decl);
+      e.setActive(!nbHiddenNow);
+      e.setLooped(true);
+      itemFx[slot] = Effect(std::move(e),"");
+      itemFx[slot].setActive(!nbHiddenNow);
+      itemFx[slot].setLooped(true);
+      syncAttaches(*att[slot]);
+      }
+    return;
+    }
   const VisualFx* vfx = Gothic::inst().loadVisualFx(effect);
   if(vfx==nullptr)
     return;

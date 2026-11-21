@@ -2491,6 +2491,49 @@ void GameScript::initCommon() {
     bindNb("NPC_VALIDFOCUSNPC", [focusNpcOf](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
       return focusNpcOf(ref)!=nullptr ? 1 : 0;
       });
+    // NB fix 151: RX_ApplyVisualGallahad(type) (0x101843a0) and RX_RemoveVisualGallahad(type) (0x10184670): Gallahad
+    // enchants the look of the weapon of the hero (0 the melee weapon, 1 the ranged one): the particles
+    // RX_Gallahad_Visual_Type (NB_VIS_MELEE_FIRE_USUAL, for the ranged weapon _RANGE_), the color
+    // RX_Gallahad_Visual_Color (ITEMEFFECTMANAGER_*) and the intensity RX_Gallahad_Visual_PPS (0..4). The plugin keeps it
+    // with the item; here it goes to C_Item.effect of the item ("NB_VIS_...:color:intensity"), saved with it
+    const auto nbGallahadItem = [this](int32_t type) -> std::pair<Npc*,Item*> {
+      auto* w  = owner.world();
+      auto* pl = w!=nullptr ? w->player() : nullptr;
+      if(pl==nullptr)
+        return {nullptr,nullptr};
+      return {pl, type==1 ? pl->currentRangedWeapon() : pl->currentMeleeWeapon()};
+      };
+    bindNb("RX_APPLYVISUALGALLAHAD", [this,nbGallahadItem](int32_t type) {
+      auto [pl,itm] = nbGallahadItem(type);
+      if(itm==nullptr)
+        return;
+      auto str = [this](std::string_view n) -> std::string {
+        auto* s = vm.find_symbol_by_name(n);
+        return s!=nullptr && s->type()==zenkit::DaedalusDataType::STRING ? std::string(s->get_string()) : std::string();
+        };
+      auto num = [this](std::string_view n) -> int32_t {
+        auto* s = vm.find_symbol_by_name(n);
+        return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT ? s->get_int() : 0;
+        };
+      std::string vis = str("RX_GALLAHAD_VISUAL_TYPE");
+      if(vis.empty())
+        return;
+      if(type==1)
+        if(auto p = vis.find("MELEE"); p!=std::string::npos)
+          vis.replace(p,5,"RANGE");
+      const int32_t color = num("RX_GALLAHAD_VISUAL_COLOR");
+      const int32_t pps   = num("RX_GALLAHAD_VISUAL_PPS");
+      itm->handle().effect = vis+":"+std::to_string(color)+":"+std::to_string(pps);
+      pl->setItemFx(type==1 ? 1 : 0, itm->handle().effect);
+      nbCtx("Gallahad: ",itm->displayName()," <- ",itm->handle().effect);
+      });
+    bindNb("RX_REMOVEVISUALGALLAHAD", [nbGallahadItem](int32_t type) {
+      auto [pl,itm] = nbGallahadItem(type);
+      if(itm==nullptr || itm->handle().effect.rfind("NB_VIS_",0)!=0)
+        return;
+      itm->handle().effect.clear();
+      pl->setItemFx(type==1 ? 1 : 0, "");
+      });
     // NB fix 149: RX_CopyAllDialogsNpc(from, to) (0x1017a4f0): the dialogs (C_Info.npc) of the instance "from" go to the
     // instance "to" - Fregyal on the West Coast (ZS_Talk: NONE_1192_Fregeal -> NONE_1192_Fregeal_WC). The plugin moves
     // them in the info manager, so the old npc has them no more
