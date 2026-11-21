@@ -15,9 +15,9 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – 🧪
-2. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda (Fregyal na Zachodnim Wybrzeżu) – ⏸ nie pomogło
-3. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅; Fregyal dalej nie płynął (poprawka 144)
+1. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
+2. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
+3. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅
 4. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – ✅
 5. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – ✅
 
@@ -250,7 +250,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 145. Fregyal obok bohatera na łodzi na Zachodnim Wybrzeżu – 🧪 (21.11.2026)
+### 145. Fregyal obok bohatera na łodzi na Zachodnim Wybrzeżu – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`AI_Teleport`), `common/world/triggers/movetrigger.cpp`
 - **Zgłoszenie:** po poprawce 144 Fregyala dalej nie ma przy bohaterze. Propozycja: niech pojawia się obok bohatera.
 - **Z logu:** łódź rusza z samym bohaterem (`riders 1`), a w promieniu 50 m nie ma żadnego towarzysza – punkt `WP_START_000`, na który skrypt przenosi Fregyala (`AI_Teleport`), leży w tym świecie daleko od łodzi.
@@ -258,8 +258,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `AI_Teleport` postaci na `WP_START_000` na Zachodnim Wybrzeżu (skrypt `RX_WestCoast_Loop` tuż przed odpłynięciem) stawia ją obok bohatera na pokładzie.
   - Gdy łódź lub winda rusza z bohaterem, na pokład wsiadają wszyscy jego towarzysze w tym świecie, nie tylko ci w promieniu 50 m. W logu jest ich lista z odległością.
 - **Do sprawdzenia:** rejs na Zachodnie Wybrzeże – Fregyal stoi obok bohatera na łodzi i dopływa z nim do brzegu. W logu `[ctx] AI_Teleport: Fregyal -> next to the hero`.
+- **Test (21.11):** działa. Cała podróż na Zachodnie Wybrzeże sprawdzona (poprawki 139–145): wejście na łódź, „Pora odpływać”, rejs z Fregyalem, „POMIŃ”, wczytanie Zachodniego Wybrzeża i dopłynięcie do brzegu razem z Fregyalem.
 
-### 144. Towarzysze wsiadają z bohaterem na ruchomy obiekt – Fregyal zostawał na Zachodnim Wybrzeżu – ⏸ nie pomogło (21.11.2026)
+### 144. Towarzysze wsiadają z bohaterem na ruchomy obiekt – Fregyal zostawał na Zachodnim Wybrzeżu – ✅ (razem z 145) (21.11.2026)
 - **Pliki:** `common/world/triggers/movetrigger.cpp/.h`
 - **Zgłoszenie:** po wczytaniu Zachodniego Wybrzeża łódź płynie z bohaterem do brzegu, ale Fregyala przy nim nie ma.
 - **Z logu:** Fregyal jest wstawiany na punkcie `WP_START_000`, który nie leży nad łodzią (port przesunął go o 1,5 m na wolne miejsce), a tuż przed odpłynięciem skrypt przenosi go na ten sam punkt (`AI_Teleport`). Łódź rusza bez niego. Skrypt w tej samej chwili robi go towarzyszem bohatera (`AIV_PartyMember`).
@@ -269,7 +270,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - W logu `[ctx] mover EVT_DRUIDBOAT_WC starts with the hero, companions on board: Fregyal`.
 - **Test (21.11):** nie pomogło – w logu `starts with the hero, riders 1`: w promieniu 50 m nie było żadnego towarzysza (poprawka 145).
 
-### 143. Pomijanie rejsu łodzią („POMIŃ”), Fregyal na łodzi na Zachodnim Wybrzeżu – ✅ / Fregyal ⏸ (21.11.2026)
+### 143. Pomijanie rejsu łodzią („POMIŃ”), Fregyal na łodzi na Zachodnim Wybrzeżu – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`
 - **Zgłoszenie:** brakuje sposobu na pominięcie rejsu, a po wczytaniu Zachodniego Wybrzeża na łodzi nie ma Fregyala.
 - **Jak to działa na PC (UNION_ABI.DLL 0x100bcd90, 0x10235530):** plugin pyta skrypt `RX_IsCutsceneActive`, czy trwa scena do pominięcia (rejs łodzią, koncerty, więzienie). Klawisz G lub R wywołuje wtedy `Script_Use_Button_Cutscene` – przy rejsie od razu przenosi na Zachodnie Wybrzeże.
@@ -319,7 +320,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - W logu `[ctx] stands on EVT_DRUIDBOAT: … yes/no`. Dopisek „no object of this name” oznacza, że łodzi nie ma wśród obiektów, które port sprawdza.
 - **Test (21.11):** opcja jest, ale łódź odpłynęła bez bohatera i Fregyala (poprawka 141).
 
-### 139. Łódź druida Fregyala: niewidzialna ściana, nie da się popłynąć na Zachodnie Wybrzeże – 🧪 (21.11.2026)
+### 139. Łódź druida Fregyala: niewidzialna ściana, nie da się popłynąć na Zachodnie Wybrzeże – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/physics/physicvbo.cpp/.h`, `common/physics/dynamicworld.cpp`
 - **Zgłoszenie:** nie da się wejść na łódź z Fregyalem – stoi przed nią niewidzialna ściana.
 - **Przyczyna:**
