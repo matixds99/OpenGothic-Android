@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **141**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **142**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **140** – rozmowa z Fregyalem na łodzi: opcja „Pora odpływać” (sprawdzanie, czy postać stoi na łodzi) – 🧪
-2. **139** – łódź druida na Zachodnie Wybrzeże: niewidzialna ściana znika (kolizja materiałów, wejście do lokacji) – 🧪
-3. **138** – wydobywanie żelaza, złota i magicznej rudy działa; żyła z rudą świeci się na zielono, pusta na szaro – 🧪
-4. **137** – osobny pasek doświadczenia: przesuwany w edytorze HUD, włączany w ustawieniach NB – ✅
-5. **136** – puste ciała postaci i zwierząt znikają po 2 s (przełącznik w ustawieniach NB) – ✅
+1. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – 🧪
+2. **140** – rozmowa z Fregyalem na łodzi: opcja „Pora odpływać” (sprawdzanie, czy postać stoi na łodzi) – ✅
+3. **139** – łódź druida na Zachodnie Wybrzeże: niewidzialna ściana znika (kolizja materiałów, wejście do lokacji) – 🧪
+4. **138** – wydobywanie żelaza, złota i magicznej rudy działa; żyła z rudą świeci się na zielono, pusta na szaro – 🧪
+5. **137** – osobny pasek doświadczenia: przesuwany w edytorze HUD, włączany w ustawieniach NB – ✅
 
 ---
 
@@ -250,7 +250,20 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 140. Fregyal na łodzi: brak opcji „Pora odpływać” – 🧪 (21.11.2026)
+### 141. Łódź odpływa bez bohatera – postacie nie jechały z ruchomymi obiektami – 🧪 (21.11.2026)
+- **Pliki:** `common/world/triggers/movetrigger.cpp`, `common/physics/physicvbo.cpp/.h`, `common/physics/dynamicworld.cpp`, `common/physics/physicmeshshape.cpp`
+- **Zgłoszenie:** po „Pora odpływać” łódź popłynęła, a bohater i Fregyal zostali na miejscu.
+- **Przyczyna:**
+  - Łódź to ruchomy obiekt (mover `EVT_DRUIDBOAT`). W silniku PC postać stojąca na moverze jedzie razem z nim. W porcie mover przesuwał się pod stopami postaci, a one zostawały w miejscu.
+  - Niewidzialna osłona łodzi (`NB_MAT_WC_BOAT_ALPHA`) w danych nie ma kolizji. Port takich materiałów w ogóle nie wkładał do siatki kolizji, więc skrypt nie mógł jej włączyć na czas rejsu („no mesh has it now” w logu).
+- **Poprawka:**
+  - Postacie, które stoją na ruchomym obiekcie (nad jego obrysem, do 2,5 m nad górą), przesuwają się razem z nim w każdej klatce ruchu – łódź, winda, platforma.
+  - Materiały New Balance (`NB_MAT_*`) bez kolizji w danych są w siatce kolizji, ale wyłączone. `RX_SetMaterialCollision` może je włączyć (osłona łodzi na czas rejsu) i wyłączyć.
+- **Do sprawdzenia:**
+  - Rejs z Fregyalem: bohater i Fregyal płyną z łodzią na Zachodnie Wybrzeże.
+  - Windy i ruchome platformy w innych miejscach gry dalej działają.
+
+### 140. Fregyal na łodzi: brak opcji „Pora odpływać” – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/triggers/abstracttrigger.h`
 - **Zgłoszenie:** na łodzi trzeba porozmawiać z Fregyalem i wybrać „Pora odpływać” – tej opcji nie ma.
 - **Przyczyna:** warunek tej opcji (`PC_PsionicQuest_TemplateDialog_561_Condition`) sprawdza funkcją pluginu `RX_CheckNpcStandsOnVob`, czy bohater i Fregyal stoją na łodzi (`EVT_DRUIDBOAT`). Port nie miał tej funkcji i zwracał 0, więc opcja nigdy się nie pokazywała.
@@ -258,6 +271,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:**
   - Wejście z Fregyalem na łódź, rozmowa – opcja „Pora odpływać” i rejs.
   - W logu `[ctx] stands on EVT_DRUIDBOAT: … yes/no`. Dopisek „no object of this name” oznacza, że łodzi nie ma wśród obiektów, które port sprawdza.
+- **Test (21.11):** opcja jest, ale łódź odpłynęła bez bohatera i Fregyala (poprawka 141).
 
 ### 139. Łódź druida Fregyala: niewidzialna ściana, nie da się popłynąć na Zachodnie Wybrzeże – 🧪 (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/physics/physicvbo.cpp/.h`, `common/physics/dynamicworld.cpp`

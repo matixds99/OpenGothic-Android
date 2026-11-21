@@ -7,8 +7,9 @@ PhysicVbo::PhysicVbo(PackedMesh&& packed)
   :PhysicVbo(packed.vertices) {
   id = std::move(packed.indices);
   for(auto& i:packed.subMeshes)
-    if(!i.material.disable_collision && i.iboLength>0) {
+    if((!i.material.disable_collision || nbSwitchable(i.material.name)) && i.iboLength>0) {
       addSegment(i.iboLength,i.iboOffset,i.material.group,nullptr,i.material.name);
+      segments.back().dataOff = i.material.disable_collision;   // NB fix 141: off until a script switches it on
       }
   for(size_t i=0;i<id.size();i+=3){
     std::swap(id[i+1],id[i+2]);
@@ -31,6 +32,17 @@ std::set<std::string>& PhysicVbo::disabledMaterials() {
   return v;
   }
 
+std::set<std::string>& PhysicVbo::enabledMaterials() {
+  static std::set<std::string> v;
+  return v;
+  }
+
+bool PhysicVbo::nbSwitchable(std::string_view material) {
+  // NB fix 141: the materials of New Balance that its scripts switch (NB_MAT_*): kept in the mesh of the collision even
+  // when the data says "no collision", so that RX_SetMaterialCollision can switch them on
+  return material.size()>=6 && (material.substr(0,6)=="NB_MAT" || material.substr(0,6)=="nb_mat");
+  }
+
 static std::string upperName(std::string_view s) {
   std::string r(s);
   for(auto& c:r)
@@ -40,9 +52,13 @@ static std::string upperName(std::string_view s) {
 
 bool PhysicVbo::setMaterialCollision(std::string_view material, bool collide) {
   const auto name = upperName(material);
-  if(collide)
-    disabledMaterials().erase(name); else
+  if(collide) {
+    disabledMaterials().erase(name);
+    enabledMaterials().insert(name);
+    } else {
     disabledMaterials().insert(name);
+    enabledMaterials().erase(name);
+    }
   bool changed = false;
   for(auto* vbo:all())
     changed |= vbo->applyMaterialCollision();
@@ -52,9 +68,11 @@ bool PhysicVbo::setMaterialCollision(std::string_view material, bool collide) {
 bool PhysicVbo::applyMaterialCollision() {
   all().insert(this);
   const auto& off = disabledMaterials();
+  const auto& on  = enabledMaterials();
   bool changed = false;
   for(auto& sg:segments) {
-    const bool want = !sg.material.empty() && off.find(sg.material)!=off.end();
+    const bool want = !sg.material.empty() &&
+                      (off.find(sg.material)!=off.end() || (sg.dataOff && on.find(sg.material)==on.end()));
     if(want==sg.off_)
       continue;
     if(idOrig.empty())

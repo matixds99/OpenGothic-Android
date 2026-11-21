@@ -607,11 +607,12 @@ DynamicWorld::DynamicWorld(World* owner, const zenkit::Mesh& worldMesh) {
 
   for(size_t i=0;i<pkg.subMeshes.size();++i) {
     auto& sm = pkg.subMeshes[i];
-    if(!sm.material.disable_collision && sm.iboLength>0) {
+    if((!sm.material.disable_collision || PhysicVbo::nbSwitchable(sm.material.name)) && sm.iboLength>0) {
       if(sm.material.group==zenkit::MaterialGroup::WATER) {
         waterMesh->addIndex(pkg.indices,sm.iboOffset,sm.iboLength,sm.material.group);
         } else {
         landMesh ->addIndex(pkg.indices,sm.iboOffset,sm.iboLength,sm.material.group,sectors[i].c_str());
+        landMesh ->nbMarkLastNoCollision(sm.material.disable_collision);   // NB fix 141
         }
       }
     }

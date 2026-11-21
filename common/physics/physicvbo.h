@@ -29,6 +29,8 @@ class PhysicVbo : public btTriangleIndexVertexArray {
     static bool             setMaterialCollision(std::string_view material, bool collide);
     /// the materials switched off are taken out (before the shape is built)
     bool                    applyMaterialCollision();
+    /// NB fix 141: the segment added last has no collision in the data (a switchable material of New Balance)
+    void                    nbMarkLastNoCollision(bool v) { if(!segments.empty()) segments.back().dataOff = v; }
 
     void                    addIndex(const std::vector<uint32_t>& index, size_t iboOff, size_t iboLen, zenkit::MaterialGroup material);
     void                    addIndex(const std::vector<uint32_t>& index, size_t iboOff, size_t iboLen, zenkit::MaterialGroup material, const char* sector);
@@ -54,10 +56,15 @@ class PhysicVbo : public btTriangleIndexVertexArray {
       const char*           sector=nullptr;
       std::string           material;   // NB fix 139: the name, in the upper case
       bool                  off_ = false;
+      bool                  dataOff = false;   // NB fix 141: the material has no collision in the data
       };
 
     static std::set<PhysicVbo*>&  all();
     static std::set<std::string>& disabledMaterials();
+    static std::set<std::string>& enabledMaterials();
+  public:
+    static bool                   nbSwitchable(std::string_view material);
+  private:
 
     std::vector<uint32_t>         idOrig;   // NB fix 139: the triangles before a material was taken out
     std::vector<btVector3>        vStorage;

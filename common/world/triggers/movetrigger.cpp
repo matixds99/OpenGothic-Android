@@ -5,6 +5,7 @@
 #include "graphics/mesh/animmath.h"
 #include "game/serialize.h"
 #include "world/world.h"
+#include "world/objects/npc.h"
 
 using namespace Tempest;
 
@@ -389,7 +390,29 @@ void MoveTrigger::updateFrame() {
   auto     m   = calcTransform(f1,f2,a);
   auto     mat = pos0;
   mat.mul(m);
+
+  // NB fix 141: the characters that stand on a moving mover (a boat, a lift, a platform) go with it, as in the original
+  // engine - here the mover moved away under their feet (the boat of the druid to the West Coast sailed off alone)
+  std::vector<Npc*> riders;
+  const auto before = transform();
+  world.detectNpc(position(),2500.f,[&](Npc& n) {
+    if(!n.isDead() && nbStandsOn(n.position()))
+      riders.push_back(&n);
+    });
+
   setLocalTransform(mat);
+
+  if(!riders.empty()) {
+    auto inv = before;
+    inv.inverse();
+    auto delta = transform();
+    delta.mul(inv);
+    for(auto* n:riders) {
+      auto p = n->position();
+      delta.project(p);
+      n->setPosition(p);
+      }
+    }
   }
 
 float MoveTrigger::calcProgress(uint32_t f1, uint32_t f2) const {

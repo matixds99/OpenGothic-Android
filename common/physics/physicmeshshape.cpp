@@ -23,7 +23,7 @@ PhysicMeshShape* PhysicMeshShape::load(PackedMesh&& packed) {
     }
   uint32_t count = 0;
   for(auto& i : packed.subMeshes)
-    if(!i.material.disable_collision && i.iboLength > 0) {
+    if((!i.material.disable_collision || PhysicVbo::nbSwitchable(i.material.name)) && i.iboLength > 0) {
       count++;
       }
   if(count == 0)
