@@ -7866,7 +7866,7 @@ void GameScript::nbBodiesTick() {
   if(nb==nbStates.end())
     return;
   auto& st = nb->second;
-  static constexpr uint64_t BodyDelay = 6000;
+  static constexpr uint64_t BodyDelay = 2000;   // 2 s (6 s at first: too long)
   if(Gothic::settingsGetI("NB_OG","bRemoveBodies")==0 || nbUiBusy || world().currentCs()!=nullptr) {
     st.bodyEmptySince.clear();
     return;

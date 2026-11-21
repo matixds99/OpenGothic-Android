@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **136** – puste ciała postaci i zwierząt znikają (przełącznik w ustawieniach NB) – 🧪
+1. **136** – puste ciała postaci i zwierząt znikają po 2 s (przełącznik w ustawieniach NB) – ✅
 2. **135** – szybki atak (QUICK): bohater nie biegnie dalej sam w stronę celu – ✅
 3. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – ✅ wskazał przyczynę
 4. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
@@ -250,12 +250,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 136. Usuwanie pustych ciał postaci i zwierząt – 🧪 (20.11.2026)
+### 136. Usuwanie pustych ciał postaci i zwierząt – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbBodiesTick`), `common/game/nboptions.h`, `common/mainwindow.cpp`
 - **Zgłoszenie:** trudno odróżnić ciała, które jeszcze coś mają, od pustych (np. gdy ognik nie zebrał łupu z goblina wojownika albo ze szkieletów). Usuwanie pustych ciał pomoże też wydajności.
 - **Zmiana:**
-  - Ciało martwej postaci lub zwierzęcia, z którego nie ma już czego zabrać (przeszukanie nie pokazałoby żadnego przedmiotu), znika po 6 s.
-  - Ciało z przedmiotami zostaje, dopóki nie zostanie opróżnione – wtedy znika po 6 s.
+  - Ciało martwej postaci lub zwierzęcia, z którego nie ma już czego zabrać (przeszukanie nie pokazałoby żadnego przedmiotu), znika po 2 s.
+  - Ciało z przedmiotami zostaje, dopóki nie zostanie opróżnione – wtedy znika po 2 s.
   - Nic nie znika, gdy otwarty jest ekwipunek, przeszukiwanie, dialog, dokument, okno handlu NB lub rzemiosła, ani w trakcie przerywnika.
   - Nie dotyczy bohatera ani postaci nieprzytomnych.
   - Przełącznik „Usuwanie pustych ciał” w ustawieniach NB (rozgrywka), domyślnie włączony.
@@ -263,6 +263,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Zabicie wilka bez umiejętności skórowania (puste ciało) – znika po kilku sekundach.
   - Zabicie bandyty – ciało zostaje do przeszukania i znika po zabraniu wszystkiego.
   - W logu `[ctx] bodies: N empty removed`.
+- **Test (21.11):** działa. Czas skrócony z 6 s do 2 s – 6 s było za długo.
 
 ### 135. Szybki atak: bohater biegł dalej sam w stronę celu – ✅ (20.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp`
