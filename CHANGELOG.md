@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – 🧪
-2. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
-3. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
-4. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
-5. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
+1. **152** – log: efekty cząsteczkowe świata włączane przez triggery i windy z obiektami (szukanie czerwonej smugi na Zachodnim Wybrzeżu) – 🧪
+2. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – 🧪
+3. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
+4. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
+5. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
 
 ---
 
@@ -249,6 +249,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 152. Log efektów świata (czerwona smuga na Zachodnim Wybrzeżu) – 🧪 (21.11.2026)
+- **Pliki:** `common/world/triggers/pfxcontroller.cpp/.h`, `common/world/triggers/movetrigger.cpp`, `common/world/objects/vob.h`
+- **Zgłoszenie (nagrania z PC):** dwa razy na Zachodnim Wybrzeżu przelatuje czerwona smuga – za mostem w drodze z Fregyalem do Kormaka i po zabiciu kamiennego strażnika-bossa. W porcie jej nie ma.
+- **Ustalenia:** to nie jest kolorowy krąg (`INCOVATION_RED`, te efekty rysują się – np. pierścień teleportu). Smuga to szybko lecąca cząsteczka ze śladem. Skrypty Zachodniego Wybrzeża takiego efektu nie odpalają, więc najpewniej to obiekt świata: kontroler cząsteczek (`zCPFXControler`) włączany triggerem, być może na windzie (`zCMover`).
+- **Zmiana (tylko log):**
+  - `[ctx] pfx controller 'NAZWA' (CZĄSTECZKI) on` – z dopiskiem, czy cząsteczki mają ślad (`trails`) i gdzie stoją;
+  - `[ctx] mover 'NAZWA' triggered: N objects on it` – dla wind, które niosą inne obiekty.
+- **Do sprawdzenia:** przejście w tych miejscach (most, boss) i log – z nazw w logu wyjdzie, co ma lecieć i czemu tego nie widać.
 
 ### 151. Wygląd broni od Gallahada (`RX_ApplyVisualGallahad`) – 🧪 (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/graphics/mdlvisual.cpp`

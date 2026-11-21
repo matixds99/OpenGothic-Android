@@ -168,6 +168,10 @@ void MoveTrigger::moveEvent() {
   }
 
 void MoveTrigger::onTrigger(const TriggerEvent& e) {
+  // NB fix 152: a mover that carries other objects (the particles of the scenes that fly) - to the log
+  if(childCount()>0)
+    Tempest::Log::d("[ctx] mover '",name(),"' triggered: ",childCount()," objects on it, ",moverKeyFrames.size()," keys",
+                    (moverKeyFrames.size()<2 || keyframes.empty() || keyframes[0].ticks==0) ? " - does not move" : "");
   if(moverKeyFrames.size()<2 || keyframes[0].ticks==0)
     return;
 
