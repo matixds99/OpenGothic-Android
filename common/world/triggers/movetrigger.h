@@ -4,6 +4,7 @@
 
 #include "graphics/meshobjects.h"
 #include "physics/physicmesh.h"
+#include "world/objects/pfxemitter.h"
 #include "abstracttrigger.h"
 
 class MoveTrigger : public AbstractTrigger {
@@ -58,6 +59,7 @@ class MoveTrigger : public AbstractTrigger {
 
     Tempest::Matrix4x4                   pos0;
     MeshObjects::Mesh                    view;
+    PfxEmitter                           pfxView;   // NB fix 153: a mover with particles as its visual (*.PFX)
     PhysicMesh                           physic;
     std::vector<KeyLen>                  keyframes;
     std::vector<zenkit::AnimationSample> moverKeyFrames;

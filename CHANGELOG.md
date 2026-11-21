@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
-2. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
-3. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
-4. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
-5. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – ✅
+1. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – 🧪
+2. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
+3. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
+4. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
+5. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
 
 ---
 
@@ -249,6 +249,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 153. Czerwony dym na Zachodnim Wybrzeżu – 🧪 (21.11.2026)
+- **Pliki:** `common/world/triggers/movetrigger.cpp/.h`, `common/game/gamescript.cpp` (`RX_RemoveVobTree`)
+- **Zgłoszenie (nagrania z PC):** w drodze z Fregyalem do Kormaka i przy drugim miejscu w lesie przelatuje czerwony dym („W lesie zauważyliśmy dziwny, czerwony dym...”). W porcie go nie ma.
+- **Przyczyna:**
+  - Skrypt (`RX_WestCoast_Loop`) przy punktach `FP_ROAM_SPAWN_SWAMP_280` i `FP_ROAM_SPAWN_755` wyłącza muzykę, gra dźwięk i włącza windę `EVT_SMOKE_00` / `EVT_SMOKE_01`. Po kilkunastu sekundach `RX_RemoveVobTree` usuwa ją ze świata.
+  - Wygląd tej windy to cząsteczki `SMOKE_SOUL_FOG.pfx` (czerwony dym ze smugą), a nie siatka. OpenGothic próbował wczytać je jako siatkę – w logu `unable to load mesh "SMOKE_SOUL_FOG.pfx"` – i nic nie rysował.
+  - `RX_RemoveVobTree` z nazwą obiektu świata była pomijana.
+- **Poprawka:**
+  - Winda, której wyglądem są cząsteczki (`*.PFX`), rysuje je i niesie po swojej trasie.
+  - `RX_RemoveVobTree` z nazwą obiektu świata (nie pliku `.ZEN`) chowa ten obiekt razem z dziećmi, jak `RX_ToggleVobVisible`, i zapisuje to w zapisie gry.
+- **Log:** `[ctx] object of the world removed (hidden): EVT_SMOKE_01 (1)`.
+- **Do sprawdzenia:** czerwony dym przelatuje w obu miejscach, po kilkunastu sekundach znika; brak `unable to load mesh "SMOKE_SOUL_FOG.pfx"` w logu.
 
 ### 152. Walka z kilkoma przeciwnikami naraz – 🧪 (21.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h` (`nbReactToHit`)

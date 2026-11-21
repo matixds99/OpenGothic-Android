@@ -1,4 +1,5 @@
 #include "gamescript.h"
+#include "utils/fileext.h"
 
 #include <set>
 
@@ -2908,6 +2909,22 @@ void GameScript::initCommon() {
         st.vobTrees.erase(st.vobTrees.begin()+int(i));
         nbCtx("part of the world removed: ",file);
         return;
+        }
+      // NB fix 153: a name of an object of the world (EVT_SMOKE_00/01: the red smoke of the West Coast, a mover with
+      // particles) - the plugin takes it away from the world; here it is hidden with its children, as RX_ToggleVobVisible
+      // does, and stays hidden in the save-game
+      if(!FileExt::hasExt(path,"ZEN")) {
+        std::string key(wrld.name());
+        key += '|';
+        key += path;
+        for(auto& c:key)
+          c = char(std::toupper(static_cast<unsigned char>(c)));
+        const size_t n = wrld.setVobVisualTree(path,false,false);
+        if(n>0) {
+          st.vobVisual[key] = false;
+          nbCtx("object of the world removed (hidden): ",path," (",n,")");
+          return;
+          }
         }
       // a part of the .ZEN of the world itself: OpenGothic cannot take it away
       Log::i("NB: RX_RemoveVobTree: \"",file,"\" was not inserted by the scripts - skipped");

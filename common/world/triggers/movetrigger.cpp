@@ -6,6 +6,9 @@
 #include "game/serialize.h"
 #include "world/world.h"
 #include "world/objects/npc.h"
+#include "graphics/pfx/particlefx.h"
+#include "utils/fileext.h"
+#include "gothic.h"
 
 using namespace Tempest;
 
@@ -134,7 +137,8 @@ void MoveTrigger::emitSound(std::string_view snd,bool freeSlot) const {
 void MoveTrigger::setVobVisual(bool show, bool collideDynamic) {
   hidden = !show;
   if(hidden) {
-    view = MeshObjects::Mesh();
+    view    = MeshObjects::Mesh();
+    pfxView = PfxEmitter();   // NB fix 153
     } else {
     invalidateView();
     }
@@ -152,6 +156,19 @@ void MoveTrigger::setVobVisual(bool show, bool collideDynamic) {
 void MoveTrigger::invalidateView() {
   if(hidden)
     return;
+  // NB fix 153: the visual of a mover may be particles (New Balance: EVT_SMOKE_00/01 - the red smoke that flies over the
+  // forest of the West Coast). OpenGothic made a mesh of it - nothing was drawn. The particles go with the mover
+  if(FileExt::hasExt(visualName,"PFX")) {
+    if(pfxView.isEmpty()) {
+      if(const ParticleFx* decl = Gothic::inst().loadParticleFx(visualName)) {
+        pfxView = PfxEmitter(world,decl);
+        pfxView.setActive(true);
+        pfxView.setLooped(true);
+        }
+      }
+    pfxView.setObjMatrix(transform());
+    return;
+    }
   if(isDynamic() && !view.isEmpty())
     return;
 
@@ -165,6 +182,7 @@ void MoveTrigger::moveEvent() {
   AbstractTrigger::moveEvent();
   view  .setObjMatrix(transform());
   physic.setObjMatrix(transform());
+  pfxView.setObjMatrix(transform());   // NB fix 153
   }
 
 void MoveTrigger::onTrigger(const TriggerEvent& e) {
