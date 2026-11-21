@@ -64,6 +64,10 @@ class Interactive : public Vob {
     bool                isTrueDoor(const Npc& npc) const;
     bool                isLadder() const;
     std::string_view    pickLockCode() const { return pickLockStr; }
+    // NB fix 138: the veins of New Balance keep their ore in the name of the vob (RX_InteractMobOre of the plugin)
+    std::string_view    nbVobName() const { return vobName; }
+    void                nbSetVobName(std::string_view s) { vobName = s; }
+    std::string_view    nbOnStateFunc() const { return onStateFunc; }
     std::string_view    keyName() const { return keyInstance; }
     void                setAsCracked(bool c) { isLockCracked = c; }
     void                setPickLockCode(std::string_view s) { pickLockStr = s; }

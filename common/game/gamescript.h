@@ -225,6 +225,8 @@ class GameScript final {
     size_t           nbResetSummons(bool keepWisp, bool print);
     void             nbSummonsFollowTick();
     void             nbBodiesTick();   // NB fix 136: the empty bodies go away
+    /// NB fix 138: the ore that is left in a vein (iron, gold, magic ore); -1 - not a vein. A vein not touched yet is full
+    int32_t          nbOreStock(const Interactive& mob) const;
     /// NB fix 136: a window that may show the inventory of a body is open (the bodies are not removed then)
     static inline bool nbUiBusy = false;
     void             nbBossHit(Npc& target, Npc& attacker);    // NB fix 100: AI_OnHit_, AI_OnGetDamage_ of the bosses

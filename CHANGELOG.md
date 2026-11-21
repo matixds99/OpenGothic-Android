@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **138**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **140**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **137** – osobny pasek doświadczenia: przesuwany w edytorze HUD, włączany w ustawieniach NB – 🧪
-2. **136** – puste ciała postaci i zwierząt znikają po 2 s (przełącznik w ustawieniach NB) – ✅
-3. **135** – szybki atak (QUICK): bohater nie biegnie dalej sam w stronę celu – ✅
-4. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – ✅ wskazał przyczynę
-5. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
+1. **139** – łódź druida na Zachodnie Wybrzeże: niewidzialna ściana znika (kolizja materiałów, wejście do lokacji) – 🧪
+2. **138** – wydobywanie żelaza, złota i magicznej rudy działa; żyła z rudą świeci się na zielono, pusta na szaro – 🧪
+3. **137** – osobny pasek doświadczenia: przesuwany w edytorze HUD, włączany w ustawieniach NB – ✅
+4. **136** – puste ciała postaci i zwierząt znikają po 2 s (przełącznik w ustawieniach NB) – ✅
+5. **135** – szybki atak (QUICK): bohater nie biegnie dalej sam w stronę celu – ✅
 
 ---
 
@@ -250,7 +250,34 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 137. Osobny pasek doświadczenia – 🧪 (21.11.2026)
+### 139. Łódź druida Fregyala: niewidzialna ściana, nie da się popłynąć na Zachodnie Wybrzeże – 🧪 (21.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/physics/physicvbo.cpp/.h`, `common/physics/dynamicworld.cpp`
+- **Zgłoszenie:** nie da się wejść na łódź z Fregyalem – stoi przed nią niewidzialna ściana.
+- **Przyczyna:**
+  - Łódź ma niewidzialną osłonę z materiału `NB_MAT_WC_BOAT_ALPHA`. Na PC skrypty wyłączają jej kolizję funkcją pluginu `RX_SetMaterialCollision`, a włączają ją tylko na czas rejsu, żeby bohater nie wypadł z płynącej łodzi. Port nie miał tej funkcji.
+  - Plugin po pełnym wczytaniu świata (nowa gra, zapis, zmiana świata) wywołuje `RX_OnEnterLoc_<ŚWIAT>` i `RX_OnEnterLocAny` (UNION_ABI.DLL 0x1027eb7c). W `RX_OnEnterLoc_NewWorld` skrypt właśnie wyłącza osłonę łodzi, gdy łódź nie płynie. Port tego nie wywoływał.
+- **Poprawka:**
+  - `RX_SetMaterialCollision(materiał, wł.)` – jak w pluginie (0x10180ba0) wyłącza lub włącza kolizję wszystkich trójkątów danego materiału: w świecie i w obiektach, także tych wczytanych później.
+  - `RX_MoverIsActive(nazwa)` – czy podnośnik (mover) o tej nazwie jest w ruchu (otwiera się albo zamyka), jak w pluginie (0x1008de00). Skrypty sprawdzają tak koniec rejsu łodzi.
+  - Po wczytaniu każdego świata wywoływane są `RX_OnEnterLoc_<ŚWIAT>` (NEWWORLD, ADDONWORLD, WESTCOAST…) i `RX_OnEnterLocAny`, jak w pluginie.
+- **Do sprawdzenia:**
+  - Wejście na łódź z Fregyalem i rejs na Zachodnie Wybrzeże.
+  - W logu `[ctx] enter location: RX_ONENTERLOC_NEWWORLD` i `[ctx] material NB_MAT_WC_BOAT_ALPHA collision off`.
+
+### 138. Wydobywanie żelaza, złota i magicznej rudy; kolor żyły w celowniku – 🧪 (21.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/interactive.h`, `common/mainwindow.cpp` (`focusColor`)
+- **Zgłoszenie:** wydobywanie surowców nie działa. Żyła z rudą ma mieć zieloną nazwę, pusta – białą lub szarą.
+- **Przyczyna:** skrypty NB (`PC_IronHacken_Addon_Hour_Info`, `PC_OreHacken…`, `PC_GoldHacken…`) pytają plugin, ile rudy udało się wydobyć (`RX_InteractMobOre`). Port nie miał tej funkcji i zwracał 0 – nic się nie wydobywało.
+- **Jak to działa na PC (UNION_ABI.DLL 0x1016f620, 0x100b0d40):** żyła trzyma zapas rudy w nazwie swojego obiektu. Przy pierwszym uderzeniu dostaje zapas: żelazo 95–105, złoto 79–81, magiczna ruda 9–11. Każde wydobycie zabiera z niego tyle, ile skrypt chce, ale nie więcej, niż zostało.
+- **Poprawka:**
+  - `RX_InteractMobOre` i `RX_InteractMobOreGetCount` jak w pluginie. Zapas zapisuje się w zapisie gry razem z żyłą.
+  - Nazwa żyły w celowniku: zielona, gdy jest w niej ruda (także nieruszona żyła), szara, gdy jest wyczerpana.
+- **Do sprawdzenia:**
+  - Kopanie żyły żelaza, złota i magicznej rudy – ruda trafia do ekwipunku, aż żyła się wyczerpie.
+  - Kolor nazwy przed i po wyczerpaniu.
+  - W logu `[ctx] ore: …`.
+
+### 137. Osobny pasek doświadczenia – ✅ (21.11.2026)
 - **Pliki:** `common/mainwindow.cpp` (`drawTouchBars`), `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.h`, `common/game/nboptions.h`
 - **Zgłoszenie:** licznik doświadczenia był przyczepiony do paska wytrzymałości. Ma być osobnym, przesuwanym paskiem, jak na PC (plugin UNION_XP_BAR), włączanym w przełącznikach gry.
 - **Zmiana:**
@@ -262,6 +289,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Pasek widoczny nad wytrzymałością, wartości po zdobyciu doświadczenia.
   - Przesunięcie i zmiana rozmiaru w edytorze HUD.
   - Wyłączenie w ustawieniach NB.
+- **Test (21.11):** pasek wygląda dobrze.
 
 ### 136. Usuwanie pustych ciał postaci i zwierząt – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbBodiesTick`), `common/game/nboptions.h`, `common/mainwindow.cpp`

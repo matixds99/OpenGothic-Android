@@ -960,6 +960,9 @@ Tempest::Color MainWindow::focusColor(const Focus& focus, const Npc& pl) {
       return yellow;
     if(mob->isContainer())
       return mob->inventory().isEmpty() ? grey : green;
+    // NB fix 138: a vein of iron, gold or magic ore - green while there is ore in it, grey when it is mined out
+    if(const int32_t ore = world->script().nbOreStock(*mob); ore>=0)
+      return ore>0 ? green : grey;
     }
   return white;
   }

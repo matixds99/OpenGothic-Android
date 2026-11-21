@@ -618,6 +618,7 @@ DynamicWorld::DynamicWorld(World* owner, const zenkit::Mesh& worldMesh) {
   }
 
   btVector3 bbox[2] = {btVector3(0,0,0), btVector3(0,0,0)};
+  landMesh->applyMaterialCollision();   // NB fix 139: the materials that New Balance has switched off
   if(!landMesh->isEmpty()) {
     Tempest::Matrix4x4 mt;
     mt.identity();

@@ -27,6 +27,8 @@
 #include "utils/gthfont.h"
 #include "world/objects/item.h"
 #include "world/objects/interactive.h"
+#include "world/triggers/movetrigger.h"
+#include "physics/physicvbo.h"
 #include "world/focus.h"
 #include "world/triggers/abstracttrigger.h"
 #include "graphics/visualfx.h"
@@ -124,6 +126,34 @@ struct NbCallback {
   bool                          waitDialog = false;
   };
 
+/// NB fix 138: 0 iron, 1 gold, 2 magic ore, -1 not a vein (the function of the state of the mob)
+int32_t nbOreKind(const Interactive& mob) {
+  std::string f(mob.nbOnStateFunc());
+  for(auto& c:f)
+    c = char(std::toupper(uint8_t(c)));
+  if(f.find("IRONHACKEN")!=std::string::npos)
+    return 0;
+  if(f.find("GOLDHACKEN")!=std::string::npos)
+    return 1;
+  if(f.find("OREHACKEN")!=std::string::npos)
+    return 2;
+  return -1;
+  }
+
+/// the ore in the name of the vob, -1 when the vein was not touched yet (the name is not a number, or too big)
+int32_t nbOreParse(const Interactive& mob, int32_t kind) {
+  const auto n = mob.nbVobName();
+  if(n.empty() || n.size()>6)
+    return -1;
+  for(char c:n)
+    if(c<'0' || c>'9')
+      return -1;
+  const int32_t v = std::atoi(std::string(n).c_str());
+  if((kind==1 && v>81) || (kind!=1 && v>=150))
+    return -1;
+  return v;
+  }
+
 // the state of NB of one GameScript (kept here, so gamescript.h stays as it is)
 struct NbState {
   std::vector<NbCallback>  callbacks;
@@ -217,6 +247,7 @@ struct NbState {
   Tempest::Vec3                               followPos;             //   in the frame before, for his teleports
   bool                                        spellsDirty   = false;
   uint32_t                                    spellsWorld   = 0;
+  uint32_t                                    enterLocWorld = 0;   // NB fix 139: RX_OnEnterLoc_* called for this world
   uint64_t                                    spellsNextCheck = 0;
   uint64_t                                    spellsHash    = 0;
   // NB fix 100: the fights of the bosses of the plugin (UNION_ABI.DLL 0x10054220, 0x100546A0): the characters with
@@ -2491,6 +2522,56 @@ void GameScript::initCommon() {
       nbStates[this].reattack.erase(key);
       });
     }
+    // NB fix 138: the mining of New Balance (UNION_ABI.DLL 0x1016f620, 0x1016f4f0, 0x100b0d40). A vein keeps its ore in
+    // the name of its vob: at the first blow the plugin gives it 95-105 (iron), 79-81 (gold) or 9-11 (magic ore) - a name
+    // that is not a number, or too big, is given anew. RX_InteractMobOre(n) takes n from it (no more than is left) and
+    // gives back what was taken; the scripts (PC_*Hacken_Addon_Hour_Info) give the hero the ore by it
+    bindNb("RX_INTERACTMOBORE", [this](int32_t count) -> int32_t {
+      auto* hero = world().player();
+      auto* mob  = hero!=nullptr ? hero->interactive() : nullptr;
+      if(mob==nullptr)
+        return 0;
+      const int32_t kind = nbOreKind(*mob);
+      if(kind<0)
+        return 0;
+      int32_t stock = nbOreParse(*mob,kind);
+      if(stock<0) {
+        if(kind==0)
+          stock = 95+int32_t(std::rand()%11); else
+        if(kind==1)
+          stock = 79+int32_t(std::rand()%3); else
+          stock = 9+int32_t(std::rand()%3);
+        }
+      const int32_t taken = std::max(0,std::min(count,stock));
+      mob->nbSetVobName(std::to_string(stock-taken));
+      nbCtx("ore: ",mob->nbOnStateFunc()," ",stock," - ",taken," = ",stock-taken);
+      return taken;
+      });
+    bindNb("RX_INTERACTMOBOREGETCOUNT", [this]() -> int32_t {
+      auto* hero = world().player();
+      auto* mob  = hero!=nullptr ? hero->interactive() : nullptr;
+      return mob!=nullptr ? std::max(0,nbOreStock(*mob)) : 0;
+      });
+    // NB fix 139: RX_SetMaterialCollision(material, on) (0x10180ba0): the material of the world (and of the objects) stops
+    // or starts to collide - the plugin sets the bit noCollDet of the zCMaterial; e.g. NB_MAT_WC_BOAT_ALPHA, the invisible
+    // shell of the boat of the druid, that lets the hero on board only when the journey to the West Coast is agreed
+    bindNb("RX_SETMATERIALCOLLISION", [](std::string_view material, int32_t on) {
+      const bool changed = PhysicVbo::setMaterialCollision(material,on!=0);
+      nbCtx("material ",material," collision ",on!=0 ? "on" : "off",changed ? "" : " (no mesh has it now)");
+      });
+    // NB fix 139: RX_MoverIsActive(name) (0x1008de00): the mover of this name is moving (opening or closing)
+    bindNb("RX_MOVERISACTIVE", [this](std::string_view name) -> int32_t {
+      int32_t ret = 0;
+      world().forEachTrigger([&](AbstractTrigger& t) {
+        if(ret!=0 || t.name()!=name)
+          return;
+        if(auto* mv = dynamic_cast<MoveTrigger*>(&t)) {
+          const int32_t s = mv->moverState();
+          ret = (s==1 || s==3) ? 1 : 0;
+          }
+        });
+      return ret;
+      });
     bindNb("RX_RESETSUMMONS", [this]() {
       nbResetSummons(false,false);
       });
@@ -5096,6 +5177,30 @@ void GameScript::tick(uint64_t dt) {
   }
 
   nbSummonsFollowTick();   // NB fix 131
+
+  // NB fix 139: the plugin calls RX_OnEnterLoc_<WORLD> and RX_OnEnterLocAny when a world is loaded to its end (a new game,
+  // a save, a change of the world: "OnLevelFullLoaded", UNION_ABI.DLL 0x1027eb7c) - the scripts put in characters there
+  // (once, by the masks), take them away, and switch the collision of the materials (the boat to the West Coast)
+  if(st.enterLocWorld!=world().serialNumber() && world().player()!=nullptr) {
+    st.enterLocWorld = world().serialNumber();
+    std::string loc(world().name());
+    if(auto dot = loc.rfind('.'); dot!=std::string::npos)
+      loc.resize(dot);
+    for(auto& ch:loc)
+      ch = char(std::toupper(uint8_t(ch)));
+    for(const std::string fn : {"RX_ONENTERLOC_"+loc, std::string("RX_ONENTERLOCANY")}) {
+      auto* sym = vm.find_symbol_by_name(fn);
+      if(sym==nullptr || sym->type()!=zenkit::DaedalusDataType::FUNCTION)
+        continue;
+      try {
+        vm.call_function<void>(sym);
+        nbCtx("enter location: ",fn);
+        }
+      catch(const std::exception& e) {
+        Log::e("NB: ",fn," failed: ",e.what());
+        }
+      }
+    }
 
   const uint64_t currentSecond = tickCount()/1000;
   if(currentSecond==st.lastCycleSecond)
@@ -7855,6 +7960,14 @@ void GameScript::nbSummonCountTick() {
     nbCtx("summon places: ",var->get_int()," -> ",count);
     var->set_int(count);
     }
+  }
+
+int32_t GameScript::nbOreStock(const Interactive& mob) const {
+  const int32_t kind = nbOreKind(mob);
+  if(kind<0)
+    return -1;
+  const int32_t v = nbOreParse(mob,kind);
+  return v<0 ? 1 : v;
   }
 
 /// NB fix 136: the bodies of the dead characters and animals with nothing to take (no item that the looting shows) go away

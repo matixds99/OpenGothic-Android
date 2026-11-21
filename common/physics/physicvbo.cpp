@@ -8,12 +8,75 @@ PhysicVbo::PhysicVbo(PackedMesh&& packed)
   id = std::move(packed.indices);
   for(auto& i:packed.subMeshes)
     if(!i.material.disable_collision && i.iboLength>0) {
-      addSegment(i.iboLength,i.iboOffset,i.material.group,nullptr);
+      addSegment(i.iboLength,i.iboOffset,i.material.group,nullptr,i.material.name);
       }
   for(size_t i=0;i<id.size();i+=3){
     std::swap(id[i+1],id[i+2]);
     }
   adjustMesh();
+  applyMaterialCollision();   // NB fix 139
+  }
+
+PhysicVbo::~PhysicVbo() {
+  all().erase(this);
+  }
+
+std::set<PhysicVbo*>& PhysicVbo::all() {
+  static std::set<PhysicVbo*> v;
+  return v;
+  }
+
+std::set<std::string>& PhysicVbo::disabledMaterials() {
+  static std::set<std::string> v;
+  return v;
+  }
+
+static std::string upperName(std::string_view s) {
+  std::string r(s);
+  for(auto& c:r)
+    c = char(std::toupper(uint8_t(c)));
+  return r;
+  }
+
+bool PhysicVbo::setMaterialCollision(std::string_view material, bool collide) {
+  const auto name = upperName(material);
+  if(collide)
+    disabledMaterials().erase(name); else
+    disabledMaterials().insert(name);
+  bool changed = false;
+  for(auto* vbo:all())
+    changed |= vbo->applyMaterialCollision();
+  return changed;
+  }
+
+bool PhysicVbo::applyMaterialCollision() {
+  all().insert(this);
+  const auto& off = disabledMaterials();
+  bool changed = false;
+  for(auto& sg:segments) {
+    const bool want = !sg.material.empty() && off.find(sg.material)!=off.end();
+    if(want==sg.off_)
+      continue;
+    if(idOrig.empty())
+      idOrig = id;
+    // a triangle taken out is made a point (all three corners in one vertex): it has no surface to stop anything
+    for(size_t i=0; i<size_t(sg.size)*3; i+=3) {
+      const size_t at = sg.off+i;
+      if(want) {
+        id[at+1] = id[at];
+        id[at+2] = id[at];
+        } else {
+        id[at+0] = idOrig[at+0];
+        id[at+1] = idOrig[at+1];
+        id[at+2] = idOrig[at+2];
+        }
+      }
+    sg.off_ = want;
+    changed = true;
+    }
+  // the tree of the shape stays as it was built: its boxes hold the whole triangles, so they hold their points too, and
+  // the triangles given back are the same as before
+  return changed;
   }
 
 PhysicVbo::PhysicVbo(const std::vector<Vertex>& v)
@@ -44,12 +107,15 @@ void PhysicVbo::addIndex(const std::vector<uint32_t>& index, size_t iboOff, size
     id[off+i+1] = index[iboOff+i+2];
     id[off+i+2] = index[iboOff+i+1];
     }
+  if(!idOrig.empty())   // NB fix 139: the copy of the triangles grows with them
+    idOrig.insert(idOrig.end(),id.begin()+std::ptrdiff_t(off),id.end());
 
-  addSegment(iboLen,off,material,sector);
+  addSegment(iboLen,off,material,sector,sector!=nullptr ? std::string_view(sector) : std::string_view());
   adjustMesh();
   }
 
-void PhysicVbo::addSegment(size_t indexSize, size_t offset, zenkit::MaterialGroup material, const char* sector) {
+void PhysicVbo::addSegment(size_t indexSize, size_t offset, zenkit::MaterialGroup material, const char* sector,
+                           std::string_view materialName) {
   btIndexedMesh meshIndex={};
   meshIndex.m_numTriangles = int(indexSize/3);
   meshIndex.m_numVertices  = int32_t(vert.size());
@@ -68,6 +134,7 @@ void PhysicVbo::addSegment(size_t indexSize, size_t offset, zenkit::MaterialGrou
   sgm.size   = int(indexSize/3);
   sgm.mat    = material;
   sgm.sector = sector;
+  sgm.material = upperName(materialName);   // NB fix 139
   segments.push_back(sgm);
   }
 
