@@ -305,6 +305,8 @@ struct NbState {
     const VisualFx*               vfx    = nullptr;
     std::weak_ptr<zenkit::INpc>   src, dst;
     Tempest::Vec3                 pos;
+    Tempest::Vec3                 dir;            // NB fix 158: a straight flight, aimed at the start
+    float                         left   = 0.f;   // the rest of its way, cm
     float                         speed  = 1.f;   // cm per ms
     int32_t                       damage = 0;
     int32_t                       type   = 0;
@@ -8405,7 +8407,14 @@ void GameScript::nbShoot(Npc& src, Npc& dst, const VisualFx& vfx, int32_t damage
   if(auto* k = vfx.key(SpellFxKey::Cast); k!=nullptr && k->emTrjEaseVel>0)
     vel = k->emTrjEaseVel;
   sh.speed  = std::clamp(vel>0 ? vel/1000.f : 1.f, 0.3f, 3.f);
-  sh.until  = tickCount()+6000;
+  // NB fix 158: the projectile is aimed once, at the place of the target when it is cast, and flies straight (as in
+  // Gothic): a step aside and it flies past. Its way: to the target and 15 m further
+  const auto tg = vfx.emTrjTargetNode.empty() ? dst.collosionCenter() : dst.mapBone(vfx.emTrjTargetNode);
+  sh.dir    = tg-sh.pos;
+  const float len = sh.dir.length();
+  sh.dir    = len>1.f ? sh.dir/len : Tempest::Vec3(std::cos(src.rotationRad()),0,std::sin(src.rotationRad()));
+  sh.left   = len+1500.f;
+  sh.until  = tickCount()+uint64_t(sh.left/sh.speed)+500;
   sh.fx     = Effect(vfx,world(),sh.pos,SpellFxKey::Cast);
   sh.fx.setActive(true);
   sh.fx.setLooped(true);
@@ -8421,18 +8430,24 @@ void GameScript::nbShotsTick(uint64_t dt) {
   for(size_t i=0; i<shots.size(); ) {
     auto& sh  = shots[i];
     Npc*  src = findNpc(sh.src.lock());
-    Npc*  dst = findNpc(sh.dst.lock());
-    bool  hit = false, gone = (dst==nullptr || dst->isDead() || now>sh.until);
+    Npc*  hit  = nullptr;
+    bool  gone = now>sh.until || sh.left<=0.f;
     if(!gone) {
-      const auto tg   = sh.vfx->emTrjTargetNode.empty() ? dst->collosionCenter() : dst->mapBone(sh.vfx->emTrjTargetNode);
-      auto       dir  = tg-sh.pos;
-      const float len = dir.length();
-      const float stp = sh.speed*float(dt);
-      if(len<=std::max(stp,30.f)) {
-        sh.pos = tg;
-        hit    = true;
-        } else {
-        sh.pos += dir*(stp/len);
+      // NB fix 158: the straight flight; it stops at the first character (not the caster) or at the world on its way
+      const float stp  = std::min(sh.speed*float(dt),sh.left);
+      const auto  next = sh.pos+sh.dir*stp;
+      const auto  r    = world().physic()->rayNpc(sh.pos,next,src);
+      if(r.npcHit!=nullptr && !r.npcHit->isDead()) {
+        hit    = r.npcHit;
+        sh.pos = next;
+        }
+      else if(r.hasCol && r.npcHit==nullptr) {
+        sh.pos = r.v;
+        gone   = true;
+        }
+      else {
+        sh.pos   = next;
+        sh.left -= stp;
         }
       }
     Tempest::Matrix4x4 m;
@@ -8440,14 +8455,14 @@ void GameScript::nbShotsTick(uint64_t dt) {
     m.translate(sh.pos);
     sh.fx.setObjMatrix(m);
     sh.fx.tick(dt);
-    if(!hit && !gone) {
+    if(hit==nullptr && !gone) {
       ++i;
       continue;
       }
-    // the effect of the hit (emFXCollDyn on the target, emFXCollStat where the target is gone)
-    Effect::onCollide(world(),sh.vfx,sh.pos,hit ? dst : nullptr,src,0);
-    if(hit && src!=nullptr)
-      nbVecDamage(*src,*dst,sh.damage,sh.type);
+    // the effect of the hit (emFXCollDyn on the character, emFXCollStat on the world or at the end of the way)
+    Effect::onCollide(world(),sh.vfx,sh.pos,hit,src,0);
+    if(hit!=nullptr && src!=nullptr)
+      nbVecDamage(*src,*hit,sh.damage,sh.type);
     sh.fx.setActive(false);
     shots.erase(shots.begin()+ptrdiff_t(i));
     }
