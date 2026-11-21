@@ -372,6 +372,7 @@ void MainWindow::paintEvent(PaintEvent& event) {
       if(auto* pl = Gothic::inst().player())
         world->script().dmaFocus(*pl,focus);
       world->script().nbSetFocusMob(focus.interactive);   // NB fix 79: the chest of Mob_SetBrakeChest
+      world->script().nbSetFocusNpc(focus.npc);           // NB fix 149: GetFocusNpc
       // CoM hides the status of the player in a camera of a cutscene (OCGAME__UPDATEPLAYERSTATUS_REPLACECHECKINGGLOBALCUTSCENE)
       const bool inCamera = world->script().dmaCutsceneStatusHidden() || nbSales.isActive() || nbCraft.isActive();   // NB fix 68: hidden under the window
       if(!inCamera) {

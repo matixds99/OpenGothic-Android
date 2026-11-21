@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **148** – młot Adanosa niszczy kamiennych strażników jednym trafieniem – 🧪
-2. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
-3. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – ✅
-4. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
-5. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
+1. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – 🧪
+2. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
+3. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
+4. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – ✅
+5. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
 
 ---
 
@@ -250,6 +250,24 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 149. Paczka 6 brakujących funkcji (log z Zachodniego Wybrzeża) – 🧪 (21.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`
+- **Zgłoszenie:** log z gry na Zachodnim Wybrzeżu (podsumowania `NB missing` i wpisy `not implemented call`).
+- **Poprawki:**
+  - `RX_CopyAllDialogsNpc(z, do)` – przenosi dialogi jednej postaci na drugą. `ZS_Talk` przenosi dialogi Fregyala (`NONE_1192_Fregeal`) na Fregyala z Zachodniego Wybrzeża (`NONE_1192_Fregeal_WC`). Bez tej funkcji rozmowa z nim kończyła się pogawędką, bez jego tematów.
+  - `RX_CreateSpellRune(postać, czar)` – przed `AI_ReadySpell` postać dostaje runę czaru, jeśli jej nie ma (tabela run z pluginu: 29 czarów, np. 72 – wodna pięść). Bez runy magowie NB (np. druid Kormak) nie mieli czego dobyć i walczyli wręcz.
+  - `GetFocusNpc(postać)` i `Npc_ValidFocusNpc(postać)` – postać w celowniku (u bohatera ta, którą pokazuje ekran, u innych ich cel). Używają ich `HandleEvent` i `G_OpenSteal` (klawisze pluginu: kradzież, zamki).
+  - `Npc_ModifyBodyState` – skrypty zwracają z niej liczbę. Przy dawnym `void` funkcja trafiała do domyślnej obsługi i w logu było `not implemented call`. Zmiany nadal nie ma, bo OpenGothic nie ma tych modyfikatorów stanu ciała (`BS_MOD_CONTROLLED` przy koncertach).
+- **Nie w tej paczce:**
+  - `UpdateKarma` – część systemu karmy pluginu, z jego własnymi zmiennymi (osobna, większa praca).
+  - `Wld_IsRaining` – stała odpowiedź „nie pada” z OpenGothic.
+  - Ostrzeżenia `C_NPC.AIVAR without an instance set` (`C_PlayerIsFakeBandit`, `ZS_Dead`) – skrypty czytają zmienną z pustej postaci i dostają 0, bez skutków w grze.
+- **Log:** `[ctx] dialogs: N moved from NONE_1192_Fregeal to NONE_1192_Fregeal_WC`, `[ctx] rune for the spell 72: ITRU_WATERFIST to Kormak`.
+- **Do sprawdzenia:**
+  - Rozmowa z Fregyalem na Zachodnim Wybrzeżu – są jego tematy.
+  - Kormak w walce rzuca wodną pięść.
+  - Wyłamywanie zamków i kradzież bez `not implemented call` w logu.
+
 ### 148. Młot Adanosa przeciw kamiennym strażnikom – 🧪 (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`Npc_ChangeAttributeExtra`)
 - **Zgłoszenie:** młot Adanosa („Skuteczny przeciwko kamiennym strażnikom”) potrzebuje około 5 uderzeń na kamiennego strażnika, a powinien 1–2.
@@ -259,7 +277,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** dodana `Npc_ChangeAttributeExtra` – zmiana atrybutu jak `Npc_ChangeAttribute`, ale z pominięciem nieśmiertelności (jak w pluginie). Gdy postać ginie, zabójcą jest bohater.
 - **Przy okazji:** ta sama funkcja działa dla innych specjalnych broni, np. Świętego Młota przeciw magicznemu golemowi i ognistemu golemowi.
 - **Log:** `[ctx] ChangeAttributeExtra 'Kamienny strażnik' attr=0 value=-10000 hp=0 (dead)`.
-- **Do sprawdzenia:** młot Adanosa w ręku, uderzenie w zwykłego kamiennego strażnika – ginie od pierwszego trafienia.
+- **Potwierdzenie z logu (21.11):** `not implemented call [NPC_CHANGEATTRIBUTEEXTRA] from B_MAGICHURTNPC_IMMORTAL (SEEKERWC, 0, -812)`. Celem był Starożytny strażnik (SEEKERWC), a zwykłe uderzenie młotem zadawało mu 0 obrażeń.
+- **Ile trafień:** według skryptów NB młot zabiera:
+  - zwykłemu kamiennemu strażnikowi 10 000 życia – 1 trafienie;
+  - kamiennemu strażnikowi-bossowi 50 000 – 1 trafienie;
+  - Starożytnemu strażnikowi na Zachodnim Wybrzeżu 1/8 największego życia (812 z 6496) – 8 trafień. Każde trafienie włącza też jego specjalny atak.
+- **Do sprawdzenia:** młot Adanosa w ręku, uderzenie w zwykłego kamiennego strażnika – ginie od pierwszego trafienia. Starożytny strażnik traci 1/8 życia na każde trafienie.
 
 ### 147. „Rysowanie świata” – obiekty tak daleko jak teren – ✅ (21.11.2026)
 - **Pliki:** `common/gothic.cpp` (`settingsObjectDistance`), `common/game/nboptions.h`

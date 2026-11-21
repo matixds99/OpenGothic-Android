@@ -217,6 +217,8 @@ struct NbState {
   // and the key of the plugin that HandleEvent sees pressed (RX_KeyPressed) while the button of the lock is handled
   Interactive*                                focusMob = nullptr;
   std::string                                 keyPressed;
+  // NB fix 149: the npc in the focus of the player (GetFocusNpc, Npc_ValidFocusNpc), set every frame by the window
+  std::weak_ptr<zenkit::INpc>                 focusNpc;
   // NB fix 82: the music of the boss fight - the last time the fight went on (RX_StartBossMusic, RX_UpdateBossMusicCoords)
   uint64_t                                    bossMusicSeen = 0;
   bool                                        musicMuteReset = false;   // NB fix 116
@@ -2463,8 +2465,76 @@ void GameScript::initCommon() {
       nbCtx("lock combinations scrambled: ",done);
       });
     // Npc_ModifyBodyState(npc, add, remove) (0x10159db0, oCNpc::ModifyBodyState): the modifiers of the state of the body
-    // (BS_MOD_CONTROLLED in the concerts of In Extremo) - OpenGothic has no such modifiers, nothing changes
-    bindNb("NPC_MODIFYBODYSTATE", [](std::shared_ptr<zenkit::INpc>, int32_t, int32_t) {});
+    // (BS_MOD_CONTROLLED in the concerts of In Extremo) - OpenGothic has no such modifiers, nothing changes.
+    // NB fix 149: the scripts declare it with the int result - with void it was left to the default handler
+    bindNb("NPC_MODIFYBODYSTATE", [](std::shared_ptr<zenkit::INpc>, int32_t, int32_t) -> int32_t { return 0; });
+    // NB fix 149: GetFocusNpc(npc) (0x1015b660, oCNpc::GetFocusNpc) and Npc_ValidFocusNpc(npc) (0x1015b6c0): the npc in the
+    // focus - of the player the one the window shows, of the others their target. Used by HandleEvent and G_OpenSteal
+    // (the keys of the plugin: theft, the locks, the summons)
+    const auto focusNpcOf = [this](std::shared_ptr<zenkit::INpc> ref) -> Npc* {
+      auto npc = findNpc(ref);
+      if(npc==nullptr)
+        return nullptr;
+      if(!npc->isPlayer())
+        return npc->target();
+      auto it = nbStates.find(this);
+      if(it==nbStates.end())
+        return nullptr;
+      return findNpc(it->second.focusNpc.lock());
+      };
+    bindNb("GETFOCUSNPC", [focusNpcOf](std::shared_ptr<zenkit::INpc> ref) -> std::shared_ptr<zenkit::INpc> {
+      auto* f = focusNpcOf(ref);
+      return f!=nullptr ? f->handlePtr() : nullptr;
+      });
+    bindNb("NPC_VALIDFOCUSNPC", [focusNpcOf](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
+      return focusNpcOf(ref)!=nullptr ? 1 : 0;
+      });
+    // NB fix 149: RX_CopyAllDialogsNpc(from, to) (0x1017a4f0): the dialogs (C_Info.npc) of the instance "from" go to the
+    // instance "to" - Fregyal on the West Coast (ZS_Talk: NONE_1192_Fregeal -> NONE_1192_Fregeal_WC). The plugin moves
+    // them in the info manager, so the old npc has them no more
+    bindNb("RX_COPYALLDIALOGSNPC", [this](std::string_view from, std::string_view to) {
+      auto* a = vm.find_symbol_by_name(from);
+      auto* b = vm.find_symbol_by_name(to);
+      if(a==nullptr || b==nullptr)
+        return;
+      const int32_t ia = int32_t(a->index()), ib = int32_t(b->index());
+      int moved = 0;
+      for(auto& info : dialogsInfo)
+        if(info!=nullptr && info->npc==ia) {
+          info->npc = ib;
+          ++moved;
+          }
+      if(moved>0)
+        nbCtx("dialogs: ",moved," moved from ",from," to ",to);
+      });
+    // NB fix 149: RX_CreateSpellRune(npc, spell) (0x1016ab90): before RX_ReadySpell / RX_ChangeSpell the npc gets the rune
+    // of the spell, if it has none - without it AI_ReadySpell finds nothing to draw and the mages of NB (the druid Kormak:
+    // the water fist) fought with their hands. The table of the runes is the one of the plugin
+    bindNb("RX_CREATESPELLRUNE", [this](std::shared_ptr<zenkit::INpc> ref, int32_t spell) {
+      static const std::pair<int32_t,const char*> runes[] = {
+        {128,"ITRU_FIRELANCE"}, {119,"ITRU_ELECTROWAVE"}, {1,"ITRU_PALLIGHTHEAL"}, {62,"ITRU_DEATHBALL"}, {113,"ITRU_EXTRICATE"},
+        {110,"ITRU_QUAKE"}, {61,"ITRU_DEATHBOLT"}, {112,"ITRU_LACERATE"}, {85,"ITRU_BELIARSRAGE"}, {114,"ITRU_EXPLOSION"},
+        {34,"ITRU_THUNDERBALL"}, {23,"ITRU_INSTANTFIREBALL"}, {42,"ITRU_FIRERAIN"}, {75,"ITRU_GEYSER"}, {72,"ITRU_WATERFIST"},
+        {117,"ITRU_ACID"}, {87,"ITRU_SKULL"}, {127,"ITRU_GREENSTRIKE"}, {31,"ITRU_SUMSKEL"}, {121,"ITRU_BLOODRAIN"},
+        {124,"ITRU_ABYSSSPELL"}, {143,"ITRU_DARKBALL"}, {145,"ITRU_BIGDARKBALL"}, {144,"ITRU_DARKSPEAR"}, {120,"ITRU_FIREWAVE"},
+        {26,"ITRU_WINDFIST"}, {71,"ITRU_WHIRLWIND"}, {38,"ITRU_FIRESTORM"}, {19,"ITRU_FIREBOLT"},
+        };
+      auto npc = findNpc(ref);
+      if(npc==nullptr || spell<=0)
+        return;
+      for(auto& r : runes) {
+        if(r.first!=spell)
+          continue;
+        auto* sym = vm.find_symbol_by_name(r.second);
+        if(sym==nullptr || sym->type()!=zenkit::DaedalusDataType::INSTANCE)
+          return;
+        if(npc->itemCount(sym->index())==0) {
+          npc->addItem(sym->index(),1);
+          nbCtx("rune for the spell ",spell,": ",r.second," to ",npc->displayName());
+          }
+        return;
+        }
+      });
     // RX_ToggleVobVisible(name, show) (0x1016f9b0): the vob of the name and its children are hidden or shown (the secrets
     // of the quests, EVT_XARDAS_SECRET_02). The collision follows the visual. Kept in the save-game
     bindNb("RX_TOGGLEVOBVISIBLE", [this](std::string_view name, int32_t show) {
@@ -7932,6 +8002,11 @@ int32_t GameScript::nbLockMode(const Npc& pl) {
 void GameScript::nbSetFocusMob(Interactive* mob) {
   if(auto it = nbStates.find(this); it!=nbStates.end())
     it->second.focusMob = mob;
+  }
+
+void GameScript::nbSetFocusNpc(Npc* npc) {
+  if(auto it = nbStates.find(this); it!=nbStates.end())
+    it->second.focusNpc = npc!=nullptr ? npc->handlePtr() : nullptr;
   }
 
 void GameScript::nbBreakLock(Npc& hero, Interactive& mob, int32_t mode) {
