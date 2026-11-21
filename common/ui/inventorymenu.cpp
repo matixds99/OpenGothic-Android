@@ -773,6 +773,26 @@ void InventoryMenu::startTakeTimer() {
   takeTimer.start(200);
   }
 
+std::array<int32_t,8> InventoryMenu::nbGainValues(Npc& pl) const {
+  // NB fix 156: life, max life, mana, max mana, strength, dexterity, the intelligence and the max stamina of NB (variables
+  // of the scripts)
+  std::array<int32_t,8> v{};
+  v[0] = pl.attribute(ATR_HITPOINTS);
+  v[1] = pl.attribute(ATR_HITPOINTSMAX);
+  v[2] = pl.attribute(ATR_MANA);
+  v[3] = pl.attribute(ATR_MANAMAX);
+  v[4] = pl.attribute(ATR_STRENGTH);
+  v[5] = pl.attribute(ATR_DEXTERITY);
+  auto& vm  = pl.world().script().getVm();
+  auto  var = [&vm](std::string_view n) -> int32_t {
+    auto* s = vm.find_symbol_by_name(n);
+    return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member() && s->count()==1 ? s->get_int() : 0;
+    };
+  v[6] = var("ATR_INTELLECT");
+  v[7] = var("ATR_STAMINA_MAX");
+  return v;
+  }
+
 void InventoryMenu::onItemAction(uint8_t slotHint) {
   infoItem.reset();
   auto& page = activePage();
@@ -788,6 +808,12 @@ void InventoryMenu::onItemAction(uint8_t slotHint) {
     if(it.isEquipped() && slotHint==Item::NSLOT) {
       player->unequipItem(clsId);
       } else {
+      // NB fix 156: the values before the use - the card shows what the item gave
+      if(nbGainUntil<Application::tickCount()) {
+        nbGainBase = nbGainValues(*player);
+        nbGainText.clear();
+        }
+      nbGainUntil = Application::tickCount()+6000;
       player->useItem(clsId,slotHint,false);
       auto it2 = page.get(sel.sel);
       if((!it2.isValid() || it2->clsId()!=clsId) && sel.sel>0)
@@ -1367,12 +1393,21 @@ std::string InventoryMenu::touchCategoryTitle() const {
     if(index<int(names.size()))
       name = names[size_t(index)];
     }
-  if(name.empty()) {
-    // the order of CategoryOrder; the Polish ones in the code page of the font
-    static const char* en[CatCount] = {"All","Weapons","Armor","Magic","Jewelry","Food","Potions","Documents","Other"};
-    static const char* pl[CatCount] = {"Wszystko","Bronie","Pancerze","Magia","Bi\xBF" "uteria","Jedzenie","Mikstury","Dokumenty","Inne"};
-    name = touchPolish() ? pl[index] : en[index];
+  // the order of CategoryOrder; the Polish ones in the code page of the font
+  static const char* en[CatCount] = {"All","Weapons","Armor","Magic","Jewelry","Food","Potions","Documents","Other"};
+  static const char* pl[CatCount] = {"Wszystko","Bronie","Pancerze","Magia","Bi\xBF" "uteria","Jedzenie","Mikstury","Dokumenty","Inne"};
+  // NB fix 156: TXT_INV_CAT of New Balance is half in English ("Other", "Weapons", "Potions") and its first name is
+  // "Other" for the tab of all the items - the Polish names of the port for these
+  if(touchPolish() && !name.empty()) {
+    static const char* engl[] = {"Other","Weapons","Armor","Magic","Artifacts","Food","Potions","Documents","Misc"};
+    for(auto e:engl)
+      if(name==e)
+        name.clear();
+    if(index==0)
+      name.clear();
     }
+  if(name.empty())
+    name = touchPolish() ? pl[index] : en[index];
   const size_t count = pagePl!=nullptr ? pagePl->size() : 0;
   return name+" ("+std::to_string(count)+")";
   }
@@ -1510,7 +1545,7 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
 
   // the name, smaller when it is too wide
   const auto desc = item.description();
-  float tsc = touchTextScale()*1.45f;
+  float tsc = touchTextScale()*1.3f;   // NB fix 156: 1.45 - smaller with the text below
   for(int i=0; i<10 && book(tsc).textSize(desc).w>x1-x0; ++i)
     tsc *= 0.9f;
   auto& title = book(tsc);
@@ -1551,7 +1586,7 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
 
   struct Line { std::string text; int y; };
   std::vector<Line> lines;
-  float rsc = touchTextScale();
+  float rsc = touchTextScale()*0.82f;   // NB fix 156: the properties smaller (were as big as the name)
   for(int attempt=0; attempt<8; ++attempt) {
     lines.clear();
     auto&     f    = book(rsc);
@@ -1590,6 +1625,39 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
   auto& f = book(rsc);
   for(auto& l:lines)
     f.drawText(p,x0,l.y,l.text);
+
+  // NB fix 156: what the used item gave, between the name and the picture, green ("Inteligencja +1  Si\xB3a +2")
+  if(player!=nullptr && nbGainUntil>=Application::tickCount()) {
+    const auto now = nbGainValues(*player);
+    const bool plTxt = touchPolish();
+    static const char* namePl[8] = {"\xAFycie","Maks. \xBFycie","Mana","Maks. mana","Si\xB3""a","Zr\xEA""czno\x9C\xE6","Inteligencja","Maks. wytrzyma\xB3o\x9C\xE6"};
+    static const char* nameEn[8] = {"Life","Max life","Mana","Max mana","Strength","Dexterity","Intelligence","Max stamina"};
+    std::string txt;
+    for(size_t i=0; i<now.size(); ++i) {
+      const int32_t d = now[i]-nbGainBase[i];
+      if(d==0)
+        continue;
+      if(!txt.empty())
+        txt += "   ";
+      txt += std::string(plTxt ? namePl[i] : nameEn[i])+(d>0 ? " +" : " ")+std::to_string(d);
+      }
+    if(!txt.empty())
+      nbGainText = txt;
+    if(!nbGainText.empty()) {
+      float gsc = touchTextScale()*0.8f;
+      for(int i=0; i<8 && book(gsc).textSize(nbGainText).w>x1-x0; ++i)
+        gsc *= 0.9f;
+      const float s = std::max(0.5f,std::floor(gsc*20.f)/20.f);
+      static std::unordered_map<int,GthFont> green;
+      const int key = int(s*100.f)*2+(dark ? 1 : 0);
+      auto gi = green.find(key);
+      if(gi==green.end())
+        gi = green.emplace(key,book(gsc).tinted(dark ? Color(0.45f,1.f,0.45f) : Color(0.05f,0.45f,0.1f))).first;
+      auto& gf = gi->second;
+      const int gy = std::min(int(pic.y)-int(H*0.01f), titleY+gf.pixelSize()+int(H*0.012f));
+      gf.drawText(p,int(r.x+(r.w-float(gf.textSize(nbGainText).w))/2),gy,nbGainText);
+      }
+    }
 
   // the actions
   const bool pl = touchPolish();

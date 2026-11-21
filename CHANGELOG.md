@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – 🧪
-2. **154** – ognik nie znika i nie pojawia się nagle; przywołańce nie wracają po wczytaniu zapisu – 🧪
-3. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – ✅
-4. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
-5. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
+1. **156** – karta przedmiotu: mniejsze napisy, „Inteligencja +1” itp. po zjedzeniu lub wypiciu, polska nazwa zakładki „Wszystko” – 🧪
+2. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – 🧪
+3. **154** – ognik nie znika i nie pojawia się nagle; przywołańce nie wracają po wczytaniu zapisu – 🧪
+4. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – ✅
+5. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
 
 ---
 
@@ -249,6 +249,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 156. Karta przedmiotu w ekwipunku: wielkość napisów, zdobyte bonusy – 🧪 (21.11.2026)
+- **Pliki:** `common/ui/inventorymenu.cpp/.h`
+- **Zgłoszenie:** napisy na karcie przedmiotu (prawa strona ekwipunku) są za duże (uwaga borsuczyny). Pomysł: zmniejszyć je i w wolnym miejscu pokazywać bonusy z jedzenia. Na zrzucie zakładka wszystkich przedmiotów nazywa się „Other (481)”.
+- **Poprawka:**
+  - Nazwa przedmiotu mniejsza o ok. 10%, właściwości (obrażenia, wymagania, waga, wartość) o ok. 18%.
+  - Po użyciu przedmiotu z ekwipunku (jedzenie, mikstura, zwój…) między nazwą a obrazkiem pojawia się na zielono, co bohater zyskał, np. „Inteligencja +1   Maks. życie +5”. Liczone ze zmiany wartości bohatera: życie, mana, ich maksima, siła, zręczność, inteligencja i maks. wytrzymałość NB. Napis zostaje 6 s od ostatniego użycia, kolejne użycia się sumują.
+  - Nazwy zakładek: `TXT_INV_CAT` w NB jest częściowo po angielsku („Other”, „Weapons”, „Potions”), a pierwsza pozycja („Other”) to zakładka wszystkich przedmiotów. Port pokazuje polskie nazwy: Wszystko, Bronie, Mikstury… Polskie nazwy skryptów (Magia, Jedzenie, Dokumenty…) zostają.
+- **Do sprawdzenia:** zjedzenie przedmiotu ze stałym bonusem (np. gulasz, eliksir umysłu) – zielony napis z bonusem; czytelność mniejszych napisów; nazwa pierwszej zakładki.
 
 ### 155. Obrażenia z kilkoma rodzajami naraz (kamienny golem) – 🧪 (21.11.2026)
 - **Pliki:** `common/game/damagecalculator.cpp`
