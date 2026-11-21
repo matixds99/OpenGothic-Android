@@ -299,12 +299,9 @@ void DrawCommands::visibilityPass(Encoder<CommandBuffer>& cmd, int pass) {
     push.znear        = scene.znear;
     push.objectDistance = scene.objectDistance;
     push.modelDetail = std::clamp(Gothic::settingsGetF("PERFORMANCE","modelDetail"),0.f,1.f);
-    {
-      // NB fix 109: the range of the characters (the menu of New Balance, NB_OG/npcDistance: the index of the choice)
-      static const float npcRange[] = {0.f, 3000.f, 4000.f, 5000.f, 6000.f, 7000.f, 10000.f};
-      const int i = Gothic::settingsGetI("NB_OG","npcDistance");
-      push.npcDistance = (i>0 && i<int(std::size(npcRange))) ? npcRange[i] : 0.f;
-    }
+    // NB fix 109, 146: the range of the characters is now done on the CPU for the whole character (World::nbNpcRangeTick):
+    // here only the skinned body was dropped, the head (a morph mesh), the helmet and the weapons stayed in the air
+    push.npcDistance = 0.f;
 #ifdef __ANDROID__
     // Keep terrain and animated objects; discard only tiny static details.
     // The HiZ prepass retains its existing large-occluder selection.

@@ -413,6 +413,22 @@ void World::tick(uint64_t dt) {
   globFx->tick(dt);
   }
 
+void World::nbNpcRangeTick(float range) {
+  auto* hero = player();
+  if(hero==nullptr)
+    return;
+  const auto  at = hero->position();
+  const float r2 = range*range;
+  const uint32_t n = npcCount();
+  for(uint32_t i=0; i<n; ++i) {
+    auto* npc = npcById(i);
+    if(npc==nullptr || npc==hero)
+      continue;
+    const bool hide = range>0 && (npc->position()-at).quadLength()>r2;
+    npc->nbSetHidden(hide);
+    }
+  }
+
 uint64_t World::tickCount() const {
   return game.tickCount();
   }

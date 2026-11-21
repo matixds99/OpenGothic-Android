@@ -39,6 +39,7 @@ class VisualObjects final {
 
       void     setObjMatrix(const Tempest::Matrix4x4& mt);
       void     setAsGhost  (bool g);
+      void     nbSetHidden (bool h);   // NB fix 146: not drawn (a character beyond the range of drawing)
       void     setFatness  (float f);
       void     setWind     (zenkit::AnimationType m, float intensity);
       void     startMMAnim (std::string_view anim, float intensity, uint64_t timeUntil);
@@ -122,6 +123,7 @@ class VisualObjects final {
       float               windIntensity = 0;
       float               fatness       = 0;
       bool                isGhost       = false;
+      bool                nbHidden      = false;   // NB fix 146
       };
 
     void     preFrameUpdateWind();

@@ -132,6 +132,9 @@ class MdlVisual final {
     uint16_t                       comboLength() const;
 
     Bounds                         bounds() const;
+    /// NB fix 146: the model of the character with all it carries is not drawn (beyond the range of drawing of characters)
+    void                           nbSetHidden(bool h);
+    bool                           nbHidden() const { return nbHiddenNow; }
 
   private:
     template<class View>
@@ -182,6 +185,7 @@ class MdlVisual final {
 
     std::vector<PfxSlot>           effects;
     PfxSlot                        pfx;
+    bool                           nbHiddenNow = false;   // NB fix 146
 
     TorchSlot                      torch;
 

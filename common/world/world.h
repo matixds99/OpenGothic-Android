@@ -62,6 +62,8 @@ class World final {
     void                 visitVisuals(const std::function<void(std::string_view,bool)>& f) const { wobj.visitVisuals(f); }
     Bullet*              shootRemote(const Item& itm, const Tempest::Vec3& pos, const Tempest::Vec3& vel) { return wobj.shootRemote(itm,pos,vel); }
     uint32_t             npcCount() const;
+    /// NB fix 146: the characters beyond this range from the hero are not drawn (cm, 0 - no limit)
+    void                 nbNpcRangeTick(float range);
 
     uint32_t             mobsiId(const Interactive* ptr) const;
     Interactive*         mobsiById(uint32_t id);

@@ -55,6 +55,7 @@ class MeshObjects final {
         void   setSkeleton (const Skeleton* sk);
         void   setPose     (const Tempest::Matrix4x4& obj, const Pose& p);
         void   setAsGhost  (bool g);
+        void   nbSetHidden (bool h);   // NB fix 146
         void   setFatness  (float f);
         void   setWind     (zenkit::AnimationType m, float intensity);
         void   startMMAnim (std::string_view anim, float intensity, uint64_t timeUntil);

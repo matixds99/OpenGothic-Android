@@ -66,6 +66,11 @@ void MeshObjects::Mesh::setAsGhost(bool g) {
     sub[i].setAsGhost(g);
   }
 
+void MeshObjects::Mesh::nbSetHidden(bool h) {
+  for(size_t i=0; i<subCount; ++i)
+    sub[i].nbSetHidden(h);
+  }
+
 void MeshObjects::Mesh::setFatness(float f) {
   for(size_t i=0;i<subCount;++i)
     sub[i].setFatness(f);

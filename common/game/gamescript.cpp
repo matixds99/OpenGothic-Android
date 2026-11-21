@@ -249,6 +249,8 @@ struct NbState {
   uint32_t                                    spellsWorld   = 0;
   uint32_t                                    enterLocWorld = 0;   // NB fix 139: RX_OnEnterLoc_* called for this world
   uint64_t                                    cutsceneNextCheck = 0;   // NB fix 143
+  uint64_t                                    npcRangeNext      = 0;   // NB fix 146
+  bool                                        npcRangeOn        = false;
   bool                                        cutsceneActive    = false;
   uint64_t                                    spellsNextCheck = 0;
   uint64_t                                    spellsHash    = 0;
@@ -5216,6 +5218,17 @@ void GameScript::tick(uint64_t dt) {
   }
 
   nbSummonsFollowTick();   // NB fix 131
+
+  // NB fix 146: the range of drawing of the characters (NB_OG/npcDistance, the index of the choice) - 4 times a second
+  if(tickCount()>=st.npcRangeNext) {
+    st.npcRangeNext = tickCount()+250;
+    static const float npcRange[] = {0.f, 3000.f, 4000.f, 5000.f, 6000.f, 7000.f, 10000.f};
+    const int   i     = Gothic::settingsGetI("NB_OG","npcDistance");
+    const float range = (i>0 && i<int(std::size(npcRange))) ? npcRange[i] : 0.f;
+    if(range>0 || st.npcRangeOn)   // once more after it is switched off: everyone is drawn again
+      world().nbNpcRangeTick(range);
+    st.npcRangeOn = range>0;
+    }
 
   // NB fix 139: the plugin calls RX_OnEnterLoc_<WORLD> and RX_OnEnterLocAny when a world is loaded to its end (a new game,
   // a save, a change of the world: "OnLevelFullLoaded", UNION_ABI.DLL 0x1027eb7c) - the scripts put in characters there

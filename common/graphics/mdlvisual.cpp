@@ -926,6 +926,21 @@ uint16_t MdlVisual::comboLength() const {
   return skInst->comboLength();
   }
 
+void MdlVisual::nbSetHidden(bool h) {
+  // NB fix 146: everything that is drawn as a part of the character: the body, the head, the armor, the weapons, the items
+  // in the hands and on the bones. Called again and again, so the meshes put on later (a new armor) follow
+  nbHiddenNow = h;
+  view.nbSetHidden(h);
+  for(auto* a : {&head, &sword, &bow, &shield, &ammunition, &stateItm})
+    a->view.nbSetHidden(h);
+  for(auto& a:item)
+    a.view.nbSetHidden(h);
+  for(auto& a:decor)
+    a.view.nbSetHidden(h);
+  for(auto& a:attach)
+    a.view.nbSetHidden(h);
+  }
+
 Bounds MdlVisual::bounds() const {
   auto b = view.bounds();
   if(!head.view.isEmpty())

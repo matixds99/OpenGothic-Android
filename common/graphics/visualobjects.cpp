@@ -59,6 +59,16 @@ void VisualObjects::Item::setObjMatrix(const Tempest::Matrix4x4& pos) {
     }
   }
 
+void VisualObjects::Item::nbSetHidden(bool h) {
+  if(owner!=nullptr) {
+    auto& obj = owner->objects[id];
+    if(obj.nbHidden==h || obj.type==DrawCommands::Landscape)
+      return;
+    obj.nbHidden = h;
+    owner->updateInstance(id);
+    }
+  }
+
 void VisualObjects::Item::setAsGhost(bool g) {
   if(owner!=nullptr) {
     owner->setAsGhost(id, g);
@@ -168,6 +178,9 @@ void VisualObjects::updateInstance(size_t id, Matrix4x4* pos) {
 
   auto cId  = obj.clusterId;
   auto npos = Vec3(obj.pos[3][0], obj.pos[3][1], obj.pos[3][2]);
+  // NB fix 146: a hidden object - its cluster stands far under the world, out of every view, and is not drawn
+  if(obj.nbHidden)
+    npos = Vec3(npos.x, -1.0e7f, npos.z);
   auto& cluster = clustersMem[cId];
   bool changed = false;
   if(pos==nullptr) {

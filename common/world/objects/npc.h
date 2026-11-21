@@ -207,6 +207,8 @@ class Npc final {
     std::string_view displayName() const;
     /// NB fix 134: what moves the character - the queue, the walk to a target, the state (the log of the hero who runs alone)
     std::string      nbMoveDebug() const;
+    /// NB fix 146: the character is not drawn (beyond the range of drawing of characters); its AI goes on
+    void             nbSetHidden(bool h) { visual.nbSetHidden(h); }
     auto       displayPosition() const -> Tempest::Vec3;
     void       setVisual    (std::string_view visual);
     void       setVisual    (const Skeleton*  visual);

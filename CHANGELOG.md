@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **146**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **147**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
-2. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
-3. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅
-4. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – ✅
-5. **141** – postacie płyną razem z łodzią (i jadą z każdym ruchomym obiektem: windą, platformą) – ✅
+1. **146** – zasięg rysowania postaci działa dla całej postaci (głowa, zbroja, broń); nowa opcja zasięgu widzenia świata – 🧪
+2. **145** – Fregyal pojawia się na łodzi obok bohatera na Zachodnim Wybrzeżu – ✅
+3. **144** – towarzysze bohatera wsiadają z nim, gdy rusza łódź lub winda – ✅ (razem z 145)
+4. **143** – przycisk „POMIŃ” scen New Balance (rejs łodzią) – ✅
+5. **142** – po dopłynięciu łodzi wczytuje się Zachodnie Wybrzeże (punkty z dołożonych części świata) – ✅
 
 ---
 
@@ -249,6 +249,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 146. Zasięg rysowania postaci i świata – 🧪 (21.11.2026)
+- **Pliki:** `common/world/world.cpp/.h` (`nbNpcRangeTick`), `common/world/objects/npc.h`, `common/graphics/mdlvisual.cpp/.h`, `common/graphics/meshobjects.cpp/.h`, `common/graphics/visualobjects.cpp/.h`, `common/graphics/drawcommands.cpp`, `common/game/gamescript.cpp`, `common/game/nboptions.h`
+- **Zgłoszenie:** ustawienie „Zasięg rysowania postaci” (30/70/100 m) chyba nie działa. Prośba o lepszą kontrolę nad rysowaniem świata, postaci i zwierząt.
+- **Przyczyna:** poprawka 109 odcinała w przebiegu widoczności GPU tylko części ze szkieletem (ciało). Głowa (siatka z mimiką), hełm, broń i przedmioty na kościach to osobne siatki – zostawały narysowane. Zysk był mały, a daleko mogły wisieć same głowy i broń.
+- **Poprawka:**
+  - Zasięg postaci liczony na procesorze 4 razy na sekundę: postać dalej od bohatera niż ustawiony zasięg nie jest rysowana w całości – ciało, głowa, zbroja, broń, przedmioty w rękach i na kościach. Dotyczy ludzi, potworów i zwierząt. AI postaci działa dalej.
+  - Ukryta część trafia poza każdy widok, więc odpada też z cieni. Na Androidzie ukryte głowy nie liczą mimiki.
+  - Nowa opcja na stronie NB (detale): „Zasięg widzenia świata” 50–750 m – to samo ustawienie co „Zasięg widzenia” w opcjach gry (`PERFORMANCE/sightValue`), teraz obok zasięgu postaci. Domyślnie 250 m. Działa od razu.
+- **Do sprawdzenia:**
+  - Zasięg postaci 30 m w Khorinis: postacie dalej niż 30 m znikają w całości (bez wiszących głów i broni) i pojawiają się po podejściu. Czy przybywa klatek.
+  - „Bez limitu” – wszyscy znowu widoczni.
+  - Zasięg widzenia świata: mniejszy – bliżej mgła i koniec świata, więcej klatek.
 
 ### 145. Fregyal obok bohatera na łodzi na Zachodnim Wybrzeżu – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`AI_Teleport`), `common/world/triggers/movetrigger.cpp`
@@ -586,7 +599,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Akrobatyka (108):** przełącznik zapisuje `MOBILE/acrobatic` i działa jak w ustawieniach dotyku, ale skrypt `RX_ApplyAcrobatic` zakłada przewrotki tylko bohaterowi, który nauczył się akrobatyki (`NPC_TALENT_ACROBAT`) – bez nauki przełącznik nic nie zmienia.
 - **Do sprawdzenia:** mikstura i roślina na pasek, dotknięcie – używa; druga broń na pasek – zakłada.
 
-### 109. Zasięg rysowania postaci (jak suwak NB 3000–7000) – 🧪 (18.11.2026)
+### 109. Zasięg rysowania postaci (jak suwak NB 3000–7000) – ⏸ zastąpione przez 146 (18.11.2026)
 - **Pliki:** `shader/materials/visibility_pass.comp`, `common/graphics/drawcommands.cpp`, `common/game/nboptions.h`, `common/ui/gamemenu.cpp`
 - **Zgłoszenie:** na PC w sterowaniu dodatkowym NB był suwak, jak daleko rysować NPC (od 3000). Na małej mapie, np. na Pustyni Adanosa, gracz ustawiał 7000 i widział postacie z daleka. W Khorinis zmniejszał, bo spadały klatki.
 - **Poprawka:** nowe ustawienie na stronie NB (kategoria detali) „Zasięg rysowania postaci”: bez limitu / 30 / 40 / 50 / 60 / 70 / 100 m (`NB_OG/npcDistance`, zapisywany numer wyboru). W przebiegu widoczności GPU części modeli ze szkieletem (ludzie, potwory) dalej niż ten zasięg od kamery nie są rysowane. Zasięg widzenia świata i obiektów się nie zmienia. Działa od razu, bez wczytywania gry.
