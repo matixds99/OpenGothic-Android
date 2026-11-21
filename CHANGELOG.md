@@ -15,10 +15,10 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – 🧪
+1. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
 2. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
 3. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
-4. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
+4. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – ✅
 5. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
 
 ---
@@ -250,7 +250,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 151. Wygląd broni od Gallahada (`RX_ApplyVisualGallahad`) – 🧪 (21.11.2026)
+### 151. Wygląd broni od Gallahada (`RX_ApplyVisualGallahad`) – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/graphics/mdlvisual.cpp`
 - **Zgłoszenie (log 21.11):** po zaklęciu wyglądu broni u Gallahada (ogień niebieski, elektryczność zielona, intensywność bardzo mocna) na broni nie ma żadnego efektu. W logu: `not implemented call [RX_APPLYVISUALGALLAHAD]`.
 - **Przyczyna:** wygląd broni robi plugin (`ItemEffectManager`, UNION_ABI.DLL `0x101843a0`). Kładzie cząsteczki `NB_VIS_<rodzaj>_USUAL` na założoną broń bohatera, w wybranym kolorze i intensywności, i zapamiętuje je przy przedmiocie. W porcie tej funkcji nie było.
@@ -261,7 +261,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Uwaga:** odcienie kolorów i stopnie intensywności są dobrane w przybliżeniu – plugin liczy je w swoim kodzie rysowania.
 - **Log:** `[ctx] Gallahad: Starożytne Ostrze <- NB_VIS_MELEE_FIRE_USUAL:3:4`.
 - **Do sprawdzenia:** zaklęcie wyglądu u Gallahada – efekt od razu na broni, po wczytaniu zapisu nadal jest; zmiana koloru i intensywności.
-- **Test (21.11):** działa w przybliżeniu – ogień zielony, iskry fioletowe, magia niebieska; cząsteczki widać przy broni na biodrze. Do porównania z PC: położenie i wielkość efektu przy dobytej broni.
+- **Test (21.11):** działa, oznaczone jako sprawdzone. Pierwsze obserwacje: działa w przybliżeniu – ogień zielony, iskry fioletowe, magia niebieska; cząsteczki widać przy broni na biodrze. Do porównania z PC: położenie i wielkość efektu przy dobytej broni.
 
 ### 150. Efekty przedmiotów (C_Item.effect) na broniach i w świecie – 🧪 (21.11.2026)
 - **Pliki:** `common/graphics/mdlvisual.cpp/.h`, `common/graphics/effect.cpp/.h`, `common/graphics/pfx/pfxbucket.cpp`, `common/world/objects/pfxemitter.cpp`, `common/world/objects/item.cpp/.h`, `common/world/objects/npc.cpp/.h`, `common/game/inventory.cpp`, `common/game/gamescript.cpp`
@@ -303,7 +303,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Test (21.11):** rozmowa z Fregyalem na Zachodnim Wybrzeżu działa – 25 tematów przeniesionych (`dialogs: 25 moved`), handel otwiera się.
   - Wyłamywanie zamków i kradzież bez `not implemented call` w logu.
 
-### 148. Młot Adanosa przeciw kamiennym strażnikom – 🧪 (21.11.2026)
+### 148. Młot Adanosa przeciw kamiennym strażnikom – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`Npc_ChangeAttributeExtra`)
 - **Zgłoszenie:** młot Adanosa („Skuteczny przeciwko kamiennym strażnikom”) potrzebuje około 5 uderzeń na kamiennego strażnika, a powinien 1–2.
 - **Przyczyna:**
@@ -318,6 +318,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - kamiennemu strażnikowi-bossowi 50 000 – 1 trafienie;
   - Starożytnemu strażnikowi na Zachodnim Wybrzeżu 1/8 największego życia (812 z 6496) – 8 trafień. Każde trafienie włącza też jego specjalny atak.
 - **Do sprawdzenia:** młot Adanosa w ręku, uderzenie w zwykłego kamiennego strażnika – ginie od pierwszego trafienia. Starożytny strażnik traci 1/8 życia na każde trafienie.
+- **Test (21.11):** działa – każde trafienie młotem zabiera Starożytnemu strażnikowi 812 życia (`ChangeAttributeExtra ... value=-812`).
 
 ### 147. „Rysowanie świata” – obiekty tak daleko jak teren – ✅ (21.11.2026)
 - **Pliki:** `common/gothic.cpp` (`settingsObjectDistance`), `common/game/nboptions.h`
