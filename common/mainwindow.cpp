@@ -2750,6 +2750,28 @@ void MainWindow::nbLogNearMobs() {
     }
   if(near==0 && seen.insert(uint32_t(-1)).second)
     Tempest::Log::i("[ctx] mob near (no focus): none in 5 m");
+  // NB fix 160 (diagnostics): the places of digging of NB (onStateFunc HIDDENFIND) in this world - where they are, once
+  if(seen.insert(uint32_t(-2)).second) {
+    int count = 0;
+    for(uint32_t i=0; auto* m = w->mobsiById(i); ++i) {
+      std::string st(m->nbOnStateFunc());
+      for(auto& c:st)
+        c = char(std::toupper(uint8_t(c)));
+      if(st.find("HIDDEN")==std::string::npos && st.find("DIG")==std::string::npos && st.find("GRAVE")==std::string::npos)
+        continue;
+      ++count;
+      const auto p = m->position();
+      Tempest::Log::i("[ctx] dig place: \"",m->tag(),"\" state=",m->nbOnStateFunc()," scheme=",m->schemeName(),
+                      " at ",int(p.x)," ",int(p.y)," ",int(p.z)," dist=",int((p-pl->position()).length()/100.f)," m");
+      }
+    const auto hp = pl->position();
+    Tempest::Log::i("[ctx] dig places in this world: ",count," (the hero at ",int(hp.x)," ",int(hp.y)," ",int(hp.z),")");
+    }
+  // items near (the sparkles of a treasure could be an item or an effect)
+  w->detectItem(pl->position(),500.f,[&](Item& it) {
+    if(seen.insert(uint32_t(0x80000000u)+uint32_t(it.clsId())).second)
+      Tempest::Log::i("[ctx] item near (no focus): ",it.displayName()," dist=",int((it.position()-pl->position()).length()));
+    });
   }
 
 void MainWindow::nbQuickLoot() {

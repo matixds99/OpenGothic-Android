@@ -268,6 +268,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Wstawianie części świata wydzielone do `nbInsertVobTree`.
   - Naprawa co 5 s: na Zachodnim Wybrzeżu, gdy `RX_WC_DeadPirateNote` = 2, a tej części świata nie ma – wstawiana teraz (raz; w logu `NB: the part of the world "…" was not inserted … - inserted now`). Brak pliku – błąd w logu, bez ponawiania.
 - **Do sprawdzenia:** wczytanie zapisu na Zachodnim Wybrzeżu po przeczytaniu notatki – przy krzyżu obiekt do kopania. Jeśli notatka nie była czytana, skrypt wstawi go sam po jej przeczytaniu.
+- **Drugi skarb Wybrzeża (wyższy kamień runiczny):** to inne miejsce – `PC_HIDDENFIND_Addon_Hour_Info` daje `ItMi_UpRuneBlank` przy `FP_ROAM_SPAWN_415` (do 3 m), po kopaniu w obiekcie z funkcją stanu `HIDDENFIND`. Tego obiektu port przy krzyżu nie ma. Diagnostyka (`common/mainwindow.cpp`): przy dotknięciu przycisku akcji bez celownika log wypisuje raz wszystkie obiekty kopania świata (`[ctx] dig place: … at x y z dist=… m`, `[ctx] dig places in this world: N`, pozycja bohatera) i przedmioty do 5 m – pokaże, czy obiekt jest w innym miejscu, czy go w ogóle nie ma.
 
 ### 159. Szybki łup (przytrzymanie przycisku akcji); log miejsc bez celownika – 🧪 (21.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/world/objects/interactive.h`
