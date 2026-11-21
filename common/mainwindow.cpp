@@ -1133,7 +1133,10 @@ void MainWindow::drawTouchBars(Painter& p, Npc& pl) {
   // optional numbers (the settings of the touch interface): never inside of a bar, so the bars stay as they are
   const auto  pref      = AndroidInput::preferences();
   const bool  numbers   = pref.hudNumbers!=0;
-  const bool  xp        = pref.hudXp!=0;
+  // NB fix 137: New Balance has a bar of the experience of its own (the option of the game); the old counter only without it
+  const bool  xpBar     = Gothic::settingsGetI("NB_OG","bXpBar")!=0 && nbSprintFn()!=nullptr;
+  const bool  xp        = pref.hudXp!=0 && !xpBar;
+  androidControls.xpBar(xpBar);
   const auto  hpText    = std::to_string(pl.attribute(ATR_HITPOINTS))+"/"+
                           std::to_string(pl.attribute(ATR_HITPOINTSMAX));
   const auto  mpText    = std::to_string(pl.attribute(ATR_MANA))+"/"+std::to_string(pl.attribute(ATR_MANAMAX));
@@ -1194,6 +1197,27 @@ void MainWindow::drawTouchBars(Painter& p, Npc& pl) {
     };
 
   drawHudBar(0,barHp,hp);
+  // NB fix 137: the experience of the level, as the bar of the plugin (UNION_XP_BAR): the part of the way to the next level.
+  // The span of a level is the one of RX_CalcNextLevelExp of the scripts: 500, from the level 10 600, 20 650, 30 800, 40 900,
+  // 50 1000, 60 1200 - times (level+1)
+  if(xpBar) {
+    const int32_t lvl  = pl.level();
+    const int32_t k    = lvl>=60 ? 1200 : lvl>=50 ? 1000 : lvl>=40 ? 900 : lvl>=30 ? 800 : lvl>=20 ? 650 : lvl>=10 ? 600 : 500;
+    const int64_t next = pl.experienceNext();
+    const int64_t span = lvl<=0 ? 500 : int64_t(k)*(lvl+1);
+    const int64_t prev = std::max<int64_t>(0,next-span);
+    const int64_t have = std::clamp<int64_t>(int64_t(pl.experience())-prev,0,std::max<int64_t>(1,next-prev));
+    const int64_t need = std::max<int64_t>(1,next-prev);
+    drawHudBar(3,barMisc,float(have)/float(need));
+    if(drawn[3].visible) {
+      const auto& d    = drawn[3];
+      const auto  text = "Poz. "+std::to_string(lvl)+"   "+std::to_string(have)+"/"+std::to_string(need)+
+                         " ("+std::to_string(int(have*100/need))+"%)";
+      const int   tw   = hudFont.textSize(text).w;
+      const int   th0  = hudFont.textSize(text).h;
+      drawText(text,d.x+(d.width-tw)/2,(d.top+d.bottom)/2+th0/2-2);
+      }
+    }
   if(pl.isDive()) {
     const float total = float(pl.diveTimeLimit())/1000.f;
     const float left  = total>0 ? (total-float(pl.diveTime())/1000.f)/total : 0.f;

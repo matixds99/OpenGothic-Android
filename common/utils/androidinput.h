@@ -118,6 +118,7 @@ class Controller {
     bool  held(Mobile::Key key) const { return controls.held(key); }        // NB fix 133
     bool  stickHeld() const { return controls.stickActive(); }              // NB fix 134
     void  stamina(bool available) { controls.stamina(available); }
+    void  xpBar(bool available) { controls.xpBar(available); }   // NB fix 137
     const std::map<std::string,Mobile::HudPlace>& hudPlaces() const { return controls.hudPlaces(); }
     bool  editingHud() const { return controls.editingHud(); }
     void  modMenu(bool on) { controls.modMenu(on); }

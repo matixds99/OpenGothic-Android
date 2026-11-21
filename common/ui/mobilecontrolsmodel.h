@@ -146,9 +146,9 @@ struct Rect {
   };
 
 /// NB fix 42: the status bars over the hotbar are a part of the HUD, as in New Balance: they are moved, resized and
-/// hidden in the editor of the HUD. Index 0 life, 1 stamina (New Balance), 2 mana.
-constexpr const char* HudBarIds[] = {"bar_hp", "bar_stamina", "bar_mana"};
-constexpr int   HudBarCount  = 3;
+/// hidden in the editor of the HUD. Index 0 life, 1 stamina (New Balance), 2 mana, 3 the experience (NB fix 137).
+constexpr const char* HudBarIds[] = {"bar_hp", "bar_stamina", "bar_mana", "bar_xp"};
+constexpr int   HudBarCount  = 4;
 constexpr float HudBarAspect = 0.125f;   // the height of the frame (BAR_BACK.TGA) to its width
 
 /// The frame of a status bar on the screen, for the size of the buttons (in percent/100)
@@ -168,6 +168,9 @@ inline Rect hudBarRect(int bar, float width, float height, float buttons, const 
     const float left = bar==0 ? width/2-half : bar==2 ? width/2+half-w0 : width/2-w0/2;
     cx = left+w0/2;
     cy = bottom-w0*HudBarAspect/2;
+    if(bar==3)
+      cy -= w0*HudBarAspect*1.9f;   // NB fix 137: the experience over the stamina, in the middle
+
     }
   return {cx-w/2,cy-h/2,w,h};
   }
@@ -237,6 +240,7 @@ class Controls {
     void  summons(bool have, bool open);
     /// The scripts have a bar of the stamina (New Balance): it is in the editor of the HUD (NB fix 42)
     void  stamina(bool available);
+    void  xpBar(bool available);   // NB fix 137: the bar of the experience is on (the option of the game)
     float buttonsScale() const { return buttonScale; }
     /// The player is dead: the button of the speed is hidden, the button that loads the newest save is shown
     void  playerDead(bool dead);
@@ -375,6 +379,7 @@ class Controls {
     bool     featureStrafe = true;    // the step buttons: the side steps and the arrows forward and back
     bool     featureSprint = false;   // the scripts have a sprint (NB fix 40)
     bool     featureStamina = false;  // the scripts have a bar of the stamina (NB fix 42)
+    bool     featureXp      = false;  // NB fix 137: the bar of the experience
     bool     dead          = false;   // the player is dead
     bool     editing    = false;      // the editor of the HUD
     bool     hudChanged = false;

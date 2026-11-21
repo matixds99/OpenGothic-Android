@@ -160,6 +160,7 @@ inline constexpr Default defaults[] = {
   {"BELIARS_RAGE", "RX_BeliarRage_ShowVisualPos", 1},
   {"NB_OG", "bNewItems", 1},   // NB fix 121, 122: the marks of the unread documents in the inventory
   {"NB_OG", "bRemoveBodies", 1},   // NB fix 136: the empty bodies go away
+  {"NB_OG", "bXpBar", 1},          // NB fix 137: the bar of the experience on the HUD
   };
 
 struct Option {
@@ -187,6 +188,8 @@ inline constexpr Option shown[] = {
   {"SHOW_SKIP_LOGO", "AST", "bSkipLogo", 0},
   // NB fix 121, 122: the marks of the unread documents in the inventory (ui/inventorymenu.cpp), on by default
   {"OG_NEW_ITEMS", "NB_OG", "bNewItems", 0, "Oznaczanie nowych przedmiot\xF3w w ekwipunku"},
+  // NB fix 137: the bar of the experience (mainwindow.cpp, drawTouchBars), moved and resized in the editor of the HUD
+  {"OG_XP_BAR", "NB_OG", "bXpBar", 0, "Pasek do\x9Cwiadczenia"},
   // the gameplay
   {"GAMEPLAY_HARDBOSSES", "AST", "bToggleHardBosses", 2},
   {"GAMEPLAY_SAVES", "AST", "bCanSaveLeg", 2},

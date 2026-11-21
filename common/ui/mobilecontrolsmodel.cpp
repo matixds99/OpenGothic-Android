@@ -177,6 +177,16 @@ void Controls::features(bool speed, bool strafe) {
   rebuild();
   }
 
+void Controls::xpBar(bool available) {
+  if(featureXp==available)
+    return;
+  featureXp = available;
+  if(editing) {
+    cancel();
+    rebuild();
+    }
+  }
+
 void Controls::stamina(bool available) {
   if(featureStamina==available)
     return;
@@ -381,6 +391,8 @@ void Controls::buildSettings(const Anchor& a) {
       continue;
     if(i==SettingAcrobatic)
       continue;   // NB fix 108: in the menu of the game, the page "Ustawienia gry i sterowanie"
+    if(i==SettingHudXp && featureSprint)
+      continue;   // NB fix 137: New Balance has the bar of the experience, switched in the menu of the game
     rows.push_back(i);
     }
   // the last row opens the editor of the HUD
@@ -569,6 +581,8 @@ void Controls::buildGame(const Anchor&) {
     for(int i=0; i<HudBarCount; ++i) {
       if(i==1 && !featureStamina)
         continue;
+      if(i==3 && !featureXp)
+        continue;   // NB fix 137
       HudPlace place;
       if(auto it = places.find(HudBarIds[i]); it!=places.end())
         place = it->second;

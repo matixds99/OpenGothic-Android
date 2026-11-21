@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **137**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **138**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **136** – puste ciała postaci i zwierząt znikają po 2 s (przełącznik w ustawieniach NB) – ✅
-2. **135** – szybki atak (QUICK): bohater nie biegnie dalej sam w stronę celu – ✅
-3. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – ✅ wskazał przyczynę
-4. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
-5. **132** – zmiana celu w walce: potwory i ludzie odwracają się do przywołańca lub innej postaci, która ich bije – ✅
+1. **137** – osobny pasek doświadczenia: przesuwany w edytorze HUD, włączany w ustawieniach NB – 🧪
+2. **136** – puste ciała postaci i zwierząt znikają po 2 s (przełącznik w ustawieniach NB) – ✅
+3. **135** – szybki atak (QUICK): bohater nie biegnie dalej sam w stronę celu – ✅
+4. **134** – log: co porusza bohatera, gdy biegnie sam do celu (diagnostyka) – ✅ wskazał przyczynę
+5. **133** – bohater nie biegnie sam do przodu i nie atakuje po trafieniu (zabezpieczenia) – ⏸ nie pomogło
 
 ---
 
@@ -249,6 +249,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 137. Osobny pasek doświadczenia – 🧪 (21.11.2026)
+- **Pliki:** `common/mainwindow.cpp` (`drawTouchBars`), `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.h`, `common/game/nboptions.h`
+- **Zgłoszenie:** licznik doświadczenia był przyczepiony do paska wytrzymałości. Ma być osobnym, przesuwanym paskiem, jak na PC (plugin UNION_XP_BAR), włączanym w przełącznikach gry.
+- **Zmiana:**
+  - Nowy pasek doświadczenia na HUD, domyślnie na środku nad paskiem wytrzymałości. W edytorze HUD da się go przesunąć, zmienić jego rozmiar i ukryć, tak jak paski życia, wytrzymałości i many.
+  - Pasek pokazuje postęp w bieżącym poziomie, jak na PC: na pasku napis „Poz. N  zdobyte/potrzebne (procent)”. Zakres poziomu liczony jak w `RX_CalcNextLevelExp` skryptów NB: 500 × (poziom+1), od poziomu 10 – 600, 20 – 650, 30 – 800, 40 – 900, 50 – 1000, 60 – 1200.
+  - Przełącznik „Pasek doświadczenia” w ustawieniach NB (interfejs), domyślnie włączony.
+  - Ze stałym paskiem znika stary licznik nad wytrzymałością, a jego przełącznik „XP counter” nie jest pokazywany w ustawieniach dotyku przy New Balance.
+- **Do sprawdzenia:**
+  - Pasek widoczny nad wytrzymałością, wartości po zdobyciu doświadczenia.
+  - Przesunięcie i zmiana rozmiaru w edytorze HUD.
+  - Wyłączenie w ustawieniach NB.
 
 ### 136. Usuwanie pustych ciał postaci i zwierząt – ✅ (20.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h` (`nbBodiesTick`), `common/game/nboptions.h`, `common/mainwindow.cpp`
