@@ -17,7 +17,7 @@ Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
 1. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – 🧪
 2. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
-3. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – 🧪
+3. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
 4. **148** – specjalne trafienia młota Adanosa (kamienni i starożytni strażnicy) – 🧪
 5. **147** – „Rysowanie świata”: drzewa, płoty i skały rysowane tak daleko jak teren (bez wyskakiwania przed bohaterem) – ✅
 
@@ -283,7 +283,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Przedmioty z blaskiem leżące na ziemi.
   - Klatki przy wielu postaciach z takimi broniami.
 
-### 149. Paczka 6 brakujących funkcji (log z Zachodniego Wybrzeża) – 🧪 (21.11.2026)
+### 149. Paczka 6 brakujących funkcji (log z Zachodniego Wybrzeża) – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`
 - **Zgłoszenie:** log z gry na Zachodnim Wybrzeżu (podsumowania `NB missing` i wpisy `not implemented call`).
 - **Poprawki:**
@@ -300,6 +300,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Rozmowa z Fregyalem na Zachodnim Wybrzeżu – są jego tematy.
   - Kormak w walce rzuca wodną pięść.
 - **Test (21.11, log):** Kormak dostaje runę wodnej pięści (`rune for the spell 72: ITRU_WATERFIST`) i walczy czarem.
+- **Test (21.11):** rozmowa z Fregyalem na Zachodnim Wybrzeżu działa – 25 tematów przeniesionych (`dialogs: 25 moved`), handel otwiera się.
   - Wyłamywanie zamków i kradzież bez `not implemented call` w logu.
 
 ### 148. Młot Adanosa przeciw kamiennym strażnikom – 🧪 (21.11.2026)
