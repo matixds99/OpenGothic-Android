@@ -209,6 +209,7 @@ struct NbState {
   // right, and the list "Ognik: name xN" of the brought items on the left (the last 7, 10 s each)
   uint64_t                                    wispSeen       = 0;  // the wisp was near the hero (for the texts)
   bool                                        wispReturn     = false; // NB fix 64: flying back to the hero
+  uint64_t                                    nextWispFarLog = 0;     // NB fix 154
   // NB fix 68: the window of the plugin to sell given items (RX_Craft_PlayerSales_*): the list and the trader. The
   // window opens after the dialog is closed (the scripts call AI_StopProcessInfos before it)
   std::vector<Gothic::NbSaleItem>             salesList;
@@ -4995,10 +4996,17 @@ void GameScript::tick(uint64_t dt) {
       const auto  d    = wisp->position()-hero->position();
       const float dist = d.length();
       if(dist>4000.f) {
+        // NB fix 154: the flight back stops and the new place is applied at once (the transform too) - the far wisp
+        // was put next to the hero, but the log showed it 40-50 m away again and again
         const float a = hero->rotation()*3.14159265f/180.f;
         wisp->clearAiQueue();
         wisp->setPosition(hero->position()+Tempest::Vec3(std::sin(a)*120.f,60.f,std::cos(a)*120.f));
-        nbCtx("the wisp was ",int(dist)," cm away: next to the hero again");
+        wisp->updateTransform();
+        st.wispReturn = false;
+        if(tickCount()>=st.nextWispFarLog) {
+          st.nextWispFarLog = tickCount()+5000;
+          nbCtx("the wisp was ",int(dist)," cm away: next to the hero again");
+          }
         }
       else if(dist>800.f) {
         // NB fix 64: the wisp of the plugin does not stay at the hero, it flies around and searches - back to the
@@ -5216,7 +5224,12 @@ void GameScript::tick(uint64_t dt) {
     float dist = d.length();
     if(dist<1.f)
       return;
-    const float step = std::min(dist,(nbWispSkill(vm,9) ? 1500.f : 800.f)*float(dt)/1000.f);
+    // NB fix 154: farther than 15 m the wisp flies twice as fast - a running (or sprinting) hero left it behind, at 40 m it
+    // was taken away and put next to him again: the wisp vanished and came back
+    float speed = nbWispSkill(vm,9) ? 1500.f : 800.f;
+    if(dist>1500.f)
+      speed *= 2.f;
+    const float step = std::min(dist,speed*float(dt)/1000.f);
     w.setPosition(w.position()+d*(step/dist));
     w.setDirection(Tempest::Vec3(d.x,0,d.z));
     };

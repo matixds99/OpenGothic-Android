@@ -174,10 +174,26 @@ DamageCalculator::Val DamageCalculator::swordDamage(Npc& nsrc, Npc& nother) {
       }
 
     bool invincible = true;
+    // NB fix 155: with several kinds of damage (the golems and the trolls: DAM_BLUNT|DAM_FLY, the magic weapons) Gothic 2
+    // adds the strength once and shares the whole (strength + damage) among the kinds by their part of the damage.
+    // OpenGothic added the whole strength to every kind: the stone golem of NB (750 strength, 250 blunt, 100 fly) hit for
+    // 750+250 and 750+100 - nearly twice the blow of the original
+    int kinds = 0, dmgSum = 0;
+    for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i)
+      if((dtype & (1<<i))!=0) {
+        ++kinds;
+        dmgSum += std::max(src.damage[i],0);
+        }
     for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i) {
       if((dtype & (1<<i))==0)
         continue;
-      int vd = std::max(str + src.damage[i] - other.protection[i],0);
+      int full = str + src.damage[i];
+      if(kinds>1) {
+        if(dmgSum>0)
+          full = int((int64_t(str)+dmgSum)*std::max(src.damage[i],0)/dmgSum); else
+          full = str/kinds;
+        }
+      int vd = std::max(full - other.protection[i],0);
       if(src.hitchance[tal]<=critChance)
         vd = (vd-1)/10;
       if(other.protection[i]>=0) { // Filter immune

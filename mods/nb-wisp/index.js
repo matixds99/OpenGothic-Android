@@ -151,9 +151,12 @@ setInterval(() => {
         return;
     }
     removeWisps(w);
+    // NB fix 154: a far wisp is no longer taken away and called again here - the engine puts it next to the hero
+    // (common/game/gamescript.cpp); both at 40 m made the wisp vanish and come back. Only a wisp lost very far (another
+    // part of a big world, 100 m) is called again
     const a = w.position, b = player.position;
     const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
-    if (dx * dx + dy * dy + dz * dz > 4000 * 4000) {
+    if (dx * dx + dy * dy + dz * dz > 10000 * 10000) {
         w.remove();
         wisp = null;
         spawnWisp(true);

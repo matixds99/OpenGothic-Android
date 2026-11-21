@@ -204,8 +204,12 @@ GameSession::GameSession(Serialize &fin) {
       }
     }
 
-  if(auto hero = wrld->player())
+  if(auto hero = wrld->player()) {
     vm->setInstanceNPC("HERO",*hero);
+    // NB fix 154: the summoned creatures do not come back from a save-game (the plugin of NB sends them away at the load,
+    // as at a change of the world). The pets (Nixdog, Jina), the totem and the wisp (kept by its mod) stay
+    vm->nbResetSummons(true,false);
+    }
 
   if(vm->hasDma()) {
     // Ikarus and LeGo start again in a new process: the original engine calls the init functions of the scripts after

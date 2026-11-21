@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – ✅
-2. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
-3. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
-4. **150** – efekty przedmiotów: ogień i blask na broniach w ręku i na plecach (ślad przy ciosie), efekty przedmiotów leżących w świecie – 🧪
-5. **149** – paczka 6 brakujących funkcji: dialogi Fregyala na Zachodnim Wybrzeżu, runy magów NB, postać w celowniku – ✅
+1. **155** – obrażenia potworów z kilkoma rodzajami obrażeń (kamienny golem, trolle): siła liczona raz, jak w Gothic 2 – 🧪
+2. **154** – ognik nie znika i nie pojawia się nagle; przywołańce nie wracają po wczytaniu zapisu – 🧪
+3. **153** – czerwony dym na Zachodnim Wybrzeżu (windy z cząsteczkami jako wyglądem) – ✅
+4. **152** – postać zaatakowana przez kilku przeciwników naraz walczy, zamiast tylko odskakiwać i obracać się między nimi – 🧪
+5. **151** – zaklinanie wyglądu broni u Gallahada (ogień, elektryczność, światło… w kolorach i intensywności) – ✅
 
 ---
 
@@ -249,6 +249,29 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 155. Obrażenia z kilkoma rodzajami naraz (kamienny golem) – 🧪 (21.11.2026)
+- **Pliki:** `common/game/damagecalculator.cpp`
+- **Zgłoszenie:** kamienny golem zadaje za duże obrażenia (do porównania ze skryptami).
+- **Skrypty NB (`StoneGolem`, `Mst_Default_StoneGolem`):**
+  - siła 750;
+  - obrażenia obuchowe 250 i obrażenia odrzutu 100 (`DAM_BLUNT|DAM_FLY`).
+- **Przyczyna:** OpenGothic dodawał całą siłę do każdego rodzaju obrażeń osobno: 750+250 obuchowych i 750+100 odrzutu, razem ok. 1850 przed pancerzem. W Gothic 2 siła liczy się raz: suma (siła + obrażenia) jest dzielona między rodzaje według ich udziału – u golema ok. 786 obuchowych i 314 odrzutu, razem 1100 przed pancerzem.
+- **Poprawka:** przy kilku rodzajach obrażeń siła jest dodawana raz i dzielona proporcjonalnie (dotyczy też trolli i broni z dwoma rodzajami obrażeń). Przy jednym rodzaju bez zmian.
+- **Do sprawdzenia:** cios golema i trolla – w logu `DMG2: melee attacker='Kamienny golem' ... value=` (przed poprawką ok. 1850 minus pancerz, teraz ok. 1100 minus pancerz); porównanie z PC.
+
+### 154. Ognik i przywołańce po wczytaniu – 🧪 (21.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/gamesession.cpp`, `mods/nb-wisp/index.js` (1.2.2)
+- **Zgłoszenie:**
+  1. Ognik znika i pojawia się w losowych momentach.
+  2. Po wczytaniu zapisu przywołane stworzenie wciąż jest przy bohaterze – na PC go nie ma.
+- **Przyczyna:**
+  1. Ognik zostawał w tyle za biegnącym bohaterem (leci 8 m/s). Przy 40 m silnik stawiał go obok bohatera, a jednocześnie mod ognika co 3 s go usuwał i przywoływał od nowa – stąd znikanie i pojawianie się. W logu seria `the wisp was 42..54 m away`.
+  2. Przywołańce zapisywały się z grą i wracały po wczytaniu. Plugin NB odsyła je przy wczytaniu, jak przy zmianie świata.
+- **Poprawka:**
+  1. Ognik dalej niż 15 m od bohatera leci dwa razy szybciej. Przy 40 m silnik stawia go obok bohatera od razu (pozycja i transformacja) i przerywa lot powrotny. Mod ognika usuwa i przywołuje go tylko, gdy zgubi się dalej niż 100 m (np. po teleporcie). Log odległości najwyżej raz na 5 s.
+  2. Po wczytaniu zapisu przywołańce są odsyłane (jak `RX_ResetSummons`). Zostają zwierzaki (Nixdog, Jina), totem i ognik.
+- **Do sprawdzenia:** bieg i sprint z ognikiem – leci za bohaterem i nie miga; wczytanie zapisu z przywołańcem – go nie ma.
 
 ### 153. Czerwony dym na Zachodnim Wybrzeżu – ✅ (21.11.2026)
 - **Pliki:** `common/world/triggers/movetrigger.cpp/.h`, `common/game/gamescript.cpp` (`RX_RemoveVobTree`)
