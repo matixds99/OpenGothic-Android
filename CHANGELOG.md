@@ -255,10 +255,11 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zgłoszenie:** napisy na karcie przedmiotu (prawa strona ekwipunku) są za duże (uwaga borsuczyny). Pomysł: zmniejszyć je i w wolnym miejscu pokazywać bonusy z jedzenia. Na zrzucie zakładka wszystkich przedmiotów nazywa się „Other (481)”.
 - **Poprawka:**
   - Nazwa przedmiotu mniejsza o ok. 10%, właściwości (obrażenia, wymagania, waga, wartość) o ok. 18%.
-  - Po użyciu przedmiotu z ekwipunku (jedzenie, mikstura, zwój…) między nazwą a obrazkiem pojawia się na zielono, co bohater zyskał, np. „Inteligencja +1   Maks. życie +5”. Liczone ze zmiany wartości bohatera: życie, mana, ich maksima, siła, zręczność, inteligencja i maks. wytrzymałość NB. Napis zostaje 6 s od ostatniego użycia, kolejne użycia się sumują.
+  - Po użyciu przedmiotu z ekwipunku (jedzenie, mikstura, zwój…) na karcie pojawia się na zielono, co bohater zyskał, np. „Inteligencja +1   Maks. życie +5”. Liczone ze zmiany wartości bohatera: życie, mana, ich maksima, siła, zręczność, inteligencja i maks. wytrzymałość NB. Napis zostaje 6 s od ostatniego użycia, kolejne użycia się sumują.
   - Nazwy zakładek: `TXT_INV_CAT` w NB jest częściowo po angielsku („Other”, „Weapons”, „Potions”), a pierwsza pozycja („Other”) to zakładka wszystkich przedmiotów. Port pokazuje polskie nazwy: Wszystko, Bronie, Mikstury… Polskie nazwy skryptów (Magia, Jedzenie, Dokumenty…) zostają.
 - **Do sprawdzenia:** zjedzenie przedmiotu ze stałym bonusem (np. gulasz, eliksir umysłu) – zielony napis z bonusem; czytelność mniejszych napisów; nazwa pierwszej zakładki.
 - **Test (21.11):** działa – po wypiciu eliksiru zręczności pod nazwą pojawia się „Zręczność +2”.
+- **Zmiana po teście:** napis był prawie czarny (kolor nakładał się na ciemną czcionkę książkową) i ściśnięty pod nazwą. Teraz jest pod właściwościami przedmiotu, po lewej, każdy bonus w osobnej linii, białą czcionką gry zabarwioną na zielono (utrata siły, zręczności itp. – na czerwono).
 
 ### 155. Obrażenia z kilkoma rodzajami naraz (kamienny golem) – ✅ (21.11.2026)
 - **Pliki:** `common/game/damagecalculator.cpp`

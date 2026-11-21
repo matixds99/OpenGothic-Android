@@ -130,11 +130,12 @@ class InventoryMenu : public Tempest::Widget {
     uint64_t                          nbNextLook  = 0;
     bool                              nbMarkOn    = true;
     bool                              nbMarkPl    = false;   // the text of the mark in Polish (New Balance)
-    // NB fix 156: what the used item gave the hero (food, potions): the values before the use, shown at the top of the
-    // card as "Inteligencja +1" while they change and 5 s after
+    // NB fix 156: what the used item gave the hero (food, potions): the values before the use, shown under the properties
+    // of the card ("Inteligencja +1") while they change and 6 s after
     std::array<int32_t,8>             nbGainBase{};
     uint64_t                          nbGainUntil = 0;
     std::string                       nbGainText;
+    [[maybe_unused]] bool             nbGainLoss  = false;
     std::array<int32_t,8>             nbGainValues(Npc& pl) const;
     void   nbSnapshot(Npc& pl);
     void   nbFindNew (Npc& pl);

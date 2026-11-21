@@ -1626,36 +1626,53 @@ void InventoryMenu::drawInfoTouch(Painter& p) {
   for(auto& l:lines)
     f.drawText(p,x0,l.y,l.text);
 
-  // NB fix 156: what the used item gave, between the name and the picture, green ("Inteligencja +1  Si\xB3a +2")
+  // NB fix 156: what the used item gave - under the properties, on the left, green (a loss: red). The white font of the
+  // game tinted (the dark font of the books stayed almost black with any color)
   if(player!=nullptr && nbGainUntil>=Application::tickCount()) {
     const auto now = nbGainValues(*player);
     const bool plTxt = touchPolish();
     static const char* namePl[8] = {"\xAFycie","Maks. \xBFycie","Mana","Maks. mana","Si\xB3""a","Zr\xEA""czno\x9C\xE6","Inteligencja","Maks. wytrzyma\xB3o\x9C\xE6"};
     static const char* nameEn[8] = {"Life","Max life","Mana","Max mana","Strength","Dexterity","Intelligence","Max stamina"};
-    std::string txt;
+    std::vector<std::string> gain;
+    bool loss = false;
     for(size_t i=0; i<now.size(); ++i) {
       const int32_t d = now[i]-nbGainBase[i];
       if(d==0)
         continue;
-      if(!txt.empty())
-        txt += "   ";
-      txt += std::string(plTxt ? namePl[i] : nameEn[i])+(d>0 ? " +" : " ")+std::to_string(d);
+      if(d<0 && i!=0 && i!=2)
+        loss = true;
+      gain.push_back(std::string(plTxt ? namePl[i] : nameEn[i])+(d>0 ? " +" : " ")+std::to_string(d));
       }
-    if(!txt.empty())
-      nbGainText = txt;
+    if(!gain.empty()) {
+      nbGainText.clear();
+      for(auto& g:gain)
+        nbGainText += (nbGainText.empty() ? "" : "\n")+g;
+      nbGainLoss = loss;
+      }
     if(!nbGainText.empty()) {
-      float gsc = touchTextScale()*0.8f;
-      for(int i=0; i<8 && book(gsc).textSize(nbGainText).w>x1-x0; ++i)
-        gsc *= 0.9f;
-      const float s = std::max(0.5f,std::floor(gsc*20.f)/20.f);
-      static std::unordered_map<int,GthFont> green;
-      const int key = int(s*100.f)*2+(dark ? 1 : 0);
-      auto gi = green.find(key);
-      if(gi==green.end())
-        gi = green.emplace(key,book(gsc).tinted(dark ? Color(0.45f,1.f,0.45f) : Color(0.05f,0.45f,0.1f))).first;
-      auto& gf = gi->second;
-      const int gy = std::min(int(pic.y)-int(H*0.01f), titleY+gf.pixelSize()+int(H*0.012f));
-      gf.drawText(p,int(r.x+(r.w-float(gf.textSize(nbGainText).w))/2),gy,nbGainText);
+      const float s = std::max(0.5f,std::floor(rsc*20.f)/20.f);
+      static std::unordered_map<int,GthFont> fonts;
+      const int key = int(s*100.f)*2+(nbGainLoss ? 1 : 0);
+      auto gi = fonts.find(key);
+      if(gi==fonts.end()) {
+        const Color c = nbGainLoss ? Color(0.85f,0.12f,0.08f) : Color(0.10f,0.62f,0.16f);
+        gi = fonts.emplace(key,Resources::font(s).tinted(c)).first;
+        }
+      auto&     gf   = gi->second;
+      const int step = gf.pixelSize()+gf.pixelSize()/5;
+      int       gy   = (lines.empty() ? top : lines.back().y+step/2)+step;
+      size_t    pos  = 0;
+      while(pos<=nbGainText.size()) {
+        size_t nl = nbGainText.find('\n',pos);
+        if(nl==std::string::npos)
+          nl = nbGainText.size();
+        const std::string ln = nbGainText.substr(pos,nl-pos);
+        if(gy>bottom)
+          break;
+        gf.drawText(p,x0,gy,ln);
+        gy  += step;
+        pos  = nl+1;
+        }
       }
     }
 
