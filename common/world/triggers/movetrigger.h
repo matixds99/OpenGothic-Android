@@ -72,6 +72,7 @@ class MoveTrigger : public AbstractTrigger {
     std::string                          sfxMoving;
     std::string                          visualName;
     uint64_t                             stayOpenTime;
+    uint64_t                             nbLastMove = 0;   // NB fix 144: the tick of the last step, a new ride after a pause
 
     bool                                 hidden      = false;   // a script has hidden the visual (showVisual)
     State                                state       = Idle;
