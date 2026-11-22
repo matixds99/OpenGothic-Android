@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – 🧪
+1. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – ✅
 2. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – ✅
 3. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
 4. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – 🧪
@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 169. Szybki łup: okno skrzyni nie wraca – 🧪 (22.11.2026)
+### 169. Szybki łup: okno skrzyni nie wraca – ✅ (22.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`
 - **Zgłoszenie:** po przytrzymaniu przycisku akcji przedmioty są zabrane i wypisane, ale potem i tak otwiera się okno skrzyni.
 - **Przyczyna:** szybki łup (poprawka 167) zamyka ekwipunek od razu po zabraniu, a interakcja bohatera ze skrzynią (animacja otwierania) trwa jeszcze chwilę i skrzynia prosi o otwarcie okna drugi raz.
@@ -260,6 +260,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** przytrzymanie na skrzyni – lista zabranych przedmiotów, bez okna skrzyni; po chwili krótkie dotknięcie tej samej skrzyni otwiera ją normalnie (pustą).
 - **Test (22.11, nagranie):** nadal źle – po liście zabranych przedmiotów bohater zostaje kilka sekund przy skrzyni (animacja otwierania i zamykania), a na ekranie sterowanie jak przy otwartej skrzyni.
 - **Zmiana:** po szybkim łupie bohater odchodzi od skrzyni od razu, bez animacji zamykania (`setInteraction(nullptr, quick)` i zatrzymanie animacji) – także gdy skrzynia w ciągu 2 s prosi o ponowne otwarcie.
+- **Test 2 (22.11):** działa – przez ułamek sekundy widać chowające się okno, poza tym bez przerwy.
 
 ### 168. Sarkofagi i groby w ziemi w celowniku – ✅ (22.11.2026)
 - **Pliki:** `common/world/objects/interactive.cpp`
