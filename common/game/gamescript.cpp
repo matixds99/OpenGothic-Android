@@ -8528,6 +8528,11 @@ void GameScript::nbInsertVobTree(std::string_view path) {
 // NB fix 160: the parts of the world that the scripts inserted when the port did not have RX_InsertVobTree yet (before
 // fix 56) or did not find: the flag of the script is set, the objects are not there - the dig place of the treasure of the
 // note of the dead pirate on the West Coast (RX_WestCoast_Loop: RX_WC_DeadPirateNote 1 -> 2 and the tree)
+int32_t GameScript::nbIntVar(std::string_view name) {
+  auto* s = vm.find_symbol_by_name(name);
+  return (s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member()) ? s->get_int() : -1;
+  }
+
 void GameScript::nbRepairVobTrees() {
   struct Repair { const char* level; const char* flag; int32_t value; const char* tree; };
   static const Repair all[] = {

@@ -211,6 +211,7 @@ class GameScript final {
     void             nbSetFocusNpc(Npc* npc);   // NB fix 149
     void             nbInsertVobTree(std::string_view path);   // NB fix 56 (RX_InsertVobTree)
     void             nbRepairVobTrees();                       // NB fix 160
+    int32_t          nbIntVar(std::string_view name);          // a global int of the scripts (-1: none)
     void             nbPartyTeleportTick();                    // NB fix 161
     /// 0: the player does not open locks now; 1: by strength (a melee weapon drawn, RX_ForcePickLock); 2: by magic (the
     /// rune of the unlocking drawn); 3: with lock picks (no weapon, the talent and 100 of dexterity)

@@ -5503,6 +5503,21 @@ void Npc::startDialog(Npc& pl) {
     return;
   if(puppet)
     puppetInteract = true;
+  // NB fix 162 (diagnostics): a talk - the state of the character, its perception of the talk and the flags of the
+  // scripts that stop B_AssessTalk (CAMMODEON, HEROTRANS); once in 5 s for a character
+  static std::unordered_map<const Npc*,uint64_t> nextLog;
+  if(auto& at = nextLog[this]; owner.tickCount()>=at) {
+    at = owner.tickCount()+5000;
+    auto& sc     = owner.script();
+    auto  fnName = [&](const ScriptFn& f) -> std::string_view {
+      auto* s = f.isValid() ? sc.findSymbol(f.ptr) : nullptr;
+      return s!=nullptr ? std::string_view(s->name()) : std::string_view("-");
+      };
+    Log::i("[ctx] talk: \"",displayName(),"\" state=",fnName(aiState.funcIni),
+           " assessTalk=",fnName(perception[PERC_ASSESSTALK].func)," talk=",int(isTalk())," down=",int(isDown()),
+           " CAMMODEON=",sc.nbIntVar("CAMMODEON")," HEROTRANS=",sc.nbIntVar("HEROTRANS"),
+           " queue=",int(aiQueue.size()));
+    }
   if(perceptionProcess(pl,nullptr,0,PERC_ASSESSTALK))
     setOther(&pl);
   }

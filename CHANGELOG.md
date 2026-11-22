@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – 🧪
-2. **160** – skarb z notatki martwego pirata (Zachodnie Wybrzeże): miejsce kopania wstawiane w starszych zapisach – 🧪
-3. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko; log miejsc bez celownika (skarby) – 🧪
-4. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – ✅
-5. **157** – pociski potworów widać w locie: rój golema bagiennego, zombie i mumii, kwas bagiennych trutni – ✅
+1. **162** – Fregyal po pokonaniu szamana nie rozmawia: log przy próbie rozmowy (do diagnozy) – 🧪
+2. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – 🧪
+3. **160** – skarb z notatki martwego pirata (Zachodnie Wybrzeże): miejsce kopania wstawiane w starszych zapisach – 🧪
+4. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko; log miejsc bez celownika (skarby) – 🧪
+5. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – ✅
 
 ---
 
@@ -251,6 +251,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 162. Fregyal po pokonaniu szamana: brak rozmowy (diagnostyka) – 🧪 (22.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`, `common/game/gamescript.cpp/.h`
+- **Zgłoszenie:** po pokonaniu szamana jaszczuroludzi na Zachodnim Wybrzeżu nie da się porozmawiać z Fregyalem.
+- **Skrypty NB:**
+  - `AI_OnDead_Draconian_ShamanWC_Final`: Fregyal i druid dostają `B_ClearPerceptions`, stan `ZS_ReactToDamage` (który przywraca postrzeganie i kończy się po 10 s), rutynę `StayBattle`, pełne życie.
+  - `B_AssessTalk` kończy się bez rozmowy, gdy `CAMMODEON` (tryb kamery scen) albo `HEROTRANS` (przemiana bohatera) jest włączony. `CAMMODEON` włącza kamera walki z szamanem (`RX_CB_WC_BattleCamera`), a wyłącza `RX_WestCoast_Loop`, gdy licznik zaklęcia szamana dojdzie do 45.
+- **Diagnostyka:** przy każdej próbie rozmowy (raz na 5 s dla postaci) log: `[ctx] talk: "imię" state=… assessTalk=… talk=… down=… CAMMODEON=… HEROTRANS=… queue=…`. Pokaże, czy Fregyal ma postrzeganie rozmowy, w jakim jest stanie i czy skrypty nie blokują rozmowy flagą.
+- Pomocnicza funkcja `GameScript::nbIntVar` (globalna zmienna int skryptów).
+- **Do sprawdzenia:** log z próby rozmowy z Fregyalem.
 
 ### 161. Towarzysze teleportują się z bohaterem – 🧪 (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`
