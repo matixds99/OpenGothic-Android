@@ -626,8 +626,15 @@ bool Interactive::canSeeNpc(const Npc& npc, bool freeLos) const {
     float tHit = DynamicWorld::rayBox(head, dir, tMax, transform(), bbox[0], bbox[1]);
 
     auto  ray  = w->ray(head, head+dir*tHit);
-    if(ray.hasCol && ray.vob!=this && !isLadder()) // maybe need to trace to closes point of bbox instead?
+    // NB fix 168: a mob sunk into the ground (the sarcophagi of the excavation, the graves): the ray stops at the
+    // ground at its edge, inside its own box, and the points of its use are in the ground - it is seen anyway. Only a
+    // hit well before the box hides it
+    const float half = (bbox[1]-bbox[0]).length()*0.5f;
+    const bool  near = ray.hasCol && (ray.v-at).length()<=half+30.f;
+    if(ray.hasCol && ray.vob!=this && !isLadder() && !near) // maybe need to trace to closes point of bbox instead?
       return false;
+    if(near || (!ray.hasCol && isContainer()))   // a chest seen: its points of use may lie in the ground
+      return true;
     }
 
   for(auto& i:attPos){

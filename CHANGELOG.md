@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
-2. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – 🧪
-3. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
-4. **164** – mikstura ochrony przed następnym ciosem działa – ✅
-5. **163** – towarzysz po walce znowu w celowniku (Fregyal po pokonaniu szamana – rozmowa) – ✅
+1. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – 🧪
+2. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
+3. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – 🧪
+4. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
+5. **164** – mikstura ochrony przed następnym ciosem działa – ✅
 
 ---
 
@@ -251,6 +251,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 168. Sarkofagi i groby w ziemi w celowniku – 🧪 (22.11.2026)
+- **Pliki:** `common/world/objects/interactive.cpp`
+- **Zgłoszenie:** sarkofagów na wykopaliskach magów wody w Khorinis nie da się wziąć w celownik – jak wcześniej miejsc kopania (poprawka 165).
+- **Skrypty NB:** sarkofagi to skrzynie (`Sarg_S1`: licznik otwarć `SARG_DIGG`, w trybie `SBMode` 50% szans na zatrucie). Zawartość z pliku świata; `RX_InsertLoop` dokłada w Khorinis do `SARG_8` kamień zaklinania (obuchowy).
+- **Przyczyna:** port uznaje obiekt za widoczny, gdy promień od głowy bohatera dochodzi do jego pudełka bez przeszkód, a potem jeszcze do jednego z jego punktów użycia. Sarkofag wpuszczony w ziemię: promień zatrzymuje się na ziemi przy jego krawędzi, a punkty użycia leżą w ziemi.
+- **Poprawka:** promień zatrzymany tuż przy pudełku obiektu (nie dalej niż pół jego przekątnej i 30 cm od środka) nie zasłania go. Skrzynia, do której promień dochodzi bez przeszkód, jest widoczna bez sprawdzania punktów użycia.
+- **Do sprawdzenia:** sarkofagi na wykopaliskach – nazwa w celowniku, otwieranie i szybki łup; zwykłe skrzynie za ścianą nadal niewidoczne.
 
 ### 167. Szybki łup na skrzyniach – ✅ (22.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/ui/inventorymenu.cpp/.h`
