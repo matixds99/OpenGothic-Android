@@ -313,7 +313,7 @@ struct NbState {
     uint64_t                      until  = 0;
     };
   std::vector<Shot>                           shots;
-  uint64_t                                    nextVobRepair = 0;   // NB fix 160
+  uint64_t                                    nextVobRepair = 0;   // NB fix 165
   // NB fix 161: the companions go with the hero when he teleports (a jump of his position in the same world)
   const World*                                partyWorld    = nullptr;
   Tempest::Vec3                               partyHeroPos;
@@ -4869,7 +4869,7 @@ void GameScript::tick(uint64_t dt) {
     }
   if(tickCount()>=nb->second.nextVobRepair) {
     nb->second.nextVobRepair = tickCount()+5000;
-    nbRepairVobTrees();   // NB fix 160
+    nbRepairVobTrees();   // NB fix 165
     }
   // NB fix 82: the music of a boss fight plays again from the start; it ends 45 s after the last blow of the fight (the
   // player has run away) or with the death of the player, as the death of the boss does (RX_StopBossMusic)
@@ -8576,7 +8576,7 @@ void GameScript::nbInsertVobTree(std::string_view path) {
   st.vobTrees.push_back(std::move(t));
   }
 
-// NB fix 160: the parts of the world that the scripts inserted when the port did not have RX_InsertVobTree yet (before
+// NB fix 165: the parts of the world that the scripts inserted when the port did not have RX_InsertVobTree yet (before
 // fix 56) or did not find: the flag of the script is set, the objects are not there - the dig place of the treasure of the
 // note of the dead pirate on the West Coast (RX_WestCoast_Loop: RX_WC_DeadPirateNote 1 -> 2 and the tree)
 int32_t GameScript::nbIntVar(std::string_view name) {

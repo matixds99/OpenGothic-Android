@@ -2778,7 +2778,7 @@ void MainWindow::nbLogNearMobs() {
     }
   if(near==0 && seen.insert(uint32_t(-1)).second)
     Tempest::Log::i("[ctx] mob near (no focus): none in 5 m");
-  // NB fix 160 (diagnostics): the places of digging of NB (onStateFunc HIDDENFIND) in this world - where they are, once
+  // NB fix 165 (diagnostics): the places of digging of NB (onStateFunc HIDDENFIND) in this world - where they are, once
   if(seen.insert(uint32_t(-2)).second) {
     int count = 0;
     for(uint32_t i=0; auto* m = w->mobsiById(i); ++i) {

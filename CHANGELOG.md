@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **165** – miejsca kopania skarbów w celowniku („Miejsce do kopania”), skarb pirata i inne – 🧪
-2. **164** – mikstura ochrony przed następnym ciosem działa – 🧪
+1. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
+2. **164** – mikstura ochrony przed następnym ciosem działa – ✅
 3. **163** – towarzysz po walce znowu w celowniku (Fregyal po pokonaniu szamana – rozmowa) – ✅
 4. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – ✅
-5. **160** – skarb z notatki martwego pirata: miejsce kopania wstawiane w starszych zapisach – 🧪
+5. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko – ✅
 
 ---
 
@@ -252,19 +252,29 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 165. Miejsca kopania skarbów w celowniku – 🧪 (22.11.2026)
-- **Pliki:** `common/world/objects/interactive.cpp/.h`
-- **Zgłoszenie:** skarbu pirata nie da się wykopać, choć po przeczytaniu notatki skrypt wstawił jego miejsce (log: `part of the world: VOBTREE_WC_TREASURE_QUEST.ZEN (1 objects)`, w świecie 4 miejsca kopania zamiast 3).
+### 165. Skarby do wykopania: wstawianie miejsca i celownik – ✅ (22.11.2026)
+- **Pliki:** `common/world/objects/interactive.cpp/.h`, `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`
+- **Zgłoszenie (pierwsze):** skarbu przy krzyżu (niebieskie iskry) nie da się wykopać – nie ma celownika ani ikony.
+- **Log (poprawka 159):** `[ctx] mob near (no focus): none in 5 m` – w tym miejscu nie ma żadnego obiektu do użycia.
+- **Skrypty NB:** obiekt kopania nie jest częścią świata. `RX_WestCoast_Loop` wstawia go (`RX_InsertVobTree("VOBTREE/VOBTREE_WC_TREASURE_QUEST.ZEN")`) po przeczytaniu notatki martwego pirata (`RX_WC_DeadPirateNote` 1 → 2), jeden raz. Jeśli to się stało, zanim port obsługiwał `RX_InsertVobTree` (poprawka 56), albo pliku nie znalazł, flaga jest już 2, a obiektu nie ma – i skrypt nie wstawi go nigdy więcej.
+- **Poprawka:**
+  - Wstawianie części świata wydzielone do `nbInsertVobTree`.
+  - Naprawa co 5 s: na Zachodnim Wybrzeżu, gdy `RX_WC_DeadPirateNote` = 2, a tej części świata nie ma – wstawiana teraz (raz; w logu `NB: the part of the world "…" was not inserted … - inserted now`). Brak pliku – błąd w logu, bez ponawiania.
+- **Sprawdzenie (pierwsze):** wczytanie zapisu na Zachodnim Wybrzeżu po przeczytaniu notatki – przy krzyżu obiekt do kopania. Jeśli notatka nie była czytana, skrypt wstawi go sam po jej przeczytaniu.
+- **Drugi skarb Wybrzeża (wyższy kamień runiczny):** to inne miejsce – `PC_HIDDENFIND_Addon_Hour_Info` daje `ItMi_UpRuneBlank` przy `FP_ROAM_SPAWN_415` (do 3 m), po kopaniu w obiekcie z funkcją stanu `HIDDENFIND`. Tego obiektu port przy krzyżu nie ma. Diagnostyka (`common/mainwindow.cpp`): przy dotknięciu przycisku akcji bez celownika log wypisuje raz wszystkie obiekty kopania świata (`[ctx] dig place: … at x y z dist=… m`, `[ctx] dig places in this world: N`, pozycja bohatera) i przedmioty do 5 m – pokaże, czy obiekt jest w innym miejscu, czy go w ogóle nie ma.
+- **Zgłoszenie (drugie):** skarbu pirata nie da się wykopać, choć po przeczytaniu notatki skrypt wstawił jego miejsce (log: `part of the world: VOBTREE_WC_TREASURE_QUEST.ZEN (1 objects)`, w świecie 4 miejsca kopania zamiast 3).
 - **Przyczyna:** miejsca kopania NB (obiekty z funkcją stanu `HIDDENFIND`, schemat `ORE`, używane z kilofem) leżą w ziemi, pod skarbem, i nie mają nazwy w celowniku. Port sprawdza, czy obiekt widać: promień od głowy bohatera do pudełka obiektu i do jego punktów użycia – przez ziemię nigdy nie dochodził, więc miejsce nigdy nie trafiało do celownika.
 - **Poprawka:** miejsce kopania (`HIDDENFIND`) nie wymaga promienia – wystarczy odległość i kąt jak dla innych obiektów. Bez nazwy w celowniku pokazuje „Miejsce do kopania”. Dalej jak w skryptach: z kilofem okno „Kop.” i skarb przy punkcie (np. `FP_ROAM_SPAWN_857` – skarb pirata, `FP_ROAM_SPAWN_415` – wyższy kamień runiczny).
 - **Do sprawdzenia:** przy skarbie pirata z kilofem w ekwipunku – „Miejsce do kopania” w celowniku, kopanie, skarb.
+- **Test (22.11):** działa – „Miejsce do kopania” w celowniku, skarb pirata wykopany.
 
-### 164. Mikstura ochrony przed następnym ciosem – 🧪 (22.11.2026)
+### 164. Mikstura ochrony przed następnym ciosem – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/npc.cpp`
 - **Zgłoszenie:** nie działa mikstura na następny atak.
 - **Skrypty NB:** `Use_ItPo_HitPotion` ustawia tylko `RX_NextHitIgnore = TRUE`. Resztę robi plugin (`UNION_ABI.DLL` 0x1013AB90): przy następnym ciosie w bohatera, gdy `RX_NextHitIgnore` = 1 (a `RX_ImmortalState` nie), flaga wraca do 0, cios nie zadaje obrażeń, napis `sPotionHitProtected` i efekt `SPELLFX_HEAL` na bohaterze. Port tego nie miał – mikstura nic nie dawała (tylko napis w statusie).
 - **Poprawka:** `GameScript::nbNextHitIgnore` jak w pluginie: cios w bohatera (broń, czar, pocisk potwora – `Wld_PlayEffect_Vec`) zabrany, flaga 0, napis, efekt leczenia. W logu `[ctx] hit potion: the blow taken away`.
 - **Do sprawdzenia:** wypicie mikstury i jeden cios przeciwnika – bez obrażeń, napis; kolejny cios już normalnie.
+- **Test (22.11):** działa – mikstura ochroniła przed obrażeniami.
 
 ### 163. Towarzysz po walce znowu w celowniku (Fregyal) – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/npc.cpp`, `common/mainwindow.cpp/.h`
@@ -289,17 +299,6 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Nie obejmuje:** zmiany świata (inny plik ZEN) – tam towarzysze zostają, jak w Gothic 2.
 - **Do sprawdzenia:** z towarzyszem (np. Blizna) i przywołańcem teleport runą – obaj obok bohatera.
 - **Test (22.11):** działa – towarzysze teleportują się z bohaterem.
-
-### 160. Skarb z notatki martwego pirata: miejsce kopania – 🧪 (22.11.2026)
-- **Pliki:** `common/game/gamescript.cpp/.h`
-- **Zgłoszenie:** skarbu przy krzyżu (niebieskie iskry) nie da się wykopać – nie ma celownika ani ikony.
-- **Log (poprawka 159):** `[ctx] mob near (no focus): none in 5 m` – w tym miejscu nie ma żadnego obiektu do użycia.
-- **Skrypty NB:** obiekt kopania nie jest częścią świata. `RX_WestCoast_Loop` wstawia go (`RX_InsertVobTree("VOBTREE/VOBTREE_WC_TREASURE_QUEST.ZEN")`) po przeczytaniu notatki martwego pirata (`RX_WC_DeadPirateNote` 1 → 2), jeden raz. Jeśli to się stało, zanim port obsługiwał `RX_InsertVobTree` (poprawka 56), albo pliku nie znalazł, flaga jest już 2, a obiektu nie ma – i skrypt nie wstawi go nigdy więcej.
-- **Poprawka:**
-  - Wstawianie części świata wydzielone do `nbInsertVobTree`.
-  - Naprawa co 5 s: na Zachodnim Wybrzeżu, gdy `RX_WC_DeadPirateNote` = 2, a tej części świata nie ma – wstawiana teraz (raz; w logu `NB: the part of the world "…" was not inserted … - inserted now`). Brak pliku – błąd w logu, bez ponawiania.
-- **Do sprawdzenia:** wczytanie zapisu na Zachodnim Wybrzeżu po przeczytaniu notatki – przy krzyżu obiekt do kopania. Jeśli notatka nie była czytana, skrypt wstawi go sam po jej przeczytaniu.
-- **Drugi skarb Wybrzeża (wyższy kamień runiczny):** to inne miejsce – `PC_HIDDENFIND_Addon_Hour_Info` daje `ItMi_UpRuneBlank` przy `FP_ROAM_SPAWN_415` (do 3 m), po kopaniu w obiekcie z funkcją stanu `HIDDENFIND`. Tego obiektu port przy krzyżu nie ma. Diagnostyka (`common/mainwindow.cpp`): przy dotknięciu przycisku akcji bez celownika log wypisuje raz wszystkie obiekty kopania świata (`[ctx] dig place: … at x y z dist=… m`, `[ctx] dig places in this world: N`, pozycja bohatera) i przedmioty do 5 m – pokaże, czy obiekt jest w innym miejscu, czy go w ogóle nie ma.
 
 ### 159. Szybki łup (przytrzymanie przycisku akcji); log miejsc bez celownika – ✅ (21.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/world/objects/interactive.h`

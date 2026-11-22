@@ -210,7 +210,7 @@ class GameScript final {
     void             nbSetFocusMob(Interactive* mob);
     void             nbSetFocusNpc(Npc* npc);   // NB fix 149
     void             nbInsertVobTree(std::string_view path);   // NB fix 56 (RX_InsertVobTree)
-    void             nbRepairVobTrees();                       // NB fix 160
+    void             nbRepairVobTrees();                       // NB fix 165
     int32_t          nbIntVar(std::string_view name);
     bool             nbNextHitIgnore(Npc& hero);              // NB fix 164: ItPo_HitPotion          // a global int of the scripts (-1: none)
     void             nbPartyTeleportTick();                    // NB fix 161
