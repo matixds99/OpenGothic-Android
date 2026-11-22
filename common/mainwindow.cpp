@@ -2280,7 +2280,7 @@ void MainWindow::setupMobileControls() {
       nbLogNearMobs();   // NB fix 159: the diagnostics of the places that cannot be used (the treasures)
     return nbQuickLootTarget()!=0;
     };
-  androidControls.quickLoot = [this]() { nbQuickLoot(); };
+  androidControls.quickLoot = [this]() { return nbQuickLoot(); };
   // NB fix 111: a slot of the wheel: the item is used; an empty slot opens the inventory (to put something there);
   // a long press on a slot takes its item off the wheel
   androidControls.wheelPick = [this](int slot, bool held) {
@@ -2720,7 +2720,8 @@ int MainWindow::nbQuickLootTarget() const {
   const auto focus = player.focus();
   if(focus.npc!=nullptr && focus.npc->isDead())
     return 1;
-  if(focus.interactive!=nullptr && focus.interactive->nbPlainChest())
+  // NB fix 167: every chest that is not locked (the chests with a script or an owner too: they are opened as usual)
+  if(focus.interactive!=nullptr && focus.interactive->isContainer() && !focus.interactive->isLocked())
     return 2;
   return 0;
   }
@@ -2802,12 +2803,12 @@ void MainWindow::nbLogNearMobs() {
     });
   }
 
-void MainWindow::nbQuickLoot() {
+bool MainWindow::nbQuickLoot() {
   auto* pl = Gothic::inst().player();
   auto* w  = Gothic::inst().world();
   const int kind = nbQuickLootTarget();
   if(pl==nullptr || w==nullptr || kind==0)
-    return;
+    return false;
   const auto& fnt = Resources::font(1.f);
   // as in NB: not with enemies around (RX_Warn_QuickLoot_EnemiesNearby)
   bool enemies = false;
@@ -2817,10 +2818,20 @@ void MainWindow::nbQuickLoot() {
     });
   if(enemies) {
     Gothic::inst().onPrintScreen("Wrogowie w pobli\xBF" "u!",-1,70,2,fnt);
-    return;
+    return false;
     }
 
   const auto  focus = player.focus();
+  if(kind==2) {
+    // NB fix 167: a chest is opened as by a tap (its scripts, its owner, the animation), and the inventory takes all
+    // of it and closes at once
+    if(focus.interactive->inventory().iterator(Inventory::T_Inventory).isValid()) {
+      inventory.nbArmAutoLoot();
+      return true;
+      }
+    Gothic::inst().onPrintScreen("Nic tu nie ma",-1,70,2,fnt);
+    return false;
+    }
   const Inventory& inv   = kind==1 ? focus.npc->inventory() : focus.interactive->inventory();
   struct Taken { size_t cls; size_t count; std::string name; };
   std::vector<Taken> taken;
@@ -2828,23 +2839,17 @@ void MainWindow::nbQuickLoot() {
     taken.push_back({it->clsId(),it.count(),std::string(it->displayName())});
   if(taken.empty()) {
     Gothic::inst().onPrintScreen("Nic tu nie ma",-1,70,2,fnt);
-    return;
+    return false;
     }
   for(auto& t:taken) {
     if(kind==1)
       pl->addItem(t.cls,*focus.npc,t.count); else
       pl->addItem(t.cls,*focus.interactive,t.count);
     }
-  Gothic::inst().emitGlobalSound("INV_OPEN");
-  // what was taken: a line for each item, under the middle of the screen
-  const size_t maxLines = 6;
-  for(size_t i=0; i<taken.size() && i<maxLines; ++i) {
-    std::string line = taken[i].name;
-    if(taken[i].count>1)
-      line += " x"+std::to_string(taken[i].count);
-    if(i+1==maxLines && taken.size()>maxLines)
-      line = "... i jeszcze "+std::to_string(taken.size()-maxLines+1);
-    Gothic::inst().onPrintScreen(line,-1,int(56+i*4),3,fnt);
-    }
+  std::vector<std::pair<std::string,size_t>> lines;
+  for(auto& t:taken)
+    lines.emplace_back(t.name,t.count);
+  InventoryMenu::nbPrintTaken(lines);
+  return false;
   }
 #endif

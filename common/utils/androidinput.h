@@ -151,7 +151,7 @@ class Controller {
     std::function<void(int)>             action;
     /// NB fix 159: the quick loot - a long press of the action button on a corpse or a chest takes all of it
     std::function<bool()>                lootFocus;   // the focus can be looted by the long press
-    std::function<void()>                quickLoot;
+    std::function<bool()>                quickLoot;   // true: the action of the game is pressed now (a chest)
 
   private:
 #ifdef __ANDROID__

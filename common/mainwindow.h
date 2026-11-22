@@ -164,7 +164,7 @@ class MainWindow : public Tempest::Window {
 #ifdef OPENGOTHIC_TOUCH_UI
     AndroidInput::Controller   androidControls;
     int                        nbQuickLootTarget() const;   // NB fix 159
-    void                       nbQuickLoot();
+    bool                       nbQuickLoot();   // true: the action is pressed for the chest (fix 167)
     void                       nbLogNearMobs();
     void                       nbLogNearNpcs();
     InventoryRenderer          mobileItems[Resources::MaxFramesInFlight];

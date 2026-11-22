@@ -267,6 +267,24 @@ void InventoryMenu::open(Npc &pl, Interactive &ch) {
   update();
   }
 
+void InventoryMenu::nbArmAutoLoot() {
+  nbAutoLootUntil = Application::tickCount()+4000;
+  }
+
+void InventoryMenu::nbPrintTaken(const std::vector<std::pair<std::string,size_t>>& items) {
+  const auto& fnt = Resources::font(1.f);
+  Gothic::inst().emitGlobalSound("INV_OPEN");
+  const size_t maxLines = 6;
+  for(size_t i=0; i<items.size() && i<maxLines; ++i) {
+    std::string line = items[i].first;
+    if(items[i].second>1)
+      line += " x"+std::to_string(items[i].second);
+    if(i+1==maxLines && items.size()>maxLines)
+      line = "... i jeszcze "+std::to_string(items.size()-maxLines+1);
+    Gothic::inst().onPrintScreen(line,-1,int(56+i*4),3,fnt);
+    }
+  }
+
 InventoryMenu::State InventoryMenu::isOpen() const {
   return state;
   }
@@ -430,6 +448,29 @@ void InventoryMenu::tick(uint64_t /*dt*/) {
   if(state==State::LockPicking) {
     if(chest->isCracked()) {
       state = State::Chest;
+      return;
+      }
+    }
+
+  // NB fix 167: the quick loot of a chest - opened by the long press, emptied and closed at once
+  if(nbAutoLootUntil!=0 && (state==State::Chest || state==State::Ransack) && pageOth!=nullptr && player!=nullptr) {
+    const bool armed = Application::tickCount()<nbAutoLootUntil;
+    nbAutoLootUntil = 0;
+    if(armed) {
+      std::vector<std::pair<std::string,size_t>> taken;
+      std::vector<std::pair<size_t,size_t>>      cls;
+      for(auto it = pageOth->iterator(); it.isValid(); ++it) {
+        taken.emplace_back(std::string(it->displayName()),it.count());
+        cls.emplace_back(it->clsId(),it.count());
+        }
+      for(auto& c:cls) {
+        if(state==State::Chest && chest!=nullptr)
+          player->addItem(c.first,*chest,c.second); else
+        if(state==State::Ransack && trader!=nullptr)
+          player->addItem(c.first,*trader,c.second);
+        }
+      nbPrintTaken(taken);
+      close();
       return;
       }
     }

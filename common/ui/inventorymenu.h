@@ -95,6 +95,10 @@ class InventoryMenu : public Tempest::Widget {
     bool  ransack(Npc& pl,Npc& tr);
     void  open(Npc& pl,Interactive& chest);
     State isOpen() const;
+    /// NB fix 167: the quick loot of a chest - the next chest or body opened within 4 s is emptied and closed at once
+    void  nbArmAutoLoot();
+    /// the lines of the taken items in the middle of the screen (the quick loot)
+    static void nbPrintTaken(const std::vector<std::pair<std::string,size_t>>& items);
     bool  isActive() const;
     /// Another screen (a document, a video) is shown over the inventory
     void  setCovered(bool c) { covered = c; }
@@ -140,6 +144,7 @@ class InventoryMenu : public Tempest::Widget {
       uint64_t    start = 0;
       };
     std::vector<NbFloat>              nbFloats;
+    uint64_t                          nbAutoLootUntil = 0;   // NB fix 167
     void   nbDrawGains(Tempest::Painter& p);
     std::array<int32_t,8>             nbGainValues(Npc& pl) const;
     void   nbSnapshot(Npc& pl);

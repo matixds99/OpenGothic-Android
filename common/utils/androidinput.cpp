@@ -744,8 +744,19 @@ bool AndroidInput::Controller::update(Window& window, Mobile::Mode mode) {
       } else
     if(Application::tickCount()>=lootPress.downAt+500) {
       lootPress.state = LootPress::Fired;   // its release is not sent
-      if(quickLoot)
-        quickLoot();
+      if(quickLoot && quickLoot()) {
+        // NB fix 167: a chest - the action of the game opens it (the inventory takes all), its release a little later
+        const auto key  = keyType(Mobile::Key::Action);
+        const auto code = Mobile::KeyCodeBase+uint32_t(Mobile::Key::Action);
+        KeyEvent down(key,code,Event::M_NoModifier,Event::KeyDown);
+        Dispatch::dispatchKeyDown(window,down,code);
+        ComboKey rel;
+        rel.at   = Application::tickCount()+100;
+        rel.key  = Mobile::Key::Action;
+        rel.down = false;
+        combo.push_back(rel);
+        lootPress.state = LootPress::Idle;   // the release of the finger is sent too (the combo sends one more: harmless)
+        }
       }
     }
   // NB fix 85, 97: the keys of the quick attack that are due now
