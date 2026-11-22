@@ -722,6 +722,13 @@ void GameMusic::setScriptMute(bool m) {
   applyEnabled();
   }
 
+void GameMusic::setLoadMute(bool m) {
+  if(loadMute==m)
+    return;
+  loadMute = m;
+  applyEnabled();
+  }
+
 void GameMusic::applyEnabled() {
   const bool on    = isOn();
   const bool wasOn = playing;

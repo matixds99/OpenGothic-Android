@@ -41,6 +41,7 @@
 
 #include "commandline.h"
 #include "gothic.h"
+#include "gamemusic.h"
 
 #ifdef __ANDROID__
 #include <Tempest/AndroidApi>
@@ -1915,6 +1916,14 @@ void MainWindow::onVideo(std::string_view fname) {
   }
 
 void MainWindow::onStartLoading() {
+  // NB fix 174: the loading of a game or a world (not a save) is silent: the thread of the loading takes the processor
+  // and the stream of the music and the looped sounds of the old world (the death, the fight) did not get their data in
+  // time - the sound stuttered until the new world came. The music comes back with the new world (onWorldLoaded)
+  if(Gothic::inst().checkLoading()==Gothic::LoadState::Loading) {
+    GameMusic::inst().setLoadMute(true);
+    if(auto w = Gothic::inst().world())
+      w->sound()->stopAllSounds();
+    }
   dialogCameraReset = false;
   player   .clearInput();
   player   .clearFocus();
@@ -1926,6 +1935,7 @@ void MainWindow::onStartLoading() {
   }
 
 void MainWindow::onWorldLoaded() {
+  GameMusic::inst().setLoadMute(false);   // NB fix 174
   dMouse = Point();
 
   if(Gothic::inst().isBenchmarkMode()) {

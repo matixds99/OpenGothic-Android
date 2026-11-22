@@ -169,6 +169,7 @@ struct NbState {
   zenkit::DaedalusSymbol*  checkMenu       = nullptr;
   zenkit::DaedalusSymbol*  gamePaused      = nullptr; // GamePaused: the HUD of the scripts, the plugin calls it every frame
   uint64_t                 nextHud         = 0;       // NB fix 62: GamePaused and the effects, every 250 ms here
+  uint64_t                 nextSprintCheck = 0;       // NB fix 173
   zenkit::DaedalusSymbol*  frameTime       = nullptr;
   int                      unionCycle      = 0;
   uint64_t                 nextCycle       = 0;   // the next tick of the timer of the plugin (NB fix 57)
@@ -284,9 +285,11 @@ struct NbState {
   std::vector<DotLine>                        dotLines;   // on the left of the screen, 3 s each
   // NB fix 65: the loot of the dead (skill 10 of the wisp of the plugin): the body it flies to, the bodies done
   std::weak_ptr<zenkit::INpc>                 wispBody;
-  std::unordered_map<const zenkit::INpc*,uint64_t> wispBodySkip;
+  // NB fix 175: by the object and not by the address - a new character (a new world, a new monster) at the address of an
+  // old body was left alone by the wisp for 10 min
+  std::map<std::weak_ptr<zenkit::INpc>,uint64_t,std::owner_less<std::weak_ptr<zenkit::INpc>>> wispBodySkip;
   std::vector<std::pair<std::string,uint64_t>> wispLines;          // the brought items: text, until
-  std::unordered_map<const zenkit::IItem*,uint64_t> wispSkip;      // the items it did not reach: not again for 60 s
+  std::map<std::weak_ptr<zenkit::IItem>,uint64_t,std::owner_less<std::weak_ptr<zenkit::IItem>>> wispSkip; // not reached: not again for 60 s
   float                                       wispBestH = 0;
   const World*                                vobWorld = nullptr;
   // NB fix 76: AST_GetManaBonus - the parts of a point of mana that are left from the last call (as the plugin)
@@ -2041,8 +2044,7 @@ void GameScript::initCommon() {
     // weapon (a knife, a club) fought like a rapier. NoUpdate = without the re-init of the model (OpenGothic needs none).
     bindNb("MDL_REMOVEOVERLAYMDS_NOUPDATE", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view name) {
       if(auto npc = findNpc(npcRef))
-        if(auto sk = Resources::loadSkeleton(name))
-          npc->delOverlay(sk);
+        npc->delOverlay(name);   // NB fix 172: by the name, nothing is loaded
       });
     bindNb("MDL_APPLYOVERLAYMDS_NOUPDATE", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view name) {
       if(auto npc = findNpc(npcRef))
@@ -2053,8 +2055,7 @@ void GameScript::initCommon() {
       auto npc = findNpc(npcRef);
       if(npc==nullptr)
         return 0;
-      auto sk = Resources::loadSkeleton(name);
-      return sk!=nullptr && npc->hasOverlay(sk) ? 1 : 0;
+      return npc->hasOverlay(name) ? 1 : 0;   // NB fix 172: by the name
       });
     bindNb("RX_OPENCRAFT", [this](int32_t craftType) {
       // NB fix 70, 71: every table in the window of the plugin (the recipes from UNION_ABI.DLL); the old menus of the
@@ -2100,13 +2101,15 @@ void GameScript::initCommon() {
       return 0;
       });
     bindNb("NPC_GETWATERLEVEL", [this](std::shared_ptr<zenkit::INpc> npcRef) -> int32_t {
-      // WATER_NONE 0, WATER_FEET 1, WATER_DIVE 2
+      // WATER_NONE 0, WATER_FEET 1, WATER_DIVE 2. NB fix 173: as the engine (oCNpc water level): 1 is the water to the
+      // knees (wading), 2 the deep water - swimming and diving. The swim (S_SWIMF) of the hero takes the stamina in
+      // Hero_Poisoned by WATER_DIVE: with the swim as 1 the stamina never went down in the water
       auto npc = findNpc(npcRef);
       if(npc==nullptr)
         return 0;
-      if(npc->isDive())
+      if(npc->isDive() || npc->isSwim())
         return 2;
-      return npc->isSwim() || npc->isInWater() ? 1 : 0;
+      return npc->isInWater() ? 1 : 0;
       });
     NbBars::reset();
     bindNb("BAR_SETSHOW", [](int32_t bar, int32_t show) {
@@ -4936,6 +4939,26 @@ void GameScript::tick(uint64_t dt) {
     callNb(st.perFrame);
     }
 
+  // NB fix 173: the end of the sprint without the stamina (PerFrame of the scripts: RX_SpeedPotion<=0, ATR_STAMINA<=0 and
+  // SPRINT_ACTIVE -> Mdl_RemoveOverlayMDS "Humans_MageSprint.MDS", SPRINT_ACTIVE=FALSE). PerFrame does it only every second frame
+  // and under its own conditions (not in the change of the form, not dead); a sprint that stayed on with no stamina (the
+  // overlay applied again by another script after it) ran on, another time it ended. Here as PerFrame, for the overlay
+  // itself as well
+  if(tickCount()>=st.nextSprintCheck) {
+    st.nextSprintCheck = tickCount()+200;
+    auto* pl = world().player();
+    const bool    known   = vm.find_symbol_by_name("ATR_STAMINA")!=nullptr && vm.find_symbol_by_name("RX_SPEEDPOTION")!=nullptr;
+    const int32_t stamina = nbIntVar("ATR_STAMINA");
+    const int32_t speed   = nbIntVar("RX_SPEEDPOTION");
+    if(known && pl!=nullptr && !pl->isDead() && stamina<=0 && speed<=0 && pl->hasOverlay("Humans_MageSprint.MDS")) {
+      pl->delOverlay("Humans_MageSprint.MDS");
+      if(auto* act = vm.find_symbol_by_name("SPRINT_ACTIVE"); act!=nullptr && act->type()==zenkit::DaedalusDataType::INT &&
+         !act->is_member())
+        act->set_int(0);
+      nbCtx("sprint: no stamina - the sprint ends");
+      }
+    }
+
   // NB fix 62: the HUD of NB - GamePaused of the scripts (the karma of the gods, the arrows, the hunger, the icons of
   // the state; PrintScreen for 1 s, so the plugin calls it every frame - here every 250 ms) and the list of the
   // effects with their time of the plugin
@@ -4995,6 +5018,9 @@ void GameScript::tick(uint64_t dt) {
           wisp = &n;
         });
       }
+    // NB fix 175: the wisp of the plugin has no collision - it stood in the way of the hero in the narrow passages
+    if(wisp!=nullptr)
+      wisp->nbSetNoCollision(true);
     if(wisp==nullptr && hero!=nullptr && tickCount()>=st.nextWispLog) {
       st.nextWispLog = tickCount()+10000;
       if(auto* ws = vm.find_symbol_by_name("WISP_DETECTOR"); ws!=nullptr && findNpc(ws)!=nullptr)
@@ -5012,6 +5038,7 @@ void GameScript::tick(uint64_t dt) {
         const float a = hero->rotation()*3.14159265f/180.f;
         wisp->clearAiQueue();
         wisp->setPosition(hero->position()+Tempest::Vec3(std::sin(a)*120.f,60.f,std::cos(a)*120.f));
+        wisp->clearSpeed();   // NB fix 175
         wisp->updateTransform();
         st.wispReturn = false;
         if(tickCount()>=st.nextWispFarLog) {
@@ -5071,7 +5098,7 @@ void GameScript::tick(uint64_t dt) {
             return;   // a theft before the eyes of the owner
             }
           }
-        if(st.wispSkip.count(&h)) {
+        if(st.wispSkip.count(it.handlePtr())) {
           ++nSkip;
           return;
           }
@@ -5160,7 +5187,7 @@ void GameScript::tick(uint64_t dt) {
         Npc*  body  = nullptr;
         float bodyD = std::numeric_limits<float>::max();
         world().detectNpc(hp,area,[&](Npc& n) {
-          if(!n.isDead() || &n==hero || &n==wisp || st.wispBodySkip.count(n.handlePtr().get()))
+          if(!n.isDead() || &n==hero || &n==wisp || st.wispBodySkip.count(n.handlePtr()))
             return;
           if(std::abs(n.position().y-hp.y)>500.f)
             return;
@@ -5191,8 +5218,10 @@ void GameScript::tick(uint64_t dt) {
     auto* body = findNpc(wBody.get());
     auto* hero = world().player();
     if(wisp==nullptr || body==nullptr || hero==nullptr || !body->isDead() || tickCount()>st.wispSince+15000) {
+      if(wisp!=nullptr && body!=nullptr && body->isDead())
+        nbCtx("the wisp did not reach the body: ",body->displayName()," (",int((body->position()-wisp->position()).length())," cm)");
       if(body!=nullptr)
-        st.wispBodySkip[wBody.get()] = tickCount()+60000;
+        st.wispBodySkip[wBody] = tickCount()+60000;
       st.wispBody.reset();
       }
     else {
@@ -5211,7 +5240,7 @@ void GameScript::tick(uint64_t dt) {
           st.wispLines.emplace_back(std::string(NbTexts::get("sWispName"))+": "+n,tickCount()+10000);
           nbCtx("the wisp brings: ",n," (from the body of ",body->displayName(),")");
           }
-        st.wispBodySkip[wBody.get()] = tickCount()+600000;  // done (what is left the hero does not see either)
+        st.wispBodySkip[wBody] = tickCount()+600000;  // done (what is left the hero does not see either)
         st.wispBody.reset();
         st.nextWispSearch = 0;
         }
@@ -5221,6 +5250,7 @@ void GameScript::tick(uint64_t dt) {
         if(dist>1.f) {
           wisp->setPosition(wisp->position()+d*(step/dist));
           wisp->setDirection(Tempest::Vec3(d.x,0,d.z));
+          wisp->clearSpeed();   // NB fix 175: see wispFly
           }
         }
       }
@@ -5243,6 +5273,10 @@ void GameScript::tick(uint64_t dt) {
     const float step = std::min(dist,speed*float(dt)/1000.f);
     w.setPosition(w.position()+d*(step/dist));
     w.setDirection(Tempest::Vec3(d.x,0,d.z));
+    // NB fix 175: the flight has no gravity. Over an edge or a slope the wisp was in the air for its move: the speed of
+    // the fall grew every frame, and after a second it was more than the flight - the log showed the wisp above the
+    // item (1 cm) and 36-287 m below it: it fell through the world, the item and the body stayed
+    w.clearSpeed();
     };
   if(st.wispReturn && st.wispItem.expired() && st.wispBody.expired()) {
     auto  wNpc = st.wispNpc.lock();
@@ -5266,7 +5300,7 @@ void GameScript::tick(uint64_t dt) {
       if(st.wispBest<1e9f)
         nbCtx("the wisp did not reach the item: closest ",int(st.wispBest)," cm (height ",int(st.wispBestH)," cm)");
       if(auto w = st.wispItem.lock())
-        st.wispSkip[w.get()] = tickCount()+60000;
+        st.wispSkip[w] = tickCount()+60000;
       st.wispItem.reset();
       }
     else if(auto* itm = findItem(wItm.get())) {
@@ -5962,12 +5996,8 @@ void GameScript::mdl_applyoverlaymdstimed(std::shared_ptr<zenkit::INpc> npcRef, 
 
 void GameScript::mdl_removeoverlaymds(std::shared_ptr<zenkit::INpc> npcRef, std::string_view overlayname) {
   auto npc = findNpc(npcRef);
-  if(npc!=nullptr) {
-    auto skelet = Resources::loadSkeleton(overlayname);
-    npc->delOverlay(skelet);
-    if(skelet==nullptr)
-      Log::d("Mdl_RemoveOverlayMds: ", overlayname, " (not found)");
-  }
+  if(npc!=nullptr)
+    npc->delOverlay(overlayname);   // NB fix 172: by the name, nothing is loaded
 }
 
 void GameScript::mdl_setmodelscale(std::shared_ptr<zenkit::INpc> npcRef, float x, float y, float z) {

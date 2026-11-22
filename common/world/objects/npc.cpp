@@ -767,6 +767,13 @@ void Npc::clearSpeed() {
   mvAlgo.clearSpeed();
   }
 
+void Npc::nbSetNoCollision(bool n) {
+  if(nbNoCol==n)
+    return;
+  nbNoCol = n;
+  physic.setEnable(!n && !isDead());
+  }
+
 void Npc::setProcessPolicy(NpcProcessPolicy t) {
   if(aiPolicy==t)
     return;
@@ -835,7 +842,7 @@ bool Npc::checkHealth(bool onChange, bool allowUnconscious) {
       return false;
       }
     }
-  physic.setEnable(true);
+  physic.setEnable(!nbNoCol);   // NB fix 175
   return true;
   }
 
@@ -1099,8 +1106,7 @@ void Npc::setVisual(std::string_view visual) {
   }
 
 bool Npc::hasOverlay(std::string_view sk) const {
-  auto skelet = Resources::loadSkeleton(sk);
-  return hasOverlay(skelet);
+  return visual.hasOverlay(sk);   // NB fix 172: by the name, nothing is loaded
   }
 
 bool Npc::hasOverlay(const Skeleton* sk) const {
@@ -1328,6 +1334,8 @@ void Npc::setPhysic(DynamicWorld::NpcItem &&item) {
   // the scale of the model (Mdl_SetModelScale) is set by the script before the body exists, or the body is new
   if(sz[0]!=1.f || sz[1]!=1.f || sz[2]!=1.f)
     physic.setScale(Vec3{sz[0],sz[1],sz[2]});
+  if(nbNoCol)
+    physic.setEnable(false);   // NB fix 175: the new body of a character without the collision
   }
 
 void Npc::setFatness(float f) {

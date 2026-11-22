@@ -36,6 +36,9 @@ class GameMusic final {
     // of the game on again
     void      setScriptMute(bool m);
     bool      isScriptMuted() const { return scriptMute; }
+    /// NB fix 174: no music while a game is loaded (after a death too): the synthesizer of the music did not keep up with the
+    /// thread of the loading and the sound stuttered. As the original, the loading screen is silent
+    void      setLoadMute(bool m);
     void      setMusic(Music m);
     void      setMusic(const zenkit::IMusicTheme &theme, Tags t);
     void      clearZoneMusic();
@@ -52,7 +55,7 @@ class GameMusic final {
     void      setupSettings();
     void      playCurrent();
     void      applyEnabled();
-    bool      isOn() const { return enabled && !scriptMute; }
+    bool      isOn() const { return enabled && !scriptMute && !loadMute; }
 
     static GameMusic* instance;
 
@@ -67,6 +70,7 @@ class GameMusic final {
     MusicProvider*       impl = nullptr;
     bool                 enabled = true;
     bool                 scriptMute = false;   // NB fix 116
+    bool                 loadMute   = false;   // NB fix 174
     bool                 playing    = true;    // the music really plays (enabled and not muted)
     int                  lastMusicSetting = -1;
     bool                 zoneMusicActive = true;

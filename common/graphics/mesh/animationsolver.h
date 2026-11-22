@@ -90,6 +90,7 @@ class AnimationSolver final {
     void                           update(uint64_t tickCount);
 
     bool                           hasOverlay(const Skeleton*  sk) const;
+    bool                           hasOverlay(std::string_view sk) const;   // NB fix 172: by the name
     std::vector<std::string>       overlayNames() const;
     void                           addOverlay(const Skeleton*  sk, uint64_t time);
     void                           delOverlay(std::string_view sk);

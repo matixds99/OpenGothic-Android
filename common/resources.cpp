@@ -460,13 +460,17 @@ ProtoMesh* Resources::implLoadMesh(std::string_view name) {
     return nullptr;
 
   auto cname = std::string(name);
-  auto it    = aniMeshCache.find(cname);
+  // NB fix 172: one entry for a file, whatever its letters ("Humans_1hST1.MDS", "HUMANS_1HST1.MDS"): it was loaded twice
+  auto key   = cname;
+  for(auto& c:key)
+    c = char(std::toupper(uint8_t(c)));
+  auto it    = aniMeshCache.find(key);
   if(it!=aniMeshCache.end())
     return it->second.get();
 
   auto  t   = implLoadMeshMain(cname);
   auto  ret = t.get();
-  aniMeshCache[cname] = std::move(t);
+  aniMeshCache[key] = std::move(t);
   if(ret==nullptr)
     Log::e("unable to load mesh \"",cname,"\"");
   return ret;
@@ -959,15 +963,18 @@ const Skeleton* Resources::loadSkeleton(std::string_view name) {
 
 const Animation* Resources::loadAnimation(std::string_view name) {
   auto cname = std::string(name);
+  auto key   = cname;   // NB fix 172: one entry for a file, whatever its letters
+  for(auto& c:key)
+    c = char(std::toupper(uint8_t(c)));
 
   std::lock_guard<std::recursive_mutex> g(inst->sync);
   auto& cache = inst->animCache;
-  auto it=cache.find(cname);
+  auto it=cache.find(key);
   if(it!=cache.end())
     return it->second.get();
   auto t       = inst->implLoadAnimation(cname);
   auto ret     = t.get();
-  cache[cname] = std::move(t);
+  cache[key]   = std::move(t);
   return ret;
   }
 

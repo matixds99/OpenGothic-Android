@@ -113,6 +113,10 @@ class Npc final {
 
     void       stopDlgAnim();
     void       clearSpeed();
+    /// NB fix 175: a character without the collision with the other characters (the wisp of Vatras): the hero and the
+    /// others go through it, it goes through them, the arrows and the spells fly through it
+    void       nbSetNoCollision(bool n);
+    bool       nbNoCollision() const { return nbNoCol; }
     bool       resetPositionToTA();
     /// A character who waits at the dead point (TOT: the scripts hide the characters there) and gets a routine somewhere in the world appears
     /// at the point of the routine: the way point of the dead point is not connected to the world and he would never get anywhere.
@@ -680,6 +684,7 @@ class Npc final {
     Tempest::Vec3                  lastGroundNormal;
 
     DynamicWorld::NpcItem          physic;
+    bool                           nbNoCol = false;   // NB fix 175
 
     WalkBit                        wlkMode                 =WalkBit::WM_Run;
     bool                           walkStopChasmEnabled     =true;

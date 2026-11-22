@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **148**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **176**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **171** – zadanie „Exodus”: piraci i bohater pojawiają się w Jarkendarze przy ich obozie (funkcje zmiany świata NB) – ✅
-2. **170** – szybki łup bez migającego okna skrzyni i bez zmiany sterowania – ✅
-3. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – ✅
-4. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – ✅
-5. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
+1. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – 🧪
+2. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – 🧪
+3. **173** – wytrzymałość: spada przy pływaniu, sprint zawsze kończy się bez wytrzymałości – 🧪
+4. **172** – przycisk sprintu bez przycięcia gry (nakładki zdejmowane po nazwie) – 🧪
+5. **171** – zadanie „Exodus”: piraci i bohater pojawiają się w Jarkendarze przy ich obozie (funkcje zmiany świata NB) – ✅
 
 ---
 
@@ -251,6 +251,52 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 175. Ognik: bez kolizji, lot bez spadania, zbieranie przedmiotów i łupów z ciał – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp/.h`, `common/physics/dynamicworld.cpp`
+- **Zgłoszenie:** ognik czasem nie zbiera przedmiotów ani łupów z zabitych; od czasu do czasu blokuje bohaterowi drogę (nie powinien mieć kolizji).
+- **Przyczyna (logi z poprzednich dni):**
+  - Lot ognika (do przedmiotu, do ciała, z powrotem do bohatera) przesuwał go co klatkę, ale ruch postaci dalej liczył grawitację. Nad krawędzią albo zboczem ognik był „w powietrzu”, prędkość spadania rosła co klatkę i po około sekundzie była większa od lotu. W logach: `the wisp did not reach the item: closest 1 cm (height 3649 cm)` – ognik nad przedmiotem, ale 36–287 m niżej (spadł przez świat). Przedmiot był pomijany przez 60 s, ciało zostawało z łupem (w logach 7 ciał znalezionych i nieograbionych).
+  - Listy pominiętych przedmiotów i ciał trzymały adres obiektu. Nowa postać (nowy potwór, inny świat) pod adresem ograbionego wcześniej ciała była pomijana przez 10 min.
+  - Ognik miał zwykłą kolizję postaci.
+- **Poprawka:**
+  - Lot ognika bez grawitacji: prędkość spadania zerowana w każdej klatce lotu, także przy przeniesieniu ognika do bohatera.
+  - Listy pominiętych po obiekcie (`weak_ptr`), nie po adresie.
+  - Ognik bez kolizji z postaciami (`Npc::nbSetNoCollision`): bohater i inni przechodzą przez niego, on przechodzi przez nich, strzały i czary przez niego przelatują. Postać bez kolizji (także martwa) nie zatrzymuje się na innych postaciach.
+  - W logu `[ctx] the wisp did not reach the body: …`, gdy ognik nie doleci do ciała w 15 s.
+- **Do sprawdzenia:** ognik w wąskim przejściu i w drzwiach – bohater przechodzi przez niego; przedmioty na zboczach, pod krawędzią i na niższym poziomie – ognik je przynosi; łupy z zabitych potworów (także po zmianie świata). W logu nie powinno być `did not reach … (height` z dużą wysokością.
+
+### 174. Dźwięk przy wczytywaniu gry – 🧪 (22.11.2026)
+- **Pliki:** `common/gamemusic.cpp/.h`, `common/mainwindow.cpp`
+- **Zgłoszenie:** przy wczytywaniu (np. po śmierci) dźwięk się zacina.
+- **Przyczyna:** w czasie wczytywania wątek wczytywania zajmuje procesor; strumień muzyki i zapętlone dźwięki starego świata (walka, śmierć) nie dostają danych na czas i powtarzają kawałki. Poprawki 36–38 przeniosły wczytywanie muzyki do osobnego wątku, ale strumień grał dalej przez całe wczytywanie.
+- **Poprawka:** wczytanie gry albo przejście do innego świata (nie zapis) jest ciche: muzyka wyciszona od początku wczytywania do wejścia do nowego świata (`GameMusic::setLoadMute`), dźwięki starego świata zatrzymane (`WorldSound::stopAllSounds`). Muzyka wraca z nowym światem.
+- **Do sprawdzenia:** śmierć → wczytanie zapisu, wczytanie z menu, przejście do innego świata: na ekranie wczytywania cisza, bez zacinania; muzyka gra w nowym świecie; zapis gry nie przerywa muzyki.
+
+### 173. Wytrzymałość: pływanie, koniec sprintu bez wytrzymałości – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/graphics/mesh/animationsolver.cpp`
+- **Zgłoszenie:** po wyczerpaniu wytrzymałości bohater raz biega dalej sprintem, a raz nie; podczas pływania wytrzymałość nie spada.
+- **Skrypty NB:**
+  - `PerFrame` (co drugą klatkę, poza przemianą i śmiercią): przy `RX_SpeedPotion <= 0`, `ATR_STAMINA <= 0` i `SPRINT_ACTIVE` → `Mdl_RemoveOverlayMds(hero, "Humans_MageSprint.MDS")`, `SPRINT_ACTIVE = FALSE`.
+  - `Hero_Poisoned`: pływanie zabiera wytrzymałość, gdy nie gra animacja `S_SWIM` (bohater płynie) i jest `BS_DIVE` albo `Npc_GetWaterLevel(hero) == WATER_DIVE` (2); przy zerze zabiera życie.
+- **Przyczyna:**
+  - `Npc_GetWaterLevel` zwracało 1 przy pływaniu (2 tylko pod wodą), więc skrypt nie widział głębokiej wody.
+  - Sprint: bez logu przyczyna niepewna. `Mdl_RemoveOverlayMds` zdejmowało jedną nakładkę, a ten sam plik wczytany pod inną pisownią (przed poprawką 172) był drugą nakładką – sprint mógł zostać mimo zdjęcia.
+- **Poprawka:**
+  - `Npc_GetWaterLevel`: 2 przy pływaniu i nurkowaniu (głęboka woda), 1 w płytkiej wodzie, jak w silniku Gothica.
+  - `Mdl_RemoveOverlayMds` zdejmuje wszystkie nakładki o tej nazwie.
+  - Silnik co 200 ms sprawdza to samo co `PerFrame`: brak wytrzymałości, brak mikstury szybkości i założona nakładka sprintu → nakładka zdjęta, `SPRINT_ACTIVE = FALSE`. W logu `[ctx] sprint: no stamina - the sprint ends` (pokazuje, że skrypty same tego nie zrobiły).
+- **Do sprawdzenia:** sprint do zera wytrzymałości – za każdym razem koniec sprintu, dalej zwykły bieg; pływanie – wytrzymałość spada, przy zerze spada życie; brodzenie w płytkiej wodzie – bez zmian; z miksturą szybkości sprint trwa.
+
+### 172. Przycisk sprintu bez przycięcia gry – 🧪 (22.11.2026)
+- **Pliki:** `common/graphics/mesh/animationsolver.cpp/.h`, `common/graphics/mdlvisual.h`, `common/world/objects/npc.cpp`, `common/game/gamescript.cpp`, `common/resources.cpp`
+- **Zgłoszenie:** po naciśnięciu przycisku sprintu gra na około sekundę się zacina.
+- **Skrypty NB:** `B_Hotkey_Sprint` → `RX_ApplyAnim_Weapons` → `RX_ResetAllOverlays`: zdejmuje około 60 nakładek (style broni, chody, sprint), potem zakłada potrzebne.
+- **Przyczyna:**
+  - `Mdl_RemoveOverlayMds` wczytywało plik każdej zdejmowanej nakładki (MDS z animacjami), żeby go porównać z założonymi. Przy pierwszym naciśnięciu sprintu wczytywały się animacje kilkudziesięciu nakładek, których bohater nie miał.
+  - Pamięć modeli i animacji rozróżniała wielkość liter: ten sam plik pod inną pisownią (w pluginie np. `humans_1hST1.MDS` i `humans_1hST1.mds`) był wczytywany drugi raz.
+- **Poprawka:** nakładki zdejmowane i sprawdzane po nazwie (bez wielkości liter i rozszerzenia), bez wczytywania pliku (`Mdl_RemoveOverlayMds`, `Mdl_RemoveOverlayMds_NoUpdate`, `Mdl_HasOverlayMds`). Pamięć modeli i animacji po nazwie pisanej wielkimi literami.
+- **Do sprawdzenia:** pierwsze i kolejne naciśnięcia sprintu bez przycięcia; zmiana broni i style walki według talentu bez zmian.
 
 ### 171. Zmiana świata: RX_OnChangeLevel_Begin/End, punkt przybycia ze skryptów (Exodus) – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamesession.cpp`, `patches/zenkit-opengothic.patch` (`lib/ZenKit/src/Archive.cc`), `patches/README.md`

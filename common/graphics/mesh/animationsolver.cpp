@@ -1,4 +1,6 @@
 #include "animationsolver.h"
+
+#include <cctype>
 #include <Tempest/Log>
 
 #include "world/objects/interactive.h"
@@ -95,11 +97,46 @@ std::vector<std::string> AnimationSolver::overlayNames() const {
   return ret;
   }
 
+// NB fix 172: an overlay is removed by its name (no case, no extension): the scripts of New Balance remove ~60 overlays
+// at every change of the weapon or the sprint (RX_ResetAllOverlays), and every one of them was loaded only to be compared
+// - all the animations of the overlays never used, at the first press of the sprint. A name in other letters (an
+// overlay put on as "Humans_1hST1.MDS" and removed as "HUMANS_1HST1.MDS") is the same overlay now too
+static bool sameOverlayName(std::string_view a, std::string_view b) {
+  auto stem = [](std::string_view s) {
+    if(auto dot = s.rfind('.'); dot!=std::string_view::npos)
+      s = s.substr(0,dot);
+    return s;
+    };
+  a = stem(a);
+  b = stem(b);
+  if(a.size()!=b.size())
+    return false;
+  for(size_t i=0; i<a.size(); ++i)
+    if(std::toupper(uint8_t(a[i]))!=std::toupper(uint8_t(b[i])))
+      return false;
+  return true;
+  }
+
 void AnimationSolver::delOverlay(std::string_view sk) {
-  if(overlay.size()==0)
-    return;
-  auto skelet = Resources::loadSkeleton(sk);
-  delOverlay(skelet);
+  // NB fix 173: every overlay of this name - the same MDS loaded under two spellings (the cache of before fix 172) was
+  // two overlays, and one Mdl_RemoveOverlayMDS left the sprint on when the stamina was gone
+  bool changed = false;
+  for(size_t i=0;i<overlay.size();)
+    if(overlay[i].skeleton!=nullptr && sameOverlayName(overlay[i].skeleton->name(),sk)) {
+      overlay.erase(overlay.begin()+int(i));
+      changed = true;
+      } else {
+      ++i;
+      }
+  if(changed)
+    invalidateCache();
+  }
+
+bool AnimationSolver::hasOverlay(std::string_view sk) const {
+  for(auto& i:overlay)
+    if(i.skeleton!=nullptr && sameOverlayName(i.skeleton->name(),sk))
+      return true;
+  return false;
   }
 
 void AnimationSolver::delOverlay(const Skeleton *sk) {

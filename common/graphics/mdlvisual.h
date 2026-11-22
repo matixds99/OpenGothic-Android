@@ -39,6 +39,7 @@ class MdlVisual final {
     std::string_view               visualSkeletonScheme() const;
 
     bool                           hasOverlay(const Skeleton*  sk) const;
+    bool                           hasOverlay(std::string_view sk) const { return solver.hasOverlay(sk); }
     std::vector<std::string>       overlayNames() const { return solver.overlayNames(); }
     void                           addOverlay(const Skeleton*  sk, uint64_t time);
     void                           delOverlay(std::string_view sk);

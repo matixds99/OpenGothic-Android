@@ -383,6 +383,10 @@ struct DynamicWorld::NpcBodyList final {
       return false;
 
     const NpcBody& n = *pn;
+    // NB fix 175: a body without the collision (the dead, the wisp of Vatras) is not stopped by the other characters
+    // either - the others already go through it (v.body->enable below)
+    if(!n.enable)
+      return false;
     if(hasCollision(n,frozen,normal,npc,colDepth,true))
       return true;
     return hasCollision(n,body,normal,npc,colDepth,false);
