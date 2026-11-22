@@ -462,6 +462,13 @@ auto GameSession::implChangeWorld(std::unique_ptr<GameSession>&& game,
     return std::move(game);
     }
 
+  // NB fix 171: the plugin of New Balance calls RX_OnChangeLevel_Begin before a change of the world (UNION_ABI.DLL,
+  // AB_ChangeLevelBegin) and RX_OnChangeLevel_End after it: the quest Exodus (the pirates Flint and Edward leave the West
+  // Coast, RX_AD_WC_HeroArrived = 1 - B_Enter_AddonWorld puts them and their point WP_AD_WC_ENTER_000 into Jarkendar)
+  if(vm->hasSymbolName("RX_ONCHANGELEVEL_BEGIN")) {
+    vm->getVm().call_function("RX_ONCHANGELEVEL_BEGIN");
+    Log::i("[ctx] change of the world: RX_OnChangeLevel_Begin (to ",world," ",wayPoint,")");
+    }
   // NB fix 131: the summoned creatures stay with the old world no more - they go away before it is stored
   vm->nbResetSummons(false,false);
   vm->nbClearShots();   // NB fix 157
@@ -492,6 +499,10 @@ auto GameSession::implChangeWorld(std::unique_ptr<GameSession>&& game,
     wrld->load(fin);
     }
 
+  // NB fix 171: the point of the arrival may come from a part of the world that the scripts insert at the enter
+  // (B_Enter_*, RX_InsertVobTree): the original engine puts the player into the world after them
+  const bool wpFound = !wayPoint.empty() && wrld->findPoint(wayPoint,false)!=nullptr;
+  const int32_t arrivedWc = vm->nbIntVar("RX_AD_WC_HEROARRIVED");
   if(1) {
     // put hero to world
     hdata.putToWorld(*game->wrld,wayPoint);
@@ -504,6 +515,26 @@ auto GameSession::implChangeWorld(std::unique_ptr<GameSession>&& game,
   initScripts(wss.isEmpty());
   wrld->triggerOnStart(wss.isEmpty());
   vm->dmaChangeLevel(false);
+
+  // NB fix 171: the hero at the point of his arrival - when the scripts have just made it (or the arrival of Exodus)
+  if(auto hero = wrld->player()) {
+    std::string_view target;
+    if(arrivedWc==1 && vm->nbIntVar("RX_AD_WC_HEROARRIVED")==2)
+      target = "WP_AD_WC_ENTER_000";   // Exodus: Jarkendar, at the pirates
+    else if(!wpFound && !wayPoint.empty())
+      target = wayPoint;
+    if(!target.empty()) {
+      if(auto pt = wrld->findPoint(target,false)) {
+        hero->setPosition (pt->position());
+        hero->setDirection(pt->direction());
+        hero->clearSpeed();
+        hero->updateTransform();
+        Log::i("[ctx] change of the world: the hero at ",target," (made by the scripts of the enter)");
+        }
+      }
+    }
+  if(vm->hasSymbolName("RX_ONCHANGELEVEL_END"))
+    vm->getVm().call_function("RX_ONCHANGELEVEL_END");
 
   for(auto& i:visitedWorlds)
     if(i.compareName(wrld->name())){

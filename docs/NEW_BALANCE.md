@@ -67,7 +67,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/world/objects/vob.cpp` (+ `.h`) | `setVobVisualTree` – widoczność obiektu i jego części (`RX_ToggleVobVisible`) | 125 |
 | `common/game/definitions/spelldefinitions.cpp` (+ `.h`) | `refresh` – dane czarów tworzone od nowa po zmianie obrażeń (`SPL_DAMAGE_*`) | 126 |
 | `common/game/inventory.cpp` (+ `.h`) | bonusy przedmiotów `change_atr` przy zakładaniu i zdejmowaniu (`applyItemEffects`) | 127 |
-| `common/game/gamesession.cpp` | wpis `game/item_effects` – bonusy przedmiotów ze starszych zapisów dodawane raz; przywołańcy odsyłani przy zmianie świata (ZEN) i po wczytaniu zapisu; pociski w locie usuwane przed zmianą świata | 127, 131, 154, 157 |
+| `common/game/gamesession.cpp` | wpis `game/item_effects` – bonusy przedmiotów ze starszych zapisów dodawane raz; przywołańcy odsyłani przy zmianie świata (ZEN) i po wczytaniu zapisu; pociski w locie usuwane przed zmianą świata; `RX_OnChangeLevel_Begin/End` przy zmianie świata, punkt przybycia ze skryptów wejścia | 127, 131, 154, 157, 171 |
 | `common/world/world.h` | numer obiektu świata (`serialNumber`) – mody widzą wczytanie zapisu tego samego świata | 117 |
 | `common/game/gamesession.h` | numer gry (`serialNumber`) – nowa gra/wczytany zapis a zmiana świata; nieprzeczytane dokumenty (`nbNewDocs`) | 117, 122 |
 | `common/game/gamesession.cpp` | zapis i wczytanie nieprzeczytanych dokumentów (wpis `game/nb_newdocs`) | 122 |

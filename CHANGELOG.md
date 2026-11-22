@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **170** – szybki łup bez migającego okna skrzyni i bez zmiany sterowania – 🧪
-2. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – ✅
-3. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – ✅
-4. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
-5. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – ✅
+1. **171** – zadanie „Exodus”: piraci i bohater pojawiają się w Jarkendarze przy ich obozie (funkcje zmiany świata NB) – 🧪
+2. **170** – szybki łup bez migającego okna skrzyni i bez zmiany sterowania – 🧪
+3. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – ✅
+4. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – ✅
+5. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
 
 ---
 
@@ -251,6 +251,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 171. Zmiana świata: RX_OnChangeLevel_Begin/End, punkt przybycia ze skryptów (Exodus) – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamesession.cpp`
+- **Zgłoszenie:** w zadaniu „Exodus” (eskorta piratów z Zachodniego Wybrzeża) po przejściu do Jarkendaru bohater zamiast przy obozie piratów ląduje w teksturach koło magów wody; piratów nie ma.
+- **Skrypty NB:**
+  - Plugin (`UNION_ABI.DLL`, `AB_ChangeLevelBegin`) woła przed zmianą świata `RX_OnChangeLevel_Begin`, a po niej `RX_OnChangeLevel_End`. Port ich nie wołał.
+  - `RX_OnChangeLevel_Begin`: na Zachodnim Wybrzeżu przy trwającym zadaniu (`MIS_WC_GoToYark`, królowa martwa) ustawia `RX_AD_WC_HeroArrived = 1` i zabiera piratów Flinta i Edwarda z Wybrzeża (`RX_TransferNpc`).
+  - `B_Enter_AddonWorld`: przy `RX_AD_WC_HeroArrived = 1` → 2 wstawia `VOBTREE/WP_AD_WC_ENTER_000.ZEN` (punkt przybycia) i piratów w tym punkcie. Oryginalny silnik stawia bohatera w świecie po funkcjach wejścia, więc punkt już jest.
+- **Poprawka:**
+  - Przed zmianą świata (jeszcze w starym świecie) `RX_OnChangeLevel_Begin`, po wejściu do nowego (po funkcjach wejścia) `RX_OnChangeLevel_End`. W logu `[ctx] change of the world: RX_OnChangeLevel_Begin (to … …)`.
+  - Punkt przybycia, którego nie było przy wstawianiu bohatera, a który dodały funkcje wejścia – bohater przenoszony tam. Exodus: gdy `RX_AD_WC_HeroArrived` przeszło z 1 na 2, bohater staje w `WP_AD_WC_ENTER_000`, przy piratach. W logu `[ctx] change of the world: the hero at …`.
+- **Zapis sprzed poprawki:** przejście już się odbyło bez `RX_OnChangeLevel_Begin` (flaga 0, piraci na Wybrzeżu) – trzeba wrócić na Zachodnie Wybrzeże i przejść do Jarkendaru jeszcze raz (z piratami).
+- **Do sprawdzenia:** Exodus – przejście z Wybrzeża do Jarkendaru: bohater i piraci przy obozie piratów.
 
 ### 170. Szybki łup bez okna skrzyni – 🧪 (22.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/mainwindow.cpp`
