@@ -15,10 +15,10 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – 🧪
-2. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – 🧪
-3. **173** – wytrzymałość: spada przy pływaniu, sprint zawsze kończy się bez wytrzymałości – 🧪
-4. **172** – przycisk sprintu bez przycięcia gry (nakładki zdejmowane po nazwie) – 🧪
+1. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
+2. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – ✅
+3. **173** – wytrzymałość: spada przy pływaniu, sprint zawsze kończy się bez wytrzymałości – ✅
+4. **172** – przycisk sprintu bez przycięcia gry (nakładki zdejmowane po nazwie) – ✅
 5. **171** – zadanie „Exodus”: piraci i bohater pojawiają się w Jarkendarze przy ich obozie (funkcje zmiany świata NB) – ✅
 
 ---
@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 175. Ognik: bez kolizji, lot bez spadania, zbieranie przedmiotów i łupów z ciał – 🧪 (22.11.2026)
+### 175. Ognik: bez kolizji, lot bez spadania, zbieranie przedmiotów i łupów z ciał – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp/.h`, `common/physics/dynamicworld.cpp`
 - **Zgłoszenie:** ognik czasem nie zbiera przedmiotów ani łupów z zabitych; od czasu do czasu blokuje bohaterowi drogę (nie powinien mieć kolizji).
 - **Przyczyna (logi z poprzednich dni):**
@@ -265,15 +265,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Ognik bez kolizji z postaciami (`Npc::nbSetNoCollision`): bohater i inni przechodzą przez niego, on przechodzi przez nich, strzały i czary przez niego przelatują. Postać bez kolizji (także martwa) nie zatrzymuje się na innych postaciach.
   - W logu `[ctx] the wisp did not reach the body: …`, gdy ognik nie doleci do ciała w 15 s.
 - **Do sprawdzenia:** ognik w wąskim przejściu i w drzwiach – bohater przechodzi przez niego; przedmioty na zboczach, pod krawędzią i na niższym poziomie – ognik je przynosi; łupy z zabitych potworów (także po zmianie świata). W logu nie powinno być `did not reach … (height` z dużą wysokością.
+- **Test (22.11):** działa – ognik bez kolizji, zbiera przedmioty i łupy z ciał.
 
-### 174. Dźwięk przy wczytywaniu gry – 🧪 (22.11.2026)
+### 174. Dźwięk przy wczytywaniu gry – ✅ (22.11.2026)
 - **Pliki:** `common/gamemusic.cpp/.h`, `common/mainwindow.cpp`
 - **Zgłoszenie:** przy wczytywaniu (np. po śmierci) dźwięk się zacina.
 - **Przyczyna:** w czasie wczytywania wątek wczytywania zajmuje procesor; strumień muzyki i zapętlone dźwięki starego świata (walka, śmierć) nie dostają danych na czas i powtarzają kawałki. Poprawki 36–38 przeniosły wczytywanie muzyki do osobnego wątku, ale strumień grał dalej przez całe wczytywanie.
 - **Poprawka:** wczytanie gry albo przejście do innego świata (nie zapis) jest ciche: muzyka wyciszona od początku wczytywania do wejścia do nowego świata (`GameMusic::setLoadMute`), dźwięki starego świata zatrzymane (`WorldSound::stopAllSounds`). Muzyka wraca z nowym światem.
 - **Do sprawdzenia:** śmierć → wczytanie zapisu, wczytanie z menu, przejście do innego świata: na ekranie wczytywania cisza, bez zacinania; muzyka gra w nowym świecie; zapis gry nie przerywa muzyki.
+- **Test (22.11):** działa – wczytywanie bez zacinania dźwięku.
 
-### 173. Wytrzymałość: pływanie, koniec sprintu bez wytrzymałości – 🧪 (22.11.2026)
+### 173. Wytrzymałość: pływanie, koniec sprintu bez wytrzymałości – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/graphics/mesh/animationsolver.cpp`
 - **Zgłoszenie:** po wyczerpaniu wytrzymałości bohater raz biega dalej sprintem, a raz nie; podczas pływania wytrzymałość nie spada.
 - **Skrypty NB:**
@@ -287,8 +289,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `Mdl_RemoveOverlayMds` zdejmuje wszystkie nakładki o tej nazwie.
   - Silnik co 200 ms sprawdza to samo co `PerFrame`: brak wytrzymałości, brak mikstury szybkości i założona nakładka sprintu → nakładka zdjęta, `SPRINT_ACTIVE = FALSE`. W logu `[ctx] sprint: no stamina - the sprint ends` (pokazuje, że skrypty same tego nie zrobiły).
 - **Do sprawdzenia:** sprint do zera wytrzymałości – za każdym razem koniec sprintu, dalej zwykły bieg; pływanie – wytrzymałość spada, przy zerze spada życie; brodzenie w płytkiej wodzie – bez zmian; z miksturą szybkości sprint trwa.
+- **Test (22.11):** działa – wytrzymałość spada przy pływaniu, sprint kończy się bez wytrzymałości.
 
-### 172. Przycisk sprintu bez przycięcia gry – 🧪 (22.11.2026)
+### 172. Przycisk sprintu bez przycięcia gry – ✅ (22.11.2026)
 - **Pliki:** `common/graphics/mesh/animationsolver.cpp/.h`, `common/graphics/mdlvisual.h`, `common/world/objects/npc.cpp`, `common/game/gamescript.cpp`, `common/resources.cpp`
 - **Zgłoszenie:** po naciśnięciu przycisku sprintu gra na około sekundę się zacina.
 - **Skrypty NB:** `B_Hotkey_Sprint` → `RX_ApplyAnim_Weapons` → `RX_ResetAllOverlays`: zdejmuje około 60 nakładek (style broni, chody, sprint), potem zakłada potrzebne.
@@ -297,6 +300,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Pamięć modeli i animacji rozróżniała wielkość liter: ten sam plik pod inną pisownią (w pluginie np. `humans_1hST1.MDS` i `humans_1hST1.mds`) był wczytywany drugi raz.
 - **Poprawka:** nakładki zdejmowane i sprawdzane po nazwie (bez wielkości liter i rozszerzenia), bez wczytywania pliku (`Mdl_RemoveOverlayMds`, `Mdl_RemoveOverlayMds_NoUpdate`, `Mdl_HasOverlayMds`). Pamięć modeli i animacji po nazwie pisanej wielkimi literami.
 - **Do sprawdzenia:** pierwsze i kolejne naciśnięcia sprintu bez przycięcia; zmiana broni i style walki według talentu bez zmian.
+- **Test (22.11):** działa – sprint bez przycięcia gry.
 
 ### 171. Zmiana świata: RX_OnChangeLevel_Begin/End, punkt przybycia ze skryptów (Exodus) – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamesession.cpp`, `patches/zenkit-opengothic.patch` (`lib/ZenKit/src/Archive.cc`), `patches/README.md`
