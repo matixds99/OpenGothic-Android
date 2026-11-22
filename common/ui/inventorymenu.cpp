@@ -256,9 +256,11 @@ void InventoryMenu::open(Npc &pl, Interactive &ch) {
     }
   // NB fix 169: the same chest, just emptied by the quick loot, opens again by its interaction - shut at once
   if(state==State::Chest && &ch==nbAutoClosed && Application::tickCount()<nbAutoCloseUntil) {
+    pl.setInteraction(nullptr,true);
+    pl.stopAnim("");
     player = &pl;
     chest  = &ch;
-    state  = State::Closed;   // the tick ends the interaction (setInteraction(nullptr))
+    state  = State::Closed;
     return;
     }
 
@@ -481,6 +483,11 @@ void InventoryMenu::tick(uint64_t /*dt*/) {
       // the inventory to open again - it is closed at once, for 2 s
       nbAutoClosed     = chest;
       nbAutoCloseUntil = Application::tickCount()+2000;
+      // the hero leaves the chest at once (no animation of closing it): no window, no kneeling
+      if(state==State::Chest && player->interactive()!=nullptr) {
+        player->setInteraction(nullptr,true);
+        player->stopAnim("");
+        }
       close();
       return;
       }

@@ -258,6 +258,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna:** szybki łup (poprawka 167) zamyka ekwipunek od razu po zabraniu, a interakcja bohatera ze skrzynią (animacja otwierania) trwa jeszcze chwilę i skrzynia prosi o otwarcie okna drugi raz.
 - **Poprawka:** przez 2 s po szybkim łupie ta sama skrzynia nie otwiera okna – jest od razu zamykana, a interakcja kończy się jak przy zamknięciu.
 - **Do sprawdzenia:** przytrzymanie na skrzyni – lista zabranych przedmiotów, bez okna skrzyni; po chwili krótkie dotknięcie tej samej skrzyni otwiera ją normalnie (pustą).
+- **Test (22.11, nagranie):** nadal źle – po liście zabranych przedmiotów bohater zostaje kilka sekund przy skrzyni (animacja otwierania i zamykania), a na ekranie sterowanie jak przy otwartej skrzyni.
+- **Zmiana:** po szybkim łupie bohater odchodzi od skrzyni od razu, bez animacji zamykania (`setInteraction(nullptr, quick)` i zatrzymanie animacji) – także gdy skrzynia w ciągu 2 s prosi o ponowne otwarcie.
 
 ### 168. Sarkofagi i groby w ziemi w celowniku – ✅ (22.11.2026)
 - **Pliki:** `common/world/objects/interactive.cpp`
