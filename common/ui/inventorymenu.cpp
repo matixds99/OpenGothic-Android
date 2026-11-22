@@ -280,6 +280,11 @@ void InventoryMenu::nbArmAutoLoot() {
   nbAutoLootUntil = Application::tickCount()+4000;
   }
 
+bool InventoryMenu::nbAutoLooting() const {
+  return nbAutoLootUntil!=0 && Application::tickCount()<nbAutoLootUntil &&
+         (state==State::Chest || state==State::Ransack || state==State::LockPicking);
+  }
+
 void InventoryMenu::nbPrintTaken(const std::vector<std::pair<std::string,size_t>>& items) {
   const auto& fnt = Resources::font(1.f);
   Gothic::inst().emitGlobalSound("INV_OPEN");
@@ -757,6 +762,8 @@ void InventoryMenu::paintEvent(PaintEvent &e) {
   // NB fix 107: a document read from the inventory (a book, a letter) is shown over it - the frames of the inventory
   // were drawn over the document
   if(player==nullptr || state==State::Closed || covered)
+    return;
+  if(nbAutoLooting() && state!=State::LockPicking)   // NB fix 170: the quick loot - the window is not shown
     return;
   renderer.reset();
 

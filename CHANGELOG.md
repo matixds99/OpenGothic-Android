@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – ✅
-2. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – ✅
-3. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
-4. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – 🧪
-5. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
+1. **170** – szybki łup bez migającego okna skrzyni i bez zmiany sterowania – 🧪
+2. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – ✅
+3. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – ✅
+4. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
+5. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – ✅
 
 ---
 
@@ -252,6 +252,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 170. Szybki łup bez okna skrzyni – 🧪 (22.11.2026)
+- **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/mainwindow.cpp`
+- **Zgłoszenie:** przy szybkim łupie przez ułamek sekundy widać chowające się okno skrzyni (prośba o ukrycie).
+- **Poprawka:** skrzynia otwarta przez szybki łup (do jej opróżnienia, najwyżej 4 s) nie rysuje okna ekwipunku, a sterowanie na ekranie zostaje jak w grze (bez przełączania na układ ekwipunku). Widać tylko listę zabranych przedmiotów.
+- **Do sprawdzenia:** przytrzymanie na skrzyni – bez okna i bez zmiany przycisków; krótkie dotknięcie – zwykłe okno.
+
 ### 169. Szybki łup: okno skrzyni nie wraca – ✅ (22.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`
 - **Zgłoszenie:** po przytrzymaniu przycisku akcji przedmioty są zabrane i wypisane, ale potem i tak otwiera się okno skrzyni.
@@ -279,12 +285,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** przytrzymanie na kilku skrzyniach (zwykłych i z zadań) – zawartość w ekwipunku, napisy, okno się nie zostaje; krótkie dotknięcie – zwykłe okno.
 - **Test (22.11):** działa – szybki łup zbiera ze skrzyń.
 
-### 166. Pierścienie teleportacyjne – 🧪 (22.11.2026)
+### 166. Pierścienie teleportacyjne – ✅ (22.11.2026)
 - **Pliki:** `common/world/objects/item.cpp/.h`, `common/game/inventory.cpp`, `common/ui/inventorymenu.cpp`
 - **Zgłoszenie:** pierścień teleportacyjny do Świątyni Adanosa nie działa (w ekwipunku przycisk „Załóż”).
 - **Skrypty NB:** `ItRi_Teleport_Ring_Adanos` (i inne `ItRi_Teleport_*`) ma flagę pierścienia, ale nie ma funkcji założenia (`on_equip`) – ma funkcję użycia (`on_state` = `Equip_ItRi_Teleport_Ring_Adanos`) i schemat `MAP`. Użycie: w Jarkendarze `AI_Teleport(hero, "RAVENPRAY")`, gdzie indziej „za daleko”, w walce – napis. Port zakładał pierścień na palec, więc funkcja użycia nigdy się nie wykonała.
 - **Poprawka:** pierścień albo amulet z funkcją użycia i schematem, bez funkcji założenia (`Item::nbUsableJewel`), jest używany jak mapa: animacja schematu i funkcja `on_state`. W karcie przedmiotu przycisk „Użyj”.
 - **Do sprawdzenia:** w Jarkendarze użycie pierścienia z ekwipunku – teleport do świątyni Adanosa.
+- **Test (22.11):** działa – teleport po przycisku „Użyj”.
 
 ### 165. Skarby do wykopania: wstawianie miejsca i celownik – ✅ (22.11.2026)
 - **Pliki:** `common/world/objects/interactive.cpp/.h`, `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`

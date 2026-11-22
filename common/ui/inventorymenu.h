@@ -97,6 +97,8 @@ class InventoryMenu : public Tempest::Widget {
     State isOpen() const;
     /// NB fix 167: the quick loot of a chest - the next chest or body opened within 4 s is emptied and closed at once
     void  nbArmAutoLoot();
+    /// NB fix 170: a chest opened for the quick loot - neither drawn nor with the controls of the inventory
+    bool  nbAutoLooting() const;
     /// the lines of the taken items in the middle of the screen (the quick loot)
     static void nbPrintTaken(const std::vector<std::pair<std::string,size_t>>& items);
     bool  isActive() const;

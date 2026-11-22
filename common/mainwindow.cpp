@@ -2212,7 +2212,7 @@ Mobile::Mode MainWindow::mobileContext() const {
     return rootMenu.isTouchMenu() ? Mobile::Mode::Menu : Mobile::Mode::Dialog;
   if(inventory.isOpen()==InventoryMenu::State::LockPicking)
     return Mobile::Mode::Lockpick;
-  if(inventory.isActive())
+  if(inventory.isActive() && !inventory.nbAutoLooting())   // NB fix 170: the quick loot keeps the controls of the game
     return Mobile::Mode::Inventory;
   if(dialogs.isActive())
     return Mobile::Mode::Dialog;
