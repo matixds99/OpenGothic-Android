@@ -107,6 +107,68 @@ ui.tab("Ognik", () => {
     ui.textDisabled("Klawiatura: Shift+F5. Konsola: ognik, ognik on, ognik off");
 });
 
+// --- NB fix 178: the learning points of the hero, for the tests (the teachers, e.g. the acrobatics)
+let lpInput = "10";
+
+function lpSupported() {
+    return typeof player.setLearningPoints === "function" && typeof player.learningPoints === "number";
+}
+
+function lpChange(value, add) {
+    if (!player.valid || !lpSupported())
+        return false;
+    const n = Math.trunc(Number(value));
+    if (!Number.isFinite(n))
+        return false;
+    player.setLearningPoints(add ? player.learningPoints + n : n);
+    return true;
+}
+
+ui.tab("Punkty nauki", () => {
+    if (!lpSupported()) {
+        ui.textColored("#d08040", "Ta wersja gry nie pozwala zmieniać punktów nauki (potrzebna poprawka 178).");
+        return;
+    }
+    if (!player.valid) {
+        ui.textDisabled("Brak gry.");
+        return;
+    }
+    ui.text("Punkty nauki: " + player.learningPoints);
+    ui.spacing();
+    const h = ui.fontSize() * 2.2;
+    [5, 10, 50, 100].forEach((n, i) => {
+        if (i > 0)
+            ui.sameLine();
+        if (ui.button("+" + n, ui.fontSize() * 4, h))
+            lpChange(n, true);
+    });
+    ui.spacing();
+    ui.separator();
+    ui.setNextWidth(ui.fontSize() * 8);
+    lpInput = ui.inputText("##lp", lpInput, "decimal");
+    ui.sameLine();
+    if (ui.button("Dodaj", ui.fontSize() * 5, h))
+        lpChange(lpInput, true);
+    ui.sameLine();
+    if (ui.button("Ustaw", ui.fontSize() * 5, h))
+        lpChange(lpInput, false);
+    ui.spacing();
+    ui.textDisabled("Konsola: pn 50 (ustawia), pn +50 (dodaje)");
+});
+
+console.registerCommand("pn", (cmd) => {
+    const a = String((cmd && cmd.args && cmd.args[0]) || "").trim();
+    if (!a) {
+        console.log("punkty nauki: " + (lpSupported() && player.valid ? player.learningPoints : "-"));
+        return;
+    }
+    const add = a.startsWith("+") || a.startsWith("-");
+    if (lpChange(a, add))
+        console.log("punkty nauki: " + player.learningPoints);
+    else
+        console.log("pn: nie można zmienić punktów nauki");
+}, "pn [n|+n] - punkty nauki bohatera: pokazuje, ustawia albo dodaje");
+
 // "ognik" switches, "ognik on" / "ognik off" call or send away (for the other scripts: mod.command)
 console.registerCommand("ognik", (cmd) => {
     const a = String((cmd && cmd.args && cmd.args[0]) || "").trim().toLowerCase();

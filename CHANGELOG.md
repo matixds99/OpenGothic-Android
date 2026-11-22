@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **178**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **179**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – ✅
-2. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – ✅
-3. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
-4. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – ✅
-5. **173** – wytrzymałość: spada przy pływaniu, sprint zawsze kończy się bez wytrzymałości – ✅
+1. **178** – mod `nb-wisp` 1.3.0: zakładka „Punkty nauki” do testów nauczycieli; paczka moda z poprawką 154 – 🧪
+2. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – ✅
+3. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – ✅
+4. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
+5. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – ✅
 
 ---
 
@@ -251,6 +251,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 178. Mod `nb-wisp` 1.3.0: punkty nauki do testów – 🧪 (22.11.2026)
+- **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json`, `mods/nb-wisp.zip`, `common/scripting/game/game_npc.cpp`, `docs/MODS.md`
+- **Zgłoszenie:** do testu nauki u nauczycieli (akrobatyka) potrzebne są punkty nauki; prośba o pole z punktami nauki w modzie ognika.
+- **Poprawka:**
+  - API modów: postać ma `learningPoints` (punkty nauki, `C_Npc.lp`) i `setLearningPoints(n)` (0–1 000 000).
+  - Mod `nb-wisp` 1.3.0: zakładka „Punkty nauki” w menu modów – bieżąca liczba, przyciski +5, +10, +50, +100, pole z liczbą i przyciski „Dodaj” / „Ustaw”. Komenda konsoli `pn` (bez liczby – pokazuje, `pn 50` – ustawia, `pn +50` / `pn -10` – dodaje / odejmuje). Na starszej wersji gry zakładka mówi, że brak tej funkcji.
+  - `mods/nb-wisp.zip` był w wersji 1.2.1, bez zmiany z poprawki 154 (ognik usuwany i przywoływany dopiero przy 100 m, nie przy 40 m) – paczka zbudowana od nowa z folderu moda.
+- **Do sprawdzenia:** instalacja `nb-wisp.zip` (launcher → Mods → Add a mod), zakładka „Punkty nauki”: przyciski i pole zmieniają liczbę, liczba w statystykach postaci taka sama; nauka u nauczyciela zużywa te punkty. Ognik działa jak dotąd.
 
 ### 177. Ognik: łup z ciała po zdjęciu broni (szkielet pirat) – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`

@@ -17,7 +17,8 @@ namespace {
 
 enum Prop : int {
   Valid, Id, Name, Instance, Level, Health, MaxHealth, Mana, MaxMana, Strength, Dexterity, Experience, Dead, GuildOf,
-  IsPlayer, X, Y, Z, Position, Rotation, Puppet, InstanceId, WeaponState_, WeaponItem, Overlays, Armor, RangedItem, Unconscious, Talking, RangedShots, CompatibilityState
+  IsPlayer, X, Y, Z, Position, Rotation, Puppet, InstanceId, WeaponState_, WeaponItem, Overlays, Armor, RangedItem, Unconscious, Talking, RangedShots, CompatibilityState,
+  LearningPoints   // NB fix 178
   };
 
 constexpr const char* HiddenId    = "__id";
@@ -73,6 +74,7 @@ JSValue get(JSContext* ctx, JSValueConst obj, int prop) {
     case Unconscious: return JS_NewBool(ctx,npc->isUnconscious());
     case Talking:     return JS_NewBool(ctx,npc->isTalk());
     case RangedShots:  return JS_NewUint32(ctx,npc->rangedShotCount());
+    case LearningPoints: return JS_NewInt32(ctx,npc->learningPoints());   // NB fix 178
     case CompatibilityState: {
       JSValue state = JS_NewObject(ctx);
       JS_SetPropertyStr(ctx,state,"diving",JS_NewBool(ctx,npc->isDive()));
@@ -150,6 +152,16 @@ JSValue setMana(JSContext* ctx, JSValueConst obj, int argc, JSValueConst* argv) 
   const int32_t max   = npc->attribute(ATR_MANAMAX);
   const int32_t value = std::max<int32_t>(0,std::min<int32_t>(max,int32_t(v)));
   npc->changeAttribute(ATR_MANA,value-npc->attribute(ATR_MANA),true);
+  return JS_UNDEFINED;
+  }
+
+/// NB fix 178: setLearningPoints(n) - the learning points of the character (C_Npc.lp), 0..1000000
+JSValue setLearningPoints(JSContext* ctx, JSValueConst obj, int argc, JSValueConst* argv) {
+  Npc* npc = self(ctx,obj);
+  double v = 0;
+  if(npc==nullptr || argc<1 || JS_IsException(number(ctx,argv[0],v)))
+    return JS_UNDEFINED;
+  npc->handle().lp = std::max<int32_t>(0,std::min<int32_t>(1000000,int32_t(v)));
   return JS_UNDEFINED;
   }
 
@@ -559,10 +571,12 @@ void game::installNpc(JSContext* ctx) {
   getter(ctx,proto,"talking",    Talking);
   getter(ctx,proto,"rangedShots",RangedShots);
   getter(ctx,proto,"compatibilityState",CompatibilityState);
+  getter(ctx,proto,"learningPoints",LearningPoints);   // NB fix 178
 
   js::fn(ctx,proto,"setHealth", setHealth,1);
   js::fn(ctx,proto,"heal",      heal,1);
   js::fn(ctx,proto,"setMana",   setMana,1);
+  js::fn(ctx,proto,"setLearningPoints",setLearningPoints,1);   // NB fix 178
   js::fn(ctx,proto,"kill",      kill,0);
   js::fn(ctx,proto,"setPosition",setPosition,3);
   js::fn(ctx,proto,"teleport",  teleport,1);
