@@ -317,6 +317,7 @@ struct NbState {
   // NB fix 161: the companions go with the hero when he teleports (a jump of his position in the same world)
   const World*                                partyWorld    = nullptr;
   Tempest::Vec3                               partyHeroPos;
+  uint64_t                                    nextPartyFocus = 0;   // NB fix 163
   };
 
 static bool nbEqualsNoCase(std::string_view a, std::string_view b) {
@@ -4862,6 +4863,10 @@ void GameScript::tick(uint64_t dt) {
   nbDotTick();    // NB fix 106: the damage over time
   nbShotsTick(dt); // NB fix 157: the projectiles of the monsters
   nbPartyTeleportTick();   // NB fix 161
+  if(tickCount()>=nb->second.nextPartyFocus) {
+    nb->second.nextPartyFocus = tickCount()+1000;
+    nbPartyFocusTick();     // NB fix 163
+    }
   if(tickCount()>=nb->second.nextVobRepair) {
     nb->second.nextVobRepair = tickCount()+5000;
     nbRepairVobTrees();   // NB fix 160
@@ -8465,6 +8470,27 @@ void GameScript::nbClearShots() {
   auto nb = nbStates.find(this);
   if(nb!=nbStates.end())
     nb->second.shots.clear();
+  }
+
+// NB fix 163: ZS_Attack makes a companion (AIV_PARTYMEMBER or NPCTYPE_FRIEND) that fights a creature not in the focus
+// (C_Npc.noFocus, so that the player does not hit him), ZS_Attack_End gives the focus back. A state that is started over it
+// without its end (AI_StartState(npc, ..., 0, ""), as AI_OnDead of the shaman of the West Coast does with Fregyal) left
+// the companion without the focus for good: no talk. A companion out of ZS_Attack gets his focus back
+void GameScript::nbPartyFocusTick() {
+  auto* hero = world().player();
+  auto* atk  = vm.find_symbol_by_name("ZS_ATTACK");
+  if(hero==nullptr || atk==nullptr)
+    return;
+  constexpr size_t AIV_PARTYMEMBER = 15;
+  world().detectNpc(hero->position(),5000.f,[&](Npc& n) {
+    auto& h = n.handle();
+    if(&n==hero || !h.no_focus || h.aivar[AIV_PARTYMEMBER]==0 || n.isDead())
+      return;
+    if(n.isInState(ScriptFn(atk->index())))
+      return;
+    h.no_focus = false;
+    nbCtx("focus: ",n.displayName()," can be in the focus again (out of ZS_Attack)");
+    });
   }
 
 // NB fix 161: the companions of the hero (AIV_PARTYMEMBER) and his summoned creatures go with him when he teleports (a

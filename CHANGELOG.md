@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **162** – Fregyal po pokonaniu szamana nie rozmawia: log przy próbie rozmowy (do diagnozy) – 🧪
-2. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – 🧪
-3. **160** – skarb z notatki martwego pirata (Zachodnie Wybrzeże): miejsce kopania wstawiane w starszych zapisach – 🧪
-4. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko; log miejsc bez celownika (skarby) – 🧪
-5. **158** – pociski potworów lecą prosto tam, gdzie stał bohater w chwili rzutu: krok w bok i pocisk chybia – ✅
+1. **163** – towarzysz po walce znowu w celowniku (Fregyal po pokonaniu szamana – rozmowa) – 🧪
+2. **162** – log celownika i rozmowy (diagnostyka do 163) – ✅
+3. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – 🧪
+4. **160** – skarb z notatki martwego pirata (Zachodnie Wybrzeże): miejsce kopania wstawiane w starszych zapisach – 🧪
+5. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko; log miejsc bez celownika (skarby) – 🧪
 
 ---
 
@@ -252,7 +252,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 162. Fregyal po pokonaniu szamana: brak rozmowy (diagnostyka) – 🧪 (22.11.2026)
+### 163. Towarzysz po walce znowu w celowniku (Fregyal) – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`
+- **Zgłoszenie:** po pokonaniu szamana nie da się porozmawiać z Fregyalem – nie da się go wziąć w celownik.
+- **Log (poprawka 162):** Fregyal 19 cm przed bohaterem, widoczny, towarzysz (`AIV_PARTYMEMBER`=1), ale `noFocus=1`.
+- **Skrypty NB:**
+  - `ZS_Attack`: towarzysz (lub `NPCTYPE_FRIEND`) walczący z kimś innym niż bohater dostaje `self.noFocus = TRUE` (żeby go nie trafić w walce); `ZS_Attack_End` przywraca `FALSE`.
+  - `AI_OnDead_Draconian_ShamanWC_Final`: `Npc_ClearAIQueue` i `AI_StartState(Fregeal, ZS_ReactToDamage, 0, "")` – nowy stan bez zakończenia bieżącego, więc `ZS_Attack_End` się nie wykonuje i `noFocus` zostaje na zawsze.
+- **Poprawka:** co sekundę towarzysze (`AIV_PARTYMEMBER`) do 50 m od bohatera z `noFocus`, którzy nie są w `ZS_Attack`, dostają celownik z powrotem. W logu: `[ctx] focus: … can be in the focus again (out of ZS_Attack)`. Działa także dla zapisów, w których Fregyal już jest bez celownika. W walce (`ZS_Attack`) towarzysz zostaje bez celownika, jak w skryptach.
+- **Do sprawdzenia:** wczytanie zapisu po walce z szamanem – Fregyal w celowniku, rozmowa działa.
+
+### 162. Fregyal po pokonaniu szamana: brak rozmowy (diagnostyka) – ✅ (22.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/game/gamescript.cpp/.h`
 - **Zgłoszenie:** po pokonaniu szamana jaszczuroludzi na Zachodnim Wybrzeżu nie da się porozmawiać z Fregyalem.
 - **Skrypty NB:**
@@ -262,7 +272,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - Pomocnicza funkcja `GameScript::nbIntVar` (globalna zmienna int skryptów).
 - **Log (22.11):** po śmierci szamana rozmowa z Kormakiem działa (`CAMMODEON=0`), próby rozmowy z Fregyalem w logu nie ma – nie da się go wziąć w celownik, także bez broni w ręku.
 - **Diagnostyka 2 (`common/mainwindow.cpp`):** przy każdym dotknięciu przycisku akcji (raz na 3 s) log celownika (`[ctx] focus: …`) i postaci do 5 m: odległość, kąt względem bohatera, `noFocus`, martwy, powalony, towarzysz (`AIV_PARTYMEMBER`), widoczność (promień), broń bohatera, pozycja.
-- **Do sprawdzenia:** log z podejścia do Fregyala (stanąć przodem, dotknąć przycisku akcji).
+- **Wynik (log 22.11):** `[ctx] npc near: "Fregyal" dist=19 angle=0 noFocus=1 … party=1 see=1` – Fregyal ma ustawione `C_Npc.noFocus`. Poprawka: 163.
 
 ### 161. Towarzysze teleportują się z bohaterem – 🧪 (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`
