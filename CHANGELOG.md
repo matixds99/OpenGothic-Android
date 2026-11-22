@@ -15,8 +15,8 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **171** – zadanie „Exodus”: piraci i bohater pojawiają się w Jarkendarze przy ich obozie (funkcje zmiany świata NB) – 🧪
-2. **170** – szybki łup bez migającego okna skrzyni i bez zmiany sterowania – 🧪
+1. **171** – zadanie „Exodus”: piraci i bohater pojawiają się w Jarkendarze przy ich obozie (funkcje zmiany świata NB) – ✅
+2. **170** – szybki łup bez migającego okna skrzyni i bez zmiany sterowania – ✅
 3. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – ✅
 4. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – ✅
 5. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 171. Zmiana świata: RX_OnChangeLevel_Begin/End, punkt przybycia ze skryptów (Exodus) – 🧪 (22.11.2026)
+### 171. Zmiana świata: RX_OnChangeLevel_Begin/End, punkt przybycia ze skryptów (Exodus) – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamesession.cpp`, `patches/zenkit-opengothic.patch` (`lib/ZenKit/src/Archive.cc`), `patches/README.md`
 - **Zgłoszenie:** w zadaniu „Exodus” (eskorta piratów z Zachodniego Wybrzeża) po przejściu do Jarkendaru bohater zamiast przy obozie piratów ląduje w teksturach koło magów wody; piratów nie ma.
 - **Skrypty NB:**
@@ -266,12 +266,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zmiana (ZenKit, `patches/zenkit-opengothic.patch`):** klasa `zCVobWaypoint` (punkt ścieżki zapisany jako obiekt – tak NB zapisał ten plik) czytana jak `zCVobSpot`: wolny punkt z nazwą. Plik się wczytuje, punkt `WP_AD_WC_ENTER_000` jest w świecie przed postawieniem bohatera i piratów.
 - **Zapis sprzed poprawki:** przejście już się odbyło bez `RX_OnChangeLevel_Begin` (flaga 0, piraci na Wybrzeżu) – trzeba wczytać zapis z Zachodniego Wybrzeża sprzed przejścia i przejść do Jarkendaru jeszcze raz (z piratami).
 - **Do sprawdzenia:** Exodus – przejście z Wybrzeża do Jarkendaru: bohater i piraci przy obozie piratów.
+- **Test (22.11):** działa – Exodus: bohater i piraci w Jarkendarze przy obozie piratów.
 
-### 170. Szybki łup bez okna skrzyni – 🧪 (22.11.2026)
+### 170. Szybki łup bez okna skrzyni – ✅ (22.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`, `common/mainwindow.cpp`
 - **Zgłoszenie:** przy szybkim łupie przez ułamek sekundy widać chowające się okno skrzyni (prośba o ukrycie).
 - **Poprawka:** skrzynia otwarta przez szybki łup (do jej opróżnienia, najwyżej 4 s) nie rysuje okna ekwipunku, a sterowanie na ekranie zostaje jak w grze (bez przełączania na układ ekwipunku). Widać tylko listę zabranych przedmiotów.
 - **Do sprawdzenia:** przytrzymanie na skrzyni – bez okna i bez zmiany przycisków; krótkie dotknięcie – zwykłe okno.
+- **Test (22.11):** działa – szybki łup bez okna skrzyni.
 
 ### 169. Szybki łup: okno skrzyni nie wraca – ✅ (22.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp/.h`
