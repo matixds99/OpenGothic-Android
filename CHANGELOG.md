@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – 🧪
+1. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
 2. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – 🧪
 3. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
 4. **164** – mikstura ochrony przed następnym ciosem działa – ✅
@@ -252,12 +252,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 167. Szybki łup na skrzyniach – 🧪 (22.11.2026)
+### 167. Szybki łup na skrzyniach – ✅ (22.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/ui/inventorymenu.cpp/.h`
 - **Zgłoszenie:** szybki łup (poprawka 159) nie działa – przytrzymanie przycisku akcji na skrzyni od razu otwiera zwykłe okno.
 - **Przyczyna:** poprawka 159 brała tylko skrzynie bez właściciela, funkcji skryptu i wyzwalacza (żeby nie pominąć ich skryptów przy otwieraniu). W NB większość skrzyń ma któreś z nich, więc przytrzymanie działało jak zwykłe dotknięcie. Na zwłokach działało.
 - **Poprawka:** każda skrzynia bez zamka (albo z otwartym zamkiem) nadaje się do szybkiego łupu. Przytrzymanie 0,5 s otwiera ją jak zwykła akcja gry (animacja, skrypty, właściciel – jak przy zwykłym otwarciu), a ekwipunek, gdy się otworzy (do 4 s), od razu zabiera całą zawartość, pokazuje zabrane przedmioty na środku ekranu i zamyka się. Pusta skrzynia – „Nic tu nie ma” bez otwierania. Zwłoki – jak dotąd (bez okna). Wypisywanie zabranych przedmiotów wspólne: `InventoryMenu::nbPrintTaken`.
 - **Do sprawdzenia:** przytrzymanie na kilku skrzyniach (zwykłych i z zadań) – zawartość w ekwipunku, napisy, okno się nie zostaje; krótkie dotknięcie – zwykłe okno.
+- **Test (22.11):** działa – szybki łup zbiera ze skrzyń.
 
 ### 166. Pierścienie teleportacyjne – 🧪 (22.11.2026)
 - **Pliki:** `common/world/objects/item.cpp/.h`, `common/game/inventory.cpp`, `common/ui/inventorymenu.cpp`
