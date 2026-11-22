@@ -228,6 +228,8 @@ class GameScript final {
     bool             nbSummonsPassive();
     void             nbSummonsAttack(Npc& enemy);
     void             nbSummonsToggleMode();
+    int32_t          nbSummonsCall();           // NB fix 176
+    int32_t          nbSummonsCallCooldown();   // NB fix 176
     /// the summoned creatures of the hero go away; the pets stay (NIXDOG, PET_JINA), the wisp too when keepWisp
     size_t           nbResetSummons(bool keepWisp, bool print);
     /// NB fix 157: the projectiles in flight go away with their world (before it is deleted)

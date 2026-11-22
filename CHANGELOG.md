@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **176**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **177**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
-2. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – ✅
-3. **173** – wytrzymałość: spada przy pływaniu, sprint zawsze kończy się bez wytrzymałości – ✅
-4. **172** – przycisk sprintu bez przycięcia gry (nakładki zdejmowane po nazwie) – ✅
-5. **171** – zadanie „Exodus”: piraci i bohater pojawiają się w Jarkendarze przy ich obozie (funkcje zmiany świata NB) – ✅
+1. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – 🧪
+2. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
+3. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – ✅
+4. **173** – wytrzymałość: spada przy pływaniu, sprint zawsze kończy się bez wytrzymałości – ✅
+5. **172** – przycisk sprintu bez przycięcia gry (nakładki zdejmowane po nazwie) – ✅
 
 ---
 
@@ -251,6 +251,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 176. Panel przywołańców: PRZYWOŁAJ (przywołańce do bohatera), RESET nad AKTYWNE – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/game/nbtexts.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`
+- **Zgłoszenie:** przywołańce czasem gubią się w świecie. Na PC był klawisz, który stawiał je przy bohaterze, z odnowieniem 30 s. Na telefonie go brak.
+- **Plugin NB:** klawisz `KEY_SUMMON_TELEPORT` (`UNION_ABI.DLL` 0x10235bae): gdy licznik odnowienia jest zerowy, wszystkie przywołańce bohatera (gdziekolwiek w świecie) stają 2–5 m od niego, a ich AI wraca do podążania (0x10138ac0, `ResetAI() -> FOLLOW`). Odnowienie 30 s, a 15 s, gdy `RX_NecroSummonWay == 179935`; liczy się w czasie gry. Na liście efektów w prawym górnym rogu plugin pokazuje „(mm:ss) `RX_SummonTeleportCD_String`” (0x10256c48).
+- **Poprawka:**
+  - Panel przywołańców ma dwa rzędy: przy przycisku ATAK i AKTYWNE/PASYWNE, nad nimi PRZYWOŁAJ (nad ATAK) i RESET (nad AKTYWNE).
+  - PRZYWOŁAJ (`GameScript::nbSummonsCall`): przywołańce i zwierzaki (bez ognika i totemu) stają w półkolu 2,5 m za bohaterem, ich kolejka AI jest czyszczona, cel zdejmowany, startuje ich stan początkowy (podążanie). Potem odnowienie 30 s / 15 s czasu gry.
+  - W czasie odnowienia przycisk jest przygaszony i pokazuje pozostałe sekundy, a dotknięcie wypisuje „Przyzwańce: ponownie za N s”. Na liście efektów linia „(mm:ss) Przywołanie przyzwańców” (tekst z `AB_Translation.lbr`, gdy jest).
+  - W logu `[ctx] summons: N called to the hero, again in 30 s`.
+- **Do sprawdzenia:** przywołaniec zostawiony daleko (np. za rzeką) → PRZYWOŁAJ: staje przy bohaterze i idzie za nim; drugie dotknięcie od razu – licznik na przycisku i na liście efektów; po 30 s znów działa. RESET, ATAK i AKTYWNE bez zmian.
 
 ### 175. Ognik: bez kolizji, lot bez spadania, zbieranie przedmiotów i łupów z ciał – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp/.h`, `common/physics/dynamicworld.cpp`

@@ -91,6 +91,7 @@ class Controller {
       bool  fastForward  = false;
       bool  sprint       = false;   // the sprint of New Balance is on (NB fix 40)
       bool  summonPassive = false;  // NB fix 131: the summoned creatures do not attack (RX_SummonMode)
+      int   summonCallCd  = 0;      // NB fix 176: the seconds until the summons can be called to the hero again
       // NB fix 111: the wheel of the quick choice - the name (UTF-8) and the number of the item of every slot
       std::array<std::string,9> wheelName;    // NB fix 112: 9 slots
       std::array<int,9>         wheelCount{};

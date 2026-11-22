@@ -17,6 +17,7 @@
 namespace NbTexts {
   inline const std::unordered_map<std::string_view,std::string_view>& fallback() {
     static const std::unordered_map<std::string_view,std::string_view> pl = {
+      {"RX_SummonTeleportCD_String", "Przywo\xB3""anie przyzwa\xF1""c\xF3w"},   // NB fix 176
       {"sHolyLight", "\x8Cwi\xEAty p\xB3omie\xF1"},
       {"sEffectResistCurse", "Ochrona przed kl\xB9twami"},
       {"sEffectAcceleration", "Przyspieszenie"},

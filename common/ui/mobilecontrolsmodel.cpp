@@ -558,8 +558,9 @@ void Controls::buildGame(const Anchor&) {
   // NB fix 85: the quick attack (a step to the side, forward and the attack), over the action button, with a melee weapon
   icon("quickattack", right(198), bottom(330),    56, "QUICK",  Key::Enter, false, Special::QuickAttack);
   icon("wheel",     right(150),   bottom(40),     56, "WHEEL",  Key::Enter, false, Special::Wheel);   // NB fix 111
-  // NB fix 131: the summoned creatures (New Balance): the button, and its three choices in a row on its left - attack the
-  // target, active / passive, away. The choices go with the button, when it is moved in the editor
+  // NB fix 131: the summoned creatures (New Balance): the button, and its choices on its left - attack the target,
+  // active / passive, away. The choices go with the button, when it is moved in the editor.
+  // NB fix 176: two rows - ATAK and AKTYWNE next to the button, over them PRZYWOŁAJ (the summons to the hero) and RESET
   if(featureSprint && !dead) {
     icon("summons", right(372), bottom(310), 56, "SUMMONS", Key::Enter, false, Special::Summons);
     const Button* sb = nullptr;
@@ -570,15 +571,15 @@ void Controls::buildGame(const Anchor&) {
       const Mobile::Rect r  = sb->rect;
       const float        bw = 118.f, bh = 46.f;
       const float        gap = 8.f*s;
-      const char*        labels[3]   = {"ATAK", "TRYB", "RESET"};
-      const int          specials[3] = {Special::SummonAttack, Special::SummonMode, Special::SummonReset};
-      float x = r.x-gap;
-      for(int i=0; i<3; ++i) {
-        x -= bw*s;
-        auto& o   = add(x, r.y+r.h/2-bh*s/2, bw, bh, labels[i], Key::Enter);
+      const char*        labels[4]   = {"ATAK", "TRYB", "PRZYWOŁAJ", "RESET"};
+      const int          specials[4] = {Special::SummonAttack, Special::SummonMode, Special::SummonCall, Special::SummonReset};
+      const float        y0 = r.y+r.h/2-bh*s/2;
+      for(int i=0; i<4; ++i) {
+        const int   col = i%2, row = i/2;
+        const float x   = r.x-gap-float(col+1)*(bw*s+gap)+gap;
+        auto& o   = add(x, y0-float(row)*(bh*s+gap), bw, bh, labels[i], Key::Enter);
         o.special = specials[i];
         o.id      = std::string("summon")+std::to_string(i);
-        x -= gap;
         }
       }
     }
@@ -1072,7 +1073,8 @@ void Controls::applyAvailability() {
       usable = true; else
     if(b.special==Special::Summons)
       usable = availableSummons && availableMovement; else   // NB fix 131
-    if(b.special==Special::SummonAttack || b.special==Special::SummonMode || b.special==Special::SummonReset)
+    if(b.special==Special::SummonAttack || b.special==Special::SummonMode || b.special==Special::SummonReset ||
+       b.special==Special::SummonCall)
       usable = summonMenu && availableSummons && availableMovement; else
     if(b.special==Special::SkipScene)
       usable = availableSkip; else   // NB fix 143

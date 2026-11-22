@@ -2396,7 +2396,8 @@ void MainWindow::onMobileAction(int id) {
     if(auto* w = Gothic::inst().world(); w!=nullptr && w->script().nbCutsceneActive())
       w->script().nbSkipCutscene();
     }
-  if(id==Mobile::Special::SummonAttack || id==Mobile::Special::SummonMode || id==Mobile::Special::SummonReset) {
+  if(id==Mobile::Special::SummonAttack || id==Mobile::Special::SummonMode || id==Mobile::Special::SummonReset ||
+     id==Mobile::Special::SummonCall) {
     auto* w  = Gothic::inst().world();
     auto* pl = Gothic::inst().player();
     if(w!=nullptr && pl!=nullptr) {
@@ -2413,6 +2414,14 @@ void MainWindow::onMobileAction(int id) {
         vm.nbSummonsToggleMode();
       if(id==Mobile::Special::SummonReset)
         vm.nbResetSummons(true,true);
+      if(id==Mobile::Special::SummonCall) {   // NB fix 176
+        const int32_t n = vm.nbSummonsCall();
+        if(n<0)
+          Gothic::inst().onPrint(("Przyzwańce: ponownie za "+std::to_string(vm.nbSummonsCallCooldown())+" s").c_str()); else
+        if(n>0)
+          Gothic::inst().onPrint("Przyzwańce: do mnie!"); else
+          Gothic::inst().onPrint("Przyzwańce: nikogo nie ma");
+        }
       }
     if(id!=Mobile::Special::SummonMode)
       summonMenuOpen = false;
@@ -2609,8 +2618,10 @@ void MainWindow::updateMobileOverlay() {
   hud.targetLocked = player.hasLock();
   hud.fastForward  = fastForward;
   hud.sprint       = nbSprintActive();
-  if(auto* w = Gothic::inst().world())
-    hud.summonPassive = w->script().nbSummonsPassive();   // NB fix 131
+  if(auto* w = Gothic::inst().world()) {
+    hud.summonPassive = w->script().nbSummonsPassive();        // NB fix 131
+    hud.summonCallCd  = w->script().nbSummonsCallCooldown();   // NB fix 176
+    }
   if(mobileContext()==Mobile::Mode::Inventory)
     hud.useLabel = std::string(inventory.mobileActionLabel());
 

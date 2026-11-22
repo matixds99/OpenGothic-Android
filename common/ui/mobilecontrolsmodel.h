@@ -70,7 +70,8 @@ namespace Special {
     SummonAttack  = 49,
     SummonMode    = 50,
     SummonReset   = 51,
-    SkipScene     = 52   // NB fix 143: "POMIŃ" - the scenes of New Balance (the voyage of the boat, the concerts)
+    SkipScene     = 52,  // NB fix 143: "POMIŃ" - the scenes of New Balance (the voyage of the boat, the concerts)
+    SummonCall    = 53   // NB fix 176: the summons to the hero (KEY_SUMMON_TELEPORT of the plugin)
     };
   }
 

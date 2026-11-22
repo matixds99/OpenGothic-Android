@@ -247,6 +247,7 @@ struct NbState {
   uint64_t                                    trollNextLook = 0;
   uint64_t                                    summonNextCount = 0;   // NB fix 129
   uint32_t                                    followWorld = 0;       // NB fix 131: the world and the place of the hero
+  uint64_t                                    summonCallCd = 0;      // NB fix 176: ms left until the summons can be called again
   // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
   std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
   std::unordered_map<const Npc*,uint64_t>     bodyEmptySince;        // NB fix 136: a dead body found empty, since when
@@ -490,7 +491,7 @@ int nbWispSkillFor(int32_t mainFlag, std::string_view name) {
 /// "(mm:ss) name" at x 5200 and y 40+200*n of the virtual 8192 of ZenGin. The names: the texts of the plugin
 /// (AB_Translation.lbr) or the strings of GOTHIC.DAT (as the plugin). Not here: the vampire, Full SnC+ and the karma
 /// skills, the slowing of time (the plugin keeps them in itself)
-void nbBuffPanel(zenkit::DaedalusVm& vm) {
+void nbBuffPanel(zenkit::DaedalusVm& vm, int32_t summonCallSec) {
   const auto var = [&vm](std::string_view name) -> int32_t {
     auto* s = vm.find_symbol_by_name(name);
     return s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member() ? s->get_int() : 0;
@@ -567,6 +568,9 @@ void nbBuffPanel(zenkit::DaedalusVm& vm) {
     }
   if(var("RX_NEXTHITIGNORE")!=0)
     lines.push_back(std::string(NbTexts::get("sNextHitPotion")));
+  // NB fix 176: the summons can be called to the hero again in (UNION_ABI.DLL 0x10256c48)
+  if(summonCallSec>0)
+    timed(summonCallSec,NbTexts::get("RX_SummonTeleportCD_String"));
 
   if(var("FIRESHIELDISUP")!=0)
     timed(3600-var("TEMPFIRESHIELDTICK"),str("RX_BUFFFIRESHIELD"));
@@ -4805,6 +4809,9 @@ void GameScript::tick(uint64_t dt) {
   if(nb==nbStates.end() || world().player()==nullptr)
     return;
 
+  // NB fix 176: the time of the game until the summons can be called to the hero again
+  nb->second.summonCallCd -= std::min(nb->second.summonCallCd,dt);
+
   // the delayed functions of NB (RX_CALLBACK*)
   if(!nb->second.callbacks.empty()) {
     const uint64_t now     = tickCount();
@@ -4965,7 +4972,7 @@ void GameScript::tick(uint64_t dt) {
   if((tickCount()>=st.nextHud || st.nextHud>tickCount()+1000) && !Gothic::inst().nbSalesOpen) {
     st.nextHud = tickCount()+250;
     callNb(st.gamePaused);
-    nbBuffPanel(vm);
+    nbBuffPanel(vm,nbSummonsCallCooldown());
     // NB fix 64: the texts of the wisp (positions from the video of the PC: the state at 86% / 36%, the list at
     // 2% from 57% down)
     if(!Gothic::inst().isInDialog()) {
@@ -8373,6 +8380,53 @@ void GameScript::nbSummonsToggleMode() {
       mode->set_int(mode->get_int()==1 ? 0 : 1);
     }
   nbCtx("summons: mode ",nbSummonsPassive() ? "passive" : "active");
+  }
+
+/// NB fix 176: the seconds until the summons can be called to the hero again (0 - now)
+int32_t GameScript::nbSummonsCallCooldown() {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end())
+    return 0;
+  return int32_t((nb->second.summonCallCd+999)/1000);
+  }
+
+/// NB fix 176: the choice PRZYWOŁAJ of the panel - KEY_SUMMON_TELEPORT of the plugin (UNION_ABI.DLL 0x10235bae,
+/// 0x10138ac0): every summoned creature of the hero, wherever it is in the world, stands near him and follows him again
+/// (its AI goes back to its start state, "ResetAI() -> FOLLOW" of the plugin). Then 30 s of the time of the game until the
+/// next call, 15 s for the necromancer of the way RX_NecroSummonWay == 179935. -1: not yet (the time left)
+int32_t GameScript::nbSummonsCall() {
+  auto& st   = nbStates[this];
+  auto* hero = world().player();
+  if(hero==nullptr || hero->isDead())
+    return 0;
+  if(st.summonCallCd>0)
+    return -1;
+  std::vector<Npc*> with;
+  world().detectNpc(hero->position(),1.0e6f,[&](Npc& n) {
+    if(n.isDead() || n.isPlayer() || !nbIsSummon(n))
+      return;
+    auto* sym = vm.find_symbol_by_index(uint32_t(n.handle().symbol_index()));
+    const std::string_view inst = sym!=nullptr ? std::string_view(sym->name()) : std::string_view();
+    if(inst=="WISP_DETECTOR" || inst=="HERO_TOTEM_VOB")
+      return;
+    with.push_back(&n);
+    });
+  if(with.empty())
+    return 0;
+  const auto pos = hero->position();
+  for(size_t i=0; i<with.size(); ++i) {
+    auto&       n = *with[i];
+    const float a = hero->rotationRad()+float(M_PI)+(float(i)-float(with.size()-1)/2.f)*0.7f;   // behind the hero
+    n.clearAiQueue();
+    n.setTarget(nullptr);
+    n.setPosition(pos+Tempest::Vec3(std::cos(a)*250.f,0.f,std::sin(a)*250.f));
+    fixNpcPosition(n,0,0);
+    if(const auto start = n.handle().start_aistate; start!=0)
+      n.aiPush(AiQueue::aiStartState(ScriptFn(size_t(start)),0,nullptr,nullptr,""));
+    }
+  st.summonCallCd = nbIntVar("RX_NECROSUMMONWAY")==179935 ? 15000 : 30000;
+  nbCtx("summons: ",with.size()," called to the hero, again in ",int(st.summonCallCd/1000)," s");
+  return int32_t(with.size());
   }
 
 /// NB fix 131: the choice ATAK of the panel (RX_Cmd_Enemy of the plugin, which no script calls) - the mode becomes active,
