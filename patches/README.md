@@ -7,6 +7,7 @@
   `Bar_Delete(var int)` of LeGo is called with an instance);
 - `INpc::compat_focus_vob` / `compat_interact_mob` - the members of oCNpc that C_NPC does not have.
 - `oCNpcEx` / `oCItemEx` of Union (saves of New Balance and other mods) are read as `oCNpc` / `oCItem`: the import of original saves (`docs/ORYGINALNE_ZAPISY.md`).
+- `zCVobWaypoint` (a waypoint of Spacer saved as an object, in the parts of the world of New Balance) is read as `zCVobSpot` - a free point with its name.
 
 CMake applies the patch by itself (`cmake/zenkitpatch.cmake`, before ZenKit is added): a clean clone, the Android build and the CI need nothing more. A tree that has it already is left alone. By hand (the patch fails when it was applied already):
 

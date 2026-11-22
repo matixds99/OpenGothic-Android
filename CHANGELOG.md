@@ -253,7 +253,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
 ### 171. Zmiana świata: RX_OnChangeLevel_Begin/End, punkt przybycia ze skryptów (Exodus) – 🧪 (22.11.2026)
-- **Pliki:** `common/game/gamesession.cpp`
+- **Pliki:** `common/game/gamesession.cpp`, `patches/zenkit-opengothic.patch` (`lib/ZenKit/src/Archive.cc`), `patches/README.md`
 - **Zgłoszenie:** w zadaniu „Exodus” (eskorta piratów z Zachodniego Wybrzeża) po przejściu do Jarkendaru bohater zamiast przy obozie piratów ląduje w teksturach koło magów wody; piratów nie ma.
 - **Skrypty NB:**
   - Plugin (`UNION_ABI.DLL`, `AB_ChangeLevelBegin`) woła przed zmianą świata `RX_OnChangeLevel_Begin`, a po niej `RX_OnChangeLevel_End`. Port ich nie wołał.
@@ -262,7 +262,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:**
   - Przed zmianą świata (jeszcze w starym świecie) `RX_OnChangeLevel_Begin`, po wejściu do nowego (po funkcjach wejścia) `RX_OnChangeLevel_End`. W logu `[ctx] change of the world: RX_OnChangeLevel_Begin (to … …)`.
   - Punkt przybycia, którego nie było przy wstawianiu bohatera, a który dodały funkcje wejścia – bohater przenoszony tam. Exodus: gdy `RX_AD_WC_HeroArrived` przeszło z 1 na 2, bohater staje w `WP_AD_WC_ENTER_000`, przy piratach. W logu `[ctx] change of the world: the hero at …`.
-- **Zapis sprzed poprawki:** przejście już się odbyło bez `RX_OnChangeLevel_Begin` (flaga 0, piraci na Wybrzeżu) – trzeba wrócić na Zachodnie Wybrzeże i przejść do Jarkendaru jeszcze raz (z piratami).
+- **Test (22.11, log):** `RX_OnChangeLevel_Begin` działa (piraci zabrani z Wybrzeża, `RX_AD_WC_HeroArrived` 1 → 2), ale część świata z punktem przybycia się nie wczytała: `Unknown object type: zCVobWaypoint:zCVob`, `RX_InsertVobTree: the file "WP_AD_WC_ENTER_000.ZEN" is not in the game or is empty`. Piraci w złym miejscu („invalid spawnpoint”), bohater w punkcie startowym świata (w teksturach przy magach wody).
+- **Zmiana (ZenKit, `patches/zenkit-opengothic.patch`):** klasa `zCVobWaypoint` (punkt ścieżki zapisany jako obiekt – tak NB zapisał ten plik) czytana jak `zCVobSpot`: wolny punkt z nazwą. Plik się wczytuje, punkt `WP_AD_WC_ENTER_000` jest w świecie przed postawieniem bohatera i piratów.
+- **Zapis sprzed poprawki:** przejście już się odbyło bez `RX_OnChangeLevel_Begin` (flaga 0, piraci na Wybrzeżu) – trzeba wczytać zapis z Zachodniego Wybrzeża sprzed przejścia i przejść do Jarkendaru jeszcze raz (z piratami).
 - **Do sprawdzenia:** Exodus – przejście z Wybrzeża do Jarkendaru: bohater i piraci przy obozie piratów.
 
 ### 170. Szybki łup bez okna skrzyni – 🧪 (22.11.2026)
