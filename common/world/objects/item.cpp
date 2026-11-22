@@ -327,6 +327,13 @@ bool Item::isRing() const {
   return flg & ITM_RING;
   }
 
+bool Item::nbUsableJewel() const {
+  auto& h = handle();
+  if((uint32_t(itemFlag()) & (ITM_RING|ITM_AMULET))==0)
+    return false;
+  return h.on_state[0]!=0 && h.on_equip==0 && !h.scheme_name.empty();
+  }
+
 bool Item::isArmor() const {
   auto flg = ItmFlags(mainFlag());
   return flg & ITM_CAT_ARMOR;

@@ -1754,6 +1754,8 @@ std::string_view InventoryMenu::mobileActionLabel() {
   if(it.isEquipped())
     return "Unequip";
   const auto flag = it->mainFlag();
+  if(it->nbUsableJewel())   // NB fix 166: the rings of the teleport are used
+    return "Use";
   if(flag&(ITM_CAT_NF|ITM_CAT_FF|ITM_CAT_MUN|ITM_CAT_ARMOR|ITM_CAT_RUNE|ITM_CAT_LIGHT|ITM_CAT_MAGIC))
     return "Equip";
   if(flag&ITM_CAT_DOCS)

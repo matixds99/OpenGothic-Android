@@ -975,10 +975,10 @@ bool Inventory::use(size_t cls, Npc &owner, uint8_t slotHint, bool force) {
   if(flag & ITM_BELT)
     return setSlot(belt,it,owner,force);
 
-  if(flag & ITM_AMULET)
+  if((flag & ITM_AMULET) && !it->nbUsableJewel())   // NB fix 166
     return setSlot(amulet,it,owner,force);
 
-  if(flag & ITM_RING) {
+  if((flag & ITM_RING) && !it->nbUsableJewel()) {
     if(ringL==nullptr)
       return setSlot(ringL,it,owner,force);
     if(ringR==nullptr)

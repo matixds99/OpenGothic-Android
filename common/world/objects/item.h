@@ -66,6 +66,9 @@ class Item : public Vob {
     bool                is2H() const;
     bool                isCrossbow() const;
     bool                isRing() const;
+    /// NB fix 166: a ring or an amulet with a function of the use (on_state) and none of the wearing (on_equip) is used,
+    /// not worn - the rings of the teleport of New Balance (ItRi_Teleport_*, the scheme MAP)
+    bool                nbUsableJewel() const;
     bool                isArmor() const;
     bool                isSpellShoot() const;
     bool                isSpellOrRune() const;

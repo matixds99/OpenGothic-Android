@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
-2. **164** – mikstura ochrony przed następnym ciosem działa – ✅
-3. **163** – towarzysz po walce znowu w celowniku (Fregyal po pokonaniu szamana – rozmowa) – ✅
-4. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – ✅
-5. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko – ✅
+1. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – 🧪
+2. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
+3. **164** – mikstura ochrony przed następnym ciosem działa – ✅
+4. **163** – towarzysz po walce znowu w celowniku (Fregyal po pokonaniu szamana – rozmowa) – ✅
+5. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – ✅
 
 ---
 
@@ -251,6 +251,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 166. Pierścienie teleportacyjne – 🧪 (22.11.2026)
+- **Pliki:** `common/world/objects/item.cpp/.h`, `common/game/inventory.cpp`, `common/ui/inventorymenu.cpp`
+- **Zgłoszenie:** pierścień teleportacyjny do Świątyni Adanosa nie działa (w ekwipunku przycisk „Załóż”).
+- **Skrypty NB:** `ItRi_Teleport_Ring_Adanos` (i inne `ItRi_Teleport_*`) ma flagę pierścienia, ale nie ma funkcji założenia (`on_equip`) – ma funkcję użycia (`on_state` = `Equip_ItRi_Teleport_Ring_Adanos`) i schemat `MAP`. Użycie: w Jarkendarze `AI_Teleport(hero, "RAVENPRAY")`, gdzie indziej „za daleko”, w walce – napis. Port zakładał pierścień na palec, więc funkcja użycia nigdy się nie wykonała.
+- **Poprawka:** pierścień albo amulet z funkcją użycia i schematem, bez funkcji założenia (`Item::nbUsableJewel`), jest używany jak mapa: animacja schematu i funkcja `on_state`. W karcie przedmiotu przycisk „Użyj”.
+- **Do sprawdzenia:** w Jarkendarze użycie pierścienia z ekwipunku – teleport do świątyni Adanosa.
 
 ### 165. Skarby do wykopania: wstawianie miejsca i celownik – ✅ (22.11.2026)
 - **Pliki:** `common/world/objects/interactive.cpp/.h`, `common/game/gamescript.cpp/.h`, `common/mainwindow.cpp`
