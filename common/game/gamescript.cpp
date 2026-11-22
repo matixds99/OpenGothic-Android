@@ -8377,8 +8377,33 @@ void GameScript::nbSummonsAttack(Npc& enemy) {
 
 /// NB fix 131: the summoned creatures go away (RX_ResetSummons of the plugin, the choice RESET of the panel, the change of
 /// the world); the pets stay, NIXDOG and PET_JINA
+// NB fix 164: the potion of the protection against the next blow (ItPo_HitPotion: RX_NextHitIgnore = TRUE). The plugin of
+// NB (UNION_ABI.DLL 0x1013AB90) takes the next blow on the hero away: the flag goes back to 0, the text sPotionHitProtected,
+// the effect SPELLFX_HEAL on the hero. The port did not have it - the potion did nothing
+bool GameScript::nbNextHitIgnore(Npc& hero) {
+  if(!hero.isPlayer())
+    return false;
+  auto* flag = vm.find_symbol_by_name("RX_NEXTHITIGNORE");
+  if(flag==nullptr || flag->type()!=zenkit::DaedalusDataType::INT || flag->is_member() || flag->get_int()!=1)
+    return false;
+  if(nbIntVar("RX_IMMORTALSTATE")==1)
+    return false;
+  flag->set_int(0);
+  if(auto txt = NbTexts::get("sPotionHitProtected"); !txt.empty())
+    Gothic::inst().onPrintScreen(txt,-1,40,2,Resources::font(1.f));
+  if(const VisualFx* vfx = Gothic::inst().loadVisualFx("SPELLFX_HEAL")) {
+    Effect e(*vfx,world(),hero,SpellFxKey::Cast);
+    e.setActive(true);
+    hero.runEffect(std::move(e));
+    }
+  nbCtx("hit potion: the blow taken away");
+  return true;
+  }
+
 void GameScript::nbVecDamage(Npc& src, Npc& dst, int32_t damage, int32_t damageType) {
   if(damage<=0 || dst.isDead())
+    return;
+  if(nbNextHitIgnore(dst))   // NB fix 164
     return;
   int32_t prot = 0;
   for(int i=0; i<int(zenkit::DamageType::NUM); ++i)

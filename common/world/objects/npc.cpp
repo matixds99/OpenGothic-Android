@@ -2697,6 +2697,9 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
     if(other.isPlayer() && !isPlayer())
       hitResult.value = std::max(0,hitResult.value+owner.script().nbCallDamage(*this,other,isSpell,splId,nbSplashPct>0));
     }
+  // NB fix 164: the potion against the next blow takes it away
+  if(hitResult.hasHit && hitResult.value>0 && isPlayer() && owner.script().nbNextHitIgnore(*this))
+    hitResult.value = 0;
   if(!isSpell && !isDown() && hitResult.hasHit) {
     owner.addWeaponHitEffect(other,b,*this).play();
     if(hitResult.value>0)
@@ -5503,7 +5506,7 @@ void Npc::startDialog(Npc& pl) {
     return;
   if(puppet)
     puppetInteract = true;
-  // NB fix 162 (diagnostics): a talk - the state of the character, its perception of the talk and the flags of the
+  // NB fix 163 (diagnostics): a talk - the state of the character, its perception of the talk and the flags of the
   // scripts that stop B_AssessTalk (CAMMODEON, HEROTRANS); once in 5 s for a character
   static std::unordered_map<const Npc*,uint64_t> nextLog;
   if(auto& at = nextLog[this]; owner.tickCount()>=at) {

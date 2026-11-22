@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **163** – towarzysz po walce znowu w celowniku (Fregyal po pokonaniu szamana – rozmowa) – 🧪
-2. **162** – log celownika i rozmowy (diagnostyka do 163) – ✅
-3. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – 🧪
-4. **160** – skarb z notatki martwego pirata (Zachodnie Wybrzeże): miejsce kopania wstawiane w starszych zapisach – 🧪
-5. **159** – szybki łup: przytrzymanie przycisku akcji na zwłokach lub skrzyni zabiera wszystko; log miejsc bez celownika (skarby) – 🧪
+1. **165** – miejsca kopania skarbów w celowniku („Miejsce do kopania”), skarb pirata i inne – 🧪
+2. **164** – mikstura ochrony przed następnym ciosem działa – 🧪
+3. **163** – towarzysz po walce znowu w celowniku (Fregyal po pokonaniu szamana – rozmowa) – ✅
+4. **161** – towarzysze i przywołańce teleportują się razem z bohaterem – ✅
+5. **160** – skarb z notatki martwego pirata: miejsce kopania wstawiane w starszych zapisach – 🧪
 
 ---
 
@@ -252,34 +252,43 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 163. Towarzysz po walce znowu w celowniku (Fregyal) – 🧪 (22.11.2026)
-- **Pliki:** `common/game/gamescript.cpp/.h`
-- **Zgłoszenie:** po pokonaniu szamana nie da się porozmawiać z Fregyalem – nie da się go wziąć w celownik.
-- **Log (poprawka 162):** Fregyal 19 cm przed bohaterem, widoczny, towarzysz (`AIV_PARTYMEMBER`=1), ale `noFocus=1`.
+### 165. Miejsca kopania skarbów w celowniku – 🧪 (22.11.2026)
+- **Pliki:** `common/world/objects/interactive.cpp/.h`
+- **Zgłoszenie:** skarbu pirata nie da się wykopać, choć po przeczytaniu notatki skrypt wstawił jego miejsce (log: `part of the world: VOBTREE_WC_TREASURE_QUEST.ZEN (1 objects)`, w świecie 4 miejsca kopania zamiast 3).
+- **Przyczyna:** miejsca kopania NB (obiekty z funkcją stanu `HIDDENFIND`, schemat `ORE`, używane z kilofem) leżą w ziemi, pod skarbem, i nie mają nazwy w celowniku. Port sprawdza, czy obiekt widać: promień od głowy bohatera do pudełka obiektu i do jego punktów użycia – przez ziemię nigdy nie dochodził, więc miejsce nigdy nie trafiało do celownika.
+- **Poprawka:** miejsce kopania (`HIDDENFIND`) nie wymaga promienia – wystarczy odległość i kąt jak dla innych obiektów. Bez nazwy w celowniku pokazuje „Miejsce do kopania”. Dalej jak w skryptach: z kilofem okno „Kop.” i skarb przy punkcie (np. `FP_ROAM_SPAWN_857` – skarb pirata, `FP_ROAM_SPAWN_415` – wyższy kamień runiczny).
+- **Do sprawdzenia:** przy skarbie pirata z kilofem w ekwipunku – „Miejsce do kopania” w celowniku, kopanie, skarb.
+
+### 164. Mikstura ochrony przed następnym ciosem – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/npc.cpp`
+- **Zgłoszenie:** nie działa mikstura na następny atak.
+- **Skrypty NB:** `Use_ItPo_HitPotion` ustawia tylko `RX_NextHitIgnore = TRUE`. Resztę robi plugin (`UNION_ABI.DLL` 0x1013AB90): przy następnym ciosie w bohatera, gdy `RX_NextHitIgnore` = 1 (a `RX_ImmortalState` nie), flaga wraca do 0, cios nie zadaje obrażeń, napis `sPotionHitProtected` i efekt `SPELLFX_HEAL` na bohaterze. Port tego nie miał – mikstura nic nie dawała (tylko napis w statusie).
+- **Poprawka:** `GameScript::nbNextHitIgnore` jak w pluginie: cios w bohatera (broń, czar, pocisk potwora – `Wld_PlayEffect_Vec`) zabrany, flaga 0, napis, efekt leczenia. W logu `[ctx] hit potion: the blow taken away`.
+- **Do sprawdzenia:** wypicie mikstury i jeden cios przeciwnika – bez obrażeń, napis; kolejny cios już normalnie.
+
+### 163. Towarzysz po walce znowu w celowniku (Fregyal) – ✅ (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/npc.cpp`, `common/mainwindow.cpp/.h`
+- **Zgłoszenie:** po pokonaniu szamana jaszczuroludzi na Zachodnim Wybrzeżu nie da się porozmawiać z Fregyalem – nie da się go wziąć w celownik.
+- **Log:** Fregyal 19 cm przed bohaterem, widoczny, towarzysz (`AIV_PARTYMEMBER`=1), ale `noFocus=1`.
 - **Skrypty NB:**
   - `ZS_Attack`: towarzysz (lub `NPCTYPE_FRIEND`) walczący z kimś innym niż bohater dostaje `self.noFocus = TRUE` (żeby go nie trafić w walce); `ZS_Attack_End` przywraca `FALSE`.
   - `AI_OnDead_Draconian_ShamanWC_Final`: `Npc_ClearAIQueue` i `AI_StartState(Fregeal, ZS_ReactToDamage, 0, "")` – nowy stan bez zakończenia bieżącego, więc `ZS_Attack_End` się nie wykonuje i `noFocus` zostaje na zawsze.
+- **Diagnostyka (zostaje w porcie):**
+  - przy próbie rozmowy (raz na 5 s dla postaci): `[ctx] talk: "imię" state=… assessTalk=… talk=… down=… CAMMODEON=… HEROTRANS=… queue=…`;
+  - przy dotknięciu przycisku akcji (raz na 3 s): `[ctx] focus: …` i postacie do 5 m (`[ctx] npc near: …` – odległość, kąt, `noFocus`, martwy, powalony, towarzysz, widoczność, broń bohatera, pozycja);
+  - pomocnicza `GameScript::nbIntVar` (globalna zmienna int skryptów).
+- **Pierwszy log:** rozmowa z Kormakiem działa (`CAMMODEON=0` – tryb kamery walki z szamanem wyłączony), próby rozmowy z Fregyalem nie ma.
 - **Poprawka:** co sekundę towarzysze (`AIV_PARTYMEMBER`) do 50 m od bohatera z `noFocus`, którzy nie są w `ZS_Attack`, dostają celownik z powrotem. W logu: `[ctx] focus: … can be in the focus again (out of ZS_Attack)`. Działa także dla zapisów, w których Fregyal już jest bez celownika. W walce (`ZS_Attack`) towarzysz zostaje bez celownika, jak w skryptach.
 - **Do sprawdzenia:** wczytanie zapisu po walce z szamanem – Fregyal w celowniku, rozmowa działa.
+- **Test (22.11):** działa – rozmowa z Fregyalem po walce z szamanem.
 
-### 162. Fregyal po pokonaniu szamana: brak rozmowy (diagnostyka) – ✅ (22.11.2026)
-- **Pliki:** `common/world/objects/npc.cpp`, `common/game/gamescript.cpp/.h`
-- **Zgłoszenie:** po pokonaniu szamana jaszczuroludzi na Zachodnim Wybrzeżu nie da się porozmawiać z Fregyalem.
-- **Skrypty NB:**
-  - `AI_OnDead_Draconian_ShamanWC_Final`: Fregyal i druid dostają `B_ClearPerceptions`, stan `ZS_ReactToDamage` (który przywraca postrzeganie i kończy się po 10 s), rutynę `StayBattle`, pełne życie.
-  - `B_AssessTalk` kończy się bez rozmowy, gdy `CAMMODEON` (tryb kamery scen) albo `HEROTRANS` (przemiana bohatera) jest włączony. `CAMMODEON` włącza kamera walki z szamanem (`RX_CB_WC_BattleCamera`), a wyłącza `RX_WestCoast_Loop`, gdy licznik zaklęcia szamana dojdzie do 45.
-- **Diagnostyka:** przy każdej próbie rozmowy (raz na 5 s dla postaci) log: `[ctx] talk: "imię" state=… assessTalk=… talk=… down=… CAMMODEON=… HEROTRANS=… queue=…`. Pokaże, czy Fregyal ma postrzeganie rozmowy, w jakim jest stanie i czy skrypty nie blokują rozmowy flagą.
-- Pomocnicza funkcja `GameScript::nbIntVar` (globalna zmienna int skryptów).
-- **Log (22.11):** po śmierci szamana rozmowa z Kormakiem działa (`CAMMODEON=0`), próby rozmowy z Fregyalem w logu nie ma – nie da się go wziąć w celownik, także bez broni w ręku.
-- **Diagnostyka 2 (`common/mainwindow.cpp`):** przy każdym dotknięciu przycisku akcji (raz na 3 s) log celownika (`[ctx] focus: …`) i postaci do 5 m: odległość, kąt względem bohatera, `noFocus`, martwy, powalony, towarzysz (`AIV_PARTYMEMBER`), widoczność (promień), broń bohatera, pozycja.
-- **Wynik (log 22.11):** `[ctx] npc near: "Fregyal" dist=19 angle=0 noFocus=1 … party=1 see=1` – Fregyal ma ustawione `C_Npc.noFocus`. Poprawka: 163.
-
-### 161. Towarzysze teleportują się z bohaterem – 🧪 (22.11.2026)
+### 161. Towarzysze teleportują się z bohaterem – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`
 - **Zgłoszenie:** gdy bohater ma towarzyszy, po teleporcie powinni pojawić się razem z nim (jak na PC).
 - **Poprawka:** port co klatkę porównuje pozycję bohatera. Skok o ponad 30 m w tym samym świecie to teleport (runa, zwój, skrypt). Wtedy towarzysze (`AIV_PARTYMEMBER`) i przywołane stworzenia, które były do 30 m od miejsca, z którego bohater zniknął, stają za nim w półkolu (1,5 m od niego); ich kolejka AI jest czyszczona, dalej idą za bohaterem jak zwykle. Kto czeka gdzie indziej (dalej niż 30 m), zostaje. W logu: `[ctx] teleport: N companions with the hero (… m)`.
 - **Nie obejmuje:** zmiany świata (inny plik ZEN) – tam towarzysze zostają, jak w Gothic 2.
 - **Do sprawdzenia:** z towarzyszem (np. Blizna) i przywołańcem teleport runą – obaj obok bohatera.
+- **Test (22.11):** działa – towarzysze teleportują się z bohaterem.
 
 ### 160. Skarb z notatki martwego pirata: miejsce kopania – 🧪 (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`
@@ -292,7 +301,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** wczytanie zapisu na Zachodnim Wybrzeżu po przeczytaniu notatki – przy krzyżu obiekt do kopania. Jeśli notatka nie była czytana, skrypt wstawi go sam po jej przeczytaniu.
 - **Drugi skarb Wybrzeża (wyższy kamień runiczny):** to inne miejsce – `PC_HIDDENFIND_Addon_Hour_Info` daje `ItMi_UpRuneBlank` przy `FP_ROAM_SPAWN_415` (do 3 m), po kopaniu w obiekcie z funkcją stanu `HIDDENFIND`. Tego obiektu port przy krzyżu nie ma. Diagnostyka (`common/mainwindow.cpp`): przy dotknięciu przycisku akcji bez celownika log wypisuje raz wszystkie obiekty kopania świata (`[ctx] dig place: … at x y z dist=… m`, `[ctx] dig places in this world: N`, pozycja bohatera) i przedmioty do 5 m – pokaże, czy obiekt jest w innym miejscu, czy go w ogóle nie ma.
 
-### 159. Szybki łup (przytrzymanie przycisku akcji); log miejsc bez celownika – 🧪 (21.11.2026)
+### 159. Szybki łup (przytrzymanie przycisku akcji); log miejsc bez celownika – ✅ (21.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/world/objects/interactive.h`
 - **Zgłoszenie:** NB na PC ma szybki łup (klawisz `KEY_QUICKLOOT`: zwłoki, skrzynie, przedmioty na ziemi), port – nie. Bez nowego przycisku na ekranie. Drugie zgłoszenie: skarbu do wykopania (miejsce z niebieskimi iskrami przy krzyżu) nie da się użyć – nie ma celownika ani ikony.
 - **Szybki łup:**
@@ -302,6 +311,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Zabrane przedmioty: napisy na środku ekranu (nazwa i liczba, do 6 wierszy), dźwięk ekwipunku. Bez broni w ręku.
 - **Skarby (diagnostyka):** dotknięcie przycisku akcji bez celownika zapisuje w logu obiekty do użycia w promieniu 5 m: `[ctx] mob near (no focus): …` (nazwa, nazwa celownika, schemat, funkcja stanu, odległość) albo `none in 5 m`. Skrypty NB: kopanie skarbów (`HIDDENFIND`) to obiekt z kilofem, oknem „Kop.” i skarbem wstawianym w ziemię – log pokaże, czy port go w ogóle ma.
 - **Do sprawdzenia:** przytrzymanie na zwłokach i na otwartej skrzyni – wszystko w ekwipunku, napisy; krótkie dotknięcie – zwykłe otwarcie; przy skarbie dotknięcie przycisku akcji i log.
+- **Test (22.11):** działa – szybkie zbieranie.
 
 ### 158. Pociski potworów lecą prosto, bez naprowadzania – ✅ (21.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`

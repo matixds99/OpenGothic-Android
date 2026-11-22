@@ -474,7 +474,19 @@ Tempest::Vec3 Interactive::displayPosition() const {
   return p+displayOffset;
   }
 
+bool Interactive::nbDigPlace() const {
+  if(onStateFunc.size()!=10)
+    return false;
+  for(size_t i=0; i<10; ++i)
+    if(std::toupper(uint8_t(onStateFunc[i]))!=uint8_t("HIDDENFIND"[i]))
+      return false;
+  return true;
+  }
+
 std::string_view Interactive::displayName() const {
+  // NB fix 165: the places of digging have no name of the focus - the player did not know what is there
+  if(focName.empty() && nbDigPlace())
+    return "Miejsce do kopania";
   if(focName.empty())
     return "";
 
@@ -598,6 +610,10 @@ uint32_t Interactive::stateMask() const {
   }
 
 bool Interactive::canSeeNpc(const Npc& npc, bool freeLos) const {
+  // NB fix 165: a place of digging lies in the ground (the treasure is under it): the rays to its box and to its points go
+  // through the ground, so it was never in the focus. Its distance and its angle are enough
+  if(nbDigPlace())
+    return true;
   const auto* w    = world.physic();
   const auto  head = npc.mapHeadBone();
   if(auto mesh = visual.protoMesh()) {

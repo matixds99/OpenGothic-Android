@@ -2275,7 +2275,7 @@ void MainWindow::setupMobileControls() {
     };
   // NB fix 159: the quick loot (the key of NB on PC: KEY_QUICKLOOT) - a long press of the action button
   androidControls.lootFocus = [this]() {
-    nbLogNearNpcs();     // NB fix 162
+    nbLogNearNpcs();     // NB fix 163
     if(!player.focus())
       nbLogNearMobs();   // NB fix 159: the diagnostics of the places that cannot be used (the treasures)
     return nbQuickLootTarget()!=0;
@@ -2725,7 +2725,7 @@ int MainWindow::nbQuickLootTarget() const {
   return 0;
   }
 
-// NB fix 162 (diagnostics): why a character near is not in the focus
+// NB fix 163 (diagnostics): why a character near is not in the focus
 void MainWindow::nbLogNearNpcs() {
   auto* pl = Gothic::inst().player();
   auto* w  = Gothic::inst().world();

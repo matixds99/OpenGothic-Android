@@ -211,7 +211,8 @@ class GameScript final {
     void             nbSetFocusNpc(Npc* npc);   // NB fix 149
     void             nbInsertVobTree(std::string_view path);   // NB fix 56 (RX_InsertVobTree)
     void             nbRepairVobTrees();                       // NB fix 160
-    int32_t          nbIntVar(std::string_view name);          // a global int of the scripts (-1: none)
+    int32_t          nbIntVar(std::string_view name);
+    bool             nbNextHitIgnore(Npc& hero);              // NB fix 164: ItPo_HitPotion          // a global int of the scripts (-1: none)
     void             nbPartyTeleportTick();                    // NB fix 161
     void             nbPartyFocusTick();                       // NB fix 163
     /// 0: the player does not open locks now; 1: by strength (a melee weapon drawn, RX_ForcePickLock); 2: by magic (the
