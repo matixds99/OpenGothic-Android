@@ -145,6 +145,8 @@ class InventoryMenu : public Tempest::Widget {
       };
     std::vector<NbFloat>              nbFloats;
     uint64_t                          nbAutoLootUntil = 0;   // NB fix 167
+    const Interactive*                nbAutoClosed    = nullptr;   // NB fix 169: the chest emptied by the quick loot
+    uint64_t                          nbAutoCloseUntil = 0;
     void   nbDrawGains(Tempest::Painter& p);
     std::array<int32_t,8>             nbGainValues(Npc& pl) const;
     void   nbSnapshot(Npc& pl);

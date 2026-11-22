@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – 🧪
-2. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
-3. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – 🧪
-4. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
-5. **164** – mikstura ochrony przed następnym ciosem działa – ✅
+1. **169** – szybki łup: okno skrzyni nie otwiera się ponownie po zebraniu – 🧪
+2. **168** – sarkofagi i groby wpuszczone w ziemię (wykopaliska magów wody) w celowniku – ✅
+3. **167** – szybki łup na skrzyniach: każda otwarta skrzynia (także ze skryptem lub właścicielem) – ✅
+4. **166** – pierścienie teleportacyjne NB (np. do Świątyni Adanosa) są używane, a nie zakładane – 🧪
+5. **165** – skarby do wykopania: miejsca kopania w celowniku („Miejsce do kopania”), skarb pirata wstawiany także w starszych zapisach – ✅
 
 ---
 
@@ -252,13 +252,21 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 168. Sarkofagi i groby w ziemi w celowniku – 🧪 (22.11.2026)
+### 169. Szybki łup: okno skrzyni nie wraca – 🧪 (22.11.2026)
+- **Pliki:** `common/ui/inventorymenu.cpp/.h`
+- **Zgłoszenie:** po przytrzymaniu przycisku akcji przedmioty są zabrane i wypisane, ale potem i tak otwiera się okno skrzyni.
+- **Przyczyna:** szybki łup (poprawka 167) zamyka ekwipunek od razu po zabraniu, a interakcja bohatera ze skrzynią (animacja otwierania) trwa jeszcze chwilę i skrzynia prosi o otwarcie okna drugi raz.
+- **Poprawka:** przez 2 s po szybkim łupie ta sama skrzynia nie otwiera okna – jest od razu zamykana, a interakcja kończy się jak przy zamknięciu.
+- **Do sprawdzenia:** przytrzymanie na skrzyni – lista zabranych przedmiotów, bez okna skrzyni; po chwili krótkie dotknięcie tej samej skrzyni otwiera ją normalnie (pustą).
+
+### 168. Sarkofagi i groby w ziemi w celowniku – ✅ (22.11.2026)
 - **Pliki:** `common/world/objects/interactive.cpp`
 - **Zgłoszenie:** sarkofagów na wykopaliskach magów wody w Khorinis nie da się wziąć w celownik – jak wcześniej miejsc kopania (poprawka 165).
 - **Skrypty NB:** sarkofagi to skrzynie (`Sarg_S1`: licznik otwarć `SARG_DIGG`, w trybie `SBMode` 50% szans na zatrucie). Zawartość z pliku świata; `RX_InsertLoop` dokłada w Khorinis do `SARG_8` kamień zaklinania (obuchowy).
 - **Przyczyna:** port uznaje obiekt za widoczny, gdy promień od głowy bohatera dochodzi do jego pudełka bez przeszkód, a potem jeszcze do jednego z jego punktów użycia. Sarkofag wpuszczony w ziemię: promień zatrzymuje się na ziemi przy jego krawędzi, a punkty użycia leżą w ziemi.
 - **Poprawka:** promień zatrzymany tuż przy pudełku obiektu (nie dalej niż pół jego przekątnej i 30 cm od środka) nie zasłania go. Skrzynia, do której promień dochodzi bez przeszkód, jest widoczna bez sprawdzania punktów użycia.
 - **Do sprawdzenia:** sarkofagi na wykopaliskach – nazwa w celowniku, otwieranie i szybki łup; zwykłe skrzynie za ścianą nadal niewidoczne.
+- **Test (22.11):** działa – z grobowców można zabierać przedmioty.
 
 ### 167. Szybki łup na skrzyniach – ✅ (22.11.2026)
 - **Pliki:** `common/mainwindow.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/ui/inventorymenu.cpp/.h`
