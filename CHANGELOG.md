@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **178** – mod `nb-wisp` 1.3.0: zakładka „Punkty nauki” do testów nauczycieli; paczka moda z poprawką 154 – 🧪
+1. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ⏸
 2. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – ✅
 3. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – ✅
 4. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 178. Mod `nb-wisp` 1.3.0: punkty nauki do testów – 🧪 (22.11.2026)
+### 178. Mod `nb-wisp`: punkty nauki do testów – ⏸ wycofane (22.11.2026)
 - **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json`, `mods/nb-wisp.zip`, `common/scripting/game/game_npc.cpp`, `docs/MODS.md`
 - **Zgłoszenie:** do testu nauki u nauczycieli (akrobatyka) potrzebne są punkty nauki; prośba o pole z punktami nauki w modzie ognika.
 - **Poprawka:**
@@ -260,6 +260,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Mod `nb-wisp` 1.3.0: zakładka „Punkty nauki” w menu modów – bieżąca liczba, przyciski +5, +10, +50, +100, pole z liczbą i przyciski „Dodaj” / „Ustaw”. Komenda konsoli `pn` (bez liczby – pokazuje, `pn 50` – ustawia, `pn +50` / `pn -10` – dodaje / odejmuje). Na starszej wersji gry zakładka mówi, że brak tej funkcji.
   - `mods/nb-wisp.zip` był w wersji 1.2.1, bez zmiany z poprawki 154 (ognik usuwany i przywoływany dopiero przy 100 m, nie przy 40 m) – paczka zbudowana od nowa z folderu moda.
 - **Do sprawdzenia:** instalacja `nb-wisp.zip` (launcher → Mods → Add a mod), zakładka „Punkty nauki”: przyciski i pole zmieniają liczbę, liczba w statystykach postaci taka sama; nauka u nauczyciela zużywa te punkty. Ognik działa jak dotąd.
+- **Test (22.11):** działa – punkty nauki posłużyły do nauki akrobatyki (test 86).
+- **Wycofane (22.11):** zakładka „Punkty nauki”, komenda `pn` i funkcje `learningPoints` / `setLearningPoints` usunięte (były tylko do testu). Zostaje paczka `mods/nb-wisp.zip` zbudowana od nowa z folderu moda (wersja 1.3.1, z poprawką 154).
 
 ### 177. Ognik: łup z ciała po zdjęciu broni (szkielet pirat) – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
@@ -991,6 +993,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Ekran śmierci:** plugin (`0x10222E00`) przy martwym bohaterze i `bShowDeadScreen` kładzie `YOU_DIE.TGA` na cały ekran. Teraz to samo, z rozjaśnieniem przez 2 s, aż do wczytania gry (tekstura z danych NB; bez niej nic się nie rysuje).
 - **Do sprawdzenia:** strona NB i „Sterowanie dodatkowe” różne; przełączniki zapisują się; akrobatyka z menu działa; śmierć bohatera – obrazek NB.
 - **Test (21.11):** ekran śmierci NB działa; zapis przełączników i akrobatyka z menu jeszcze niesprawdzone.
+- **Test (22.11):** akrobatyka z menu NB działa (przewrotki po nauce). Zapis pozostałych przełączników jeszcze niesprawdzony.
 
 ### 107. Książka/list czytany z ekwipunku pod ramkami ekwipunku – ✅ (18.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp`
@@ -1118,7 +1121,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Test (17.11–19.11):** działa; tempo dopasowane do PC.
 - **Pozostałości w kodzie:** `PlayerControl::quickCombo` (94) i `pendingReset` (95) są już nieużywane (zawsze wyłączone), a sekwencer klawiszy `combo` w `androidinput` jest pusty. Do usunięcia przy sprzątaniu.
 
-### 86. Ustawienie: akrobatyka NB (przewrotki) – 🧪 (17.11.2026)
+### 86. Ustawienie: akrobatyka NB (przewrotki) – ✅ (17.11.2026)
 - **Pliki:** `common/utils/androidinput.cpp/.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/game/gamescript.cpp/.h`
 - **Zgłoszenie:** przełącznik akrobatyki w ustawieniach – przewrotki w lewo/prawo zamiast kroków w bok (na PC klawisz `KEY_ACROBAT`), potrzebne m.in. do szybkiego ataku (85).
 - **Jak to działa na PC:** `HandleEvent` przy klawiszu akrobatyki przełącza `RX_AcrobaticActive` i woła `RX_ApplyAcrobatic(hero)` – nakładka animacji `Humans_Acrobatic.MDS`, tylko gdy bohater ma talent akrobatyki (Cassia).
@@ -1126,6 +1129,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - Przycisk szybkiego ataku (85) dostał numer `Special::QuickAttack = 28` (26 zajął nowy wiersz ustawień).
 - **Uwaga:** jeśli akrobatyka jest włączona, zanim bohater się jej nauczy – po nauce przełącz OFF/ON.
 - **Do sprawdzenia:** z talentem akrobatyki: ON → kroki w bok z bronią to przewrotki, szybki atak z przewrotką; OFF → zwykłe kroki; w logu `[ctx] acrobatics: on/off`.
+- **Test (22.11):** działa – po nauce akrobatyki przewrotki działają.
 
 ### 75. Log: powtarzany błąd „Accessing member … without an instance set” – 🧪 (17.11.2026)
 - **Pliki:** `game/main.cpp`

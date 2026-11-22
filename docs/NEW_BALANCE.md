@@ -45,7 +45,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/graphics/effect.cpp` (+ `.h`), `common/graphics/pfx/pfxbucket.cpp`, `common/world/objects/pfxemitter.cpp`, `common/world/objects/item.cpp` (+ `.h`), `common/game/inventory.cpp` | efekty przedmiotów (`C_Item.effect`) na broniach i w świecie | 150 |
 | `common/world/triggers/movetrigger.cpp` (+ `.h`) | windy z cząsteczkami jako wyglądem (czerwony dym `EVT_SMOKE_*`) | 153 |
 | `common/game/damagecalculator.cpp` | siła liczona raz przy kilku rodzajach obrażeń (golemy, trolle) | 155 |
-| `mods/nb-wisp/index.js` | ognik nie jest usuwany i przywoływany przy 40 m (tylko przy 100 m); zakładka „Punkty nauki” i komenda `pn` | 117–120, 154, 178 |
+| `mods/nb-wisp/index.js` | ognik nie jest usuwany i przywoływany przy 40 m (tylko przy 100 m) | 117–120, 154 |
 | `common/graphics/drawcommands.cpp`, `shader/materials/visibility_pass.comp` | zasięg rysowania postaci w przebiegu widoczności (109), od 146 wyłączony – zasięg liczy `World::nbNpcRangeTick` | 109, 146 |
 | `common/physics/physicmeshshape.cpp` | siatka kolizji obiektu także z samymi materiałami `NB_MAT_*` | 141 |
 | `common/game/gamescript.cpp` (+ `.h`) | fazy bossów: `AI_OnTick_`/`AI_OnHit_`/`AI_OnGetDamage_`/`AI_OnBreak_` po nazwie instancji, licznik walki `aivar[95]`; `Wld_InsertNpcAndAttackEnemy`; `RX_IsWaiting`, `RX_Stop_AI_Wait`, `UpdateSpeed`, `AI_*_Summoned`; obrażenia w czasie (`RX_ApplyDotDamage*`, napisy po lewej), `RX_CallDamage` przy ciosach bohatera, splash | 100, 101, 106 |
@@ -73,8 +73,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/game/gamesession.cpp` | zapis i wczytanie nieprzeczytanych dokumentów (wpis `game/nb_newdocs`) | 122 |
 | `common/scripting/game/game_events.cpp` | zdarzenie modów `world:load` (`{world, newGame}`) | 117 |
 | `common/scripting/game/game_npcs.cpp` | `npcs.all(instance)` – wszystkie postacie danej instancji w świecie | 117 |
-| `common/scripting/game/game_npc.cpp` | mody: `learningPoints` i `setLearningPoints(n)` postaci | 178 |
-| `docs/MODS.md` | opis `world:load` i `npcs.all`; `learningPoints`, `setLearningPoints` | 117, 178 |
+| `docs/MODS.md` | opis `world:load` i `npcs.all` | 117 |
 | `common/game/playercontrol.cpp` (+ `.h`) | przycisk akcji na zamkniętej skrzyni w fokusie: otwieranie zamka NB (siła/magia/wytrychy); `quickCombo` – szybki atak czytany jak sterowanie Gothic 1, W resetuje pozycję po ciosie; `quickAttack` – szybkie ciosy do przodu z resetem (`QuickHits`, `QuickTime`, `QuickSpeed` w `.h`), jedno dotknięcie = jeden cios, tempo zależne od stylu walki (szabla/rapier, `quickMeleeSpeed`); `nbReleaseStuckMove`; szybki atak zatrzymuje bieg bez gałki, log `[hero-ai]` | 80, 94, 95, 98, 114, 115, 133, 134, 135 |
 | `common/utils/androidinput.h` | j.w. (`IconSprint`, `hud.sprint`, `hudPlaces`, `stamina`) (`hud.summonPassive`, `summons`); `held()` | 40, 42, 131, 133, 176 |
 | `common/gothic.cpp` | ekran wczytywania: obrazki moda `LOADING_<ŚWIAT>_<numer>` | 3, 3a |
@@ -104,7 +103,7 @@ Mody w JavaScripcie dla systemu modów projektu borsuczyny (`docs/MODS.md`). Ins
 
 | Mod | Plik do zainstalowania | Co robi | Poprawka |
 |---|---|---|---|
-| `mods/nb-wisp` | `mods/nb-wisp.zip` (wersja 1.3.0) | wędrujący ognik od Vatrasa: Shift+F5, przycisk w zakładce „Ognik” menu modów albo komenda `ognik` (`ognik on`/`ognik off`); ognik na jedną sesję gry (pierwsze wczytanie po włączeniu gry bez ognika), przywołany wraca po śmierci i wczytaniu, nigdy więcej niż jeden; zakładka „Punkty nauki” (+5/+10/+50/+100, pole z liczbą: Dodaj / Ustaw) i komenda `pn` – do testów nauczycieli | 11, 117–120, 154, 178 |
+| `mods/nb-wisp` | `mods/nb-wisp.zip` (wersja 1.3.1) | wędrujący ognik od Vatrasa: Shift+F5, przycisk w zakładce „Ognik” menu modów albo komenda `ognik` (`ognik on`/`ognik off`); ognik na jedną sesję gry (pierwsze wczytanie po włączeniu gry bez ognika), przywołany wraca po śmierci i wczytaniu, nigdy więcej niż jeden | 11, 117–120, 154 |
 | `mods/test-umiejetnosci-broni` | `index.js` do folderu moda „Test umiejętności broni” (podmienić) | test poziomów broni pod NB: procent trafienia jak u nauczyciela, animacje zakłada skrypt NB | 48 |
 
 ---
