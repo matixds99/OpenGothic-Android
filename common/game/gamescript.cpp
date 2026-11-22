@@ -289,6 +289,8 @@ struct NbState {
   // NB fix 175: by the object and not by the address - a new character (a new world, a new monster) at the address of an
   // old body was left alone by the wisp for 10 min
   std::map<std::weak_ptr<zenkit::INpc>,uint64_t,std::owner_less<std::weak_ptr<zenkit::INpc>>> wispBodySkip;
+  // NB fix 177: since when a body with something to take is seen dead (the wisp waits 1 s: ZS_Dead finishes it first)
+  std::map<std::weak_ptr<zenkit::INpc>,uint64_t,std::owner_less<std::weak_ptr<zenkit::INpc>>> wispBodySeen;
   std::vector<std::pair<std::string,uint64_t>> wispLines;          // the brought items: text, until
   std::map<std::weak_ptr<zenkit::IItem>,uint64_t,std::owner_less<std::weak_ptr<zenkit::IItem>>> wispSkip; // not reached: not again for 60 s
   float                                       wispBestH = 0;
@@ -5191,6 +5193,8 @@ void GameScript::tick(uint64_t dt) {
       else if(nearWisp.empty() && nbWispSkill(vm,0)) {   // NB fix 66: only with the skill 0
         for(auto i=st.wispBodySkip.begin(); i!=st.wispBodySkip.end();)
           i = (i->second<tickCount()) ? st.wispBodySkip.erase(i) : std::next(i);
+        for(auto i=st.wispBodySeen.begin(); i!=st.wispBodySeen.end();)
+          i = (i->first.expired() || i->second+600000<tickCount()) ? st.wispBodySeen.erase(i) : std::next(i);
         Npc*  body  = nullptr;
         float bodyD = std::numeric_limits<float>::max();
         world().detectNpc(hp,area,[&](Npc& n) {
@@ -5199,6 +5203,11 @@ void GameScript::tick(uint64_t dt) {
           if(std::abs(n.position().y-hp.y)>500.f)
             return;
           if(!n.inventory().iterator(Inventory::T_Ransack).isValid())
+            return;
+          // NB fix 177: ZS_Dead of NB gives the loot of the death (B_GiveDeathInv) and takes the weapon off the belt
+          // (AI_UnequipWeapons, from the queue of the AI) - a body taken at once kept its sword
+          auto seen = st.wispBodySeen.try_emplace(n.handlePtr(),tickCount()).first;
+          if(tickCount()<seen->second+1000)
             return;
           const float q = (n.position()-wp).quadLength();
           if(q<bodyD) {
@@ -5247,7 +5256,9 @@ void GameScript::tick(uint64_t dt) {
           st.wispLines.emplace_back(std::string(NbTexts::get("sWispName"))+": "+n,tickCount()+10000);
           nbCtx("the wisp brings: ",n," (from the body of ",body->displayName(),")");
           }
-        st.wispBodySkip[wBody] = tickCount()+600000;  // done (what is left the hero does not see either)
+        // done; NB fix 177: again in 3 s, if something comes to the body later (the weapon off the belt, a drop of a
+        // script) - with 10 min the wisp left it there
+        st.wispBodySkip[wBody] = tickCount()+3000;
         st.wispBody.reset();
         st.nextWispSearch = 0;
         }

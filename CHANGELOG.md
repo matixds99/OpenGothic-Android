@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **177**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **178**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – ✅
-2. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
-3. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – ✅
-4. **173** – wytrzymałość: spada przy pływaniu, sprint zawsze kończy się bez wytrzymałości – ✅
-5. **172** – przycisk sprintu bez przycięcia gry (nakładki zdejmowane po nazwie) – ✅
+1. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – 🧪
+2. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – ✅
+3. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
+4. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – ✅
+5. **173** – wytrzymałość: spada przy pływaniu, sprint zawsze kończy się bez wytrzymałości – ✅
 
 ---
 
@@ -251,6 +251,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 177. Ognik: łup z ciała po zdjęciu broni (szkielet pirat) – 🧪 (22.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`
+- **Zgłoszenie:** ognik zbiera większość łupów, ale ciała szkieleta pirata nie przeszukał do końca – bohater znalazł w nim jeszcze przedmiot.
+- **Log:** ognik doleciał do obu szkieletów zaraz po ich śmierci (`the wisp brings: Kość szkieletu x2 (from the body of Szkielet pirat)`); kordelas drugiego leżał na ziemi (broń w ręku spada przy śmierci). Ciało pierwszego nie zniknęło jako puste i bohater otworzył je w ekwipunku.
+- **Skrypty NB:** `ZS_Dead` daje łup śmierci (`B_GiveDeathInv`) i woła `AI_UnequipWeapons(self)`, które wykonuje się później, z kolejki AI. Broń na pasie (szkielet nie walczył bronią w ręku) jest do tego czasu założona, więc nie należy do łupu (przy przeszukaniu założone przedmioty się pomija).
+- **Przyczyna:** ognik zabierał łup w chwili śmierci, zanim broń zeszła z pasa, a ciało po przeszukaniu było pomijane przez 10 min. Broń, która potem pojawiła się w łupie (najpewniej kordelas pierwszego szkieletu), została w ciele.
+- **Poprawka:**
+  - Ognik leci do ciała dopiero 1 s po tym, jak zobaczy je martwe z łupem (`ZS_Dead` i jego kolejka AI zdążą się wykonać).
+  - Po przeszukaniu ciało jest pomijane 3 s zamiast 10 min. Gdy później coś w nim przybędzie (broń z pasa, przedmiot ze skryptu), ognik wraca i to zabiera.
+- **Do sprawdzenia:** szkielety piratów i inni przeciwnicy z bronią na pasie – ognik przynosi kości i broń, ciało znika jako puste. W logu dwa razy `the wisp found the body: …` dla jednego ciała jest możliwe (drugi raz po broń).
 
 ### 176. Panel przywołańców: PRZYWOŁAJ (przywołańce do bohatera), RESET nad AKTYWNE – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/game/nbtexts.h`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`, `common/mainwindow.cpp`
