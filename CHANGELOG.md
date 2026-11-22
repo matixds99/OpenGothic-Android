@@ -260,7 +260,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `B_AssessTalk` kończy się bez rozmowy, gdy `CAMMODEON` (tryb kamery scen) albo `HEROTRANS` (przemiana bohatera) jest włączony. `CAMMODEON` włącza kamera walki z szamanem (`RX_CB_WC_BattleCamera`), a wyłącza `RX_WestCoast_Loop`, gdy licznik zaklęcia szamana dojdzie do 45.
 - **Diagnostyka:** przy każdej próbie rozmowy (raz na 5 s dla postaci) log: `[ctx] talk: "imię" state=… assessTalk=… talk=… down=… CAMMODEON=… HEROTRANS=… queue=…`. Pokaże, czy Fregyal ma postrzeganie rozmowy, w jakim jest stanie i czy skrypty nie blokują rozmowy flagą.
 - Pomocnicza funkcja `GameScript::nbIntVar` (globalna zmienna int skryptów).
-- **Do sprawdzenia:** log z próby rozmowy z Fregyalem.
+- **Log (22.11):** po śmierci szamana rozmowa z Kormakiem działa (`CAMMODEON=0`), próby rozmowy z Fregyalem w logu nie ma – nie da się go wziąć w celownik, także bez broni w ręku.
+- **Diagnostyka 2 (`common/mainwindow.cpp`):** przy każdym dotknięciu przycisku akcji (raz na 3 s) log celownika (`[ctx] focus: …`) i postaci do 5 m: odległość, kąt względem bohatera, `noFocus`, martwy, powalony, towarzysz (`AIV_PARTYMEMBER`), widoczność (promień), broń bohatera, pozycja.
+- **Do sprawdzenia:** log z podejścia do Fregyala (stanąć przodem, dotknąć przycisku akcji).
 
 ### 161. Towarzysze teleportują się z bohaterem – 🧪 (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`

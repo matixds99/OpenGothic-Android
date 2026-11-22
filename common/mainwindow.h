@@ -166,6 +166,7 @@ class MainWindow : public Tempest::Window {
     int                        nbQuickLootTarget() const;   // NB fix 159
     void                       nbQuickLoot();
     void                       nbLogNearMobs();
+    void                       nbLogNearNpcs();
     InventoryRenderer          mobileItems[Resources::MaxFramesInFlight];
     std::string                mobileItemStamp[Resources::MaxFramesInFlight];
     Tempest::VectorImage       touchLayer;

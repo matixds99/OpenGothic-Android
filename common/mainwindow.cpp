@@ -2275,6 +2275,7 @@ void MainWindow::setupMobileControls() {
     };
   // NB fix 159: the quick loot (the key of NB on PC: KEY_QUICKLOOT) - a long press of the action button
   androidControls.lootFocus = [this]() {
+    nbLogNearNpcs();     // NB fix 162
     if(!player.focus())
       nbLogNearMobs();   // NB fix 159: the diagnostics of the places that cannot be used (the treasures)
     return nbQuickLootTarget()!=0;
@@ -2722,6 +2723,33 @@ int MainWindow::nbQuickLootTarget() const {
   if(focus.interactive!=nullptr && focus.interactive->nbPlainChest())
     return 2;
   return 0;
+  }
+
+// NB fix 162 (diagnostics): why a character near is not in the focus
+void MainWindow::nbLogNearNpcs() {
+  auto* pl = Gothic::inst().player();
+  auto* w  = Gothic::inst().world();
+  if(pl==nullptr || w==nullptr)
+    return;
+  // the focus and the characters up to 5 m, at the action button (once in 3 s)
+  static uint64_t nextNpcLog = 0;
+  if(Application::tickCount()>=nextNpcLog) {
+    nextNpcLog = Application::tickCount()+3000;
+    const auto f = player.focus();
+    Tempest::Log::i("[ctx] focus: npc=\"",f.npc!=nullptr ? f.npc->displayName() : std::string_view("-"),
+                    "\" mob=",int(f.interactive!=nullptr)," item=",int(f.item!=nullptr));
+    w->detectNpc(pl->position(),500.f,[&](Npc& n) {
+      if(&n==pl)
+        return;
+      const auto  d   = n.position()-pl->position();
+      const float ang = std::atan2(d.z,d.x);
+      const float dif = std::abs(std::remainder(pl->rotationRad()-ang,2.f*float(M_PI)))*180.f/float(M_PI);
+      Tempest::Log::i("[ctx] npc near: \"",n.displayName(),"\" dist=",int(d.length()),
+                      " angle=",int(dif)," noFocus=",int(n.handle().no_focus)," dead=",int(n.isDead()),
+                      " down=",int(n.isDown())," party=",n.handle().aivar[15]," see=",int(pl->canSeeNpc(n,true)),
+                      " ws=",int(pl->weaponState())," pos=",int(n.position().x)," ",int(n.position().y)," ",int(n.position().z));
+      });
+    }
   }
 
 // NB fix 159 (diagnostics): the action button without a focus - the interactive objects up to 5 m, once each
