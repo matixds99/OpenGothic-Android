@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **191**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **192**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – 🧪
-2. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – 🧪
-3. **188** – bossowie z `bodystate_interruptable_override` nie zataczają się od ciosów (Im'Arah może rzucać czary) – 🧪
-4. **187** – ślad AI bossów w logu (diagnostyka: dlaczego Im'Arah nie rzuca czarów) – ✅
-5. **186** – obrażenia przyzwanego kamiennego golema jak na PC: bez siły, obrażenia minus ochrona – 🧪
+1. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – 🧪
+2. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – 🧪
+3. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – 🧪
+4. **188** – bossowie z `bodystate_interruptable_override` nie zataczają się od ciosów (Im'Arah może rzucać czary) – 🧪
+5. **187** – ślad AI bossów w logu (diagnostyka: dlaczego Im'Arah nie rzuca czarów) – ✅
 
 ---
 
@@ -251,6 +251,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 191. Ustawienie „Fight focus” – walka bez celowania w przeciwników – 🧪 (23.11.2026)
+- **Pliki:** `common/world/worldobjects.cpp`, `common/world/worldobjects.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`
+- **Zgłoszenie:** w walce z Im'Arah focus cały czas zaznacza bossa – bohater nie może ominąć jego czarów; propozycja: przełącznik w ustawieniach.
+- **Poprawka:** nowy wiersz ustawień „Fight focus (aim at enemies)” (domyślnie ON – jak dotąd). OFF: z bronią lub czarem w ręce żadna żywa postać nie wchodzi w focus – czary i strzały lecą tam, gdzie patrzy bohater, nic go nie obraca do przeciwnika. Bez broni focus jak zwykle (rozmowy, przeszukiwanie, ciała). Wersja ustawień 11 (starsze ustawienia dostają ON).
+- **Do sprawdzenia:** Ustawienia → „Fight focus: OFF”, walka z Im'Arah – brak zaznaczenia nad bossem z dobytym czarem, można biegać w bok i omijać czary; schowanie broni – rozmowa z postacią działa. Z powrotem ON – celowanie jak wcześniej.
 
 ### 190. Teleport magów: animacja, efekt, bez spadania – 🧪 (23.11.2026)
 - **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
