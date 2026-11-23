@@ -19,7 +19,7 @@ Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 2. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – ✅
 3. **180** – okno zapisów modów Spine (eksport i import ZIP) przywrócone, z zapisami z folderu gry – 🧪
 4. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
-5. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ⏸
+5. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ✅
 
 ---
 
