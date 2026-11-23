@@ -20,7 +20,11 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/game/nbbars.h` | do folderu `common/game/`, obok `gamescript.cpp` | `gamescript.cpp`, `mainwindow.cpp` (pasek wytrzymałości, otwarty ekwipunek) | 41, 49 |
 | `android/assets/touch-icons/quick_attack.png` | do folderu `android/assets/touch-icons/` | `utils/androidinput.cpp` (ikona szybkiego ataku) | 85 |
 | `android/assets/touch-icons/sprint.png` | do folderu `android/assets/touch-icons/`, obok `walk.png` | `utils/androidinput.cpp` (ikona sprintu) | 40 |
+| 🆕 `common/utils/drmp3.cpp` | do folderu `common/utils/` | `gamemusic.cpp` (dekoder mp3 muzyki NB) | 183 |
+| 🆕 `lib/dr_libs/dr_mp3.h` (+ `LICENSE`) | do folderu `lib/dr_libs/` (dr_mp3 0.7.5, domena publiczna / MIT-0) | `utils/drmp3.cpp`, `gamemusic.cpp` | 183 |
 
+> `lib/dr_libs` jest dopisany w `CMakeLists.txt` (poprawka 183) – plik `CMakeLists.txt` też trzeba podmienić.
+>
 > Nagłówki (`.h`) i ikona – nie trzeba niczego dopisywać w `CMakeLists.txt` (ikony są zbierane z folderu automatycznie; przy pierwszym buildzie po dodaniu ikony CMake sam przeładuje listę).
 
 ---
@@ -79,7 +83,9 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/gothic.cpp` | ekran wczytywania: obrazki moda `LOADING_<ŚWIAT>_<numer>` | 3, 3a |
 | `common/mainwindow.cpp` | ekran wczytywania: świat z nagłówka save'a, czarne tło zamiast białego, pasek wczytywania dla tekstur HD; cisza podczas wczytywania gry (muzyka, dźwięki starego świata) | 3, 3a, 14, 174 |
 | `common/ui/gamemenu.cpp` | strona „Ustawienia gry” z przełącznikami NB, okno statystyk postaci (B) z 5 zakładkami, zakładki dziennika (zakończone, bestiariusz), przełącznik „Jasna noc (do testów)” | 5, 8, 10, 15, 53 |
-| `common/gamemusic.cpp` (+ `.h`) | muzyka: segment motywu ładowany w wątku gry, nie w wątku dźwięku; wyższy priorytet wątku dźwięku na Androidzie, muzyka ładowana w osobnym wątku dla obu silników muzyki (zacinanie na ekranie wczytywania); wyciszenie muzyki gry przez skrypty NB (`setScriptMute`), którego nie zdejmuje zapis opcji; wyciszenie na czas wczytywania (`setLoadMute`) | 36, 37, 38, 116, 174 |
+| `common/gamemusic.cpp` (+ `.h`) | muzyka: segment motywu ładowany w wątku gry, nie w wątku dźwięku; wyższy priorytet wątku dźwięku na Androidzie, muzyka ładowana w osobnym wątku dla obu silników muzyki (zacinanie na ekranie wczytywania); wyciszenie muzyki gry przez skrypty NB (`setScriptMute`), którego nie zdejmuje zapis opcji; wyciszenie na czas wczytywania (`setLoadMute`); muzyka BassMusicController (mp3 z `BASSMUSICCONTROLLER_*.D`) | 36, 37, 38, 116, 174, 183 |
+| `common/game/definitions/musicdefinitions.cpp` (+ `.h`) | motywy BassMusicController z `System/Autorun/BASSMUSICCONTROLLER_*.D` zastępują motywy z `Music.dat` o tej samej nazwie | 183 |
+| `CMakeLists.txt` | `lib/dr_libs` (dekoder mp3) | 183 |
 | `game/main.cpp` | dłuższy bufor dźwięku OpenAL (`alsoft.conf`, 6 × 20 ms); powtarzany błąd ZenKita „Accessing member” raz w logu, potem licznik | 37, 75 |
 | `common/game/playercontrol.cpp` | „lepki” focus przeciwnika w walce wręcz (bohater sam się do niego obraca) | 18 |
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |

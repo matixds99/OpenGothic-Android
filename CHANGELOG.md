@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **183**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **184**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **182** – mod `nb-wisp` 1.3.2: ognik odesłany na czas przemiany bohatera, wraca po niej – 🧪
-2. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – ✅
-3. **180** – okno zapisów modów Spine (eksport i import ZIP) przywrócone, z zapisami z folderu gry – 🧪
-4. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
-5. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ✅
+1. **183** – muzyka NB w lokacjach: motywy BassMusicController (mp3) z `BASSMUSICCONTROLLER_*.D`, m.in. dolina Adanosa – 🧪
+2. **182** – mod `nb-wisp` 1.3.2: ognik odesłany na czas przemiany bohatera, wraca po niej – ✅
+3. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – ✅
+4. **180** – okno zapisów modów Spine (eksport i import ZIP) przywrócone, z zapisami z folderu gry – 🧪
+5. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
 
 ---
 
@@ -252,7 +252,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 182. Ognik na czas przemiany bohatera – 🧪 (23.11.2026)
+### 183. Muzyka NB w lokacjach (BassMusicController, mp3) – 🧪 (23.11.2026)
+- **Pliki:** `common/gamemusic.cpp`, `common/gamemusic.h`, `common/game/definitions/musicdefinitions.cpp`, `common/game/definitions/musicdefinitions.h`, `CMakeLists.txt`, 🆕 `common/utils/drmp3.cpp`, 🆕 `lib/dr_libs/dr_mp3.h` (+ `LICENSE`)
+- **Zgłoszenie:** w niektórych lokacjach nie ma muzyki (log z doliny Adanosa: `unable to load sound: "DarkSagaPirateCamp.sgt"`).
+- **Skrypty NB:** plugin BassMusicController czyta `System/Autorun/BASSMUSICCONTROLLER_NB.D` i `_MI.D` (w `AB_Scripts.vdf`): 137 motywów `instance NAZWA(C_MUSICTHEME_…) { file = "a.mp3|b.mp3"; vol = 0.3; }`, 81 plików mp3. Motyw o tej samej nazwie co w `Music.dat` jest grany z mp3 zamiast DirectMusic; 44 motywów nie ma w `Music.dat` wcale (np. `THF_DAY_FGT`, `PIR_NGT_STD`).
+- **Przyczyna:** OpenGothic znał tylko motywy z `Music.dat`. `Music.dat` NB wskazuje w części stref pliki `.sgt`, których nie ma w grze (`DSP_DAY_STD` → `DarkSagaPirateCamp.sgt`), więc tam była cisza; motywy walki/zagrożenia dodane przez plugin nie grały wcale. Dekodera mp3 w projekcie nie było.
+- **Poprawka:**
+  - `MusicDefinitions` czyta pliki `BASSMUSICCONTROLLER*.D` z `/SYSTEM/AUTORUN` (VDFS): komentarze pominięte, `file` dzielone po `|`, nazwa bez rozszerzenia dostaje `.MP3`, `vol` jako głośność motywu. Pliki szukane po nazwie w VDFS (jak plugin przez zFILE). Motyw bez żadnego znalezionego mp3 zostaje z `Music.dat`; brakujące pliki – jedna linia w logu (`NB music: N mp3 files not found`).
+  - `GameMusic`: motyw BassMusicController grany przez dekoder dr_mp3 – pliki motywu po kolei, w losowej kolejności przy każdym starcie motywu, pojedynczy plik w pętli; inne próbkowanie niż 44100 Hz przeliczane liniowo, mono na oba kanały. Pliki czytane w osobnym wątku (do wczytania pierwszego – cisza). Zmiana motywu: stary wycisza się przez 2 s, nowy wchodzi przez 2 s; ta sama lista plików w kolejnej strefie gra dalej bez przerwy. Głośność muzyki z opcji i wyciszenia skryptów (116) / wczytywania (174) działają jak dla innych motywów.
+  - W logu: `NB music: N BassMusicController themes, …` przy starcie i `NB music: <pliki>` przy zmianie motywu.
+- **Do sprawdzenia:** dolina Adanosa (płaskowyż) – gra muzyka z mp3; walka w strefie z motywem walki pluginu; przejście między strefami – płynne wyciszenie; muzyka wyłączona w opcjach – cisza. W `log.txt` liczba motywów i brak linii `mp3 files not found` (jeśli jest – podać, którego pliku brakuje).
+
+### 182. Ognik na czas przemiany bohatera – ✅ (23.11.2026)
 - **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json`, `mods/nb-wisp.zip` (wersja 1.3.2)
 - **Zgłoszenie:** w czasie przemiany ognik ma być wyłączony, a po przemianie sam wracać.
 - **Poprawka (mod):**
@@ -260,6 +271,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Przywołany ognik przy przemianie znika (`ognik: odesłany na czas przemiany` w konsoli moda), po powrocie do człowieka pojawia się obok bohatera (`ognik: wrócił po przemianie`). Ognik odesłany przez gracza nie wraca.
   - W czasie przemiany ognik nie jest przywoływany ponownie (pilnowanie co 3 s, nowy świat). Przywołanie w przemianie (zakładka, Shift+F5, `ognik on`) – „Ognik przyjdzie po przemianie”; odesłanie w tym czasie – nie wraca. Zakładka „Ognik” pokazuje „wróci po przemianie”.
 - **Do sprawdzenia:** z przywołanym ognikiem przemiana w krwiopijcę – ognik znika; powrót do człowieka – ognik obok, zbiera dalej. Bez ognika przemiana i powrót – ognik się nie pojawia.
+- **Test (23.11):** działa – ognik znika na czas przemiany i wraca po niej.
 
 ### 181. Przemiany: stan przemiany prowadzony przez plugin (krwiopijca) – ✅ (23.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`

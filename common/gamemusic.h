@@ -50,7 +50,9 @@ class GameMusic final {
     struct MusicProvider;
     struct OpenGothicMusicProvider;
     struct GothicKitMusicProvider;
+    struct StreamMusic;
     struct RecordedMusic;
+    struct BassMusic;
 
     void      setupSettings();
     void      playCurrent();
@@ -75,7 +77,7 @@ class GameMusic final {
     int                  lastMusicSetting = -1;
     bool                 zoneMusicActive = true;
     Tempest::SoundEffect recordedSound, outgoingSound;
-    RecordedMusic*       recordedImpl = nullptr;
+    StreamMusic*         recordedImpl = nullptr;   // CoM ogg or the mp3 of BassMusicController (NB fix 183)
     std::string          recordedFile;
     int32_t              recordedFadeOut = 0;
     std::optional<zenkit::IMusicTheme> overrideTheme;

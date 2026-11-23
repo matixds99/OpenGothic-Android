@@ -165,6 +165,9 @@ if(TARGET minivorbis)
   target_compile_definitions(${PROJECT_NAME} PRIVATE OPENGOTHIC_RECORDED_MUSIC)
 endif()
 
+# NB fix 183: mp3 decoder (dr_mp3, public domain / MIT-0) for the music of BassMusicController
+include_directories(SYSTEM lib/dr_libs)
+
 # zip
 include_directories(lib/miniz)
 add_definitions(-DMINIZ_NO_STDIO)

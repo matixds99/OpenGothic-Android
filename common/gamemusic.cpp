@@ -22,6 +22,8 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #endif
+#include <random>
+#include <dr_mp3.h>
 #ifdef OPENGOTHIC_RECORDED_MUSIC
 #define OV_EXCLUDE_STATIC_CALLBACKS
 #include <minivorbis/minivorbis.h>
@@ -46,8 +48,15 @@ static void boostAudioThread() {
   }
 
 static constexpr uint16_t SAMPLE_RATE = 44100;
+static constexpr int32_t  BASS_FADE_MS = 2000;   // NB fix 183: the change of the theme of BassMusicController
 
-struct GameMusic::RecordedMusic : Tempest::SoundProducer {
+// NB fix 183: a recorded track that replaces the DirectMusic themes and fades out when the next one starts
+struct GameMusic::StreamMusic : Tempest::SoundProducer {
+  using Tempest::SoundProducer::SoundProducer;
+  std::atomic<int32_t> fadeOut{-1};
+  };
+
+struct GameMusic::RecordedMusic : GameMusic::StreamMusic {
 #ifdef OPENGOTHIC_RECORDED_MUSIC
   struct Source {
     std::vector<uint8_t> bytes;
@@ -114,10 +123,9 @@ struct GameMusic::RecordedMusic : Tempest::SoundProducer {
   double loopStart = 0;
   float gain = 0.f, target = 1.f;
   uint64_t ramp = 0;
-  std::atomic<int32_t> fadeOut{-1};
 
   RecordedMusic(std::unique_ptr<Source> input, int loopMs, int fadeMs)
-    : SoundProducer(uint16_t(input->rate),2), source(std::move(input)) {
+    : StreamMusic(uint16_t(input->rate),2), source(std::move(input)) {
     const double duration = ov_time_total(&source->file,-1);
     loopStart = double(loopMs)/1000.0;
     if(loopStart<0 || loopStart>=duration)
@@ -166,9 +174,162 @@ struct GameMusic::RecordedMusic : Tempest::SoundProducer {
       }
     }
 #else
-  RecordedMusic() : SoundProducer(SAMPLE_RATE,2) {}
+  RecordedMusic() : StreamMusic(SAMPLE_RATE,2) {}
   void renderSound(int16_t* out, size_t frames) override { boostAudioThread(); std::fill(out,out+frames*2,int16_t(0)); }
 #endif
+  };
+
+// NB fix 183: the music of BassMusicController - the mp3 files of a theme, one after another (in a random order, as a
+// new theme starts), with the volume of the theme. The files are read on a thread of their own (the lock of the VDFS
+// would stop the sound during the loading of a world, fix 38); until the first one is read the music is silent.
+struct GameMusic::BassMusic : GameMusic::StreamMusic {
+  struct Shared {
+    std::vector<std::string>          files;
+    std::vector<std::vector<uint8_t>> data;
+    std::unique_ptr<std::atomic<int>[]> state;   // 0 - loading, 1 - ready, 2 - failed
+    std::atomic<bool>                 stop{false};
+    };
+
+  std::shared_ptr<Shared> sh;
+  std::thread             loader;
+  drmp3                   mp3 = {};
+  bool                    opened = false;
+  size_t                  cur = 0;
+  size_t                  failed = 0;
+  float                   vol = 1.f;
+  float                   gain = 0.f, target = 1.f;
+  uint64_t                ramp = 0;
+  // linear resampling: the files may have another rate than the output (44100 Hz)
+  double                  step = 1.0, frac = 0.0;
+  int16_t                 a[2] = {}, b[2] = {};
+  bool                    primed = false;
+  int16_t                 buf[2048] = {};
+  size_t                  bufLen = 0, bufPos = 0;
+  uint32_t                channels = 2;
+
+  BassMusic(const MusicDefinitions::BassTrack& track, int fadeMs)
+    : StreamMusic(SAMPLE_RATE,2), sh(std::make_shared<Shared>()), vol(track.vol) {
+    sh->files = track.files;
+    std::shuffle(sh->files.begin(),sh->files.end(),std::mt19937(std::random_device{}()));
+    sh->data.resize(sh->files.size());
+    sh->state.reset(new std::atomic<int>[sh->files.size()]);
+    for(size_t i=0; i<sh->files.size(); ++i)
+      sh->state[i].store(0);
+    ramp = uint64_t(std::max(fadeMs,0))*SAMPLE_RATE/1000;
+    if(ramp==0)
+      gain = 1.f;
+    auto shared = sh;
+    loader = std::thread([shared]() {
+      for(size_t i=0; i<shared->files.size() && !shared->stop.load(); ++i) {
+        std::vector<uint8_t> data;
+        const bool ok = Resources::getFileData(shared->files[i],data) && !data.empty();
+        if(ok)
+          shared->data[i] = std::move(data);
+        else
+          Log::e("NB music: cannot read ",shared->files[i]);
+        shared->state[i].store(ok ? 1 : 2,std::memory_order_release);
+        }
+      });
+    }
+
+  ~BassMusic() override {
+    sh->stop.store(true);
+    if(loader.joinable())
+      loader.join();
+    if(opened)
+      drmp3_uninit(&mp3);
+    }
+
+  // opens the file cur; false: not read yet or no file can be played
+  bool openCurrent() {
+    const size_t n = sh->files.size();
+    while(failed<n) {
+      const int st = sh->state[cur].load(std::memory_order_acquire);
+      if(st==0)
+        return false;
+      if(st==1) {
+        auto& d = sh->data[cur];
+        if(drmp3_init_memory(&mp3,d.data(),d.size(),nullptr)) {
+          if(mp3.sampleRate>0 && (mp3.channels==1 || mp3.channels==2)) {
+            opened   = true;
+            failed   = 0;
+            channels = mp3.channels;
+            step     = double(mp3.sampleRate)/double(SAMPLE_RATE);
+            return true;
+            }
+          drmp3_uninit(&mp3);
+          }
+        Log::e("NB music: invalid mp3 ",sh->files[cur]);
+        sh->state[cur].store(2);
+        }
+      ++failed;
+      cur = (cur+1)%n;
+      }
+    return false;
+    }
+
+  bool nextFrame(int16_t* f) {
+    if(bufPos>=bufLen) {
+      for(int attempt=0; attempt<2; ++attempt) {
+        if(!opened && !openCurrent())
+          return false;
+        const drmp3_uint64 want = sizeof(buf)/sizeof(buf[0])/channels;
+        bufLen = size_t(drmp3_read_pcm_frames_s16(&mp3,want,buf));
+        bufPos = 0;
+        if(bufLen>0)
+          break;
+        // the end of the file: the next one of the playlist (the only one loops)
+        drmp3_uninit(&mp3);
+        opened = false;
+        cur    = (cur+1)%sh->files.size();
+        }
+      if(bufLen==0)
+        return false;
+      }
+    const size_t at = bufPos*channels;
+    f[0] = buf[at];
+    f[1] = buf[at+(channels==2 ? 1 : 0)];
+    ++bufPos;
+    return true;
+    }
+
+  void renderSound(int16_t* out, size_t frames) override {
+    boostAudioThread();
+    if(const int ms = fadeOut.exchange(-1); ms>=0) {
+      target = 0.f;
+      ramp = std::max(uint64_t(1),uint64_t(ms)*SAMPLE_RATE/1000);
+      }
+    if(!primed) {
+      if(!nextFrame(a) || !nextFrame(b)) {
+        std::fill(out,out+frames*2,int16_t(0));
+        return;
+        }
+      primed = true;
+      }
+    for(size_t i=0; i<frames; ++i) {
+      if(ramp>0) {
+        gain += (target-gain)/float(ramp);
+        --ramp;
+        }
+      const float k = float(frac);
+      const float g = gain*vol;
+      out[i*2]   = int16_t((float(a[0])+(float(b[0])-float(a[0]))*k)*g);
+      out[i*2+1] = int16_t((float(a[1])+(float(b[1])-float(a[1]))*k)*g);
+      frac += step;
+      while(frac>=1.0) {
+        frac -= 1.0;
+        a[0] = b[0];
+        a[1] = b[1];
+        if(!nextFrame(b)) {
+          // the next file is not read yet: silence until it is
+          primed = false;
+          frac   = 0.0;
+          std::fill(out+(i+1)*2,out+frames*2,int16_t(0));
+          return;
+          }
+        }
+      }
+    }
   };
 
 // NB fix 38: the music of a theme is loaded on a thread of its own. Loading it needs the lock of the resources, which the
@@ -803,6 +964,35 @@ void GameMusic::playCurrent() {
     return;
     }
   const auto& theme = overrideTheme ? *overrideTheme : currentMusic.theme;
+  // NB fix 183: a theme of BassMusicController
+  if(const auto* bass = Gothic::musicDef().bassTrack(theme.file)) {
+    if(recordedImpl!=nullptr && recordedFile==theme.file)
+      return;
+    try {
+      auto producer = std::make_unique<BassMusic>(*bass,BASS_FADE_MS);
+      auto* implementation = producer.get();
+      auto next = device.load(std::move(producer));
+      outgoingSound = SoundEffect();
+      if(recordedImpl!=nullptr) {
+        recordedImpl->fadeOut.store(recordedFadeOut);
+        outgoingSound = std::move(recordedSound);
+        }
+      recordedSound   = std::move(next);
+      recordedImpl    = implementation;
+      recordedFile    = theme.file;
+      recordedFadeOut = BASS_FADE_MS;
+      recordedSound.setVolume(Gothic::settingsGetF("SOUND","musicVolume"));
+      impl->setEnabled(false);
+      sound.pause();
+      if(isOn())
+        recordedSound.play();
+      Log::i("NB music: ",theme.file);
+      return;
+      }
+    catch(const std::exception& e) {
+      Log::e("NB music: ",e.what());
+      }
+    }
   const auto* track = Gothic::musicDef().recordedTrack(theme.file);
   if(track!=nullptr) {
 #ifdef OPENGOTHIC_RECORDED_MUSIC
