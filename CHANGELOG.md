@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **181**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **182**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **180** – okno zapisów modów Spine (eksport i import ZIP) przywrócone, z zapisami z folderu gry – 🧪
-2. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
-3. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ⏸
-4. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – ✅
-5. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – ✅
+1. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – 🧪
+2. **180** – okno zapisów modów Spine (eksport i import ZIP) przywrócone, z zapisami z folderu gry – 🧪
+3. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
+4. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ⏸
+5. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – ✅
 
 ---
 
@@ -251,6 +251,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 181. Przemiany: stan przemiany prowadzony przez plugin (krwiopijca) – 🧪 (23.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`
+- **Zgłoszenie:** przemiana w krwiopijcę (runa od Nedtbeka) nie działa.
+- **Skrypty NB:** runa `ItRu_TrfBloodFly` używa czaru `SPL_TRFSCAVENGER`; `Spell_Logic_TrfScavenger` przemienia (`Npc_SetActiveSpellInfo(self, BloodFly_Rune)`) tylko przy `!HeroTransOpen`, a przy rzucie ustawia `HeroTransOpen = TRUE`, `RX_BloodFlyTransCheck`, `RX_BloodFlyTimes += 1`. Tak samo inne przemiany. Żaden skrypt nie zeruje `HeroTransOpen` – robi to plugin. Czas zwoju liczy `B_GetTime` (`HeroTRANSCOUNT` do `TempTransTime`, potem ostrzeżenie i utrata życia) tylko przy `HEROTRANS == TRUE`.
+- **Plugin NB** (`UNION_ABI.DLL` 0x10223340, co klatkę):
+  - bohater stał się stworzeniem (gildia > 21): `HEROTRANS = 1`, `HeroTransOpen = 0`, `HeroTRANSCOUNT`, `TransformWarn`, `RX_BloodFlyTransCheck`, `RX_MagicShieldActive` i tarcze (łowca demonów, wampir) 0, `HeroTransScroll = 0` przy runie, `TempTransTime` = `ATR_INTELLECT` + 2 × poziom + 120;
+  - bohater znów człowiekiem: `HEROTRANS`, `HeroTransOpen`, liczniki, `TempTransTime`, `HEROTRANSRUNE`, `HeroTransScroll`, `POISONED`, `RX_HardPoisoned`, `PlayerIsBleeding` 0, `RX_ResetAnimsOnLoad`, sprint sprzed przemiany (`RX_SaveSprintTime` → `RX_ApplySprint`);
+  - `HeroTransOpen` przez 3 s bez przemiany (czar nie zadziałał): wszystko 0, krwiopijca dnia nie liczony (`RX_BloodFlyTimes - 1`).
+- **Przyczyna:** tej części pluginu nie było. Po pierwszej przemianie `HeroTransOpen` zostawał ustawiony i każdy następny czar przemiany od razu się przerywał; zapis z ustawionym `HeroTransOpen` nie pozwalał na żadną przemianę. Czas zwoju nie był liczony (`HEROTRANS` 0).
+- **Poprawka:** `GameScript::nbTransformTick` (co klatkę, według `Npc::isTransformed`) robi to co plugin. W logu `[ctx] transformation: on (scroll …, N s)` / `off` / `HeroTransOpen without a transformation for 3 s - cleared`.
+- **Do sprawdzenia:** runa krwiopijcy – przemiana, powrót, druga przemiana zaraz potem; zwój przemiany – licznik „(mm:ss)” na liście efektów i powrót po czasie; zapis, w którym przemiana nie działała, po wczytaniu (po 3 s przemiana znów możliwa).
 
 ### 180. Okno zapisów modów Spine (eksport / import) – 🧪 (23.11.2026)
 - **Pliki:** `android/java/org/opengothic/app/SaveExport.java`, `SaveImport.java`, `SpineSavesActivity.java` (z projektu borsuczyny, usunięte w 179), `android/AndroidManifest.xml`, `android/java/org/opengothic/app/SpineActivity.java`

@@ -248,6 +248,8 @@ struct NbState {
   uint64_t                                    summonNextCount = 0;   // NB fix 129
   uint32_t                                    followWorld = 0;       // NB fix 131: the world and the place of the hero
   uint64_t                                    summonCallCd = 0;      // NB fix 176: ms left until the summons can be called again
+  bool                                        trfWas       = false;  // NB fix 181: the hero was transformed (the plugin 0x1056aec0)
+  uint64_t                                    trfOpenMs    = 0;      // NB fix 181: HeroTransOpen without a transformation, ms
   // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
   std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
   std::unordered_map<const Npc*,uint64_t>     bodyEmptySince;        // NB fix 136: a dead body found empty, since when
@@ -4850,6 +4852,7 @@ void GameScript::tick(uint64_t dt) {
 
   // NB fix 176: the time of the game until the summons can be called to the hero again
   nb->second.summonCallCd -= std::min(nb->second.summonCallCd,dt);
+  nbTransformTick(dt);   // NB fix 181
 
   // the delayed functions of NB (RX_CALLBACK*)
   if(!nb->second.callbacks.empty()) {
@@ -8481,6 +8484,89 @@ void GameScript::nbSummonsToggleMode() {
       mode->set_int(mode->get_int()==1 ? 0 : 1);
     }
   nbCtx("summons: mode ",nbSummonsPassive() ? "passive" : "active");
+  }
+
+/// NB fix 181: the state of the transformation of the hero, which the plugin keeps (UNION_ABI.DLL 0x10223340): the spells of
+/// the transformation (SPELL_LOGIC_TRF*) set HeroTransOpen and allow no new one while it is set, the plugin clears it.
+///  - the hero became a creature: HEROTRANS = 1, HeroTransOpen = 0, the counters and the shields 0, TempTransTime = the
+///    intellect + 2 * the level + 120 (the seconds of a scroll, B_GetTime counts HeroTRANSCOUNT and warns after them);
+///  - the hero is human again: HEROTRANS, the counters, HEROTRANSRUNE / HeroTransScroll, the poison and the bleeding 0,
+///    RX_ResetAnimsOnLoad, the sprint of before (RX_SaveSprintTime) back;
+///  - HeroTransOpen 3 s without a transformation (the spell did not take): all 0, the bloodfly of the day not counted.
+/// Without it the first transformation was the only one: HeroTransOpen stayed and every later spell stopped at once.
+void GameScript::nbTransformTick(uint64_t dt) {
+  auto* hero = world().player();
+  auto  nb   = nbStates.find(this);
+  if(hero==nullptr || nb==nbStates.end())
+    return;
+  auto& st = nb->second;
+  const auto get = [this](std::string_view n) { return nbIntVar(n); };
+  const auto set = [this](std::string_view n, int32_t v) {
+    if(auto* s = vm.find_symbol_by_name(n); s!=nullptr && s->type()==zenkit::DaedalusDataType::INT && !s->is_member())
+      s->set_int(v);
+    };
+  const auto call = [this](std::string_view n, auto... args) {
+    auto* fn = vm.find_symbol_by_name(n);
+    if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+      return;
+    try {
+      if(fn->has_return())
+        (void)vm.call_function<int>(fn,args...); else
+        vm.call_function<void>(fn,args...);
+      }
+    catch(const std::exception& e) {
+      Log::e("NB: ",n," failed: ",e.what());
+      }
+    };
+
+  const bool trf = hero->isTransformed();
+  if(trf && !st.trfWas) {
+    st.trfWas    = true;
+    st.trfOpenMs = 0;
+    if(get("HEROTRANSRUNE")>0)
+      set("HEROTRANSSCROLL",0);
+    set("HEROTRANS",1);
+    set("HEROTRANSOPEN",0);
+    set("HEROTRANSCOUNT",0);
+    set("TRANSFORMWARN",0);
+    set("RX_BLOODFLYTRANSCHECK",0);
+    set("RX_MAGICSHIELDACTIVE",0);
+    set("RX_DH_SKILLSHIELDVALUE",0);
+    set("RX_VAMP_SKILLMAGIC_BLOODSHIELDDAMAGEMAX",0);
+    set("RX_VAMP_SKILLMAGIC_BLOODSHIELDDAMAGE",0);
+    const int32_t time = std::max(0,get("ATR_INTELLECT"))+2*hero->handle().level+120;
+    set("TEMPTRANSTIME",time);
+    nbCtx("transformation: on (scroll ",get("HEROTRANSSCROLL")>0 ? "yes" : "no",", ",time," s)");
+    return;
+    }
+  if(!trf && st.trfWas) {
+    st.trfWas = false;
+    for(auto n:{"HEROTRANS","HEROTRANSOPEN","HEROTRANSCOUNT","TRANSFORMWARN","TEMPTRANSTIME","HEROTRANSRUNE",
+                "HEROTRANSSCROLL","POISONED","RX_HARDPOISONED","PLAYERISBLEEDING"})
+      set(n,0);
+    call("RX_RESETANIMSONLOAD");
+    if(const int32_t sprint = get("RX_SAVESPRINTTIME"); sprint>0) {
+      call("RX_APPLYSPRINT",int32_t(0),sprint);
+      set("RX_SAVESPRINTTIME",0);
+      }
+    nbCtx("transformation: off");
+    return;
+    }
+  if(!trf && get("HEROTRANSOPEN")>0 && get("HEROTRANS")<=0) {
+    st.trfOpenMs += dt;
+    if(st.trfOpenMs<3000)
+      return;
+    st.trfOpenMs = 0;
+    for(auto n:{"HEROTRANS","HEROTRANSOPEN","HEROTRANSRUNE","HEROTRANSCOUNT","TRANSFORMWARN"})
+      set(n,0);
+    if(get("RX_BLOODFLYTRANSCHECK")==1) {
+      set("RX_BLOODFLYTRANSCHECK",0);
+      set("RX_BLOODFLYTIMES",std::max(0,get("RX_BLOODFLYTIMES")-1));
+      }
+    nbCtx("transformation: HeroTransOpen without a transformation for 3 s - cleared");
+    return;
+    }
+  st.trfOpenMs = 0;
   }
 
 /// NB fix 176: the seconds until the summons can be called to the hero again (0 - now)
