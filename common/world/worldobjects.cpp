@@ -1267,16 +1267,6 @@ static bool checkPeaceful(Npc& n, const Npc& pl, World& w) {
   return w.script().personAttitude(n,pl)<ATT_NEUTRAL;
   }
 
-/// NB fix 191: the setting "Fight focus" off - a living character is not in the focus of the player with a weapon drawn
-template<class T>
-static bool checkFightFocus(T&, const Npc&) { return true; }
-
-static bool checkFightFocus(Npc& n, const Npc& pl) {
-  if(WorldObjects::fightFocus.load(std::memory_order_relaxed) || !pl.isPlayer())
-    return true;
-  return pl.weaponState()==WeaponState::NoWeapon || n.isDead();
-  }
-
 template<class T>
 static bool checkTargetType(T&, TargetType, World&) { return true; }
 
@@ -1343,8 +1333,6 @@ bool WorldObjects::testObj(T &src, const Npc &pl, const WorldObjects::SearchOpt 
   if(!checkFlag(npc,opt.flags))
     return false;
   if(!checkParty(npc,pl,owner))
-    return false;
-  if(!checkFightFocus(npc,pl))
     return false;
   if(!checkPeaceful(npc,pl,owner))
     return false;

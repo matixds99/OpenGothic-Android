@@ -15,9 +15,9 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – 🧪
-2. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – 🧪
-3. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – 🧪
+1. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – ⏸ wycofane
+2. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – ✅
+3. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – ✅
 4. **188** – bossowie z `bodystate_interruptable_override` nie zataczają się od ciosów (Im'Arah może rzucać czary) – 🧪
 5. **187** – ślad AI bossów w logu (diagnostyka: dlaczego Im'Arah nie rzuca czarów) – ✅
 
@@ -252,13 +252,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 191. Ustawienie „Fight focus” – walka bez celowania w przeciwników – 🧪 (23.11.2026)
+### 191. Ustawienie „Fight focus” – walka bez celowania w przeciwników – ⏸ (23.11.2026)
 - **Pliki:** `common/world/worldobjects.cpp`, `common/world/worldobjects.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`
 - **Zgłoszenie:** w walce z Im'Arah focus cały czas zaznacza bossa – bohater nie może ominąć jego czarów; propozycja: przełącznik w ustawieniach.
 - **Poprawka:** nowy wiersz ustawień „Fight focus (aim at enemies)” (domyślnie ON – jak dotąd). OFF: z bronią lub czarem w ręce żadna żywa postać nie wchodzi w focus – czary i strzały lecą tam, gdzie patrzy bohater, nic go nie obraca do przeciwnika. Bez broni focus jak zwykle (rozmowy, przeszukiwanie, ciała). Wersja ustawień 11 (starsze ustawienia dostają ON).
 - **Do sprawdzenia:** Ustawienia → „Fight focus: OFF”, walka z Im'Arah – brak zaznaczenia nad bossem z dobytym czarem, można biegać w bok i omijać czary; schowanie broni – rozmowa z postacią działa. Z powrotem ON – celowanie jak wcześniej.
+- **Test (23.11):** wycofane – przy OFF nie da się namierzyć bossa (na PC focus myszką był częściowy i dało się go zaznaczyć i trafić). Kod usunięty (revert); w ustawieniach zostaje sam wpis `fightfocus` bez znaczenia.
 
-### 190. Teleport magów: animacja, efekt, bez spadania – 🧪 (23.11.2026)
+### 190. Teleport magów: animacja, efekt, bez spadania – ✅ (23.11.2026)
 - **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
 - **Zgłoszenie (po 189):** Im'Arah teleportuje się, ale momentalnie – bez animacji i efektu.
 - **Log (23.11):** 8 teleportów (`blink`); po części Im'Arah w stanie ciała 10 (spadanie) i 12 (leży) – lądował wyżej niż ziemia, spadał i nie rzucał czarów.
@@ -268,8 +269,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - miejsce: ziemia szukana promieniem od góry nad magiem i wrogiem, na wysokości maga albo wroga (±3 m), z miejscem na ciało nad ziemią.
 - **Log:** `[ctx] blink: Im'Arah teleports … animation N ms` (−1 – bez animacji, 0,9 s).
 - **Do sprawdzenia:** przed teleportem gest Im'Arah i niebieskie kręgi w obu miejscach, przeniesienie po chwili; po teleporcie od razu walczy (w logu `NB ai: Im'Arah` bez `body=10`/`body=12`).
+- **Test (23.11):** działa – teleport z animacją i efektem.
 
-### 189. Teleport magów do wroga (Im'Arah i inni) – 🧪 (23.11.2026)
+### 189. Teleport magów do wroga (Im'Arah i inni) – ✅ (23.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
 - **Zgłoszenie:** nagrania z PC – Im'Arah z drzwi wieży teleportuje się (niebieski krąg) do bohatera i walczy dalej w terenie; w porcie stał w drzwiach.
 - **Plugin (UNION_ABI.DLL):** co 500 ms (`0x102542d0`) dla magów z listy (`0x10253fc0`): Im'Arah (nie gdy `ImarahHeals`), `Skeleton_archemageDungeon`, `Madness_Conjurer`, `KDF_511_Daron`, `Rigellion`, `dementor_ud`, `DMT_Dementor_ScoutCav_01`, `PAL_6104_RITTER_mage`, `AD_Boss6`, `AL_Boss7`, `SAURON_INT`. Warunki: `ZS_Attack`/`ZS_MM_Attack`, broń w ręku, wróg żyje, do 30 m, brak ataku specjalnego (`AIVRX_SPECIAL_ATTACK`). Licznik: wróg widoczny – 8 sprawdzeń (4 s), niewidoczny – 4 (2 s); teleport, gdy mag biegnie (animacje `S_MAGRUN`, `S_1HRUN`, uniki). Miejsce (`0x10253b40`): od maga 500–1500 (wróg dalej niż 15 m) lub 700–1200 cm w stronę wroga, przy wrogu bliżej niż 7 m – 500–1000 (30%: 1000–1500) wzdłuż jego spojrzenia, do 15 prób; miejsce na ziemi, widoczne dla wroga, do 35 m od niego. Sam teleport to atak specjalny 11 (`0x1007b230`): efekt `SPELLFX_TELEPORT` w starym i nowym miejscu, obrót do wroga. Wróg daleko bez łuku i czaru – następny teleport później.
@@ -277,6 +279,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Log:** `[ctx] blink: Im'Arah teleports N cm (to M cm from the hero)`.
 - **Do sprawdzenia:** walka z Im'Arah – oddal się, żeby za tobą pobiegł: niebieski efekt i Im'Arah obok bohatera. Linie `blink` w logu.
 - **Test (23.11):** teleportuje się do bohatera (8 razy w walce), ale momentalnie, bez animacji i efektu – poprawka 190.
+- **Test (23.11, z 190):** działa.
 
 ### 188. Bossowie nie zataczają się od ciosów (`bodystate_interruptable_override`) – 🧪 (23.11.2026)
 - **Plik:** `common/world/objects/npc.cpp`

@@ -55,7 +55,7 @@ const char* const IconFiles[AndroidInput::IconCount] = {
 
 const char* const SettingNames[Mobile::SettingCount] = {
   "buttons", "resolution", "shadows", "effects", "fps", "deadzone", "sensitivity", "vibration", "gui",
-  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus", "acrobatic", "reflections", "padstyle", "rain", "fightfocus"
+  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus", "acrobatic", "reflections", "padstyle", "rain"
   };
 
 // Gives access to the dispatch functions of SystemApi
@@ -193,7 +193,6 @@ int nextValue(int setting, int value) {
     case Mobile::SettingAcrobatic:
     case Mobile::SettingReflections:
     case Mobile::SettingPadStyle:
-    case Mobile::SettingFightFocus:
       return value ? 0 : 1;
     case Mobile::SettingRain:
       return value>=3 ? 0 : value+1;
@@ -225,8 +224,6 @@ std::string settingText(int setting, const std::string& label) {
     return value ? "Target peaceful creatures: ON" : "Target peaceful creatures: OFF";
   if(setting==Mobile::SettingAcrobatic)
     return value ? "Acrobatics (rolls): ON" : "Acrobatics (rolls): OFF";
-  if(setting==Mobile::SettingFightFocus)
-    return value ? "Fight focus (aim at enemies): ON" : "Fight focus (aim at enemies): OFF";
   if(setting==Mobile::SettingSpeed)
     return label+"   "+std::to_string(value/100)+"."+std::to_string(value%100/10)+"x";
 
@@ -334,9 +331,6 @@ AndroidInput::Preferences AndroidInput::preferences() {
     ret.padStyle    = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingPadStyle])!=0 ? 1 : 0;
     ret.rain        = std::clamp(Gothic::settingsGetI(Section,SettingNames[Mobile::SettingRain]),0,3);
     }
-  // NB fix 191 (the version 11): the focus of the fight
-  if(Gothic::settingsGetI(Section,"version")>=11)
-    ret.fightFocus = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingFightFocus])!=0 ? 1 : 0;
   return ret;
   }
 
@@ -362,11 +356,10 @@ void AndroidInput::Controller::bind() {
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingReflections],def.reflections);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPadStyle],   def.padStyle);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingRain],       def.rain);
-    Gothic::settingsSetI(Section,SettingNames[Mobile::SettingFightFocus], def.fightFocus);
-    Gothic::settingsSetI(Section,"version",11);
+    Gothic::settingsSetI(Section,"version",10);
     Gothic::flushSettings();
     } else
-  if(Gothic::settingsGetI(Section,"version")<11) {
+  if(Gothic::settingsGetI(Section,"version")<10) {
     // settings saved before the vibration, the scale of the interface, the fast forward, the side steps and the auto lock were added
     const Preferences def;
     const int version = Gothic::settingsGetI(Section,"version");
@@ -398,10 +391,7 @@ void AndroidInput::Controller::bind() {
       Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPadStyle],   def.padStyle);
       Gothic::settingsSetI(Section,SettingNames[Mobile::SettingRain],       def.rain);
       }
-    // NB fix 191 (the version 11): the focus of the fight stays on until the player switches it off
-    if(version<11)
-      Gothic::settingsSetI(Section,SettingNames[Mobile::SettingFightFocus],def.fightFocus);
-    Gothic::settingsSetI(Section,"version",11);
+    Gothic::settingsSetI(Section,"version",10);
     Gothic::flushSettings();
     }
   loadHudPlaces();
@@ -708,7 +698,6 @@ void AndroidInput::Controller::applyPreferences() {
   // the game is vanilla: the fast forward is on the HUD and in the settings only when a mod has asked for it
   controls.features(Scripting::ModHost::inst().fastForwardWanted(),pref.strafe!=0);
   WorldObjects::peacefulFocus.store(pref.peaceful!=0);
-  WorldObjects::fightFocus.store(pref.fightFocus!=0);   // NB fix 191
   GameScript::nbAcrobaticPref.store(pref.acrobatic);
   }
 

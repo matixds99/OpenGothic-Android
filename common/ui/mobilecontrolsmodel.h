@@ -97,7 +97,6 @@ enum Setting : int {
   SettingReflections,
   SettingPadStyle,
   SettingRain,
-  SettingFightFocus, // NB fix 191: the living characters in the focus with a weapon in the hand
   SettingCount
   };
 static_assert(int(Special::FirstSetting)+int(SettingCount)<=96, "the ids of the rows of the settings");

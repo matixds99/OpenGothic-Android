@@ -34,9 +34,6 @@ class WorldObjects final {
     /// NB fix 78 (the setting "Target peaceful creatures"): false - the creatures that are not hostile to the player
     /// (the wisp, the summons, the sheep, the rabbits...) are not in his focus, the fight does not hit them
     static inline std::atomic<bool> peacefulFocus{true};
-    /// NB fix 191 (the setting "Fight focus"): false - with a weapon in the hand the player has no living character in his
-    /// focus: the spells and the arrows fly where he looks, nothing turns him to the enemy (the target lock still works)
-    static inline std::atomic<bool> fightFocus{true};
 
     enum SearchFlg : uint8_t {
       NoFlg         = 0,
