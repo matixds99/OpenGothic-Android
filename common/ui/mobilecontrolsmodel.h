@@ -97,6 +97,7 @@ enum Setting : int {
   SettingReflections,
   SettingPadStyle,
   SettingRain,
+  SettingPartialFocus, // NB fix 194: the side steps in the fight do not turn the hero to his target
   SettingCount
   };
 static_assert(int(Special::FirstSetting)+int(SettingCount)<=96, "the ids of the rows of the settings");

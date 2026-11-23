@@ -55,7 +55,7 @@ const char* const IconFiles[AndroidInput::IconCount] = {
 
 const char* const SettingNames[Mobile::SettingCount] = {
   "buttons", "resolution", "shadows", "effects", "fps", "deadzone", "sensitivity", "vibration", "gui",
-  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus", "acrobatic", "reflections", "padstyle", "rain"
+  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus", "acrobatic", "reflections", "padstyle", "rain", "partialfocus"
   };
 
 // Gives access to the dispatch functions of SystemApi
@@ -193,6 +193,7 @@ int nextValue(int setting, int value) {
     case Mobile::SettingAcrobatic:
     case Mobile::SettingReflections:
     case Mobile::SettingPadStyle:
+    case Mobile::SettingPartialFocus:
       return value ? 0 : 1;
     case Mobile::SettingRain:
       return value>=3 ? 0 : value+1;
@@ -220,6 +221,8 @@ std::string settingText(int setting, const std::string& label) {
     return value<=0 ? "Rain: OFF" : value==1 ? "Rain: light" : value==2 ? "Rain: normal" : "Rain: heavy";
   if(setting==Mobile::SettingAutoLock)
     return value ? "Auto lock on weapon draw: ON" : "Auto lock on weapon draw: OFF";
+  if(setting==Mobile::SettingPartialFocus)
+    return value ? "Partial focus (free side steps): ON" : "Partial focus (free side steps): OFF";
   if(setting==Mobile::SettingPeaceful)
     return value ? "Target peaceful creatures: ON" : "Target peaceful creatures: OFF";
   if(setting==Mobile::SettingAcrobatic)
@@ -331,6 +334,9 @@ AndroidInput::Preferences AndroidInput::preferences() {
     ret.padStyle    = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingPadStyle])!=0 ? 1 : 0;
     ret.rain        = std::clamp(Gothic::settingsGetI(Section,SettingNames[Mobile::SettingRain]),0,3);
     }
+  // NB fix 194 (the version 12; 11 was the withdrawn fix 191): the partial focus of the fight
+  if(Gothic::settingsGetI(Section,"version")>=12)
+    ret.partialFocus = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingPartialFocus])!=0 ? 1 : 0;
   return ret;
   }
 
@@ -356,10 +362,11 @@ void AndroidInput::Controller::bind() {
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingReflections],def.reflections);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPadStyle],   def.padStyle);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingRain],       def.rain);
-    Gothic::settingsSetI(Section,"version",10);
+    Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPartialFocus],def.partialFocus);
+    Gothic::settingsSetI(Section,"version",12);
     Gothic::flushSettings();
     } else
-  if(Gothic::settingsGetI(Section,"version")<10) {
+  if(Gothic::settingsGetI(Section,"version")<12) {
     // settings saved before the vibration, the scale of the interface, the fast forward, the side steps and the auto lock were added
     const Preferences def;
     const int version = Gothic::settingsGetI(Section,"version");
@@ -391,7 +398,10 @@ void AndroidInput::Controller::bind() {
       Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPadStyle],   def.padStyle);
       Gothic::settingsSetI(Section,SettingNames[Mobile::SettingRain],       def.rain);
       }
-    Gothic::settingsSetI(Section,"version",10);
+    // NB fix 194 (the version 12): the partial focus is off until the player switches it on
+    if(version<12)
+      Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPartialFocus],def.partialFocus);
+    Gothic::settingsSetI(Section,"version",12);
     Gothic::flushSettings();
     }
   loadHudPlaces();
@@ -698,6 +708,7 @@ void AndroidInput::Controller::applyPreferences() {
   // the game is vanilla: the fast forward is on the HUD and in the settings only when a mod has asked for it
   controls.features(Scripting::ModHost::inst().fastForwardWanted(),pref.strafe!=0);
   WorldObjects::peacefulFocus.store(pref.peaceful!=0);
+  PlayerControl::partialFocus.store(pref.partialFocus!=0);   // NB fix 194
   GameScript::nbAcrobaticPref.store(pref.acrobatic);
   }
 

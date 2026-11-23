@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **194**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **195**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – 🧪
-2. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – 🧪
-3. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – ⏸ wycofane
-4. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – ✅
-5. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – ✅
+1. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – 🧪
+2. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – 🧪
+3. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – 🧪
+4. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – ⏸ wycofane
+5. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – ✅
 
 ---
 
@@ -251,6 +251,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 194. Ustawienie „Partial focus” – kroki w bok bez krążenia wokół celu – 🧪 (23.11.2026)
+- **Pliki:** `common/game/playercontrol.cpp`, `common/game/playercontrol.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`
+- **Zgłoszenie (po 191):** przy krokach w bok focus zaznacza bossa i bohater biega wokół niego, zamiast iść w bok. Na PC (mysz) focus był częściowy: bossa dało się zaznaczyć, gdy bohater stał i rzucał czar albo dobywał broni, a ruch w bok był ruchem w bok.
+- **Przyczyna:** w OpenGothic krok w bok (`MoveL`/`MoveR`) z celem w focusie obraca bohatera do celu (`processAutoRotate`), tak samo blokada celu (`lockFace`) zamienia skręt w krok wokół celu – w efekcie krążenie.
+- **Poprawka:** nowy wiersz ustawień „Partial focus (free side steps)” (domyślnie OFF – jak dotąd). ON:
+  - krok w bok nie obraca bohatera do celu; obraca tylko przycisk akcji (czar, cios) – jak dotąd;
+  - blokada celu (także „Auto lock”) trzyma bohatera przodem do celu tylko, gdy stoi; ruch i skręt idą tam, gdzie wskazuje gałka;
+  - focus zostaje – cel jest zaznaczony, czary i strzały lecą w niego.
+- Wersja ustawień 12 (11 była wycofaną 191; starsze ustawienia dostają OFF).
+- **Do sprawdzenia:** Ustawienia → „Partial focus: ON”, walka z Im'Arah z dobytym czarem: kroki w bok idą w bok (bez okrążania), boss dalej zaznaczony; stanie i rzut czaru – bohater obraca się do bossa i trafia. OFF – jak wcześniej.
 
 ### 193. Przywołańce przy bossie – diagnostyka w logu – 🧪 (23.11.2026)
 - **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`

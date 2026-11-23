@@ -26,6 +26,7 @@ class PlayerControl final {
     /// runs, the keys are read as in the controls of Gothic 1 - with the attack key held, A/D is the blow to the side and W
     /// the blow forward (the touch screen has the controls of Gothic 2 otherwise, where only the attack key strikes)
     static inline std::atomic<bool> quickCombo{false};
+    static inline std::atomic<bool> partialFocus{false};   // NB fix 194: the setting "Partial focus"
     void  quickAttack();   // NB fix 96: QUICK of the touch screen
     bool  nbReleaseStuckMove(bool forward, bool back);   // NB fix 133
     std::string nbInputDebug() const;                     // NB fix 134

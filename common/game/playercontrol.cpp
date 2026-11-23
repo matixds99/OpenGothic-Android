@@ -846,7 +846,12 @@ void PlayerControl::implMove(uint64_t dt) {
 
   // The lock holds the hero turned to the target all the time (not only while the action key is held): turning by hand would only
   // fight it, so the turn input of the stick is the step to the side instead and goes around the target.
-  const bool lockFace = lockedNpc!=nullptr && ws!=WeaponState::NoWeapon && pl.isRotationAllowed();
+  // NB fix 194: with the partial focus the lock turns the hero to his target only while he stands; a step to the side or a
+  // turn goes where the stick points (as with the mouse on the PC: the target stays marked, the hero does not circle it)
+  const bool moveInput = wantsToMoveForward() || wantsToMoveBackward() || wantsToStrafeLeft() || wantsToStrafeRight() ||
+                         wantsToTurnLeft() || wantsToTurnRight() || std::fabs(padSide)>PadStepAt;
+  const bool lockFace = lockedNpc!=nullptr && ws!=WeaponState::NoWeapon && pl.isRotationAllowed() &&
+                        !(partialFocus.load() && moveInput);
 
   int rotation = 0;
   if(allowRot) {
@@ -1215,7 +1220,10 @@ void PlayerControl::implMove(uint64_t dt) {
     }
 
   setAnimRotate(pl, rot, ani==Npc::Anim::Idle ? rotation : 0, movement.turnRightLeft.any(), dt);
-  if(actrl[ActGeneric] || ani==Npc::Anim::MoveL || ani==Npc::Anim::MoveR || pl.isFinishingMove()) {
+  // NB fix 194: with the partial focus a side step does not turn the hero to his target - only the action key (a spell, a
+  // blow) does; the focus itself stays
+  const bool sideTurn = (ani==Npc::Anim::MoveL || ani==Npc::Anim::MoveR) && !partialFocus.load();
+  if(actrl[ActGeneric] || sideTurn || pl.isFinishingMove()) {
     processAutoRotate(pl,rot,dt);
     }
 

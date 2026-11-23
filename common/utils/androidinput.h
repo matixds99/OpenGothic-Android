@@ -69,6 +69,7 @@ struct Preferences {
   int acrobatic   = 0;   // 1: the acrobatics of New Balance (rolls), when the hero has learned it
   int reflections = 1; // 1: the water reflects the scene (screen space), 0: only the sky
   int rain        = 2;   // the rain of the outdoor worlds: 0 off, 1 light, 2 normal, 3 heavy
+  int partialFocus = 0;  // NB fix 194: 1 - the side steps do not turn the hero to his target (only the action key does)
   int padStyle    = 0;   // the left stick of a gamepad: 0 walks where it points (a diagonal), 1 as the touch stick (a turn, a side step with a weapon drawn)
   };
 
