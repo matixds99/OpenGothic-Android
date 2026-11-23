@@ -78,6 +78,8 @@ public final class LauncherActivity extends Activity {
         new GameDef("Gothic1", "Gothic", "", 65540, "covers/gothic1.webp", "Gothic.ini"),
         new GameDef("Gothic2", "Gothic II", "Noc Kruka", 39510, "covers/gothic2.webp", "GothicII.ini"),
         new GameDef("Myrtana", "The Chronicles of Myrtana", "Archolos", 1467450, "covers/myrtana.webp", "TheChroniclesOfMyrtana.ini"),
+        // NB fix 195: Gothic II with the mod New Balance in its own folder; no download from Steam (appId 0)
+        new GameDef("NewBalance", "Gothic II", "New Balance", 0, "covers/newbalance.webp", "GothicII.ini"),
     };
 
     private static final String[][] LANGUAGES = {
@@ -323,7 +325,8 @@ public final class LauncherActivity extends Activity {
             try {
                 Set<Integer> ids = new HashSet<>();
                 for (GameDef g : GAMES)
-                    ids.add(g.appId);
+                    if (g.appId != 0)
+                        ids.add(g.appId);
                 have = SteamBridge.owned(s, ids);
             } catch (SteamBridge.Denied e) {
                 again = e.signIn;

@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **195**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **197**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – ✅
-2. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – ✅ (golemy zgodnie ze skryptami)
-3. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – ✅🧪 (wachlarz działa)
-4. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – ⏸ wycofane
-5. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – ✅
+1. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
+2. **195** – launcher: czwarta karta „Gothic II – New Balance” z okładką – 🧪
+3. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – ✅
+4. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – ✅ (golemy zgodnie ze skryptami)
+5. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – ✅🧪 (wachlarz działa)
 
 ---
 
@@ -251,6 +251,23 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 196. `StopPlayerBleeding` – mikstury lecznicze zatrzymują krwawienie – 🧪 (23.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- **Log (23.11):** `not implemented call [STOPPLAYERBLEEDING] from USEITPO_HEALTH_01`.
+- **Skrypty NB:** mikstury i esencje lecznicze (`Use_ItPo_Health_*` i inne) wołają `StopPlayerBleeding()` – funkcję pluginu.
+- **Plugin (UNION_ABI.DLL `0x1016d610` → `0x1013bdb0`):** z listy obrażeń rozłożonych w czasie usuwa wpisy bohatera typu 4 (`DAM_EDGE` – krwawienie) razem z ich efektem i ustawia `PlayerIsBleeding` = 0.
+- **Poprawka:** to samo na liście obrażeń w czasie portu (`RX_ApplyDotDamage`, poprawka 106); w logu `[ctx] bleeding stopped: N`, gdy coś usunięto.
+- **Do sprawdzenia:** krwawienie bohatera (np. od przeciwnika z krwawieniem), wypicie esencji leczniczej – krwawienie (ubywanie życia) się kończy, w logu nie ma już `not implemented call [STOPPLAYERBLEEDING]`.
+
+### 195. Launcher: czwarta karta „Gothic II – New Balance” – 🧪 (23.11.2026)
+- **Pliki:** `android/java/org/opengothic/app/LauncherActivity.java`, nowy `android/launcher-assets/covers/newbalance.webp`
+- **Zgłoszenie:** w launcherze dodać czwartą kartę New Balance; tło z obrazka z logo NB, bez liczby 44.
+- **Poprawka:**
+  - nowa karta „Gothic II / New Balance” obok Gothic, Gothic II i Archolosa, z własnym folderem (`path_NewBalance`) i plikiem `GothicII.ini` – NB nie musi już zajmować karty Gothic II;
+  - bez pobierania ze Steam (NB to mod, nie gra na Steam) – karta ma tylko „Wybierz folder” / „Graj”;
+  - okładka: obrazek bez czarnych pasów, przycięty tak, że liczby 44 nie ma (bez retuszu), na rozmytym tle w pionie, jak pozostałe okładki.
+- **Do sprawdzenia:** launcher – cztery karty w rzędzie; na karcie New Balance „Wybierz folder” → folder `Gothic II NB` → „Graj” uruchamia NB. Karta Gothic II zostaje dla zwykłej Noc Kruka (albo bez folderu).
 
 ### 194. Ustawienie „Partial focus” – kroki w bok bez krążenia wokół celu – ✅ (23.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp`, `common/game/playercontrol.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`

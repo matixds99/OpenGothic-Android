@@ -3284,6 +3284,29 @@ void GameScript::initCommon() {
       if(nb!=nbStates.end())
         nb->second.dots.clear();
       });
+    // NB fix 196: StopPlayerBleeding (UNION_ABI.DLL 0x1016d610 -> 0x1013bdb0), called by the potions of healing: the damage
+    // over time of the hero of the type 4 (DAM_EDGE, the bleeding) ends, PlayerIsBleeding = 0
+    bindNb("STOPPLAYERBLEEDING", [this]() {
+      auto  nb   = nbStates.find(this);
+      auto* hero = world().player();
+      size_t gone = 0;
+      if(nb!=nbStates.end() && hero!=nullptr) {
+        auto& dots = nb->second.dots;
+        const auto me = hero->handlePtr();
+        for(size_t i=0; i<dots.size(); ) {
+          if(dots[i].type==4 && dots[i].target.lock()==me) {
+            dots.erase(dots.begin()+ptrdiff_t(i));
+            ++gone;
+            continue;
+            }
+          ++i;
+          }
+        }
+      if(auto* v = vm.find_symbol_by_name("PLAYERISBLEEDING"); v!=nullptr && v->type()==zenkit::DaedalusDataType::INT)
+        v->set_int(0);
+      if(gone>0)
+        nbCtx("bleeding stopped: ",gone);
+      });
 
     // NB fix 100: the bosses call their helpers - the character at the point, and it attacks the hero at once
     bindNb("WLD_INSERTNPCANDATTACKENEMY", [this](int32_t instance, std::string_view point) {
