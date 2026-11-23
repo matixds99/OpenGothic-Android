@@ -252,6 +252,8 @@ struct NbState {
   uint64_t                                    trfOpenMs    = 0;      // NB fix 181: HeroTransOpen without a transformation, ms
   float                                       blessAcc[3]  = {};     // NB fix 184: RX_AST_Blessing - the fractions of hp, stamina, mana
   uint64_t                                    monsterStatsNext = 0;  // NB fix 185: RX_AST_UpdateMonsterStats every second
+  uint64_t                                    blinkNext = 0;         // NB fix 189: the teleports of the mages, every 0.5 s
+  std::unordered_map<const Npc*,std::pair<int32_t,int32_t>> blinkCount; //   seen / not seen counters
   // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
   std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
   std::unordered_map<const Npc*,uint64_t>     bodyEmptySince;        // NB fix 136: a dead body found empty, since when
@@ -4919,6 +4921,10 @@ void GameScript::tick(uint64_t dt) {
     nb->second.monsterStatsNext = tickCount()+1000;
     nbMonsterStatsTick();   // NB fix 185
     }
+  if(tickCount()>=nb->second.blinkNext) {
+    nb->second.blinkNext = tickCount()+500;
+    nbMageBlinkTick();      // NB fix 189
+    }
 
   // the delayed functions of NB (RX_CALLBACK*)
   if(!nb->second.callbacks.empty()) {
@@ -8565,6 +8571,128 @@ void GameScript::nbSummonsToggleMode() {
 // AIVAR[89] says it is done. On Nightmare (RX_IsLeg) 150% of the life, RX_MonsterProtRatio 150, RX_MonsterPower 200;
 // on the difficulty "Gothic" the options bOptionMonsterHealth/Power/Prot. Without this call the npcs had the life of
 // their instance (Im'Arah: 25000 instead of 37500 on Nightmare)
+// NB fix 189: the mages of New Balance teleport near their enemy (UNION_ABI.DLL 0x102542d0, every 500 ms; the chosen place
+// 0x10253b40, the teleport itself is the special attack 11, 0x1007b230). Only the npcs of the list of the plugin
+// (0x10253fc0), in ZS_Attack/ZS_MM_Attack with the weapon out, an enemy that lives at most 30 m away and no special
+// attack going on (AIVRX_SPECIAL_ATTACK). The enemy seen: 8 checks (4 s), not seen: 4 checks (2 s); then the teleport,
+// when the npc runs (the plugin: S_MAGRUN, S_1HRUN, the strafes). Im'Arah not while ImarahHeals is set
+void GameScript::nbMageBlinkTick() {
+  static const char* names[] = {
+    "IMARAH","SKELETON_ARCHEMAGEDUNGEON","MADNESS_CONJURER","KDF_511_DARON","RIGELLION","DEMENTOR_UD",
+    "DMT_DEMENTOR_SCOUTCAV_01","PAL_6104_RITTER_MAGE","AD_BOSS6","AL_BOSS7","SAURON_INT",
+    };
+  auto* zsA  = vm.find_symbol_by_name("ZS_ATTACK");
+  auto* zsMM = vm.find_symbol_by_name("ZS_MM_ATTACK");
+  auto* imar = vm.find_symbol_by_name("IMARAH");
+  std::set<uint32_t> ids;
+  for(auto* n:names)
+    if(auto* sym = vm.find_symbol_by_name(n); sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INSTANCE)
+      ids.insert(sym->index());
+  if(ids.empty() || (zsA==nullptr && zsMM==nullptr))
+    return;
+  constexpr int32_t AIVRX_SPECIAL_ATTACK = 100;
+  auto& st = nbStates[this];
+  auto& w  = world();
+  for(uint32_t i=0; i<w.npcCount(); ++i) {
+    auto* npc = w.npcById(i);
+    if(npc==nullptr || npc->isPlayer() || npc->isDead() || npc->isDown())
+      continue;
+    const uint32_t inst = npc->handle().symbol_index();
+    if(ids.find(inst)==ids.end())
+      continue;
+    if(imar!=nullptr && inst==imar->index() && nbIntVar("IMARAHHEALS")>0)
+      continue;
+    if(npc->weaponState()==WeaponState::NoWeapon)
+      continue;
+    if(!((zsA!=nullptr && npc->isInState(zsA->index())) || (zsMM!=nullptr && npc->isInState(zsMM->index()))))
+      continue;
+    Npc* t = npc->target();
+    if(t==nullptr || t->isDead() || npc->newBalanceGetNpcVar(AIVRX_SPECIAL_ATTACK)!=0)
+      continue;
+    const float dist = (t->position()-npc->position()).length();
+    if(dist>3000.f)
+      continue;
+    auto& c = st.blinkCount[npc];
+    if(npc->canSeeNpc(*t,true)) {
+      if(++c.first<8)
+        continue;
+      } else {
+      if(++c.second<4)
+        continue;
+      }
+    const auto bs = npc->bodyStateMasked();
+    if(bs!=BS_RUN && bs!=BS_WALK)
+      continue;   // the plugin teleports a mage that runs to its enemy
+    if(nbMageBlink(*npc,*t,dist)) {
+      c = {0,0};
+      // the enemy far away without a bow or a spell: the next teleport later (the plugin: -(10..20) and -(5..10))
+      if(dist>2000.f && t->weaponState()!=WeaponState::Bow && t->weaponState()!=WeaponState::CBow &&
+         t->weaponState()!=WeaponState::Mage)
+        c = {-(10+int32_t(rand(11))),-(5+int32_t(rand(6)))};
+      }
+    }
+  }
+
+bool GameScript::nbMageBlink(Npc& npc, Npc& target, float dist) {
+  auto* phys = world().physic();
+  if(phys==nullptr)
+    return false;
+  const Tempest::Vec3 np = npc.position(), tp = target.position();
+  // the distance of the jump (0x10253b40): near the enemy 500-1000 (30%: 1000-1500) along its view, otherwise along the way
+  // to it 500-1500 (far) or 700-1200
+  float rMin = 700, rMax = 1200, sideMin = 0, sideMax = 25;
+  Tempest::Vec3 dir = tp-np;
+  if(dist<700.f) {
+    const float a = target.rotationRad();
+    dir = Tempest::Vec3(std::cos(a),0,std::sin(a));
+    if(rand(101)>70) { rMin = 1000; rMax = 1500; } else { rMin = 500; rMax = 1000; }
+    if(rand(2)==1) { sideMin = 30; sideMax = 90; }
+    } else
+  if(dist>1500.f) {
+    rMin = 500; rMax = 1500;
+    }
+  dir.y = 0;
+  if(dir.length()<1.f)
+    return false;
+  dir = dir/dir.length();
+  const Tempest::Vec3 center = np+Tempest::Vec3(0,200,0);
+  for(int attempt=0; attempt<15; ++attempt) {
+    float off = (sideMin+float(rand(uint32_t(sideMax-sideMin)+1u)))*float(M_PI)/180.f;
+    if(rand(2)==0)
+      off = -off;
+    const float cs = std::cos(off), sn = std::sin(off);
+    const Tempest::Vec3 d(dir.x*cs-dir.z*sn,0,dir.x*sn+dir.z*cs);
+    const float r = rMin+float(rand(uint32_t(rMax-rMin)+1u));
+    const Tempest::Vec3 p = center+d*r;
+    if((p-tp).length()>=3500.f)
+      continue;
+    auto land = phys->landRay(Tempest::Vec3(p.x,p.y+300.f,p.z),1500.f);
+    if(!land.hasCol || std::abs(land.v.y-np.y)>600.f)
+      continue;
+    const Tempest::Vec3 dst = land.v;
+    // the enemy sees the place, and the way there is not through a wall
+    if(phys->ray(tp+Tempest::Vec3(0,150,0),dst+Tempest::Vec3(0,150,0)).hasCol)
+      continue;
+    const VisualFx* fx = Gothic::inst().loadVisualFx("SPELLFX_TELEPORT");
+    if(fx!=nullptr) {
+      Effect e(*fx,world(),np);
+      e.setActive(true);
+      world().runEffect(std::move(e));
+      }
+    npc.setPosition(dst);
+    npc.setDirection(tp-dst);
+    if(fx!=nullptr) {
+      Effect e(*fx,world(),dst);
+      e.setActive(true);
+      world().runEffect(std::move(e));
+      }
+    nbCtx("blink: ",npc.displayName()," teleports ",int((dst-np).length())," cm (to ",int((dst-tp).length()),
+          " cm from ",target.isPlayer() ? std::string_view("the hero") : target.displayName(),")");
+    return true;
+    }
+  return false;
+  }
+
 void GameScript::nbMonsterStatsTick() {
   auto* fn = vm.find_symbol_by_name("RX_AST_UPDATEMONSTERSTATS");
   if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)

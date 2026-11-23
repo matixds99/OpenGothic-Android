@@ -2776,7 +2776,9 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
         visual.interrupt(); // TODO: put down in pipeline, at Pose and merge with setAnimAngGet
         }
 
-      if((damageType & (1<<zenkit::DamageType::FLY))==0)
+      // NB fix 188: C_NPC.bodystate_interruptable_override - a blow does not interrupt the character at all, the stumble
+      // too (the bosses of New Balance: Im'Arah stumbled at each spell of the hero and could not cast his own)
+      if((damageType & (1<<zenkit::DamageType::FLY))==0 && !noInter)
         setAnimAngGet(lastHitType=='A' ? Anim::StumbleA  : Anim::StumbleB);
       }
     }

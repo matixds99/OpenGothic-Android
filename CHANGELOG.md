@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **188**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **190**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **187** – ślad AI bossów w logu (diagnostyka: dlaczego Im'Arah nie rzuca czarów) – 🧪
-2. **186** – obrażenia przyzwanego kamiennego golema jak na PC: bez siły, obrażenia minus ochrona – 🧪
-3. **185** – życie, siła i ochrona potworów według poziomu trudności (`RX_AST_UpdateMonsterStats`); Nightmare: 150% życia, m.in. bossowie – 🧪
-4. **184** – paczka 7 brakujących funkcji: błogosławieństwa Isgarotha (`RX_AST_Blessing`), `RX_SelectSpell` – 🧪
-5. **183** – muzyka NB w lokacjach: motywy BassMusicController (mp3) z `BASSMUSICCONTROLLER_*.D`, m.in. dolina Adanosa – ✅🧪
+1. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – 🧪
+2. **188** – bossowie z `bodystate_interruptable_override` nie zataczają się od ciosów (Im'Arah może rzucać czary) – 🧪
+3. **187** – ślad AI bossów w logu (diagnostyka: dlaczego Im'Arah nie rzuca czarów) – ✅
+4. **186** – obrażenia przyzwanego kamiennego golema jak na PC: bez siły, obrażenia minus ochrona – 🧪
+5. **185** – życie, siła i ochrona potworów według poziomu trudności (`RX_AST_UpdateMonsterStats`); Nightmare: 150% życia, m.in. bossowie – 🧪
 
 ---
 
@@ -252,12 +252,28 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 187. Ślad AI bossów w logu (Im'Arah nie atakuje) – 🧪 (23.11.2026)
+### 189. Teleport magów do wroga (Im'Arah i inni) – 🧪 (23.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
+- **Zgłoszenie:** nagrania z PC – Im'Arah z drzwi wieży teleportuje się (niebieski krąg) do bohatera i walczy dalej w terenie; w porcie stał w drzwiach.
+- **Plugin (UNION_ABI.DLL):** co 500 ms (`0x102542d0`) dla magów z listy (`0x10253fc0`): Im'Arah (nie gdy `ImarahHeals`), `Skeleton_archemageDungeon`, `Madness_Conjurer`, `KDF_511_Daron`, `Rigellion`, `dementor_ud`, `DMT_Dementor_ScoutCav_01`, `PAL_6104_RITTER_mage`, `AD_Boss6`, `AL_Boss7`, `SAURON_INT`. Warunki: `ZS_Attack`/`ZS_MM_Attack`, broń w ręku, wróg żyje, do 30 m, brak ataku specjalnego (`AIVRX_SPECIAL_ATTACK`). Licznik: wróg widoczny – 8 sprawdzeń (4 s), niewidoczny – 4 (2 s); teleport, gdy mag biegnie (animacje `S_MAGRUN`, `S_1HRUN`, uniki). Miejsce (`0x10253b40`): od maga 500–1500 (wróg dalej niż 15 m) lub 700–1200 cm w stronę wroga, przy wrogu bliżej niż 7 m – 500–1000 (30%: 1000–1500) wzdłuż jego spojrzenia, do 15 prób; miejsce na ziemi, widoczne dla wroga, do 35 m od niego. Sam teleport to atak specjalny 11 (`0x1007b230`): efekt `SPELLFX_TELEPORT` w starym i nowym miejscu, obrót do wroga. Wróg daleko bez łuku i czaru – następny teleport później.
+- **Poprawka:** to samo w porcie; bieg = stan ciała `BS_RUN`/`BS_WALK`. Bez animacji ostrzeżenia `T_WARN` przed teleportem (od razu przeniesienie).
+- **Log:** `[ctx] blink: Im'Arah teleports N cm (to M cm from the hero)`.
+- **Do sprawdzenia:** walka z Im'Arah – oddal się, żeby za tobą pobiegł: niebieski efekt i Im'Arah obok bohatera. Linie `blink` w logu.
+
+### 188. Bossowie nie zataczają się od ciosów (`bodystate_interruptable_override`) – 🧪 (23.11.2026)
+- **Plik:** `common/world/objects/npc.cpp`
+- **Log (23.11, poprawka 187):** Im'Arah w `ZS_ATTACK` z burzą ognia w ręce co chwilę w stanie ciała 21 (zatoczenie po trafieniu) – każdy czar bohatera (413) przerywał mu rzucanie, przez całą walkę trafił 2 razy.
+- **Przyczyna:** postać z `BODYSTATEINTERRUPTABLEOVERRIDE = TRUE` (bossowie NB, Im'Arah w instancji; `RX_ApplyStagger` dla bossów nic nie zmienia) nie powinna dać się przerwać ciosem. Port pomijał tylko przerwanie animacji, ale animacja zatoczenia i tak się włączała.
+- **Poprawka:** przy `bodystate_interruptable_override` cios nie włącza zatoczenia. Odrzut (`DAM_FLY`) bez zmian.
+- **Do sprawdzenia:** Im'Arah pod ostrzałem czarów bohatera dalej rzuca swoje; w logu `NB ai: Im'Arah` bez `body=21`. Inni bossowie i potwory „nieprzerywalne” (np. elitarne orki przy słabym bohaterze) – nie zataczają się.
+
+### 187. Ślad AI bossów w logu (Im'Arah nie atakuje) – ✅ (23.11.2026)
 - **Plik:** `common/world/objects/npc.cpp`
 - **Zgłoszenie:** w porcie Im'Arah stoi w drzwiach wieży i prawie nie rzuca czarów, golemy go biją. Na nagraniu z PC teleportuje się do bohatera i walczy w terenie cały czas czarami.
 - **Log (23.11):** przez całą walkę Im'Arah trafił 3 razy (bohater 417, golem 2×260); ślad AI (`NB ai:`) obejmował tylko potwory, a Im'Arah to człowiek – nie było widać jego stanu.
 - **Zmiana (diagnostyka):** ślad `NB ai:` także dla bossów (`aivar[90]`), z rodzajem broni, czarem w ręce (`spell=`), stanem ciała (`body=`) i kolejką AI; nowa linia przy każdej zmianie stanu, celu, broni lub kolejki.
 - **Do sprawdzenia:** walka z Im'Arah – w logu linie `NB ai: Im'Arah ...`, z nich przyczyna, dlaczego nie rzuca czarów.
+- **Test (23.11):** działa – log pokazał przyczynę: zatoczenia od czarów bohatera (poprawka 188) i brak teleportu (189).
 
 ### 186. Obrażenia przyzwanego kamiennego golema (bez siły) – 🧪 (23.11.2026)
 - **Plik:** `common/game/damagecalculator.cpp`
