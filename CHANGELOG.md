@@ -16,7 +16,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
 1. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – ✅
-2. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – 🧪
+2. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – ✅ (golemy zgodnie ze skryptami)
 3. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – ✅🧪 (wachlarz działa)
 4. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – ⏸ wycofane
 5. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – ✅
@@ -264,14 +264,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Ustawienia → „Partial focus: ON”, walka z Im'Arah z dobytym czarem: kroki w bok idą w bok (bez okrążania), boss dalej zaznaczony; stanie i rzut czaru – bohater obraca się do bossa i trafia. OFF – jak wcześniej.
 - **Test (23.11):** działa – kroki w bok idą w bok, boss zostaje zaznaczony, po zatrzymaniu czar leci w bossa.
 
-### 193. Przywołańce przy bossie – diagnostyka w logu – 🧪 (23.11.2026)
+### 193. Przywołańce przy bossie – diagnostyka w logu – ✅ (23.11.2026)
 - **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
 - **Zgłoszenie:** na PC golemy przy Im'Arah znikają (reset), w OpenGothic biją bossa.
 - **Skrypty NB:** to nie plugin, a `ZS_MM_Attack_Loop` w `GOTHIC.DAT`: przywołaniec bohatera (poza `SumKhubi`, `Pet_Jina`, `DSnapper`, `DK_Pet`, totemami), który walczy z bossem (`RX_IsBoss`: `aivar[90]` albo `AIVRX_NPC_LP` > 0) lub z postacią nieśmiertelną (nie zwierzęciem), traci całe życie, gdy nie ma bitu `BIT_CAN_AT_BOSS` (`VAR_BIT_MASK`, 16) albo ma go, ale `RX_SummonCount` > `GetSummonCountMax()`. Golemy (`RX_SetGolemStats`) dostają ten bit tylko przy `ATR_INTELLECT` ≥ 300; demony, szkielety, smok, `ShadowBeast_Skeleton_Summon` – zawsze.
 - **Przyczyna różnicy:** bohater na PC ma 292 inteligencji – golemy bez bitu, znikają przy bossie. Zapis w OpenGothic ma 363 – golemy z bitem, wg skryptów NB mogą bić bossa. Skrypt jest ten sam w obu wersjach.
 - **Poprawka:** bez zmiany zasad (robią to skrypty); raz na przywołańca, gdy jego celem jest boss, wpis `[ctx] summon at a boss: <przywołaniec> -> <boss>, BIT_CAN_AT_BOSS 0/1, summons N/max, ATR_INTELLECT N` z informacją, czy skrypty go odeślą.
 - **Do sprawdzenia:** golemy przy Im'Arah – w logu wpis; przy `BIT_CAN_AT_BOSS 0` albo liczbie ponad limit golem powinien zniknąć. Gdy wpis mówi „the scripts send it away”, a golem zostaje – błąd w porcie, do poprawy.
-- **Test (23.11):** golemy przy Im'Arah nie znikają. W logu przy obu `BIT_CAN_AT_BOSS 1, summons 2/4` i `4/4, ATR_INTELLECT 363 - it may fight the boss`: według skryptu NB przy inteligencji 363 golemy mogą bić bossa (na PC bohater ma 292 – bez bitu, dlatego tam znikają). Do decyzji, czy reset ma działać także przy bicie.
+- **Test (23.11):** golemy przy Im'Arah nie znikają. W logu przy obu `BIT_CAN_AT_BOSS 1, summons 2/4` i `4/4, ATR_INTELLECT 363 - it may fight the boss`: według skryptu NB przy inteligencji 363 golemy mogą bić bossa (na PC bohater ma 292 – bez bitu, dlatego tam znikają). Zostaje jak w skryptach: golemy znikają tylko bez bitu albo ponad limitem przywołańców.
 
 ### 192. Ataki specjalne Im'Arah – ✅🧪 (23.11.2026)
 - **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
