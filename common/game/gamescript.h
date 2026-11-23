@@ -233,6 +233,8 @@ class GameScript final {
     void             nbMonsterStatsTick();           // NB fix 185
     void             nbMageBlinkTick();              // NB fix 189
     bool             nbMageBlink(Npc& npc, Npc& target, float dist);
+    void             nbMageBlinkStart(Npc& npc, Npc& target, const Tempest::Vec3& dst);   // NB fix 190
+    void             nbMageBlinkJobs();
     int32_t          nbSummonsCallCooldown();   // NB fix 176
     /// the summoned creatures of the hero go away; the pets stay (NIXDOG, PET_JINA), the wisp too when keepWisp
     size_t           nbResetSummons(bool keepWisp, bool print);

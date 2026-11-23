@@ -254,6 +254,14 @@ struct NbState {
   uint64_t                                    monsterStatsNext = 0;  // NB fix 185: RX_AST_UpdateMonsterStats every second
   uint64_t                                    blinkNext = 0;         // NB fix 189: the teleports of the mages, every 0.5 s
   std::unordered_map<const Npc*,std::pair<int32_t,int32_t>> blinkCount; //   seen / not seen counters
+  // NB fix 190: the teleport goes on during an animation of the mage (the special attack 11 of the plugin)
+  struct BlinkJob {
+    std::weak_ptr<zenkit::INpc> npc, target;
+    Tempest::Vec3               dst;
+    uint64_t                    teleAt = 0, endAt = 0;
+    bool                        moved  = false;
+    };
+  std::vector<BlinkJob>                       blinkJobs;
   // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
   std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
   std::unordered_map<const Npc*,uint64_t>     bodyEmptySince;        // NB fix 136: a dead body found empty, since when
@@ -4921,6 +4929,7 @@ void GameScript::tick(uint64_t dt) {
     nb->second.monsterStatsNext = tickCount()+1000;
     nbMonsterStatsTick();   // NB fix 185
     }
+  nbMageBlinkJobs();         // NB fix 190
   if(tickCount()>=nb->second.blinkNext) {
     nb->second.blinkNext = tickCount()+500;
     nbMageBlinkTick();      // NB fix 189
@@ -8666,31 +8675,88 @@ bool GameScript::nbMageBlink(Npc& npc, Npc& target, float dist) {
     const Tempest::Vec3 p = center+d*r;
     if((p-tp).length()>=3500.f)
       continue;
-    auto land = phys->landRay(Tempest::Vec3(p.x,p.y+300.f,p.z),1500.f);
-    if(!land.hasCol || std::abs(land.v.y-np.y)>600.f)
+    // NB fix 190: the ground under the place at the height of the mage or of its enemy (the ray from above both - not from
+    // inside a hill, not onto a roof); room for the body over it. Before the mage stood on a high place and fell (BS_FALL, BS_LIE)
+    const float top = std::max(np.y,tp.y)+250.f;
+    auto land = phys->landRay(Tempest::Vec3(p.x,top,p.z),top-std::min(np.y,tp.y)+400.f);
+    if(!land.hasCol || (std::abs(land.v.y-np.y)>300.f && std::abs(land.v.y-tp.y)>300.f))
       continue;
     const Tempest::Vec3 dst = land.v;
-    // the enemy sees the place, and the way there is not through a wall
+    if(phys->ray(dst+Tempest::Vec3(0,40,0),dst+Tempest::Vec3(0,190,0)).hasCol)
+      continue;
+    // the enemy sees the place
     if(phys->ray(tp+Tempest::Vec3(0,150,0),dst+Tempest::Vec3(0,150,0)).hasCol)
       continue;
-    const VisualFx* fx = Gothic::inst().loadVisualFx("SPELLFX_TELEPORT");
-    if(fx!=nullptr) {
-      Effect e(*fx,world(),np);
-      e.setActive(true);
-      world().runEffect(std::move(e));
-      }
-    npc.setPosition(dst);
-    npc.setDirection(tp-dst);
-    if(fx!=nullptr) {
-      Effect e(*fx,world(),dst);
-      e.setActive(true);
-      world().runEffect(std::move(e));
-      }
-    nbCtx("blink: ",npc.displayName()," teleports ",int((dst-np).length())," cm (to ",int((dst-tp).length()),
-          " cm from ",target.isPlayer() ? std::string_view("the hero") : target.displayName(),")");
+    nbMageBlinkStart(npc,target,dst);
     return true;
     }
   return false;
+  }
+
+// NB fix 190: the special attack 11 of the plugin (0x1007b230): the mage plays S_TESTSHOCKWAVE (or T_WARN), the effect of the
+// teleport shows at the place it goes to and where it stands, it moves between 45% and 65% of the animation (here 55%),
+// faces its enemy; AIVRX_SPECIAL_ATTACK is 11 until the animation ends
+void GameScript::nbMageBlinkStart(Npc& npc, Npc& target, const Tempest::Vec3& dst) {
+  constexpr int32_t AIVRX_SPECIAL_ATTACK = 100;
+  const auto np = npc.position();
+  for(auto* name:{"SPELLFX_TELEPORT_RING","SPELLFX_TELEPORT_CAST"}) {
+    if(const VisualFx* fx = Gothic::inst().loadVisualFx(name)) {
+      for(auto& at:{dst,np}) {
+        Effect e(*fx,world(),at);
+        e.setActive(true);
+        world().runEffect(std::move(e));
+        }
+      }
+    }
+  npc.setDirection(target.position()-np);
+  const Animation::Sequence* sq = npc.playAnimByName("S_TESTSHOCKWAVE",BS_NONE);
+  if(sq==nullptr)
+    sq = npc.playAnimByName("T_WARN",BS_NONE);
+  const uint64_t len = sq!=nullptr ? uint64_t(std::max(sq->totalTime(),400.f)) : 900;
+  auto& st = nbStates[this];
+  NbState::BlinkJob job;
+  job.npc    = npc.handlePtr();
+  job.target = target.handlePtr();
+  job.dst    = dst;
+  job.teleAt = tickCount()+len*55/100;
+  job.endAt  = tickCount()+len;
+  st.blinkJobs.push_back(job);
+  npc.newBalanceSetNpcVar(AIVRX_SPECIAL_ATTACK,11);
+  nbCtx("blink: ",npc.displayName()," teleports ",int((dst-np).length())," cm (to ",int((dst-target.position()).length()),
+        " cm from ",target.isPlayer() ? std::string_view("the hero") : target.displayName(),"), animation ",
+        sq!=nullptr ? int(len) : -1," ms");
+  }
+
+void GameScript::nbMageBlinkJobs() {
+  constexpr int32_t AIVRX_SPECIAL_ATTACK = 100;
+  auto& jobs = nbStates[this].blinkJobs;
+  if(jobs.empty())
+    return;
+  const uint64_t now = tickCount();
+  for(size_t i=0; i<jobs.size(); ) {
+    auto& j   = jobs[i];
+    auto  ref = j.npc.lock();
+    Npc*  npc = ref!=nullptr ? findNpc(ref) : nullptr;
+    if(npc==nullptr || npc->isDead() || npc->isDown()) {
+      if(npc!=nullptr)
+        npc->newBalanceSetNpcVar(AIVRX_SPECIAL_ATTACK,0);
+      jobs.erase(jobs.begin()+ptrdiff_t(i));
+      continue;
+      }
+    if(!j.moved && now>=j.teleAt) {
+      j.moved = true;
+      npc->setPosition(j.dst);
+      auto tr = j.target.lock();
+      if(Npc* t = tr!=nullptr ? findNpc(tr) : nullptr)
+        npc->setDirection(t->position()-j.dst);
+      }
+    if(now>=j.endAt) {
+      npc->newBalanceSetNpcVar(AIVRX_SPECIAL_ATTACK,0);
+      jobs.erase(jobs.begin()+ptrdiff_t(i));
+      continue;
+      }
+    ++i;
+    }
   }
 
 void GameScript::nbMonsterStatsTick() {

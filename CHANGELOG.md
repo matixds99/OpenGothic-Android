@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **190**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **191**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – 🧪
-2. **188** – bossowie z `bodystate_interruptable_override` nie zataczają się od ciosów (Im'Arah może rzucać czary) – 🧪
-3. **187** – ślad AI bossów w logu (diagnostyka: dlaczego Im'Arah nie rzuca czarów) – ✅
-4. **186** – obrażenia przyzwanego kamiennego golema jak na PC: bez siły, obrażenia minus ochrona – 🧪
-5. **185** – życie, siła i ochrona potworów według poziomu trudności (`RX_AST_UpdateMonsterStats`); Nightmare: 150% życia, m.in. bossowie – 🧪
+1. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – 🧪
+2. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – 🧪
+3. **188** – bossowie z `bodystate_interruptable_override` nie zataczają się od ciosów (Im'Arah może rzucać czary) – 🧪
+4. **187** – ślad AI bossów w logu (diagnostyka: dlaczego Im'Arah nie rzuca czarów) – ✅
+5. **186** – obrażenia przyzwanego kamiennego golema jak na PC: bez siły, obrażenia minus ochrona – 🧪
 
 ---
 
@@ -252,6 +252,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 190. Teleport magów: animacja, efekt, bez spadania – 🧪 (23.11.2026)
+- **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
+- **Zgłoszenie (po 189):** Im'Arah teleportuje się, ale momentalnie – bez animacji i efektu.
+- **Log (23.11):** 8 teleportów (`blink`); po części Im'Arah w stanie ciała 10 (spadanie) i 12 (leży) – lądował wyżej niż ziemia, spadał i nie rzucał czarów.
+- **Plugin (atak specjalny 11, `0x1007b230`):** mag gra animację `S_TESTSHOCKWAVE` (bez niej `T_WARN`), efekt `SPELLFX_TELEPORT` w miejscu docelowym i tam, gdzie stoi; przeniesienie między 45% a 65% animacji, obrót do wroga; `AIVRX_SPECIAL_ATTACK` = 11 do końca animacji.
+- **Poprawka:**
+  - teleport w trakcie animacji: start – animacja, efekty `SPELLFX_TELEPORT_RING` (niebieski krąg) i `SPELLFX_TELEPORT_CAST` w obu miejscach; przeniesienie w 55% animacji; `AIVRX_SPECIAL_ATTACK` = 11 do końca (nie ma wtedy kolejnego teleportu ani zmian faz walki ze skryptu);
+  - miejsce: ziemia szukana promieniem od góry nad magiem i wrogiem, na wysokości maga albo wroga (±3 m), z miejscem na ciało nad ziemią.
+- **Log:** `[ctx] blink: Im'Arah teleports … animation N ms` (−1 – bez animacji, 0,9 s).
+- **Do sprawdzenia:** przed teleportem gest Im'Arah i niebieskie kręgi w obu miejscach, przeniesienie po chwili; po teleporcie od razu walczy (w logu `NB ai: Im'Arah` bez `body=10`/`body=12`).
+
 ### 189. Teleport magów do wroga (Im'Arah i inni) – 🧪 (23.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
 - **Zgłoszenie:** nagrania z PC – Im'Arah z drzwi wieży teleportuje się (niebieski krąg) do bohatera i walczy dalej w terenie; w porcie stał w drzwiach.
@@ -259,13 +270,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** to samo w porcie; bieg = stan ciała `BS_RUN`/`BS_WALK`. Bez animacji ostrzeżenia `T_WARN` przed teleportem (od razu przeniesienie).
 - **Log:** `[ctx] blink: Im'Arah teleports N cm (to M cm from the hero)`.
 - **Do sprawdzenia:** walka z Im'Arah – oddal się, żeby za tobą pobiegł: niebieski efekt i Im'Arah obok bohatera. Linie `blink` w logu.
+- **Test (23.11):** teleportuje się do bohatera (8 razy w walce), ale momentalnie, bez animacji i efektu – poprawka 190.
 
 ### 188. Bossowie nie zataczają się od ciosów (`bodystate_interruptable_override`) – 🧪 (23.11.2026)
 - **Plik:** `common/world/objects/npc.cpp`
 - **Log (23.11, poprawka 187):** Im'Arah w `ZS_ATTACK` z burzą ognia w ręce co chwilę w stanie ciała 21 (zatoczenie po trafieniu) – każdy czar bohatera (413) przerywał mu rzucanie, przez całą walkę trafił 2 razy.
 - **Przyczyna:** postać z `BODYSTATEINTERRUPTABLEOVERRIDE = TRUE` (bossowie NB, Im'Arah w instancji; `RX_ApplyStagger` dla bossów nic nie zmienia) nie powinna dać się przerwać ciosem. Port pomijał tylko przerwanie animacji, ale animacja zatoczenia i tak się włączała.
 - **Poprawka:** przy `bodystate_interruptable_override` cios nie włącza zatoczenia. Odrzut (`DAM_FLY`) bez zmian.
-- **Do sprawdzenia:** Im'Arah pod ostrzałem czarów bohatera dalej rzuca swoje; w logu `NB ai: Im'Arah` bez `body=21`. Inni bossowie i potwory „nieprzerywalne” (np. elitarne orki przy słabym bohaterze) – nie zataczają się.
+- **Do sprawdzenia:** Im'Arah pod ostrzałem czarów bohatera dalej rzuca swoje; w logu `NB ai: Im'Arah` bez `body=21`.
+- **Test (23.11):** w logu Im'Arah już bez `body=21`, rzuca czary w trakcie walki. Inni bossowie i potwory „nieprzerywalne” (np. elitarne orki przy słabym bohaterze) – nie zataczają się.
 
 ### 187. Ślad AI bossów w logu (Im'Arah nie atakuje) – ✅ (23.11.2026)
 - **Plik:** `common/world/objects/npc.cpp`
