@@ -15,9 +15,9 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – 🧪
+1. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – ✅
 2. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – 🧪
-3. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – 🧪
+3. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – ✅🧪 (wachlarz działa)
 4. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – ⏸ wycofane
 5. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – ✅
 
@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 194. Ustawienie „Partial focus” – kroki w bok bez krążenia wokół celu – 🧪 (23.11.2026)
+### 194. Ustawienie „Partial focus” – kroki w bok bez krążenia wokół celu – ✅ (23.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp`, `common/game/playercontrol.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`
 - **Zgłoszenie (po 191):** przy krokach w bok focus zaznacza bossa i bohater biega wokół niego, zamiast iść w bok. Na PC (mysz) focus był częściowy: bossa dało się zaznaczyć, gdy bohater stał i rzucał czar albo dobywał broni, a ruch w bok był ruchem w bok.
 - **Przyczyna:** w OpenGothic krok w bok (`MoveL`/`MoveR`) z celem w focusie obraca bohatera do celu (`processAutoRotate`), tak samo blokada celu (`lockFace`) zamienia skręt w krok wokół celu – w efekcie krążenie.
@@ -262,6 +262,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - focus zostaje – cel jest zaznaczony, czary i strzały lecą w niego.
 - Wersja ustawień 12 (11 była wycofaną 191; starsze ustawienia dostają OFF).
 - **Do sprawdzenia:** Ustawienia → „Partial focus: ON”, walka z Im'Arah z dobytym czarem: kroki w bok idą w bok (bez okrążania), boss dalej zaznaczony; stanie i rzut czaru – bohater obraca się do bossa i trafia. OFF – jak wcześniej.
+- **Test (23.11):** działa – kroki w bok idą w bok, boss zostaje zaznaczony, po zatrzymaniu czar leci w bossa.
 
 ### 193. Przywołańce przy bossie – diagnostyka w logu – 🧪 (23.11.2026)
 - **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
@@ -270,8 +271,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna różnicy:** bohater na PC ma 292 inteligencji – golemy bez bitu, znikają przy bossie. Zapis w OpenGothic ma 363 – golemy z bitem, wg skryptów NB mogą bić bossa. Skrypt jest ten sam w obu wersjach.
 - **Poprawka:** bez zmiany zasad (robią to skrypty); raz na przywołańca, gdy jego celem jest boss, wpis `[ctx] summon at a boss: <przywołaniec> -> <boss>, BIT_CAN_AT_BOSS 0/1, summons N/max, ATR_INTELLECT N` z informacją, czy skrypty go odeślą.
 - **Do sprawdzenia:** golemy przy Im'Arah – w logu wpis; przy `BIT_CAN_AT_BOSS 0` albo liczbie ponad limit golem powinien zniknąć. Gdy wpis mówi „the scripts send it away”, a golem zostaje – błąd w porcie, do poprawy.
+- **Test (23.11):** golemy przy Im'Arah nie znikają. W logu przy obu `BIT_CAN_AT_BOSS 1, summons 2/4` i `4/4, ATR_INTELLECT 363 - it may fight the boss`: według skryptu NB przy inteligencji 363 golemy mogą bić bossa (na PC bohater ma 292 – bez bitu, dlatego tam znikają). Do decyzji, czy reset ma działać także przy bicie.
 
-### 192. Ataki specjalne Im'Arah – 🧪 (23.11.2026)
+### 192. Ataki specjalne Im'Arah – ✅🧪 (23.11.2026)
 - **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
 - **Zgłoszenie:** na PC Im'Arah gra animację, świeci na zielono lub czerwono, wystrzeliwuje wachlarz ognistych pocisków, rzuca pioruny z falą (na nagraniu fala zabiła bohatera); w OpenGothic tego nie ma.
 - **Plugin (UNION_ABI.DLL):**
@@ -283,6 +285,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna:** port miał z tego tylko teleport (atak 11, poprawki 189–190).
 - **Poprawka:** wybór ataku co sekundę i trzy ataki jak wyżej (zmienne `AIVRX_SPECIAL_ATTACK*` jak w pluginie, w czasie ataku bez teleportu). Różnice: fala pioruna rani wroga, gdy stoi bliżej niż 7 m od miejsca błysku (w pluginie trafia cel efektu – tu można uciec); wybór nie w czasie leczenia (`ImarahHeals`) ani teleportu; pociski lecą prosto do 32,5 m (jak pociski potworów, poprawka 157) i trafiają też inne postacie po drodze.
 - **Do sprawdzenia:** walka z Im'Arah – w logu `[ctx] imarah: special attack N`; wachlarz 24 ognistych pocisków po zielonym/czerwonym świetle; przy mniej niż 75% życia pioruny: błysk i chmura nad bohaterem, po ~2 s fala – ucieczka na bok chroni; przy mniej niż 50% także pięć pocisków jej czaru.
+- **Test (23.11):** wachlarz działa – w logu 5 razy `special attack 1`, 24 ogniste pociski po 900 obrażeń, zielona i czerwona wersja; pierwszy wachlarz zabił bohatera. Życie Im'Arah nie spadło poniżej 75% (najniżej 30830/38250), więc pioruny (2) i pociski jej czaru (3) jeszcze się nie pojawiły – do sprawdzenia. Dwa razy `animation 0 ms` – `S_TESTSHOCKWAVE` się nie włączyła (Im'Arah była w innej animacji), pociski poleciały od razu.
 
 ### 191. Ustawienie „Fight focus” – walka bez celowania w przeciwników – ⏸ (23.11.2026)
 - **Pliki:** `common/world/worldobjects.cpp`, `common/world/worldobjects.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`
