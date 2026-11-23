@@ -262,6 +262,24 @@ struct NbState {
     bool                        moved  = false;
     };
   std::vector<BlinkJob>                       blinkJobs;
+  // NB fix 192: the special attacks of Im'Arah (UNION_ABI.DLL 0x1007fe60 chooses, 0x1006f630 / 0x10070050 / 0x10070860 do)
+  struct ImarahStrike {
+    uint64_t      startAt = 0, flashAt = 0, waveAt = 0, until = 0;
+    Tempest::Vec3 pos;
+    int32_t       state = 0;   // 0 waits, 1 the animation, 2 the flash is there, 3 done
+    };
+  struct ImarahJob {
+    std::weak_ptr<zenkit::INpc> npc, target;
+    int32_t                     attack = 0;
+    int32_t                     state  = 0;
+    uint64_t                    start = 0, fireAt = 0, endAt = 0, animEnd = 0, until = 0;
+    bool                        red    = false;
+    std::vector<ImarahStrike>   strikes;
+    };
+  std::vector<ImarahJob>                      imarahJobs;
+  uint64_t                                    imarahNext  = 0;    // the choice once a second
+  int32_t                                     imarahEvery = 0;    // the seconds between the attacks (0x105701a0)
+  std::unordered_map<const Npc*,uint64_t>     summonBossLog;      // NB fix 193: a summon at a boss, in the log once
   // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
   std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
   std::unordered_map<const Npc*,uint64_t>     bodyEmptySince;        // NB fix 136: a dead body found empty, since when
@@ -4930,6 +4948,12 @@ void GameScript::tick(uint64_t dt) {
     nbMonsterStatsTick();   // NB fix 185
     }
   nbMageBlinkJobs();         // NB fix 190
+  nbImarahJobs();            // NB fix 192
+  if(tickCount()>=nb->second.imarahNext) {
+    nb->second.imarahNext = tickCount()+1000;
+    nbImarahTick();         // NB fix 192
+    nbSummonBossLog();      // NB fix 193
+    }
   if(tickCount()>=nb->second.blinkNext) {
     nb->second.blinkNext = tickCount()+500;
     nbMageBlinkTick();      // NB fix 189
@@ -8757,6 +8781,380 @@ void GameScript::nbMageBlinkJobs() {
       }
     ++i;
     }
+  }
+
+// NB fix 192: the special attacks of Im'Arah (UNION_ABI.DLL 0x1007fe60, the timer of her tactic). Once a second
+// AIVRX_SPECIAL_ATTACK_TIMER (103) counts up and AIVRX_SPECIAL_ATTACK_COOLDOWN (102) down; with no cooldown and no attack
+// going on, every N-th second she chooses one (AIVRX_SPECIAL_ATTACK 100, AIVRX_SPECIAL_ATTACK_STAGE 101 = 1):
+//  - life at most 50%: 35% the lightning (2), 35% the fire bolts of her spell (3), 30% the fan of fire bolts (1); N 8..19;
+//  - life at most 75%: 60% the lightning, 40% the fan; N 10..20;
+//  - otherwise the fan; N 10..20. The first N is 15..30.
+// The plugin: Im'Arah of the guild DMT with her enemy in the fight. Here as for the teleport (fix 189): ZS_Attack, the
+// weapon (the spell) out, the enemy lives; not during a teleport and not while she heals (ImarahHeals)
+void GameScript::nbImarahTick() {
+  constexpr int32_t SA = 100, SA_STAGE = 101, SA_COOLDOWN = 102, SA_TIMER = 103;
+  auto* imar = vm.find_symbol_by_name("IMARAH");
+  auto* zsA  = vm.find_symbol_by_name("ZS_ATTACK");
+  if(imar==nullptr || imar->type()!=zenkit::DaedalusDataType::INSTANCE || zsA==nullptr)
+    return;
+  auto& st = nbStates[this];
+  auto& w  = world();
+  for(uint32_t i=0; i<w.npcCount(); ++i) {
+    auto* npc = w.npcById(i);
+    if(npc==nullptr || npc->isPlayer() || npc->isDead() || npc->isDown())
+      continue;
+    if(npc->handle().symbol_index()!=imar->index())
+      continue;
+    Npc* t = npc->target();
+    if(t==nullptr || t->isDead() || npc->weaponState()==WeaponState::NoWeapon || !npc->isInState(zsA->index()))
+      continue;
+    if(st.imarahEvery<=0)
+      st.imarahEvery = 15+int32_t(rand(16));
+    const int32_t timer = npc->newBalanceGetNpcVar(SA_TIMER);
+    if(npc->newBalanceGetNpcVar(SA_COOLDOWN)==0 && npc->newBalanceGetNpcVar(SA_STAGE)==0 &&
+       npc->newBalanceGetNpcVar(SA)==0 && timer!=0 && timer%st.imarahEvery==0 && nbIntVar("IMARAHHEALS")<=0) {
+      const int32_t hp  = npc->attribute(ATR_HITPOINTS);
+      const int32_t max = std::max(1,npc->attribute(ATR_HITPOINTSMAX));
+      int32_t attack = 1;
+      if(hp<=max*50/100) {
+        const int32_t r = int32_t(rand(100));
+        attack = r<35 ? 2 : (r<70 ? 3 : 1);
+        st.imarahEvery = 8+int32_t(rand(12));
+        }
+      else if(hp<=max*75/100) {
+        attack = int32_t(rand(101))<=60 ? 2 : 1;
+        st.imarahEvery = 10+int32_t(rand(11));
+        }
+      else {
+        st.imarahEvery = 10+int32_t(rand(11));
+        }
+      nbImarahStart(*npc,*t,attack);
+      }
+    npc->newBalanceSetNpcVar(SA_TIMER,timer+1);
+    if(const int32_t cd = npc->newBalanceGetNpcVar(SA_COOLDOWN); cd>0)
+      npc->newBalanceSetNpcVar(SA_COOLDOWN,cd-1);
+    }
+  }
+
+/// NB fix 192: the damage of a special attack (0x1006f4f0): AIVRX_SPECIAL_ATTACK_DAMAGE_0x; with RX_MonsterPower of at
+/// least 150 (Nightmare 200) it is the damage * power/100 * 0.75
+static int32_t nbSpecialDamage(int32_t base, int32_t power) {
+  const float k = float(power)/100.f;
+  if(k<1.5f)
+    return base;
+  return int32_t(double(int32_t(float(base)*k))*0.75);
+  }
+
+void GameScript::nbImarahStart(Npc& npc, Npc& target, int32_t attack) {
+  constexpr int32_t SA = 100, SA_STAGE = 101;
+  auto& st = nbStates[this];
+  NbState::ImarahJob job;
+  job.npc    = npc.handlePtr();
+  job.target = target.handlePtr();
+  job.attack = attack;
+  job.state  = 1;
+  job.start  = tickCount();
+  job.until  = job.start+10000;   // the plugin gives up a step after 10 s
+  if(attack==2) {
+    // 1..3 lightnings, 2.5 s one after another; the wave 2 s after the flash (1.3..2 s when the enemy is over 20 m away)
+    const float   dist = (target.position()-npc.position()).length();
+    const int32_t num  = 1+int32_t(rand(3));
+    for(int32_t i=0; i<num; ++i) {
+      NbState::ImarahStrike s;
+      s.startAt = job.start+uint64_t(i)*2500;
+      s.waveAt  = uint64_t(dist>2000.f ? 13+int32_t(rand(8)) : 20)*100;   // the delay, here until the flash
+      s.until   = s.startAt+10000;
+      job.strikes.push_back(s);
+      }
+    }
+  npc.newBalanceSetNpcVar(SA,attack);
+  npc.newBalanceSetNpcVar(SA_STAGE,2);
+  npc.clearAiQueue();
+  st.imarahJobs.push_back(std::move(job));
+  static const char* names[] = {"","the fan of fire bolts","the lightning","the bolts of her spell"};
+  nbCtx("imarah: special attack ",attack," (",names[attack],"), life ",npc.attribute(ATR_HITPOINTS),"/",
+        npc.attribute(ATR_HITPOINTSMAX),", next choice after ",st.imarahEvery," s");
+  }
+
+void GameScript::nbImarahEnd(Npc& npc, int32_t cooldown, bool resetTimer) {
+  constexpr int32_t SA = 100, SA_STAGE = 101, SA_COOLDOWN = 102, SA_TIMER = 103;
+  npc.newBalanceSetNpcVar(SA_STAGE,0);
+  npc.newBalanceSetNpcVar(SA_COOLDOWN,cooldown);
+  if(resetTimer)
+    npc.newBalanceSetNpcVar(SA_TIMER,0);
+  npc.newBalanceSetNpcVar(SA,0);
+  }
+
+void GameScript::nbShootDir(Npc& src, const Tempest::Vec3& from, const Tempest::Vec3& dir, float range,
+                            const VisualFx& vfx, int32_t damage, int32_t damageType) {
+  auto& st = nbStates[this];
+  NbState::Shot sh;
+  sh.vfx    = &vfx;
+  sh.src    = src.handlePtr();
+  sh.pos    = from;
+  sh.damage = damage;
+  sh.type   = damageType;
+  float vel = vfx.emTrjEaseVel;
+  if(auto* k = vfx.key(SpellFxKey::Cast); k!=nullptr && k->emTrjEaseVel>0)
+    vel = k->emTrjEaseVel;
+  sh.speed  = std::clamp(vel>0 ? vel/1000.f : 1.f, 0.3f, 3.f);
+  const float len = dir.length();
+  sh.dir    = len>0.001f ? dir/len : Tempest::Vec3(std::cos(src.rotationRad()),0,std::sin(src.rotationRad()));
+  sh.left   = range;
+  sh.until  = tickCount()+uint64_t(sh.left/sh.speed)+500;
+  sh.fx     = Effect(vfx,world(),sh.pos,SpellFxKey::Cast);
+  sh.fx.setActive(true);
+  sh.fx.setLooped(true);
+  st.shots.push_back(std::move(sh));
+  }
+
+/// NB fix 192: the steps of the special attacks of Im'Arah
+///  1 (0x1006f630): S_TESTSHOCKWAVE, on her SPELLFX_IMARAH_GREEN or _RED (half and half; red: she turns to her enemy
+///    from 10% to 55% of the animation); at 55% a fan of SPELLFX_IMARAH_FIREBOLT from -90 to +94 degrees, every
+///    8 degrees, with AIVRX_SPECIAL_ATTACK_DAMAGE_01 of fire each; 3.5 s later the end, the cooldown 10 s;
+///  2 (0x10070050): for each lightning S_LIGHTINGATTACK; at 70% of the animation SPELLFX_LIGHTNINGFLASH_HEAVENSRAGE and
+///    SPELLFX_SPECIALATTACK02_CLOUD where the enemy stands; the delay later SPELLFX_SPECIALATTACK02_ELECTROWAVE there with
+///    AIVRX_SPECIAL_ATTACK_DAMAGE_02 of magic for the enemy (here: when he is less than 7 m from the place). Im'Arah
+///    herself less than 7 m from it: she takes the damage less her protection against magic (at least 1 life left),
+///    IMARAHCURSE, T_PALELITE, the cloud on her, the attack ends. The end: the cooldown 3 s; 15% (not cursed) attack 3;
+///  3 (0x10070860): S_RADIUSATTACK; at 30% five projectiles of her spell (SPELLFX_<spell>, else SPELLFX_IMARAH_FIREBOLT)
+///    at her enemy and 1 and 2 steps to the sides (600 cm, less when he is over 15 m away), AIVRX_SPECIAL_ATTACK_DAMAGE_03
+///    of fire each; then the end, the cooldown 5 s
+void GameScript::nbImarahJobs() {
+  auto& jobs = nbStates[this].imarahJobs;
+  if(jobs.empty())
+    return;
+  const uint64_t now   = tickCount();
+  const int32_t  power = nbIntVar("RX_MONSTERPOWER");
+  const auto playAt = [this](std::string_view name, const Tempest::Vec3& at) {
+    if(const VisualFx* fx = Gothic::inst().loadVisualFx(name)) {
+      Effect e(*fx,world(),at);
+      e.setActive(true);
+      world().runEffect(std::move(e));
+      }
+    };
+  const auto playOn = [](Npc& npc, std::string_view name) {
+    if(const VisualFx* fx = Gothic::inst().loadVisualFx(name))
+      npc.startEffect(npc,*fx);
+    };
+  const auto anim = [](Npc& npc, std::string_view name) -> uint64_t {
+    const Animation::Sequence* sq = npc.playAnimByName(name,BS_NONE);
+    return sq!=nullptr ? uint64_t(std::max(sq->totalTime(),300.f)) : 0;
+    };
+  const auto facing = [](const Npc& npc) {
+    const float a = npc.rotationRad();
+    return Tempest::Vec3(std::cos(a),0,std::sin(a));
+    };
+  const auto origin = [](Npc& npc) {
+    auto p = npc.mapBone("ZS_RIGHTHAND");
+    return p==Tempest::Vec3() ? npc.collosionCenter() : p;
+    };
+
+  std::vector<std::pair<std::weak_ptr<zenkit::INpc>,std::weak_ptr<zenkit::INpc>>> chain;
+  for(size_t i=0; i<jobs.size(); ) {
+    auto& j   = jobs[i];
+    auto  ref = j.npc.lock();
+    Npc*  npc = ref!=nullptr ? findNpc(ref) : nullptr;
+    auto  tr  = j.target.lock();
+    Npc*  tgt = tr!=nullptr ? findNpc(tr) : nullptr;
+    if(npc==nullptr || npc->isDead() || npc->isDown()) {
+      if(npc!=nullptr)
+        nbImarahEnd(*npc,0,false);
+      jobs.erase(jobs.begin()+ptrdiff_t(i));
+      continue;
+      }
+    bool done = false;
+    if(j.attack==1) {
+      if(j.state==1) {
+        if(tgt!=nullptr)
+          npc->setDirection(tgt->position()-npc->position());
+        const uint64_t len = anim(*npc,"S_TESTSHOCKWAVE");
+        j.red     = rand(2)==0;
+        playOn(*npc,j.red ? "SPELLFX_IMARAH_RED" : "SPELLFX_IMARAH_GREEN");
+        j.animEnd = now+len;
+        j.fireAt  = now+len*55/100;
+        j.state   = 2;
+        nbCtx("imarah: the fan (",j.red ? "red" : "green","), animation ",len," ms");
+        }
+      else if(j.state==2) {
+        const uint64_t len = j.animEnd-j.start;
+        if(j.red && tgt!=nullptr && now>=j.start+len*10/100 && now<j.fireAt)
+          npc->setDirection(tgt->position()-npc->position());
+        if(now>=j.fireAt) {
+          const VisualFx* fx = Gothic::inst().loadVisualFx("SPELLFX_IMARAH_FIREBOLT");
+          const int32_t   dmg = nbSpecialDamage(npc->newBalanceGetNpcVar(104),power);
+          const auto      from = origin(*npc);
+          const auto      fw   = facing(*npc);
+          float slope = 0;
+          if(tgt!=nullptr) {
+            const auto  d = tgt->collosionCenter()-from;
+            const float h = std::sqrt(d.x*d.x+d.z*d.z);
+            slope = h>100.f ? std::clamp(d.y/h,-0.5f,0.5f) : 0.f;
+            }
+          int32_t n = 0;
+          for(int32_t ang=-90; fx!=nullptr && ang<=94; ang+=8) {
+            const float a = float(ang)*float(M_PI)/180.f, cs = std::cos(a), sn = std::sin(a);
+            const Tempest::Vec3 d(fw.x*cs-fw.z*sn,slope,fw.x*sn+fw.z*cs);
+            nbShootDir(*npc,from,d,3250.f,*fx,dmg,8);   // DAM_FIRE
+            ++n;
+            }
+          nbCtx("imarah: ",n," fire bolts, ",dmg," damage each");
+          j.endAt = now+3500;
+          j.state = 5;
+          }
+        }
+      else if(j.state==5 && now>=j.endAt) {
+        nbImarahEnd(*npc,10,true);
+        done = true;
+        }
+      }
+    else if(j.attack==2) {
+      bool cursed = false, all = true;
+      for(auto& s:j.strikes) {
+        if(s.state==3)
+          continue;
+        all = false;
+        if(now>=s.until) {
+          s.state = 3;
+          continue;
+          }
+        if(s.state==0 && now>=s.startAt) {
+          if(tgt!=nullptr)
+            npc->setDirection(tgt->position()-npc->position());
+          const uint64_t len   = anim(*npc,"S_LIGHTINGATTACK");
+          const uint64_t delay = s.waveAt;
+          s.flashAt = now+len*70/100;
+          s.waveAt  = s.flashAt+delay;
+          s.state   = 1;
+          }
+        if(s.state==1 && now>=s.flashAt) {
+          if(tgt==nullptr || tgt->isDead()) {
+            s.state = 3;
+            continue;
+            }
+          s.pos = tgt->position()+Tempest::Vec3(0,50,0);
+          playAt("SPELLFX_LIGHTNINGFLASH_HEAVENSRAGE",s.pos);
+          playAt("SPELLFX_SPECIALATTACK02_CLOUD",s.pos);
+          s.state = 2;
+          }
+        if(s.state==2 && now>=s.waveAt) {
+          s.state = 3;
+          playAt("SPELLFX_SPECIALATTACK02_ELECTROWAVE",s.pos);
+          const int32_t dmg = nbSpecialDamage(npc->newBalanceGetNpcVar(105),power);
+          float tdist = -1;
+          if(tgt!=nullptr && !tgt->isDead()) {
+            tdist = (tgt->position()-s.pos).length();
+            if(tdist<700.f)
+              nbVecDamage(*npc,*tgt,dmg,32);   // DAM_MAGIC
+            }
+          const float self = (npc->position()-s.pos).length();
+          nbCtx("imarah: the wave, ",dmg," damage, the enemy ",int(tdist)," cm from it, she ",int(self)," cm");
+          if(self<700.f) {
+            // her own lightning hits her
+            const int32_t hurt = std::max(0,dmg-npc->protection(PROT_MAGIC));
+            const int32_t hp   = npc->attribute(ATR_HITPOINTS);
+            npc->changeAttribute(ATR_HITPOINTS,hp>hurt ? -hurt : 1-hp,false);
+            snd_play("IMARAHCURSE");
+            anim(*npc,"T_PALELITE");
+            playOn(*npc,"SPELLFX_SPECIALATTACK02_CLOUD");
+            nbCtx("imarah: cursed by her own lightning, -",hurt," life");
+            cursed = true;
+            break;
+            }
+          }
+        }
+      if(cursed || all) {
+        nbImarahEnd(*npc,3,false);
+        if(!cursed && rand(100)<15 && tgt!=nullptr && !tgt->isDead())
+          chain.emplace_back(j.npc,j.target);
+        done = true;
+        }
+      }
+    else if(j.attack==3) {
+      if(j.state==1) {
+        if(tgt!=nullptr)
+          npc->setDirection(tgt->position()-npc->position());
+        const uint64_t len = anim(*npc,"S_RADIUSATTACK");
+        j.fireAt = now+len*30/100;
+        j.state  = 2;
+        }
+      else if(j.state==2 && now>=j.fireAt) {
+        const VisualFx* fx = nullptr;
+        if(auto* w = npc->activeWeapon(); w!=nullptr && w->isSpellOrRune())
+          fx = spellVfx(w->spellId());
+        if(fx==nullptr)
+          fx = Gothic::inst().loadVisualFx("SPELLFX_IMARAH_FIREBOLT");
+        if(fx!=nullptr && tgt!=nullptr && !tgt->isDead()) {
+          const auto    from = origin(*npc);
+          const auto    tp   = tgt->collosionCenter();
+          const float   dist = (tp-from).length();
+          const int32_t step = dist>1500.f ? std::max(0,600-(int32_t(dist)-1500)/4) : 600;
+          const int32_t dmg  = nbSpecialDamage(npc->newBalanceGetNpcVar(106),power);
+          Tempest::Vec3 side = tp-from;
+          side = Tempest::Vec3(-side.z,0,side.x);
+          const float sl = side.length();
+          side = sl>1.f ? side/sl : Tempest::Vec3(1,0,0);
+          int32_t acc = 0;
+          for(int32_t k=0; k<3; ++k) {
+            const float off[2] = {float(acc+int32_t(rand(101))), -float((step+int32_t(rand(101)))*k)};
+            for(int32_t m=0; m<(k==0 ? 1 : 2); ++m)
+              nbShootDir(*npc,from,tp+side*off[m]-from,3250.f,*fx,dmg,8);   // DAM_FIRE
+            acc += step;
+            }
+          nbCtx("imarah: 5 bolts of her spell, ",dmg," damage each, the step ",step," cm");
+          }
+        nbImarahEnd(*npc,5,true);
+        done = true;
+        }
+      }
+    if(!done && j.attack!=2 && now>=j.until+5000) {
+      nbImarahEnd(*npc,10,true);
+      done = true;
+      }
+    if(done) {
+      jobs.erase(jobs.begin()+ptrdiff_t(i));
+      continue;
+      }
+    ++i;
+    }
+  for(auto& c:chain) {
+    auto a = c.first.lock(), b = c.second.lock();
+    Npc* npc = a!=nullptr ? findNpc(a) : nullptr;
+    Npc* tgt = b!=nullptr ? findNpc(b) : nullptr;
+    if(npc!=nullptr && tgt!=nullptr)
+      nbImarahStart(*npc,*tgt,3);
+    }
+  }
+
+/// NB fix 193: a summoned creature of the hero at a boss. The scripts decide (ZS_MM_Attack_Loop): a summon without
+/// BIT_CAN_AT_BOSS (VAR_BIT_MASK, 16), or with it and RX_SummonCount over GetSummonCountMax, that fights a boss (RX_IsBoss)
+/// or an immortal npc loses all its life - it goes. The golems get the bit in RX_SetGolemStats when ATR_INTELLECT is
+/// at least 300. Here: in the log once for each summon, what the scripts will see
+void GameScript::nbSummonBossLog() {
+  auto nb = nbStates.find(this);
+  auto* hero = world().player();
+  if(nb==nbStates.end() || hero==nullptr)
+    return;
+  auto& seen = nb->second.summonBossLog;
+  constexpr int32_t VAR_BIT_MASK = 71, BIT_CAN_AT_BOSS = 16, AIVRX_NPC_LP = 53;
+  world().detectNpc(hero->position(),4000.f,[&](Npc& n) {
+    if(n.isPlayer() || n.isDead() || !nbIsSummon(n))
+      return;
+    Npc* t = n.target();
+    if(t==nullptr || t->isDead())
+      return;
+    const bool boss = t->handle().aivar[90]!=0 || t->newBalanceGetNpcVar(AIVRX_NPC_LP)>0;
+    if(!boss || seen.find(&n)!=seen.end())
+      return;
+    seen[&n] = tickCount();
+    const bool can = (n.newBalanceGetNpcVar(VAR_BIT_MASK) & BIT_CAN_AT_BOSS)!=0;
+    const int32_t cnt = nbIntVar("RX_SUMMONCOUNT"), max = nbIntVar("RX_SUMMONCOUNTMAX");
+    nbCtx("summon at a boss: ",n.displayName()," -> ",t->displayName(),", BIT_CAN_AT_BOSS ",can ? 1 : 0,
+          ", summons ",cnt,"/",max,", ATR_INTELLECT ",nbIntVar("ATR_INTELLECT"),
+          (!can || cnt>max) ? " - the scripts send it away" : " - it may fight the boss");
+    });
+  if(seen.size()>64)
+    seen.clear();
   }
 
 void GameScript::nbMonsterStatsTick() {

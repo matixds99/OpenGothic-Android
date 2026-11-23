@@ -235,6 +235,11 @@ class GameScript final {
     bool             nbMageBlink(Npc& npc, Npc& target, float dist);
     void             nbMageBlinkStart(Npc& npc, Npc& target, const Tempest::Vec3& dst);   // NB fix 190
     void             nbMageBlinkJobs();
+    void             nbImarahTick();                 // NB fix 192
+    void             nbImarahStart(Npc& npc, Npc& target, int32_t attack);
+    void             nbImarahJobs();
+    void             nbImarahEnd(Npc& npc, int32_t cooldown, bool resetTimer);
+    void             nbSummonBossLog();              // NB fix 193
     int32_t          nbSummonsCallCooldown();   // NB fix 176
     /// the summoned creatures of the hero go away; the pets stay (NIXDOG, PET_JINA), the wisp too when keepWisp
     size_t           nbResetSummons(bool keepWisp, bool print);
@@ -257,6 +262,8 @@ class GameScript final {
     void             nbSplash(Npc& target, Npc& hero);         // NB fix 106: the blow hits the characters next to it
     void             nbShotsTick(uint64_t dt);                 // NB fix 157: the projectiles of the monsters
     void             nbShoot(Npc& src, Npc& dst, const VisualFx& vfx, int32_t damage, int32_t damageType);
+    void             nbShootDir(Npc& src, const Tempest::Vec3& from, const Tempest::Vec3& dir, float range,
+                                const VisualFx& vfx, int32_t damage, int32_t damageType);   // NB fix 192
     void             nbVecDamage(Npc& src, Npc& dst, int32_t damage, int32_t damageType);
     void             nbDotTick();                              // NB fix 106: the damage over time
     void             nbOnDamage(Npc& target, Npc& attacker);   // NB fix 82, 83: RX_OnDamage - the music of the bosses, the knock down

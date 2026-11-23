@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **192**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **194**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – ⏸ wycofane
-2. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – ✅
-3. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – ✅
-4. **188** – bossowie z `bodystate_interruptable_override` nie zataczają się od ciosów (Im'Arah może rzucać czary) – 🧪
-5. **187** – ślad AI bossów w logu (diagnostyka: dlaczego Im'Arah nie rzuca czarów) – ✅
+1. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – 🧪
+2. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – 🧪
+3. **191** – ustawienie „Fight focus”: walka bez zaznaczania przeciwników (czary lecą przed siebie) – ⏸ wycofane
+4. **190** – teleport magów z animacją i niebieskim efektem, bez spadania po teleporcie – ✅
+5. **189** – teleport magów do wroga (Im'Arah i 10 innych z listy pluginu) – ✅
 
 ---
 
@@ -251,6 +251,27 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 193. Przywołańce przy bossie – diagnostyka w logu – 🧪 (23.11.2026)
+- **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
+- **Zgłoszenie:** na PC golemy przy Im'Arah znikają (reset), w OpenGothic biją bossa.
+- **Skrypty NB:** to nie plugin, a `ZS_MM_Attack_Loop` w `GOTHIC.DAT`: przywołaniec bohatera (poza `SumKhubi`, `Pet_Jina`, `DSnapper`, `DK_Pet`, totemami), który walczy z bossem (`RX_IsBoss`: `aivar[90]` albo `AIVRX_NPC_LP` > 0) lub z postacią nieśmiertelną (nie zwierzęciem), traci całe życie, gdy nie ma bitu `BIT_CAN_AT_BOSS` (`VAR_BIT_MASK`, 16) albo ma go, ale `RX_SummonCount` > `GetSummonCountMax()`. Golemy (`RX_SetGolemStats`) dostają ten bit tylko przy `ATR_INTELLECT` ≥ 300; demony, szkielety, smok, `ShadowBeast_Skeleton_Summon` – zawsze.
+- **Przyczyna różnicy:** bohater na PC ma 292 inteligencji – golemy bez bitu, znikają przy bossie. Zapis w OpenGothic ma 363 – golemy z bitem, wg skryptów NB mogą bić bossa. Skrypt jest ten sam w obu wersjach.
+- **Poprawka:** bez zmiany zasad (robią to skrypty); raz na przywołańca, gdy jego celem jest boss, wpis `[ctx] summon at a boss: <przywołaniec> -> <boss>, BIT_CAN_AT_BOSS 0/1, summons N/max, ATR_INTELLECT N` z informacją, czy skrypty go odeślą.
+- **Do sprawdzenia:** golemy przy Im'Arah – w logu wpis; przy `BIT_CAN_AT_BOSS 0` albo liczbie ponad limit golem powinien zniknąć. Gdy wpis mówi „the scripts send it away”, a golem zostaje – błąd w porcie, do poprawy.
+
+### 192. Ataki specjalne Im'Arah – 🧪 (23.11.2026)
+- **Plik:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
+- **Zgłoszenie:** na PC Im'Arah gra animację, świeci na zielono lub czerwono, wystrzeliwuje wachlarz ognistych pocisków, rzuca pioruny z falą (na nagraniu fala zabiła bohatera); w OpenGothic tego nie ma.
+- **Plugin (UNION_ABI.DLL):**
+  - wybór (`0x1007fe60`, co sekundę): `AIVRX_SPECIAL_ATTACK_TIMER` (103) +1, `AIVRX_SPECIAL_ATTACK_COOLDOWN` (102) −1; bez cooldownu i trwającego ataku co N-tą sekundę: życie ≤ 50% – 35% piorun (2), 35% pociski czaru (3), 30% wachlarz (1), N 8–19; życie ≤ 75% – 60% piorun, 40% wachlarz, N 10–20; inaczej wachlarz, N 10–20; pierwsze N 15–30;
+  - obrażenia (`0x1006f4f0`): `AIVRX_SPECIAL_ATTACK_DAMAGE_01–03` (Im'Arah 600/500/500), przy `RX_MonsterPower` ≥ 150 razy moc/100 razy 0,75 (Nightmare: 900/750/750);
+  - atak 1 (`0x1006f630`): `S_TESTSHOCKWAVE`, na niej `SPELLFX_IMARAH_GREEN` albo `_RED` (pół na pół; czerwona obraca się do wroga od 10% do 55% animacji); w 55% wachlarz `SPELLFX_IMARAH_FIREBOLT` od −90° do +94° co 8° (24 pociski, ogień); po 3,5 s koniec, cooldown 10 s;
+  - atak 2 (`0x10070050`): 1–3 pioruny co 2,5 s; każdy: obrót, `S_LIGHTINGATTACK`, w 70% animacji `SPELLFX_LIGHTNINGFLASH_HEAVENSRAGE` i `SPELLFX_SPECIALATTACK02_CLOUD` w miejscu wroga, po 2 s (wróg dalej niż 20 m: 1,3–2 s) `SPELLFX_SPECIALATTACK02_ELECTROWAVE` z obrażeniami magii; Im'Arah bliżej niż 7 m od miejsca – sama dostaje obrażenia minus ochrona przed magią (zostaje co najmniej 1 życia), dźwięk `IMARAHCURSE`, `T_PALELITE`, chmura na niej, koniec ataku; koniec: cooldown 3 s, 15% (bez klątwy) od razu atak 3;
+  - atak 3 (`0x10070860`): obrót, `S_RADIUSATTACK`, w 30% pięć pocisków jej czaru (`SPELLFX_<czar>`, bez czaru `SPELLFX_IMARAH_FIREBOLT`) – w wroga i krok oraz dwa kroki w bok z obu stron (600 cm, przy wrogu dalej niż 15 m mniej), ogień; koniec, cooldown 5 s.
+- **Przyczyna:** port miał z tego tylko teleport (atak 11, poprawki 189–190).
+- **Poprawka:** wybór ataku co sekundę i trzy ataki jak wyżej (zmienne `AIVRX_SPECIAL_ATTACK*` jak w pluginie, w czasie ataku bez teleportu). Różnice: fala pioruna rani wroga, gdy stoi bliżej niż 7 m od miejsca błysku (w pluginie trafia cel efektu – tu można uciec); wybór nie w czasie leczenia (`ImarahHeals`) ani teleportu; pociski lecą prosto do 32,5 m (jak pociski potworów, poprawka 157) i trafiają też inne postacie po drodze.
+- **Do sprawdzenia:** walka z Im'Arah – w logu `[ctx] imarah: special attack N`; wachlarz 24 ognistych pocisków po zielonym/czerwonym świetle; przy mniej niż 75% życia pioruny: błysk i chmura nad bohaterem, po ~2 s fala – ucieczka na bok chroni; przy mniej niż 50% także pięć pocisków jej czaru.
 
 ### 191. Ustawienie „Fight focus” – walka bez celowania w przeciwników – ⏸ (23.11.2026)
 - **Pliki:** `common/world/worldobjects.cpp`, `common/world/worldobjects.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`
