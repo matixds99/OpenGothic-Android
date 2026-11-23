@@ -1,0 +1,235 @@
+package org.opengothic.app;
+
+import android.content.Context;
+import android.net.Uri;
+
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+/** Exports OpenGothic save slots through Android's Storage Access Framework. */
+final class SaveExport {
+    private static final int MAX_DEPTH = 4;
+    private static final byte[] BUFFER = new byte[64 * 1024];
+
+    private SaveExport() {
+    }
+
+    static int write(Context context, Uri destination, String gameId) throws IOException {
+        Set<String> entries = new HashSet<>();
+        int[] count = {0};
+
+        try (OutputStream raw = context.getContentResolver().openOutputStream(destination, "w")) {
+            if (raw == null)
+                throw new IOException(Texts.t("Android could not open the selected destination.",
+                        "Android nie mógł otworzyć wybranego miejsca zapisu."));
+
+            try (ZipOutputStream zip = new ZipOutputStream(raw)) {
+                zip.putNextEntry(new ZipEntry("opengothic/game.txt"));
+                zip.write(gameId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.closeEntry();
+                // NativeActivity's internal working directory is the app's files directory.
+                addTree(context.getFilesDir(), context.getFilesDir(), "saves/internal", 0, zip, entries, count, gameId);
+
+                // Also check the app-specific external directory in case a build or mod stored saves there.
+                File external = context.getExternalFilesDir(null);
+                if (external != null && external.isDirectory())
+                    addTree(external, external, "saves/external", 0, zip, entries, count, gameId);
+
+                // NB fix 180: the engine works in the folder of the game that the player has chosen (GameRoots), the saves are
+                // there, next to the files of the game - only that folder itself, not the folders of the game in it
+                for (String folder : SpineActions.GAME_FOLDERS) {
+                    File linked = GameRoots.linked(context, folder);
+                    if (linked != null)
+                        addTree(linked, linked, FOLDER + folder, MAX_DEPTH, zip, entries, count, gameId);
+                }
+
+                zip.finish();
+            }
+        }
+        return count[0];
+    }
+
+    private static void addTree(File root, File dir, String prefix, int depth, ZipOutputStream zip,
+                                Set<String> entries, int[] count, String gameId) throws IOException {
+        if (depth > MAX_DEPTH || dir == null || !dir.isDirectory())
+            return;
+
+        File[] children = dir.listFiles();
+        if (children == null)
+            return;
+
+        for (File file : children) {
+            if (file.isDirectory()) {
+                addTree(root, file, prefix, depth + 1, zip, entries, count, gameId);
+                continue;
+            }
+            if (!file.isFile() || !isSave(file.getName()) || !belongsToGame(file.getName(), gameId))
+                continue;
+
+            String canonicalRoot = root.getCanonicalPath() + File.separator;
+            String canonicalFile = file.getCanonicalPath();
+            if (!canonicalFile.startsWith(canonicalRoot))
+                continue;
+
+            String relative = canonicalFile.substring(canonicalRoot.length()).replace(File.separatorChar, '/');
+            String entryName = prefix + "/" + relative;
+            if (!entries.add(entryName))
+                continue;
+
+            zip.putNextEntry(new ZipEntry(entryName));
+            try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(file))) {
+                int n;
+                while ((n = input.read(BUFFER)) != -1)
+                    zip.write(BUFFER, 0, n);
+            }
+            zip.closeEntry();
+            count[0]++;
+        }
+    }
+
+    /** The names of the files of the saves: "<game>save_slot_N.sav" (a slot) and "<game>quicksave_N.sav" (the quick save). */
+    private static final String[] MARKERS = {"save_slot_", "quicksave_"};
+
+    /**
+     * The part of the file name before the marker ("g1_", "thechroniclesofmyrtana_", "archolos_" or "" for Gothic 2),
+     * null when the file is not a save of the game at all.
+     */
+    static String prefixOf(String name) {
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (!lower.endsWith(".sav"))
+            return null;
+        for (String marker : MARKERS) {
+            int slot = lower.lastIndexOf(marker);
+            if (slot < 0)
+                continue;
+            int start = slot + marker.length();
+            int end = lower.length() - 4;
+            if (start >= end)
+                continue;
+            boolean digits = true;
+            for (int i = start; i < end; i++) {
+                if (lower.charAt(i) < '0' || lower.charAt(i) > '9') {
+                    digits = false;
+                    break;
+                }
+            }
+            if (digits)
+                return lower.substring(0, slot);
+        }
+        return null;
+    }
+
+    /** The start of the game id of the saves of a mod of Spine: "mods:<id>,<id>", see {@link #modGameId}. */
+    static final String MODS = "mods:";
+
+    /**
+     * What the engine puts before "save_slot_" for a mod: the name of its ini file without the extension, only the letters and
+     * digits, in lower case ("Archolos_EN.ini" gives "archolosen"), as Gothic::saveGameId does.
+     */
+    static String modSaveId(String ini) {
+        String name = ini.substring(Math.max(ini.lastIndexOf('/'), ini.lastIndexOf('\\')) + 1);
+        int dot = name.lastIndexOf('.');
+        if (dot >= 0)
+            name = name.substring(0, dot);
+        StringBuilder id = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (c >= 'A' && c <= 'Z')
+                c = (char) (c + ('a' - 'A'));
+            if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+                id.append(c);
+        }
+        return id.toString();
+    }
+
+    /**
+     * The game id of the saves of a downloaded mod. Each ini file of the mod (a version for each language) starts the game under its
+     * own name, so the saves of all of them belong to the mod. Empty when the ini gives no name: the saves would be those of Gothic II.
+     */
+    static String modGameId(SpineStore.Mod mod) {
+        Set<String> ids = new LinkedHashSet<>();
+        String own = modSaveId(mod.ini);
+        if (!own.isEmpty())
+            ids.add(own);
+        for (String ini : SpineStore.iniFiles(mod.files)) {
+            String id = modSaveId(ini);
+            if (!id.isEmpty())
+                ids.add(id);
+        }
+        if (ids.isEmpty())
+            return "";
+        StringBuilder ret = new StringBuilder(MODS);
+        boolean first = true;
+        for (String id : ids) {
+            if (!first)
+                ret.append(',');
+            ret.append(id);
+            first = false;
+        }
+        return ret.toString();
+    }
+
+    /** NB fix 180: the start of the entries of the saves of a folder of a game that the player has chosen ("saves/folder/Gothic2/"). */
+    static final String FOLDER = "saves/folder/";
+
+    /** The names of all the save files of the application, in the folders that the export reads. */
+    static List<String> listSaveNames(Context context) {
+        List<String> ret = new ArrayList<>();
+        collectNames(context.getFilesDir(), 0, ret);
+        File external = context.getExternalFilesDir(null);
+        if (external != null)
+            collectNames(external, 0, ret);
+        // NB fix 180: the chosen folders of the games (only the folder itself, the saves are next to the files of the game)
+        for (String folder : SpineActions.GAME_FOLDERS)
+            collectNames(GameRoots.linked(context, folder), MAX_DEPTH, ret);
+        return ret;
+    }
+
+    private static void collectNames(File dir, int depth, List<String> out) {
+        if (depth > MAX_DEPTH || dir == null || !dir.isDirectory())
+            return;
+        File[] children = dir.listFiles();
+        if (children == null)
+            return;
+        for (File file : children) {
+            if (file.isDirectory())
+                collectNames(file, depth + 1, out);
+            else if (file.isFile() && isSave(file.getName()))
+                out.add(file.getName());
+        }
+    }
+
+    static boolean belongsToGame(String name, String gameId) {
+        String prefix = prefixOf(name);
+        if (prefix == null)
+            return false;
+        if (gameId.startsWith(MODS)) {
+            for (String id : gameId.substring(MODS.length()).split(",")) {
+                if (!id.isEmpty() && prefix.equals(id + "_"))
+                    return true;
+            }
+            return false;
+        }
+        if ("gothic1".equals(gameId)) return prefix.equals("g1_");
+        if ("myrtana".equals(gameId)) return prefix.equals("thechroniclesofmyrtana_");
+        if ("gothic2".equals(gameId) || "gothic2_notr".equals(gameId))
+            // Gothic 2 itself has no prefix, the mods of the Spine have the name of their ini ("archolos_save_slot_1.sav")
+            return !prefix.equals("g1_") && !prefix.equals("thechroniclesofmyrtana_");
+        return false;
+    }
+
+    static boolean isSave(String name) {
+        return prefixOf(name) != null;
+    }
+}

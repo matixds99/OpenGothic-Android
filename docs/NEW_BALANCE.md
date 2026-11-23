@@ -94,6 +94,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/gothic.h` | sygnały `onOpenPlayerSales` (okno sprzedaży NB) i `onOpenCraft` (okno alchemii NB) | 68, 69, 70 |
 | `common/graphics/mesh/animationsolver.cpp` (+ `.h`) | nakładki zdejmowane i sprawdzane po nazwie (bez wczytywania, bez wielkości liter), wszystkie o tej nazwie | 172, 173 |
 | `common/resources.cpp` | pamięć modeli i animacji po nazwie wielkimi literami (jeden plik wczytany raz) | 172 |
+| `android/java/org/opengothic/app/SaveExport.java`, `SaveImport.java` | okno zapisów Spine (borsuczyna): zapisy także z folderu gry wybranego w launcherze (`GameRoots.linked`) i wgrywanie do niego | 180 |
 
 ---
 
