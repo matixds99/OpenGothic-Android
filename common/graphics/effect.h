@@ -41,6 +41,8 @@ class Effect final {
     void     setKey      (World& owner, SpellFxKey key, int32_t keyLvl=0);
     void     setMesh     (const MeshObjects::Mesh* mesh);
     void     setItemMesh (const MeshObjects::Mesh* mesh);   // NB fix 150: the emitter of the shape MESH is the item
+    /// The particles come from the whole surface of the mesh of an item (a weapon, an arrow): the shape MESH of its particle effect
+    void     setObjectMesh(const MeshObjects::Mesh* mesh);
     void     setBullet   (Bullet* b, World& owner);
     void     setSpellId  (int32_t splId, World& owner);
     bool     isActiveSpell(int32_t id) const { return root!=nullptr && spellAssigned && active && splId==id; }
@@ -59,6 +61,9 @@ class Effect final {
     void               setupPfx(World& owner);
     void               setupSfx(World& owner);
     void               setupCollision(World& owner);
+    void               beginFlight();
+    Tempest::Vec3      flightGoal() const;
+    Tempest::Vec3      flightPosition() const;
 
     const VisualFx::Key*  key  = nullptr;
     const VisualFx*       root = nullptr;
@@ -81,6 +86,7 @@ class Effect final {
     const Pose*           pose     = nullptr;
 
     const MeshObjects::Mesh* meshEmitter = nullptr;
+    const PfxEmitterMesh*    objectMesh  = nullptr;
 
     Tempest::Matrix4x4    pos;
     Tempest::Vec3         selfRotation;
@@ -88,6 +94,14 @@ class Effect final {
     bool                  active    = false;
     bool                  looped    = false;
     bool                  noPhysics = false;
+
+    // The spell without a projectile (Whirlwind, Swarm) flies from the hand of the caster to the target
+    bool                  flight       = false;
+    bool                  flightEnded  = false;
+    Tempest::Vec3         flightFrom;
+    float                 flightPassed = 0;
+    uint64_t              flightTimeMs = 0;
+    const ParticleFx*     flightFx     = nullptr;
 
     std::unique_ptr<Effect> next;
   };

@@ -321,6 +321,11 @@ class GameScript final {
 
     const PerDist& percRanges() const { return perceptionRanges; }
 
+    /// The hero has no reason of an attack (AIV_ATTACKREASON): the scripts write it only for the characters that they control. A value that is left in
+    /// the hero makes the witnesses of his fights think that he fights for a serious reason, and they help him (B_AssessFightSound).
+    /// Returns the value that was cleared (0: there was none).
+    int clearHeroAttackReason(Npc& hero);
+
     bool isDead       (const Npc &pl);
     bool isUnconscious(const Npc &pl);
     bool isTalk       (const Npc &pl);
@@ -400,6 +405,7 @@ class GameScript final {
     auto  findFocus(std::string_view name) -> zenkit::IFocus;
 
     void storeItem(Item* it);
+    bool isItemInstance(int itemInstance, std::string_view caller);
 
     bool aiOutput   (Npc &from, std::string_view name, bool overlay);
     bool aiOutputSvm(Npc &from, std::string_view name, bool overlay);
@@ -484,7 +490,7 @@ class GameScript final {
     int  npc_removeinvitems  (std::shared_ptr<zenkit::INpc> npcRef, int itemId, int amount);
     int  npc_getbodystate    (std::shared_ptr<zenkit::INpc> npcRef);
     std::shared_ptr<zenkit::INpc> npc_getlookattarget (std::shared_ptr<zenkit::INpc> npcRef);
-    int  npc_getdisttonpc    (std::shared_ptr<zenkit::INpc> aRef, std::shared_ptr<zenkit::INpc> bRef);
+    int  npc_getdisttonpc    (std::shared_ptr<zenkit::DaedalusInstance> aRef, std::shared_ptr<zenkit::DaedalusInstance> bRef);
     bool npc_hasequippedarmor(std::shared_ptr<zenkit::INpc> npcRef);
     void npc_setperctime     (std::shared_ptr<zenkit::INpc> npcRef, float sec);
     void npc_percenable      (std::shared_ptr<zenkit::INpc> npcRef, int pr, int fn);
@@ -649,6 +655,7 @@ class GameScript final {
     mutable int32_t                                             sepHum = -1;
     mutable int32_t                                             sepOrc = -1;
     int32_t                                                     vmLang = -1;
+    int                                                         attackReasonVar = -2; // index of AIV_ATTACKREASON: -2 is not looked up yet, -1 the scripts have none
     std::mt19937                                                randGen;
     NpcProcessPolicy                                            aiProcessPolicy = NpcProcessPolicy::AiNormal;
 

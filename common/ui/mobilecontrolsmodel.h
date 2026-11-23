@@ -58,8 +58,10 @@ namespace Special {
     EditHud,       // the settings: the layout of the HUD is edited on the game screen
     HudDone,       // the editor of the HUD: back to the settings
     HudReset,      // the editor of the HUD: every button goes back to its place
-    FirstSetting  = 11,
-    Wheel         = 27,   // NB fix 111: the wheel of the quick choice (after the settings 11..26)
+    // the rows of the settings: FirstSetting+Setting. After the merge with borsuczyna (23.11) there are 19 of them - from 11
+    // they went over Wheel, QuickAttack and Sprint, so they are past every other button
+    FirstSetting  = 64,
+    Wheel         = 27,   // NB fix 111: the wheel of the quick choice
     QuickAttack   = 28,   // NB fix 85: the quick attack of New Balance - a side step (A/D), forward (W) and the attack (Ctrl)
     Sprint        = 29,   // NB fix 40: the sprint of New Balance (B_Hotkey_Sprint, the key ~ in the original)
     QuickSave     = 30,   // saves the game to the quick save slot
@@ -92,8 +94,12 @@ enum Setting : int {
   SettingAutoLock,
   SettingPeaceful,   // NB fix 78: the peaceful creatures (the wisp, the summons, the sheep...) in the focus
   SettingAcrobatic,  // NB fix 86: the acrobatics of New Balance (the rolls instead of the side steps; KEY_ACROBAT on the PC)
+  SettingReflections,
+  SettingPadStyle,
+  SettingRain,
   SettingCount
   };
+static_assert(int(Special::FirstSetting)+int(SettingCount)<=96, "the ids of the rows of the settings");
 
 constexpr int CategoryCount = 9;
 

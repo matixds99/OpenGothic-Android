@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **179**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **180**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ⏸
-2. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – ✅
-3. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – ✅
-4. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
-5. **174** – wczytywanie gry bez zacinającego się dźwięku (cisza do wejścia do świata) – ✅
+1. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
+2. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ⏸
+3. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – ✅
+4. **176** – przywołańce: przycisk PRZYWOŁAJ – wszyscy przy bohaterze (ponownie po 30 s); RESET nad AKTYWNE – ✅
+5. **175** – ognik bez kolizji; w locie nie spada przez świat, więc dolatuje do przedmiotów i ciał – ✅
 
 ---
 
@@ -251,6 +251,30 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 179. Scalenie z aktualizacją borsuczyny (`touch-ui`, 23.11.2026) – 🧪 (23.11.2026)
+- **Pliki:** 74 pliki z `borsuczyna/OpenGothic-Android` (29 commitów do `eb943e19`); rozwiązane konflikty: `common/game/inventory.cpp`, `common/graphics/effect.cpp/.h`, `common/graphics/mdlvisual.cpp/.h`, `common/graphics/pfx/pfxbucket.cpp`, `common/world/bullet.cpp`, `common/world/objects/pfxemitter.cpp`, `common/world/objects/npc.cpp/.h`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`, `android/java/org/opengothic/app/LauncherActivity.java`, `patches/zenkit-opengothic.patch`
+- **Zgłoszenie:** nowa wersja u borsuczyny – dociągnąć zmiany.
+- **Co przyszło (najważniejsze):**
+  - deszcz w światach zewnętrznych (krople, dźwięk, pogoda na dzień, ciemniejsze niebo) i ustawienie „Rain” (wył. / lekki / zwykły / ulewa);
+  - magiczne i ogniste strzały i bełty lecą ze swoim efektem; efekty broni z siatki całej broni;
+  - ważna rozmowa postaci przed wyborem w dialogu (postać nie zaczyna w kółko tej samej rozmowy);
+  - przeszukiwanie ciał pokazuje broń noszoną na pasie i plecach;
+  - NPC przesunięci z punktu trasy nie lądują na meblach ani w filarach (Hilda, Orik), bohater nie wpada w szczelinę na schodach do Garonda, przeskakuje niskie przeszkody z prześwitami (płoty);
+  - przyjaciele nie dołączają do walk bohatera przez nieaktualny powód ataku; ciała oznaczone przez skrypty (piraci Angus i Hank) zostają przy resecie rutyn;
+  - animacja natychmiastowych czarów, lodowa lanca, Trąba powietrzna leci od rzucającego do celu;
+  - Mali: woda bez teselacji, ustawienie odbić wody („Water reflections”); gamepad – styl lewej gałki („Gamepad movement”);
+  - paski życia i many w HUD dotykowym chowają się razem z przyciskami; dokument czytany z ekwipunku zamyka ekwipunek;
+  - raport braku pamięci i powodu zamknięcia gry (`lifecycle.txt`); poprawki wczytywania (Velaya, `oCAIArrow` tylko w zapisach) i `CreateInvItems` (handel Samuela).
+- **Rozwiązanie konfliktów:**
+  - **Efekty przedmiotów (150):** borsuczyna zrobił to samo dla broni (efekt za mieczem i łukiem). Zostaje wersja z poprawki 150 (miecz, łuk/kusza, tarcza, przedmioty w świecie, chowanie z zasięgiem rysowania 146). Od borsuczyny wzięte: wczytywanie siatek emiterów z plików `MRM`/`MMB` (bez tego broń nie dawała siatki emitera i cząsteczki nie szły z ostrza – dotyczy też 150), efekty lecących strzał i bełtów, `PfxEmitter::setMeshEmitter` i rozpoznawanie siatki statycznej w `pfxbucket.cpp`.
+  - **Ustawienia dotyku:** obie listy razem – nasze „Peaceful targets” i „Acrobatics” (ukryta, 108) oraz „Water reflections”, „Gamepad movement” i „Rain”. Obie wersje używały numerów wersji ustawień 8–10 do czego innego; w tym repo wersja 10 dokłada odbicia, gałkę i deszcz z domyślnymi wartościami (zapisane ustawienia peaceful/acrobatic zostają).
+  - **Numery przycisków:** 19 wierszy ustawień od numeru 11 wchodziło na koło szybkiego wyboru (27), szybki atak (28) i sprint (29) – dotknięcie szybkiego ataku przełączałoby ustawienie. Wiersze ustawień mają teraz numery od 64 (`Special::FirstSetting`, sprawdzane `static_assert`).
+  - **Launcher:** eksport/import zapisów modów Spine (`SaveExport`, `SpineSavesActivity`) nie wchodzi – ten launcher nie ma eksportu i importu zapisów (usunięte 15.11). Wymiary banera zostają nasze.
+  - **ZenKit:** łatka złożona z naszej i borsuczyny (oCAIArrow, Velaya).
+  - Podwójna deklaracja `editingHud()` w `androidinput.h` po scaleniu usunięta.
+- **Kompilacja:** wszystkie pliki silnika sprawdzone clangiem (`-fsyntax-only -Werror -Wall -Wimplicit-int-float-conversion`, z `OPENGOTHIC_TOUCH_UI`). Niesprawdzone: shadery i Java (brak narzędzi Androida w tym środowisku).
+- **Do sprawdzenia:** budowa APK (Java, shadery); ustawienia dotyku – wszystkie wiersze przełączają właściwe ustawienie, szybki atak, sprint i koło działają; deszcz i ustawienie „Rain”; ogniste/magiczne strzały w locie; ogniste bronie (150); ognik i przeszukiwanie ciał (177) przy broni na pasie.
 
 ### 178. Mod `nb-wisp`: punkty nauki do testów – ⏸ wycofane (22.11.2026)
 - **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json`, `mods/nb-wisp.zip`, `common/scripting/game/game_npc.cpp`, `docs/MODS.md`

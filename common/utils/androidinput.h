@@ -67,6 +67,9 @@ struct Preferences {
   int autoLock    = 0;   // 1: the lock of the target is taken by itself when a weapon is drawn
   int peaceful    = 1;   // 1: the peaceful creatures can be in the focus (to talk to the wisp, to hunt the sheep)
   int acrobatic   = 0;   // 1: the acrobatics of New Balance (rolls), when the hero has learned it
+  int reflections = 1; // 1: the water reflects the scene (screen space), 0: only the sky
+  int rain        = 2;   // the rain of the outdoor worlds: 0 off, 1 light, 2 normal, 3 heavy
+  int padStyle    = 0;   // the left stick of a gamepad: 0 walks where it points (a diagonal), 1 as the touch stick (a turn, a side step with a weapon drawn)
   };
 
 Preferences preferences();
@@ -139,6 +142,8 @@ class Controller {
     const Tempest::Sprite&     icon(Icon id) const { return icons.at(size_t(id)); }
     const std::vector<Mobile::Button>& buttons() const { return controls.buttons(); }
     bool  settingsVisible() const { return controls.settingsVisible(); }
+    /// The player can move: the stick and the hotbar are on the screen (not in a cutscene, on a pause, when the player is down)
+    bool  movementAvailable() const { return controls.movementAvailable(); }
     /// The left stick of a gamepad: the angle of a diagonal walk and the push to the side, see Mobile::Controls::padMove
     float moveYaw() const { return controls.moveYaw(); }
     float moveSide() const { return controls.moveSide(); }

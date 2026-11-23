@@ -38,6 +38,7 @@
 #include "game/nbbars.h"
 #include "scripting/gameapi.h"
 #include "utils/dbgpainter.h"
+#include "utils/crashlog.h"
 
 #include "commandline.h"
 #include "gothic.h"
@@ -275,11 +276,11 @@ void MainWindow::setupUi() {
   Gothic::inst().onShowDocument.bind(this,&MainWindow::showDocument);
   }
 
-/// A letter or a recipe that the player reads from the inventory. The inventory of CoM stays on the screen over the page, so
-/// with the mods of Ikarus it is closed, as the original engine does it for the documents.
+/// A letter or a recipe that the player reads from the inventory. The inventory is above the page in the order of the widgets, and it
+/// stayed on the screen over the letter (the panel of the item, the slots, the numbers) and took the keys. The original engine closes it
+/// for every document, in Gothic, Gothic II and in the mods, so it is closed here for every game.
 void MainWindow::showDocument(const DocumentMenu::Show& doc) {
-  auto* world = Gothic::inst().world();
-  if(world!=nullptr && world->script().hasDma() && inventory.isOpen()==InventoryMenu::State::Equip)
+  if(inventory.isOpen()==InventoryMenu::State::Equip)
     inventory.close();
   document.show(doc);
   }
@@ -1184,6 +1185,9 @@ void MainWindow::drawTouchBars(Painter& p, Npc& pl) {
     }
   if(mode!=Mobile::Mode::Game)
     return;
+  // the bars go with the controls: no stick and no hotbar in a cutscene, on a pause, when the player is down, in the settings
+  if(androidControls.settingsVisible() || !(androidControls.movementAvailable() || androidControls.editingHud()))
+    return;
 
   // NB fix 42: the bars stand where the editor of the HUD has put them (by default over the ends of the hotbar, the
   // stamina of New Balance in the middle), in the size chosen there; a hidden bar is not drawn (in the editor it is)
@@ -2029,6 +2033,9 @@ void MainWindow::setFullscreen(bool fs) {
 void MainWindow::render(){
   GameScript::nbUiBusy = inventory.isActive() || dialogs.isActive() || document.isActive() ||
                          nbSales.isActive() || nbCraft.isActive();   // NB fix 136
+  // what the frame was doing, for the report of the lack of memory
+  const char* phase = "start";
+  static int oomFrames = 0;
   try {
 #ifdef __ANDROID__
     if(!androidWindowCheck())
@@ -2058,6 +2065,7 @@ void MainWindow::render(){
       once player position is updated, animation bones(cameraBone in particular) can be updated
       lastly - camera position
       */
+    phase = "tick";
     uint64_t dt = 0;
     try {
       dt = tick();
@@ -2067,12 +2075,17 @@ void MainWindow::render(){
     catch(const Tempest::SwapchainSuboptimal&) {
       throw;
       }
+    catch(const std::bad_alloc&) {
+      // bad_alloc is a std::exception too, but it is not an error of the scripts: the frame is dropped below, with the report of the memory
+      throw;
+      }
     catch(const std::exception& e) {
       // an exception of the scripts or of the game: it is shown with the details, the game goes on (the same error is shown once)
       Log::e("exception in the game: ",e.what());
       errorScreen.report("Exception of the game",e.what());
       }
 
+    phase = "fence";
     auto& sync = fence[cmdId];
     if(!sync.wait(0)) {
       // GPU rendering is not done, pass to next frame
@@ -2082,6 +2095,7 @@ void MainWindow::render(){
     Resources::resetRecycled(cmdId);
     Resources::updateTextureQuality(Gothic::settingsGetF("INTERNAL","texDetailIndex"));
 
+    phase = "ui-paint";
     if(video.isActive()) {
       video.paint(device,cmdId);
       uiLayer.clear();
@@ -2095,6 +2109,7 @@ void MainWindow::render(){
       PaintEvent p(numOverlay,atlas,this->w(),this->h());
       inventory.paintNumOverlay(p);
       }
+    phase = "ui-mesh";
     uiMesh [cmdId].update(device,uiLayer);
     numMesh[cmdId].update(device,numOverlay);
 
@@ -2104,6 +2119,7 @@ void MainWindow::render(){
     // Models of the inventory are drawn over everything else, hide them below a document
     inventory.setCovered(document.isActive() || chapter.isActive() || video.isActive());
 
+    phase = "render";
     CommandBuffer& cmd = commands[cmdId];
     {
     auto enc = cmd.startEncoding(device);
@@ -2119,6 +2135,7 @@ void MainWindow::render(){
       renderer.drawTouchItems(swapchain[swapchain.currentImage()],enc,mobileItems[cmdId]);
 #endif
     }
+    phase = "submit";
     sync = device.submit(cmd);
     device.present(swapchain);
     cmdId = (cmdId+1u)%Resources::MaxFramesInFlight;
@@ -2136,6 +2153,38 @@ void MainWindow::render(){
     if(Gothic::inst().isBenchmarkMode() && Gothic::inst().world()!=nullptr && Gothic::inst().world()->currentCs()!=nullptr)
       benchmark.push(t-time);
     time = t;
+
+#if defined(__ANDROID__)
+    // the memory of the process, every 5 seconds, in the log that the player sends: the crash with std::bad_alloc is a matter of the time and
+    // of the memory, and the last line shows how it grew (Debug lines are written to the file at once)
+    {
+    static uint64_t nextMemLog = 0;
+    if(t>=nextMemLog) {
+      nextMemLog = t+5000;
+      Log::d("[mem] ",t/1000," s: ",CrashLog::memoryInfo());
+      // what takes the address space, when it is big: the Mali crashes at about 420 GB of it, with 3 GB of the real memory in use
+      const std::string maps = CrashLog::mappingsSummary(6,32.0);
+      if(!maps.empty())
+        Log::d("[maps] ",maps);
+      }
+    }
+#endif
+    oomFrames = 0;
+    }
+  catch(const std::bad_alloc&) {
+    // a failed allocation of this frame: the frame is dropped, and the game goes on if it was a one-off. When it is not (30 frames in a row),
+    // the process ends as before, with the report of the crash.
+    // Nothing in the handler may throw (the memory is short): an exception from here would end the process at once.
+    try {
+      Log::e("out of memory (std::bad_alloc) in the frame, phase: ",phase,", the frames lost in a row: ",oomFrames+1,", ",CrashLog::memoryInfo());
+      const std::string maps = CrashLog::mappingsSummary(10);
+      if(!maps.empty())
+        Log::e(maps);
+      }
+    catch(...) {
+      }
+    if(++oomFrames>=30)
+      throw;
     }
   catch(const Tempest::SwapchainSuboptimal&) {
     Log::e("swapchain is outdated - reset renderer");

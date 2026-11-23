@@ -480,7 +480,7 @@ public final class LauncherActivity extends Activity {
 
         View shade = new View(this);
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[] {0x33050b12, 0xb3050b12, 0xe6050b12}));
+                new int[] {0x4d050b12, 0xcc050b12, 0xf2050b12}));
         box.addView(shade, new FrameLayout.LayoutParams(-1, -1));
 
         LinearLayout row = new LinearLayout(this);
@@ -498,17 +498,21 @@ public final class LauncherActivity extends Activity {
         LinearLayout texts = new LinearLayout(this);
         texts.setOrientation(LinearLayout.VERTICAL);
         texts.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(0, -2, 1.f);
-        tp.setMargins(dp(10), 0, dp(8), 0);
+        // the height is fixed: the description takes what is left under the name, and the text shrinks to fit
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(0, -1, 1.f);
+        tp.setMargins(dp(8), 0, dp(6), 0);
         row.addView(texts, tp);
 
         LinearLayout titleRow = new LinearLayout(this);
         titleRow.setGravity(Gravity.BOTTOM);
         TextView name = text("Summer Hideout", 14, CREAM);
         name.setTypeface(Typeface.create("serif", Typeface.NORMAL));
+        name.setSingleLine(true);
+        name.setShadowLayer(dp(2), 0, dp(1), 0xff000000);
         titleRow.addView(name);
         TextView author = text(Texts.t("From the developer", "Od twórcy"), 10, GREY);
         author.setPadding(dp(8), 0, 0, dp(2));
+        author.setSingleLine(true);
         titleRow.addView(author);
         texts.addView(titleRow);
 
@@ -517,11 +521,15 @@ public final class LauncherActivity extends Activity {
                 "Przeżyj lato 2005 na polskiej wsi, odbuduj samochód i odkryj mroczne tajemnice Racibórz-Zdroju."), 10, 0xffd3dde3);
         about.setMaxLines(3);
         about.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        texts.addView(about);
+        about.setTextColor(0xffeaf1f4);
+        about.setShadowLayer(dp(2), 0, dp(1), 0xff000000);
+        if (android.os.Build.VERSION.SDK_INT >= 26)
+            about.setAutoSizeTextTypeUniformWithConfiguration(8, 11, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        texts.addView(about, new LinearLayout.LayoutParams(-1, 0, 1.f));
 
-        TextView discord = text("Discord  \u203a", 13, GOLD);
+        TextView discord = text("Discord \u203a", 12, GOLD);
         discord.setGravity(Gravity.CENTER);
-        discord.setPadding(dp(14), dp(6), dp(14), dp(6));
+        discord.setPadding(dp(10), dp(5), dp(10), dp(5));
         discord.setBackground(round(0x33c9a24a, GOLD, dp(1), dp(18)));
         discord.setOnClickListener(v -> openDiscord());
         row.addView(discord);

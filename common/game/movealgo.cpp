@@ -1,6 +1,7 @@
 #include "movealgo.h"
 
 #include <Tempest/Log>
+#include <unordered_map>
 
 #include "world/objects/npc.h"
 #include "world/objects/interactive.h"
@@ -170,6 +171,19 @@ void MoveAlgo::tick(uint64_t dt, MvFlags moveFlg) {
     }
   }
 
+/// DIAGNOSTICS of the hero: where and why the walk stops (a void under the feet, a slope taken as a wall, a collision).
+/// One line per second at most, to keep the log small.
+static void logHeroMove(Npc& npc, const char* what, const Tempest::Vec3& pos, float ground, bool gValid, float dY, int state) {
+  if(npc.processPolicy()!=NpcProcessPolicy::Player)
+    return;
+  static uint64_t last = 0;
+  const uint64_t  now  = npc.world().tickCount();
+  if(now<last+1000)
+    return;
+  last = now;
+  Tempest::Log::d("[move] ", what, " at ", pos.x, " ", pos.y, " ", pos.z, " ground ", gValid ? ground : -99999.f, " dY ", dY, " state ", state);
+  }
+
 bool MoveAlgo::implTick(uint64_t dt, MvFlags moveFlg) {
   if(flags==ClimbUp) {
     tickClimb(dt);
@@ -196,6 +210,9 @@ bool MoveAlgo::implTick(uint64_t dt, MvFlags moveFlg) {
   DynamicWorld::CollisionTest info;
   if(!tryMove(dp,info)) {
     info.preFall = false;
+    if(!grav && state==Run)
+      logHeroMove(npc,info.vob!=nullptr ? "blocked by vob" : info.landCol ? "blocked by level" : info.npc!=nullptr ? "blocked by npc" : "blocked",
+                  pos0,0,false,0,int(state));
     if(state==Slide) {
       onGravityFailed(info,dt);
       setState(InAir);
@@ -239,6 +256,29 @@ bool MoveAlgo::implTick(uint64_t dt, MvFlags moveFlg) {
   bool  gValid  = false;
   auto  ground  = dropRay  (pos, gValid);
   auto  normal  = normalRay(pos);
+
+  if(state==Run && !dead && (!gValid || pos.y-ground>=stickThreshold)) {
+    // A narrow gap between two surfaces is not a void: the character is wider than it. The end of the staircase (a vob) and
+    // the floor behind it (the level) leave a gap of a few centimeters in the corridor of Garond, and the hero fell into it.
+    // The ground is looked for with a ring of rays around the character, the highest one that is within a step wins.
+    constexpr float gapRadius = 8.f;
+    const float     threshold = npc.physic.groundOffset() + 1.f;
+    bool            found     = false;
+    float           best      = 0;
+    for(int i=0; i<8; ++i) {
+      const float a = float(i)*float(M_PI)/4.f;
+      const auto  r = npc.world().physic()->landRay(Tempest::Vec3(pos.x+std::cos(a)*gapRadius, pos.y+threshold, pos.z+std::sin(a)*gapRadius),
+                                                    threshold+100.f);
+      if(r.hasCol && r.v.y-pos.y<=stickThreshold && pos.y-r.v.y<stickThreshold && (!found || r.v.y>best)) {
+        best  = r.v.y;
+        found = true;
+        }
+      }
+    if(found) {
+      ground = best;
+      gValid = true;
+      }
+    }
   auto  water   = waterRay (pos);
   float dY      = pos.y-ground;
 
@@ -255,7 +295,7 @@ bool MoveAlgo::implTick(uint64_t dt, MvFlags moveFlg) {
     return false;
 
   // jump animation (lift off)
-  if(bs==BS_JUMP && npc.isFlyAnim() && state!=InAir && state!=Jump && state!=JumpUp) {
+  if(bs==BS_JUMP && (npc.isFlyAnim() || npc.isJumpAnim()) && state!=InAir && state!=Jump && state!=JumpUp) {
     setState(Jump);
     return true;
     }
@@ -354,6 +394,7 @@ bool MoveAlgo::implTick(uint64_t dt, MvFlags moveFlg) {
       // sea monster condition?
       }
 
+    logHeroMove(npc,"void under the feet",pos,ground,gValid,dY,int(state));
     const bool lowHeight = (dY < falldownHeight()*0.75f);
     if((walk || swim) && !(lowHeight && !npc.isPlayer())) {
       npc.setPosition(pos0);
@@ -439,6 +480,7 @@ bool MoveAlgo::implTick(uint64_t dt, MvFlags moveFlg) {
 
     if(state!=InAir && Tempest::Vec3::dotProduct(normal,dp)<0.45f) {
       // same as wall
+      logHeroMove(npc,"slope as a wall",pos,ground,gValid,dY,int(state));
       npc.setPosition(pos0);
       info.preFall = false;
       onMoveFailed(dp,info,dt);
@@ -1003,6 +1045,24 @@ void MoveAlgo::onMoveFailed(const Tempest::Vec3& dp, const DynamicWorld::Collisi
         npc.setDirection(npc.rotation()+stp);
         } else {
         auto jc = npc.tryJump();
+        if(npc.processPolicy()!=NpcProcessPolicy::Player) {
+          // DIAGNOSTICS: a route that leads into a wall, the log has the character, the waypoints and what is in the way
+          static std::unordered_map<const Npc*,uint64_t> lastLog;
+          const uint64_t now  = npc.world().tickCount();
+          auto&          last = lastLog[&npc];
+          if(now>=last+5000) {
+            last = now;
+            auto  p    = npc.position();
+            auto* from = npc.currentWayPoint();
+            auto* to   = npc.go2.wp;
+            Tempest::Log::d("[blocked] ", npc.displayName().data(), " (", npc.instanceSymbol(), ") at ", p.x, " ", p.y, " ", p.z,
+                            " hint ", int(npc.moveHint()), " from ", from!=nullptr ? from->name.c_str() : "-",
+                            " to ", to!=nullptr ? to->name.c_str() : "-",
+                            " normal ", info.normal.x, " ", info.normal.y, " ", info.normal.z,
+                            " vob ", info.vob!=nullptr, " npc ", info.npc!=nullptr, " land ", info.landCol,
+                            " jump ", int(jc.anim), " noClimb ", jc.noClimb, " height ", jc.height);
+            }
+          }
         if(jc.noClimb)
           npc.setDirection(npc.rotation()+stp); else
         if(!npc.startClimb(jc))
