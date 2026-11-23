@@ -5719,8 +5719,21 @@ bool Npc::perceptionProcess(Npc &pl) {
         }
       else if(!std::get<2>(e) && owner.tickCount()>std::get<1>(e)+5000) {
         std::get<2>(e) = true;
+        // NB fix 197: what holds the queue - Npc::tick takes the next action only when the character is not in the air,
+        // does not wait (AI_Wait, an animation, a dialog line), does not walk (go2) and does not cast
+        const uint64_t now  = owner.tickCount();
+        const auto     left = [now](uint64_t t) { return t>now ? int64_t(t-now) : int64_t(0); };
+        int fightD = -1, fightPref = -1;
+        if(currentTarget!=nullptr) {
+          fightD    = int(std::sqrt(fghAlgo.qDistTo(*this,*currentTarget)));
+          fightPref = int(fghAlgo.prefferedAttackDistance(*this,*currentTarget,owner.script()));
+          }
         Log::i("NB ai: ",displayName().data()," STUCK 5 s: state=",stName," weapon=",int(weaponState()),
-               " body=",int(bodyStateMasked())," ai=[",desc,"]");
+               " body=",int(bodyStateMasked())," ai=[",desc,"] inAir=",int(isInAir())," move=",int(mvAlgo.state()),
+               " go2=",int(go2.flag),(go2.npc!=nullptr ? std::string(" ")+std::string(go2.npc->displayName()) : std::string()),
+               " wait=",left(waitTime)," ani=",left(aniWaitTime)," out=",left(outWaitTime)," fai=",left(faiWaitTime),
+               " walk=",int(walkMode())," cast=",int(currentSpellCast!=size_t(-1)),
+               " fight=",fightD,"/",fightPref," see=",int(currentTarget!=nullptr && canSeeNpc(*currentTarget,false)));
         }
       }
     }

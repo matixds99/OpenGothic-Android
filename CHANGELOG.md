@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **197**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **198**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
-2. **195** – launcher: czwarta karta „Gothic II – New Balance” z okładką – ✅
-3. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – ✅
-4. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – ✅ (golemy zgodnie ze skryptami)
-5. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – ✅🧪 (wachlarz działa)
+1. **197** – golemy stoją przy wrogu: szczegóły w logu (`STUCK 5 s`: powietrze, oczekiwanie, droga, odległość walki) – 🧪
+2. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
+3. **195** – launcher: czwarta karta „Gothic II – New Balance” z okładką – ✅
+4. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – ✅
+5. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – ✅ (golemy zgodnie ze skryptami)
 
 ---
 
@@ -251,6 +251,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 197. Golemy stoją przy wrogu i dają się gryźć – diagnostyka – 🧪 (23.11.2026)
+- **Plik:** `common/world/objects/npc.cpp`
+- **Zgłoszenie (nagranie + log 23.11):** dwa kamienne golemy przy pustynnym wężu stoją obok bohatera, nie atakują, wąż je gryzie (119 obrażeń za ugryzienie); polecenia panelu przywołańców (atak, tryb) nic nie zmieniają.
+- **Log:** golemy w `ZS_MM_ATTACK` z celem „Wąż pustynny”, kolejka AI cały czas `[SetWalkMode]` – `STUCK 5 s`; `B_MM_AssessEnemy | !Npc_CanSeeNpc` (golem nie widzi węża). Po zresetowaniu i nowym przywołaniu tuż przy wężu golem uderzył 6 razy (176), potem znów stanął. Ten sam `STUCK` z `SetWalkMode` jest w logach od 22.11 (także przy Im'Arah) – nie po ostatnich poprawkach.
+- **Przyczyna (niepotwierdzona):** dopóki kolejka AI nie jest pusta, silnik nie prowadzi walki (`implAttack`), a kolejną akcję bierze tylko, gdy postać nie jest w powietrzu, na nic nie czeka i nie idzie. `ZS_MM_Attack_Loop` dodaje `AI_SetWalkMode(NPC_RUN)` przy każdym przejściu, gdy postać nie biega – jeśli ta akcja nie schodzi, golem nigdy nie zaczyna walki. Z logu nie widać, co ją trzyma.
+- **Poprawka:** wpis `STUCK 5 s` mówi teraz, co trzyma kolejkę: `inAir`, stan ruchu, `go2` (cel drogi), pozostałe czasy oczekiwania (`wait`, `ani`, `out`, `fai`), tryb chodu, rzucanie czaru, odległość walki do celu / wymagana i czy golem widzi cel.
+- **Do sprawdzenia:** golemy przy wężu (albo innym wrogu, przy którym stoją) – log z wierszem `NB ai: … golem STUCK 5 s: … inAir=… go2=… wait=…`; na tej podstawie właściwa poprawka.
 
 ### 196. `StopPlayerBleeding` – mikstury lecznicze zatrzymują krwawienie – 🧪 (23.11.2026)
 - **Plik:** `common/game/gamescript.cpp`
