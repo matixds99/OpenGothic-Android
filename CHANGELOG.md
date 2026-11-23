@@ -277,6 +277,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Plugin (UNION_ABI.DLL `0x1016d610` → `0x1013bdb0`):** z listy obrażeń rozłożonych w czasie usuwa wpisy bohatera typu 4 (`DAM_EDGE` – krwawienie) razem z ich efektem i ustawia `PlayerIsBleeding` = 0.
 - **Poprawka:** to samo na liście obrażeń w czasie portu (`RX_ApplyDotDamage`, poprawka 106); w logu `[ctx] bleeding stopped: N`, gdy coś usunięto.
 - **Do sprawdzenia:** krwawienie bohatera (np. od przeciwnika z krwawieniem), wypicie esencji leczniczej – krwawienie (ubywanie życia) się kończy, w logu nie ma już `not implemented call [STOPPLAYERBLEEDING]`.
+- **Test (23.11, log):** esencja lecznicza wypita – nie ma już `not implemented call [STOPPLAYERBLEEDING]`. Samo zatrzymanie krwawienia jeszcze nie sprawdzone (bohater nie krwawił).
 
 ### 195. Launcher: czwarta karta „Gothic II – New Balance” – ✅ (23.11.2026)
 - **Pliki:** `android/java/org/opengothic/app/LauncherActivity.java`, nowy `android/launcher-assets/covers/newbalance.webp`
