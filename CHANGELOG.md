@@ -267,7 +267,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - nowa karta „Gothic II / New Balance” obok Gothic, Gothic II i Archolosa, z własnym folderem (`path_NewBalance`) i plikiem `GothicII.ini` – NB nie musi już zajmować karty Gothic II;
   - bez pobierania ze Steam (NB to mod, nie gra na Steam) – karta ma tylko „Wybierz folder” / „Graj”;
   - okładka: obrazek bez czarnych pasów, przycięty tak, że liczby 44 nie ma (bez retuszu), na rozmytym tle w pionie, jak pozostałe okładki.
+  - okładka wyższa (640×1000), logo mniejsze i wyżej – na wąskiej karcie mieści się całe i nie wchodzi pod napis „Gothic II / New Balance”.
 - **Do sprawdzenia:** launcher – cztery karty w rzędzie; na karcie New Balance „Wybierz folder” → folder `Gothic II NB` → „Graj” uruchamia NB. Karta Gothic II zostaje dla zwykłej Noc Kruka (albo bez folderu).
+- **Test (23.11, zrzut):** karta jest i działa („Zainstalowane (GOTOWE)”, „Graj”); pierwsza okładka za szeroka – logo ucięte po bokach („Gothic I”), napis „New Balance” z logo pod tytułem karty. Okładka poprawiona.
 
 ### 194. Ustawienie „Partial focus” – kroki w bok bez krążenia wokół celu – ✅ (23.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp`, `common/game/playercontrol.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`
