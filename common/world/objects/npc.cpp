@@ -5684,12 +5684,16 @@ bool Npc::perceptionProcess(Npc &pl) {
     }
 
   const float quadDist = pl.qDistTo(*this);
-  if(NB_AI_TRACE && pl.isPlayer() && !isHuman() && !isDown() && quadDist<NB_AI_TRACE_DIST*NB_AI_TRACE_DIST &&
+  // NB fix 187: the bosses too (aivar[90], Im'Arah is a human mage) - their state, the target and the spell in the log
+  constexpr size_t AIV_BOSS = 90;
+  const bool nbBoss = hnpc->aivar[AIV_BOSS]!=0;
+  if(NB_AI_TRACE && pl.isPlayer() && (!isHuman() || nbBoss) && !isDown() && quadDist<NB_AI_TRACE_DIST*NB_AI_TRACE_DIST &&
      owner.script().findSymbol("RX_ISSPACETNET")!=nullptr) {
     auto*       st     = owner.script().findSymbol(aiState.funcIni.ptr);
     const char* stName = (aiState.funcIni.isValid() && st!=nullptr ? st->name().c_str() : "<none>");
     float       range  = float(world().script().percRanges().at(PERC_ASSESSENEMY, hnpc->senses_range));
-    if(nbAiTraceChanged(this,std::string(stName)+"|"+(currentTarget!=nullptr ? std::string(currentTarget->displayName()) : "-")))
+    if(nbAiTraceChanged(this,std::string(stName)+"|"+(currentTarget!=nullptr ? std::string(currentTarget->displayName()) : "-")+
+                        (nbBoss ? "|"+std::to_string(int(weaponState()))+"|"+aiQueue.describe(2) : std::string())))
     Log::i("NB ai: ",displayName().data()," guild=",int(guild()),
            " state=",stName,
            " started=",int(aiState.started)," queue=",int(aiQueue.size()),
@@ -5698,7 +5702,9 @@ bool Npc::perceptionProcess(Npc &pl) {
            " sense=",int(canSenseNpc(pl,true)),
            " dist=",int(std::sqrt(quadDist))," range=",int(range),
            " target=",(currentTarget!=nullptr ? (currentTarget->isPlayer() ? "hero" : currentTarget->displayName().data()) : "-"),
-           " weapon=",int(weaponState())," ai=[",aiQueue.describe(4),"]");
+           " weapon=",int(weaponState()),
+           " spell=",(nbBoss && invent.activeWeapon()!=nullptr && invent.activeWeapon()->isSpellOrRune() ? invent.activeWeapon()->spellId() : -1),
+           " body=",int(bodyStateMasked())," ai=[",aiQueue.describe(4),"]");
     // NB fix 54: the same not empty AI queue for 5 s near the hero - what blocks the monster
     if(aiQueue.size()>0) {
       static std::unordered_map<const void*,std::tuple<std::string,uint64_t,bool>> stall;
