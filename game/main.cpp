@@ -29,6 +29,7 @@
 
 #include "utils/crashlog.h"
 #include "utils/gamelog.h"
+#include "utils/nblog.h"
 #include "graphics/safegpu.h"
 #include "mainwindow.h"
 #include "gothic.h"
@@ -142,6 +143,10 @@ int main(int argc, const char** argv) {
                                      GameLog::Info,
           text);
 
+      // NB fix 202-203: the problems are counted for the summary; the level of the log keeps the noisy lines out
+      NbLog::observe(mode==Tempest::Log::Error,text);
+      if(!NbLog::filter(text))
+        return;
       logFile.write(text,std::strlen(text));
       logFile.write("\n",1);
 
@@ -153,7 +158,17 @@ int main(int argc, const char** argv) {
         SafeGpu::onLog(text);
         logFile.flush();
         }
+      // NB fix 202: the game goes to the background - the system may end it there without a word, so the summary now
+      if(std::strncmp(text,"android: the window goes away",29)==0) {
+        NbLog::writeSummary("background");
+        logFile.flush();
+        }
 #endif
+      });
+    // NB fix 200: the crash into log.txt too
+    CrashLog::setLogSink([](const char* text) {
+      logFile.write(text,std::strlen(text));
+      logFile.flush();
       });
     }
   catch(...) {
@@ -170,6 +185,7 @@ int main(int argc, const char** argv) {
     }
 
   CrashLog::setup();
+  NbLog::reportPreviousCrash();   // NB fix 200
 
   zenkit::Logger::set(
       zenkit::LogLevel::INFO,
@@ -251,6 +267,7 @@ int main(int argc, const char** argv) {
   Tempest::Application app;
   const int ret = app.exec();
 
+  NbLog::writeSummary("exit");   // NB fix 202
 #if defined(__ANDROID__)
   Tempest::Log::i("exit ",ret);
   if(appLogFile!=nullptr)

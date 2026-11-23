@@ -3313,6 +3313,7 @@ void Npc::tick(uint64_t dt) {
 
   tickAggroLeash();
   tickEffectHits();
+  nbWatchIdle();   // NB fix 201
 
   if(compatDiveLimit>=0) {
     // Gothic counts remaining milliseconds down under water, and refills them
@@ -4150,6 +4151,25 @@ void Npc::tickRoutine() {
 
   auto& sc = owner.script();
   if(!aiState.started) {
+    // NB fix 201: a character that starts the same state again and again (the loop ends at once and the perception starts it
+    // anew) does nothing else: 10 starts in 5 s near the hero - one line in the log
+    if(!isPlayer() && owner.player()!=nullptr && qDistTo(*owner.player())<4000.f*4000.f) {
+      struct Starts { uint64_t t0 = 0; size_t fn = 0; int n = 0; bool logged = false; };
+      static std::unordered_map<const Npc*,Starts> starts;
+      if(starts.size()>4096)
+        starts.clear();
+      auto&          e   = starts[this];
+      const uint64_t now = owner.tickCount();
+      if(e.fn!=aiState.funcIni.ptr || now>e.t0+5000) {
+        e = Starts{now,aiState.funcIni.ptr,0,e.fn==aiState.funcIni.ptr && e.logged};
+        }
+      if(++e.n==10 && !e.logged) {
+        e.logged = true;
+        Log::i("[thrash] ",displayName().data()," starts ",nbStateName()," 10 times in ",now-e.t0," ms: target ",
+               currentTarget!=nullptr ? (currentTarget->isPlayer() ? std::string("hero") : std::string(currentTarget->displayName())) : std::string("-"),
+               ", ai [",aiQueue.describe(4),"], weapon ",int(weaponState()),", body ",int(bodyStateMasked()));
+        }
+      }
     aiState.started      = true;
     aiState.loopNextTime = owner.tickCount();
     // WA: for gothic1 dialogs
@@ -4206,6 +4226,54 @@ void Npc::tickRoutine() {
       currentVictim = nullptr;
       }
     }
+  }
+
+/// NB fix 201: a character in a fight (ZS_Attack, ZS_MM_Attack) near the hero, with a living target out of its reach, that
+/// does not move and does not strike for 8 s: one line in the log with what the engine sees (the golems that stood beside
+/// a snake with another snake 22 m away as the target). Again only after it has moved, struck or changed the target
+void Npc::nbWatchIdle() {
+  struct Idle { uint64_t next = 0, since = 0; Tempest::Vec3 pos; const Npc* tg = nullptr; bool logged = false; };
+  static std::unordered_map<const Npc*,Idle> idle;
+  const uint64_t now = owner.tickCount();
+  const Npc*     pl  = owner.player();
+  if(isPlayer() || pl==nullptr)
+    return;
+  auto it = idle.find(this);
+  if(it!=idle.end() && now<it->second.next)
+    return;
+  if(isDown() || currentTarget==nullptr || currentTarget->isDown() || qDistTo(*pl)>3000.f*3000.f) {
+    if(it!=idle.end())
+      idle.erase(it);
+    return;
+    }
+  const std::string_view st = nbStateName();
+  if(st!="ZS_ATTACK" && st!="ZS_MM_ATTACK") {
+    if(it!=idle.end())
+      idle.erase(it);
+    return;
+    }
+  if(idle.size()>4096)
+    idle.clear();
+  auto& e = idle[this];
+  e.next = now+1000;
+  const float fd   = std::sqrt(fghAlgo.qDistTo(*this,*currentTarget));
+  const float pref = fghAlgo.prefferedAttackDistance(*this,*currentTarget,owner.script());
+  const bool  moved = (position()-e.pos).length()>40.f;
+  if(e.tg!=currentTarget || moved || isAttackAnim() || fd<=pref*1.3f) {
+    e.pos    = position();
+    e.since  = now;
+    e.tg     = currentTarget;
+    e.logged = false;
+    return;
+    }
+  if(e.logged || now<e.since+8000)
+    return;
+  e.logged = true;
+  Log::i("[idle] ",displayName().data()," stands ",(now-e.since)/1000," s in ",st," - target ",
+         currentTarget->isPlayer() ? std::string("hero") : std::string(currentTarget->displayName()),
+         " at ",int(fd)," cm (reach ",int(pref),"), sees it ",int(canSeeNpc(*currentTarget,false)),
+         ", ai [",aiQueue.describe(4),"], go2 ",int(go2.flag),", in air ",int(isInAir()),", walk ",int(walkMode()),
+         ", weapon ",int(weaponState()),", body ",int(bodyStateMasked()));
   }
 
 void Npc::tickAggroLeash() {
@@ -5866,6 +5934,17 @@ Interactive* Npc::detectedMob() const {
 
 bool Npc::isInState(ScriptFn stateFn) const {
   return aiState.funcIni==stateFn;
+  }
+
+std::string_view Npc::nbStateName() const {
+  if(!aiState.funcIni.isValid())
+    return "-";
+  auto* st = owner.script().findSymbol(aiState.funcIni.ptr);
+  return st!=nullptr ? std::string_view(st->name()) : std::string_view("?");
+  }
+
+std::string Npc::nbAiQueueDesc() const {
+  return aiQueue.describe(4);
   }
 
 bool Npc::isInRoutine(ScriptFn stateFn) const {

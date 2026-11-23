@@ -39,6 +39,7 @@
 #include "scripting/gameapi.h"
 #include "utils/dbgpainter.h"
 #include "utils/crashlog.h"
+#include "utils/nblog.h"
 
 #include "commandline.h"
 #include "gothic.h"
@@ -2158,14 +2159,19 @@ void MainWindow::render(){
     // the memory of the process, every 5 seconds, in the log that the player sends: the crash with std::bad_alloc is a matter of the time and
     // of the memory, and the last line shows how it grew (Debug lines are written to the file at once)
     {
-    static uint64_t nextMemLog = 0;
+    static uint64_t nextMemLog = 0, nextMapsLog = 0;
     if(t>=nextMemLog) {
-      nextMemLog = t+5000;
+      // NB fix 203: every 5 s only at the level "full" of the log; 30 s normal, 60 s quiet
+      const int lv = NbLog::level();
+      nextMemLog = t+(lv>=NbLog::Full ? 5000 : lv==NbLog::Normal ? 30000 : 60000);
       Log::d("[mem] ",t/1000," s: ",CrashLog::memoryInfo());
       // what takes the address space, when it is big: the Mali crashes at about 420 GB of it, with 3 GB of the real memory in use
-      const std::string maps = CrashLog::mappingsSummary(6,32.0);
-      if(!maps.empty())
-        Log::d("[maps] ",maps);
+      if(lv>=NbLog::Full || t>=nextMapsLog) {
+        nextMapsLog = t+120000;
+        const std::string maps = CrashLog::mappingsSummary(6,32.0);
+        if(!maps.empty())
+          Log::d("[maps] ",maps);
+        }
       }
     }
 #endif
@@ -2396,6 +2402,13 @@ void MainWindow::onMobileAction(int id) {
   if(0<=category && category<Mobile::CategoryCount) {
     if(mobileContext()==Mobile::Mode::Inventory)
       inventory.setCategory(category);
+    return;
+    }
+
+  // NB fix 199: a marker in the log - the moment the player has seen something wrong
+  if(id==Mobile::Special::LogMark) {
+    const int n = NbLog::mark();
+    Gothic::inst().onPrint("Znacznik w logu: "+std::to_string(n));
     return;
     }
 

@@ -1,4 +1,5 @@
 #include "damagecalculator.h"
+#include "utils/nblog.h"
 
 #include "world/objects/npc.h"
 #include "world/objects/item.h"
@@ -44,10 +45,26 @@ DamageCalculator::Val DamageCalculator::damageValue(Npc& src, Npc& other, const 
                   " dtype=",damageTypeMask(src),
                   " value=",ret.value);
   Item* weapon = b!=nullptr ? src.currentRangedWeapon() : src.activeWeapon();
-  for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i) {
-    int bulletDmg = b!=nullptr ? int(b->damage().val[i]) : int(splDmg.val[i]);
-    int itemDmg   = weapon!=nullptr ? int(weapon->handle().damage[i]) : -999;
-    Tempest::Log::d("DMG2:  type ",i," npcDamage=",hs.damage[i]," usedDmg=",bulletDmg," weaponItemDmg=",itemDmg," targetProt=",ho.protection[i]);
+  if(NbLog::level()>=NbLog::Full) {
+    for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i) {
+      int bulletDmg = b!=nullptr ? int(b->damage().val[i]) : int(splDmg.val[i]);
+      int itemDmg   = weapon!=nullptr ? int(weapon->handle().damage[i]) : -999;
+      Tempest::Log::d("DMG2:  type ",i," npcDamage=",hs.damage[i]," usedDmg=",bulletDmg," weaponItemDmg=",itemDmg," targetProt=",ho.protection[i]);
+      }
+    } else {
+    // NB fix 203: one line for the types that take part in the blow (damage of the character / of the bullet or the
+    // spell / of the weapon, and the protection of the target), instead of 8 lines
+    std::string parts;
+    for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i) {
+      int bulletDmg = b!=nullptr ? int(b->damage().val[i]) : int(splDmg.val[i]);
+      int itemDmg   = weapon!=nullptr ? int(weapon->handle().damage[i]) : 0;
+      if(hs.damage[i]==0 && bulletDmg==0 && itemDmg==0)
+        continue;
+      parts += " ["+std::to_string(i)+": "+std::to_string(hs.damage[i])+"/"+std::to_string(bulletDmg)+"/"+
+               std::to_string(itemDmg)+" prot "+std::to_string(ho.protection[i])+"]";
+      }
+    if(!parts.empty())
+      Tempest::Log::d("DMG2:  types (npc/used/weapon)",parts);
     }
   }
 

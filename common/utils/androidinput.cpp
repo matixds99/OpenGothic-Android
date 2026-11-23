@@ -21,6 +21,7 @@
 #include "world/worldobjects.h"
 #include "game/gamescript.h"
 #include "game/playercontrol.h"
+#include "utils/nblog.h"
 #include "resources.h"
 #include "winpad.h"
 #include "scripting/modhost.h"
@@ -55,7 +56,7 @@ const char* const IconFiles[AndroidInput::IconCount] = {
 
 const char* const SettingNames[Mobile::SettingCount] = {
   "buttons", "resolution", "shadows", "effects", "fps", "deadzone", "sensitivity", "vibration", "gui",
-  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus", "acrobatic", "reflections", "padstyle", "rain", "partialfocus"
+  "speed", "hudnumbers", "hudxp", "strafe", "autolock", "peacefulfocus", "acrobatic", "reflections", "padstyle", "rain", "partialfocus", "loglevel"
   };
 
 // Gives access to the dispatch functions of SystemApi
@@ -197,6 +198,8 @@ int nextValue(int setting, int value) {
       return value ? 0 : 1;
     case Mobile::SettingRain:
       return value>=3 ? 0 : value+1;
+    case Mobile::SettingLogLevel:
+      return value>=2 ? 0 : value+1;
     }
   return value;
   }
@@ -221,6 +224,8 @@ std::string settingText(int setting, const std::string& label) {
     return value<=0 ? "Rain: OFF" : value==1 ? "Rain: light" : value==2 ? "Rain: normal" : "Rain: heavy";
   if(setting==Mobile::SettingAutoLock)
     return value ? "Auto lock on weapon draw: ON" : "Auto lock on weapon draw: OFF";
+  if(setting==Mobile::SettingLogLevel)
+    return value<=0 ? "Log: quiet (problems only)" : value==1 ? "Log: normal" : "Log: full (everything)";
   if(setting==Mobile::SettingPartialFocus)
     return value ? "Partial focus (free side steps): ON" : "Partial focus (free side steps): OFF";
   if(setting==Mobile::SettingPeaceful)
@@ -337,6 +342,9 @@ AndroidInput::Preferences AndroidInput::preferences() {
   // NB fix 194 (the version 12; 11 was the withdrawn fix 191): the partial focus of the fight
   if(Gothic::settingsGetI(Section,"version")>=12)
     ret.partialFocus = Gothic::settingsGetI(Section,SettingNames[Mobile::SettingPartialFocus])!=0 ? 1 : 0;
+  // NB fix 203 (the version 13): the level of the log
+  if(Gothic::settingsGetI(Section,"version")>=13)
+    ret.logLevel = std::clamp(Gothic::settingsGetI(Section,SettingNames[Mobile::SettingLogLevel]),0,2);
   return ret;
   }
 
@@ -363,10 +371,11 @@ void AndroidInput::Controller::bind() {
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPadStyle],   def.padStyle);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingRain],       def.rain);
     Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPartialFocus],def.partialFocus);
-    Gothic::settingsSetI(Section,"version",12);
+    Gothic::settingsSetI(Section,SettingNames[Mobile::SettingLogLevel],   def.logLevel);
+    Gothic::settingsSetI(Section,"version",13);
     Gothic::flushSettings();
     } else
-  if(Gothic::settingsGetI(Section,"version")<12) {
+  if(Gothic::settingsGetI(Section,"version")<13) {
     // settings saved before the vibration, the scale of the interface, the fast forward, the side steps and the auto lock were added
     const Preferences def;
     const int version = Gothic::settingsGetI(Section,"version");
@@ -401,7 +410,10 @@ void AndroidInput::Controller::bind() {
     // NB fix 194 (the version 12): the partial focus is off until the player switches it on
     if(version<12)
       Gothic::settingsSetI(Section,SettingNames[Mobile::SettingPartialFocus],def.partialFocus);
-    Gothic::settingsSetI(Section,"version",12);
+    // NB fix 203 (the version 13): the normal log
+    if(version<13)
+      Gothic::settingsSetI(Section,SettingNames[Mobile::SettingLogLevel],def.logLevel);
+    Gothic::settingsSetI(Section,"version",13);
     Gothic::flushSettings();
     }
   loadHudPlaces();
@@ -709,6 +721,7 @@ void AndroidInput::Controller::applyPreferences() {
   controls.features(Scripting::ModHost::inst().fastForwardWanted(),pref.strafe!=0);
   WorldObjects::peacefulFocus.store(pref.peaceful!=0);
   PlayerControl::partialFocus.store(pref.partialFocus!=0);   // NB fix 194
+  NbLog::setLevel(pref.logLevel);                             // NB fix 203
   GameScript::nbAcrobaticPref.store(pref.acrobatic);
   }
 

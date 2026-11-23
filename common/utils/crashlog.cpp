@@ -1,4 +1,7 @@
 #include "crashlog.h"
+#include "nblog.h"
+
+#include <sstream>
 #include "commandline.h"
 
 #include <Tempest/Except>
@@ -35,6 +38,7 @@
 #endif
 
 static char gpuName[64]="?";
+static void (*logSink)(const char*) = nullptr;   // NB fix 200
 
 #ifdef __WINDOWS__
 #include <windows.h>
@@ -152,6 +156,10 @@ void CrashLog::setup() {
   std::set_terminate(terminateHandler);
   }
 
+void CrashLog::setLogSink(void (*sink)(const char*)) {
+  logSink = sink;
+  }
+
 void CrashLog::setGpu(std::string_view name) {
   if(name.empty())
     return;
@@ -200,6 +208,31 @@ void CrashLog::dumpStack(const char *sig, const char *extGpuLog) {
   tracebackLinux(fout);
 #endif
   fout.flush();
+
+  // NB fix 200: the same into log.txt, with the lines that the level of the log kept out and the summary of the problems:
+  // the player sends log.txt, and before it ended without a word at the crash
+  if(logSink!=nullptr) {
+    std::ostringstream out;
+    out << "==== CRASH (" << sig << ") ====" << std::endl;
+#if defined(__ANDROID__)
+    writeFault(out);
+#endif
+    writeSysInfo(out);
+    tracebackGpu(out, extGpuLog);
+#if defined(__cpp_lib_stacktrace)
+    tracebackStd(out);
+#elif defined(__ANDROID__)
+    tracebackAndroid(out);
+#elif defined(__LINUX__) || defined(__APPLE__)
+    tracebackLinux(out);
+#endif
+    const std::string hidden = NbLog::recentHidden(true);
+    if(!hidden.empty())
+      out << "---- the last lines kept out of the log" << std::endl << hidden;
+    out << "---- the summary of the problems" << std::endl << NbLog::summary(true);
+    out << "==== end of the crash ====" << std::endl;
+    logSink(out.str().c_str());
+    }
   }
 
 void CrashLog::tracebackStd(std::ostream &out) {

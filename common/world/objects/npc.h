@@ -409,6 +409,8 @@ class Npc final {
     void      setDetectedMob(Interactive* id);
 
     bool      isInState  (ScriptFn stateFn) const;
+    std::string_view nbStateName() const;        // NB fix 199: the name of the AI state (ZS_ATTACK...), for the log
+    std::string      nbAiQueueDesc() const;      // NB fix 199: the AI queue as text
     bool      isInRoutine(ScriptFn stateFn) const;
     bool      wasInState (ScriptFn stateFn) const;
     uint64_t  stateTime() const;
@@ -636,6 +638,7 @@ class Npc final {
     bool      isPlayerEnabledState(const ::AiState& st) const;
     void      tickRoutine();
     void      tickAggroLeash();
+    void      nbWatchIdle();   // NB fix 201
     void      nextAiAction(AiQueue& queue, uint64_t dt);
     void      commitDamage();
     Npc*      updateNearestEnemy();

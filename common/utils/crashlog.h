@@ -11,6 +11,9 @@ class CrashLog final {
 
     static void dumpStack(const char* sig, const char* extGpuLog);
 
+    /// NB fix 200: the crash also goes into log.txt (the file that the player sends), with the summary of the problems
+    static void setLogSink(void (*sink)(const char* text));
+
     /// The memory of the process and of the system (Linux, Android): where a std::bad_alloc comes from, the process, the system or the limit of the mappings
     static std::string memoryInfo();
 

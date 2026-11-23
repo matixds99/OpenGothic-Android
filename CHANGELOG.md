@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **199**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **204**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
-2. **197** – golemy stoją przy wrogu: szczegóły w logu (`STUCK 5 s`) – ✅ (dał przyczynę: cel 22 m dalej)
-3. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
-4. **195** – launcher: czwarta karta „Gothic II – New Balance” z okładką – ✅
-5. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – ✅
+1. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – 🧪
+2. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
+3. **197** – golemy stoją przy wrogu: szczegóły w logu (`STUCK 5 s`) – ✅ (dał przyczynę: cel 22 m dalej)
+4. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
+5. **195** – launcher: czwarta karta „Gothic II – New Balance” z okładką – ✅
 
 ---
 
@@ -251,6 +251,22 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 199–203. Rozbudowany log do zgłoszeń – 🧪 (24.11.2026)
+- **Pliki:** nowe `common/utils/nblog.cpp` i `nblog.h`; `game/main.cpp`, `common/utils/crashlog.cpp/.h`, `common/world/objects/npc.cpp/.h`, `common/game/damagecalculator.cpp`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`
+- **Zgłoszenie:** log ma szybciej pokazywać błędy, zwłaszcza takie jak przy golemach, gdzie w logu nie było żadnego błędu, a postacie nic nie robiły; przyda się przy kolejnych bossach.
+- **199 – znacznik (przycisk MARK):** nowy przycisk na nakładce (u góry, obok LOG; można go przesunąć lub ukryć w edytorze nakładki). Dotknięcie dopisuje do logu blok `[mark N]`: czas od startu, świat, dzień i godzina gry, pozycja, życie, mana, broń i stan ciała bohatera, jego cel, oraz do 12 postaci w promieniu 30 m – odległość, stan AI, życie, cel, broń, stan ciała, kolejka AI. Na ekranie „Znacznik w logu: N”.
+- **200 – awaria w `log.txt`:** dotąd stos wywołań szedł tylko do `crash.log`, a `log.txt` urywał się bez słowa. Teraz przy awarii do `log.txt` trafia blok `==== CRASH ====` (sygnał, adres błędu, GPU, stos wywołań, linie ukryte przez poziom logu, podsumowanie problemów). Przy następnym starcie `crash.log` z poprzedniej awarii jest przepisywany na początek logu (`[crash] the previous start crashed`), raz (`crash.seen`).
+- **201 – zapętlone i stojące postacie:**
+  - `[thrash]` – postać przy bohaterze (do 40 m), która 10 razy w 5 s zaczyna ten sam stan AI (pętla kończy się od razu, percepcja zaczyna ją znowu): stan, cel, kolejka AI, broń, stan ciała;
+  - `[idle]` – postać w walce (`ZS_ATTACK`, `ZS_MM_ATTACK`, do 30 m od bohatera), której cel żyje i jest poza jej zasięgiem, a ona przez 8 s nie rusza się i nie uderza: odległość walki / zasięg, czy widzi cel, kolejka AI, cel drogi, powietrze, tryb chodu – przypadek golemów zostałby pokazany od razu. Raz, do ruchu, ciosu lub zmiany celu.
+- **202 – podsumowanie problemów:** każda linia logu jest sprawdzana, a na końcu (wyjście z gry, przejście w tło, awaria) w logu jest blok `==== NB summary ====`: brakujące funkcje pluginu wołane przez skrypty, błędy skryptów, zablokowane postacie (`STUCK`, `[idle]`, `[thrash]`), brakujące pliki (dźwięki, tekstury), inne błędy, ostrzeżenia danych przy wczytywaniu – każdy problem raz, z liczbą wystąpień i czasem pierwszego, najczęstsze na górze.
+- **203 – mniej szumu, poziom logu:** nowy wiersz ustawień „Log”: *quiet* (bez śladu AI, `NB trace`, obrażeń i ruchu bohatera; same problemy), *normal* (domyślny), *full* (wszystko jak dotąd). Przy *normal* cios to 1 linia `DMG2` z rodzajami obrażeń, które biorą udział (zamiast 8), `[mem]` co 30 s (było 5 s), `[maps]` co 2 min. Linie ukryte są i tak liczone w podsumowaniu i trafiają do raportu awarii. Wersja ustawień 13.
+- **Do sprawdzenia:**
+  - przycisk MARK u góry ekranu, dotknięcie – napis i blok `[mark 1]` w logu;
+  - wyjście z gry lub przejście do innej aplikacji – na końcu logu `==== NB summary`;
+  - Ustawienia → „Log: quiet / normal / full” – log krótszy przy *quiet*;
+  - przy stojących postaciach w walce – `[idle]` w logu.
 
 ### 198. Przywołaniec gryziony przez innego wroga odwraca się do niego – 🧪 (23.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/world/objects/npc.cpp`

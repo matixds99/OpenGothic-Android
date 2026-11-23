@@ -73,7 +73,8 @@ namespace Special {
     SummonMode    = 50,
     SummonReset   = 51,
     SkipScene     = 52,  // NB fix 143: "POMIŃ" - the scenes of New Balance (the voyage of the boat, the concerts)
-    SummonCall    = 53   // NB fix 176: the summons to the hero (KEY_SUMMON_TELEPORT of the plugin)
+    SummonCall    = 53,  // NB fix 176: the summons to the hero (KEY_SUMMON_TELEPORT of the plugin)
+    LogMark       = 54   // NB fix 199: a marker in the log (MARK)
     };
   }
 
@@ -98,6 +99,7 @@ enum Setting : int {
   SettingPadStyle,
   SettingRain,
   SettingPartialFocus, // NB fix 194: the side steps in the fight do not turn the hero to his target
+  SettingLogLevel,     // NB fix 203: the log - quiet, normal, full
   SettingCount
   };
 static_assert(int(Special::FirstSetting)+int(SettingCount)<=96, "the ids of the rows of the settings");
@@ -127,7 +129,7 @@ inline float hotbarSlot(float buttons) {
 constexpr const char* HudIds[] = {
   "menu", "character", "speed", "log", "map", "sneak", "walk", "stepleft", "stepright", "stepforward", "stepback",
   "action", "hitleft", "hitright", "block", "jump", "inventory", "target", "spells", "weapon", "quicksave", "human",
-  "sprint", "bar_hp", "bar_stamina", "bar_mana", "quickattack"
+  "sprint", "bar_hp", "bar_stamina", "bar_mana", "quickattack", "logmark"
   };
 constexpr int HudIdCount = int(sizeof(HudIds)/sizeof(HudIds[0]));
 

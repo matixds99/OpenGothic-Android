@@ -390,7 +390,7 @@ void Controls::buildSettings(const Anchor& a) {
     "Button size", "3D resolution", "Shadow quality", "SSAO effects",
     "FPS limit", "Joystick deadzone", "Camera sensitivity", "Vibration", "GUI scale",
     "Fast forward", "HP/Mana numbers", "XP counter", "Step buttons", "Auto lock", "Peaceful targets", "Acrobatics",
-    "Water reflections", "Gamepad movement", "Rain", "Partial focus"
+    "Water reflections", "Gamepad movement", "Rain", "Partial focus", "Log"
     };
   // The speed is not a part of the vanilla game: its row is there only when a mod has asked for it
   std::vector<int> rows;
@@ -520,6 +520,9 @@ void Controls::buildGame(const Anchor&) {
   if(featureSpeed && !dead)
     icon("speed",   left(244),  top(36), 50, "SPEED",     Key::Enter, false, Special::Speed);
   icon("log",       right(124), top(36), 50, "LOG",       Key::Log);
+  // NB fix 199: a marker in the log of the game, at the moment the player sees something wrong
+  if(!dead)
+    icon("logmark", right(186), top(36), 50, "MARK",      Key::Enter, false, Special::LogMark);
   icon("map",       right(62),  top(36), 50, "MAP",       Key::Map);
 
   if(dead && !editing) {
@@ -1083,7 +1086,7 @@ void Controls::applyAvailability() {
       usable = availableTarget; else
     if(b.special==Special::Spell)
       usable = availableSpells; else
-    if(b.special==Special::Speed || b.special==Special::LoadSave || b.special==Special::QuickSave)
+    if(b.special==Special::Speed || b.special==Special::LoadSave || b.special==Special::QuickSave || b.special==Special::LogMark)
       usable = true; else
     if(b.special==Special::Sprint)
       usable = availableMovement; else
