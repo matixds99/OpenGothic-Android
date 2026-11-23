@@ -15,6 +15,14 @@ let wisp     = null;    // the character of the wisp that this mod has called
 let summoned = false;   // the player has called the wisp in this session (not kept in a save, nor between sessions)
 let started  = false;   // the first world of this session has come
 let shift    = false;
+let paused   = false;   // NB fix 182: sent away for the transformation of the hero, it comes back after it
+
+// NB fix 182: the hero is a creature (a spell of the transformation): the engine gives him the instance of the creature
+// (BLOODFLY_RUNE...), the hero of NB is PC_HERO
+function heroTransformed() {
+    return player.valid && typeof player.instance === "string" && player.instance !== "" &&
+           player.instance.toUpperCase() !== "PC_HERO";
+}
 
 function hasAmulet() {
     return AMULETS.some(a => player.valid && player.hasItem(a));
@@ -79,7 +87,18 @@ function dismissWisp(quiet) {
 }
 
 function toggleWisp() {
+    if (paused) {           // NB fix 182: sent away for the transformation - now not to come back
+        paused   = false;
+        summoned = false;
+        screen.print("Ognik odesłany");
+        return;
+    }
     if (findWisp()) dismissWisp(false);
+    else if (heroTransformed()) {
+        paused   = true;
+        summoned = true;
+        screen.print("Ognik przyjdzie po przemianie");
+    }
     else spawnWisp(false);
 }
 
@@ -100,8 +119,8 @@ ui.tab("Ognik", () => {
     ui.spacing();
     if (!hasAmulet())
         ui.textColored("#d08040", "Potrzebny amulet wędrującego ognika.");
-    ui.text(on ? "Ognik: przywołany" : "Ognik: odesłany");
-    if (ui.button(on ? "Odeślij ognika" : "Przywołaj ognika", -1, ui.fontSize() * 2.5))
+    ui.text(on ? "Ognik: przywołany" : paused ? "Ognik: wróci po przemianie" : "Ognik: odesłany");
+    if (ui.button(on || paused ? "Odeślij ognika" : "Przywołaj ognika", -1, ui.fontSize() * 2.5))
         toggleWisp();
     ui.spacing();
     ui.textDisabled("Klawiatura: Shift+F5. Konsola: ognik, ognik on, ognik off");
@@ -110,8 +129,8 @@ ui.tab("Ognik", () => {
 // "ognik" switches, "ognik on" / "ognik off" call or send away (for the other scripts: mod.command)
 console.registerCommand("ognik", (cmd) => {
     const a = String((cmd && cmd.args && cmd.args[0]) || "").trim().toLowerCase();
-    if (a === "on" || a === "1")       { if (!findWisp()) spawnWisp(false); }
-    else if (a === "off" || a === "0") dismissWisp(false);
+    if (a === "on" || a === "1")       { if (!findWisp() && !paused) toggleWisp(); }
+    else if (a === "off" || a === "0") { paused = false; dismissWisp(false); }
     else                               toggleWisp();
 }, "ognik [on|off] - przywołuje albo odsyła wędrującego ognika");
 
@@ -136,14 +155,32 @@ events.on("world:load", () => {
         console.log("ognik: odesłano nadmiarowe: " + removed);
     wisp = kept;
     if (!kept)
-        setTimeout(() => { if (summoned && !findWisp()) spawnWisp(true); }, 1500);
+        setTimeout(() => { if (summoned && !paused && !heroTransformed() && !findWisp()) spawnWisp(true); }, 1500);
 });
+
+// NB fix 182: no wisp while the hero is a creature (the transformation): it goes when he changes, and comes back next to
+// him when he is human again - when the player has called it
+setInterval(() => {
+    if (!player.valid)
+        return;
+    const trf = heroTransformed();
+    if (trf && summoned && !paused) {
+        paused = true;
+        removeWisps(null);
+        wisp = null;
+        console.log("ognik: odesłany na czas przemiany");
+    } else if (!trf && paused && !player.dead) {
+        paused = false;
+        if (summoned && !findWisp() && spawnWisp(true))
+            console.log("ognik: wrócił po przemianie");
+    }
+}, 500);
 
 // the wisp stays near: if it is lost far away (a teleport), it is called again next to the hero; a second wisp goes.
 // NB fix 120: a called wisp that is not there (killed, the hero died, a save without it - also without the event
 // world:load of the engine) comes back next to the hero within 3 s, until the player sends it away
 setInterval(() => {
-    if (!player.valid || player.dead) return;
+    if (!player.valid || player.dead || paused || heroTransformed()) return;   // NB fix 182
     const w = findWisp();
     if (!w) {
         if (summoned && spawnWisp(true))

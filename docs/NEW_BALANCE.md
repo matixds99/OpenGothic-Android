@@ -45,7 +45,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/graphics/effect.cpp` (+ `.h`), `common/graphics/pfx/pfxbucket.cpp`, `common/world/objects/pfxemitter.cpp`, `common/world/objects/item.cpp` (+ `.h`), `common/game/inventory.cpp` | efekty przedmiotów (`C_Item.effect`) na broniach i w świecie | 150, 179 |
 | `common/world/triggers/movetrigger.cpp` (+ `.h`) | windy z cząsteczkami jako wyglądem (czerwony dym `EVT_SMOKE_*`) | 153 |
 | `common/game/damagecalculator.cpp` | siła liczona raz przy kilku rodzajach obrażeń (golemy, trolle) | 155 |
-| `mods/nb-wisp/index.js` | ognik nie jest usuwany i przywoływany przy 40 m (tylko przy 100 m) | 117–120, 154 |
+| `mods/nb-wisp/index.js` | ognik nie jest usuwany i przywoływany przy 40 m (tylko przy 100 m); odesłany na czas przemiany bohatera | 117–120, 154, 182 |
 | `common/graphics/drawcommands.cpp`, `shader/materials/visibility_pass.comp` | zasięg rysowania postaci w przebiegu widoczności (109), od 146 wyłączony – zasięg liczy `World::nbNpcRangeTick` | 109, 146 |
 | `common/physics/physicmeshshape.cpp` | siatka kolizji obiektu także z samymi materiałami `NB_MAT_*` | 141 |
 | `common/game/gamescript.cpp` (+ `.h`) | fazy bossów: `AI_OnTick_`/`AI_OnHit_`/`AI_OnGetDamage_`/`AI_OnBreak_` po nazwie instancji, licznik walki `aivar[95]`; `Wld_InsertNpcAndAttackEnemy`; `RX_IsWaiting`, `RX_Stop_AI_Wait`, `UpdateSpeed`, `AI_*_Summoned`; obrażenia w czasie (`RX_ApplyDotDamage*`, napisy po lewej), `RX_CallDamage` przy ciosach bohatera, splash | 100, 101, 106 |
@@ -104,7 +104,7 @@ Mody w JavaScripcie dla systemu modów projektu borsuczyny (`docs/MODS.md`). Ins
 
 | Mod | Plik do zainstalowania | Co robi | Poprawka |
 |---|---|---|---|
-| `mods/nb-wisp` | `mods/nb-wisp.zip` (wersja 1.3.1) | wędrujący ognik od Vatrasa: Shift+F5, przycisk w zakładce „Ognik” menu modów albo komenda `ognik` (`ognik on`/`ognik off`); ognik na jedną sesję gry (pierwsze wczytanie po włączeniu gry bez ognika), przywołany wraca po śmierci i wczytaniu, nigdy więcej niż jeden | 11, 117–120, 154 |
+| `mods/nb-wisp` | `mods/nb-wisp.zip` (wersja 1.3.2) | wędrujący ognik od Vatrasa: Shift+F5, przycisk w zakładce „Ognik” menu modów albo komenda `ognik` (`ognik on`/`ognik off`); ognik na jedną sesję gry (pierwsze wczytanie po włączeniu gry bez ognika), przywołany wraca po śmierci i wczytaniu, nigdy więcej niż jeden; znika na czas przemiany bohatera i wraca po niej | 11, 117–120, 154, 182 |
 | `mods/test-umiejetnosci-broni` | `index.js` do folderu moda „Test umiejętności broni” (podmienić) | test poziomów broni pod NB: procent trafienia jak u nauczyciela, animacje zakłada skrypt NB | 48 |
 
 ---

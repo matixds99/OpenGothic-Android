@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **182**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **183**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – 🧪
-2. **180** – okno zapisów modów Spine (eksport i import ZIP) przywrócone, z zapisami z folderu gry – 🧪
-3. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
-4. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ⏸
-5. **177** – ognik: ciało przeszukane od razu po śmierci zostawało z bronią – ognik czeka 1 s i wraca do ciała, gdy coś w nim przybędzie – ✅
+1. **182** – mod `nb-wisp` 1.3.2: ognik odesłany na czas przemiany bohatera, wraca po niej – 🧪
+2. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – ✅
+3. **180** – okno zapisów modów Spine (eksport i import ZIP) przywrócone, z zapisami z folderu gry – 🧪
+4. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
+5. **178** – mod `nb-wisp`: punkty nauki do testu akrobatyki (wycofane po teście); paczka moda 1.3.1 z poprawką 154 – ⏸
 
 ---
 
@@ -252,7 +252,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 181. Przemiany: stan przemiany prowadzony przez plugin (krwiopijca) – 🧪 (23.11.2026)
+### 182. Ognik na czas przemiany bohatera – 🧪 (23.11.2026)
+- **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json`, `mods/nb-wisp.zip` (wersja 1.3.2)
+- **Zgłoszenie:** w czasie przemiany ognik ma być wyłączony, a po przemianie sam wracać.
+- **Poprawka (mod):**
+  - Przemiana rozpoznawana po instancji bohatera: w przemianie silnik daje mu instancję stworzenia (`BLOODFLY_RUNE`…), bohater NB to `PC_HERO`. Sprawdzane co 0,5 s.
+  - Przywołany ognik przy przemianie znika (`ognik: odesłany na czas przemiany` w konsoli moda), po powrocie do człowieka pojawia się obok bohatera (`ognik: wrócił po przemianie`). Ognik odesłany przez gracza nie wraca.
+  - W czasie przemiany ognik nie jest przywoływany ponownie (pilnowanie co 3 s, nowy świat). Przywołanie w przemianie (zakładka, Shift+F5, `ognik on`) – „Ognik przyjdzie po przemianie”; odesłanie w tym czasie – nie wraca. Zakładka „Ognik” pokazuje „wróci po przemianie”.
+- **Do sprawdzenia:** z przywołanym ognikiem przemiana w krwiopijcę – ognik znika; powrót do człowieka – ognik obok, zbiera dalej. Bez ognika przemiana i powrót – ognik się nie pojawia.
+
+### 181. Przemiany: stan przemiany prowadzony przez plugin (krwiopijca) – ✅ (23.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`
 - **Zgłoszenie:** przemiana w krwiopijcę (runa od Nedtbeka) nie działa.
 - **Skrypty NB:** runa `ItRu_TrfBloodFly` używa czaru `SPL_TRFSCAVENGER`; `Spell_Logic_TrfScavenger` przemienia (`Npc_SetActiveSpellInfo(self, BloodFly_Rune)`) tylko przy `!HeroTransOpen`, a przy rzucie ustawia `HeroTransOpen = TRUE`, `RX_BloodFlyTransCheck`, `RX_BloodFlyTimes += 1`. Tak samo inne przemiany. Żaden skrypt nie zeruje `HeroTransOpen` – robi to plugin. Czas zwoju liczy `B_GetTime` (`HeroTRANSCOUNT` do `TempTransTime`, potem ostrzeżenie i utrata życia) tylko przy `HEROTRANS == TRUE`.
@@ -263,6 +272,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna:** tej części pluginu nie było. Po pierwszej przemianie `HeroTransOpen` zostawał ustawiony i każdy następny czar przemiany od razu się przerywał; zapis z ustawionym `HeroTransOpen` nie pozwalał na żadną przemianę. Czas zwoju nie był liczony (`HEROTRANS` 0).
 - **Poprawka:** `GameScript::nbTransformTick` (co klatkę, według `Npc::isTransformed`) robi to co plugin. W logu `[ctx] transformation: on (scroll …, N s)` / `off` / `HeroTransOpen without a transformation for 3 s - cleared`.
 - **Do sprawdzenia:** runa krwiopijcy – przemiana, powrót, druga przemiana zaraz potem; zwój przemiany – licznik „(mm:ss)” na liście efektów i powrót po czasie; zapis, w którym przemiana nie działała, po wczytaniu (po 3 s przemiana znów możliwa).
+- **Test (23.11):** działa – przemiana w krwiopijcę.
 
 ### 180. Okno zapisów modów Spine (eksport / import) – 🧪 (23.11.2026)
 - **Pliki:** `android/java/org/opengothic/app/SaveExport.java`, `SaveImport.java`, `SpineSavesActivity.java` (z projektu borsuczyny, usunięte w 179), `android/AndroidManifest.xml`, `android/java/org/opengothic/app/SpineActivity.java`
@@ -299,7 +309,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Kompilacja:** wszystkie pliki silnika sprawdzone clangiem (`-fsyntax-only -Werror -Wall -Wimplicit-int-float-conversion`, z `OPENGOTHIC_TOUCH_UI`). Niesprawdzone: shadery i Java (brak narzędzi Androida w tym środowisku).
 - **Do sprawdzenia:** budowa APK (Java, shadery); ustawienia dotyku – wszystkie wiersze przełączają właściwe ustawienie, szybki atak, sprint i koło działają; deszcz i ustawienie „Rain”; ogniste/magiczne strzały w locie; ogniste bronie (150); ognik i przeszukiwanie ciał (177) przy broni na pasie.
 
-### 178. Mod `nb-wisp`: punkty nauki do testów – ⏸ wycofane (22.11.2026)
+### 178. Mod `nb-wisp`: punkty nauki do testów – ✅ wycofane (22.11.2026)
 - **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json`, `mods/nb-wisp.zip`, `common/scripting/game/game_npc.cpp`, `docs/MODS.md`
 - **Zgłoszenie:** do testu nauki u nauczycieli (akrobatyka) potrzebne są punkty nauki; prośba o pole z punktami nauki w modzie ognika.
 - **Poprawka:**
@@ -309,6 +319,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** instalacja `nb-wisp.zip` (launcher → Mods → Add a mod), zakładka „Punkty nauki”: przyciski i pole zmieniają liczbę, liczba w statystykach postaci taka sama; nauka u nauczyciela zużywa te punkty. Ognik działa jak dotąd.
 - **Test (22.11):** działa – punkty nauki posłużyły do nauki akrobatyki (test 86).
 - **Wycofane (22.11):** zakładka „Punkty nauki”, komenda `pn` i funkcje `learningPoints` / `setLearningPoints` usunięte (były tylko do testu). Zostaje paczka `mods/nb-wisp.zip` zbudowana od nowa z folderu moda (wersja 1.3.1, z poprawką 154).
+- **Test (23.11):** po instalacji `nb-wisp.zip` 1.3.1 zakładki „Punkty nauki” nie ma.
 
 ### 177. Ognik: łup z ciała po zdjęciu broni (szkielet pirat) – ✅ (22.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
