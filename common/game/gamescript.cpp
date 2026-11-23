@@ -250,6 +250,8 @@ struct NbState {
   uint64_t                                    summonCallCd = 0;      // NB fix 176: ms left until the summons can be called again
   bool                                        trfWas       = false;  // NB fix 181: the hero was transformed (the plugin 0x1056aec0)
   uint64_t                                    trfOpenMs    = 0;      // NB fix 181: HeroTransOpen without a transformation, ms
+  float                                       blessAcc[3]  = {};     // NB fix 184: RX_AST_Blessing - the fractions of hp, stamina, mana
+  uint64_t                                    monsterStatsNext = 0;  // NB fix 185: RX_AST_UpdateMonsterStats every second
   // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
   std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
   std::unordered_map<const Npc*,uint64_t>     bodyEmptySince;        // NB fix 136: a dead body found empty, since when
@@ -2610,6 +2612,66 @@ void GameScript::initCommon() {
         return;
         }
       });
+    // NB fix 184: RX_SelectSpell(npc, spell) (0x101711e0, RX_ChangeSpell of the bosses: Im'Arah...): the plugin puts the rune
+    // of the spell into the magic book of the npc and makes it the chosen spell. In OpenGothic the next call of
+    // RX_ChangeSpell, AI_ReadySpell, chooses the rune by the spell (Inventory::switchActiveSpell); RX_CreateSpellRune
+    // before it gave the rune. Here only the check that the rune is there, for the log
+    bindNb("RX_SELECTSPELL", [this](std::shared_ptr<zenkit::INpc> ref, int32_t spell) {
+      auto npc = findNpc(ref);
+      if(npc==nullptr || spell<=0)
+        return;
+      const auto* inv = &npc->inventory();
+      for(auto it=inv->iterator(Inventory::T_Inventory); it.isValid(); ++it) {
+        if(it->isSpellOrRune() && it->spellId()==spell)
+          return;
+        }
+      nbCtx("select spell: ",npc->displayName()," has no rune of the spell ",spell);
+      });
+    // NB fix 184: RX_AST_Blessing(kind) (0x10170160), the blessings of Isgaroth in RX_RegenCommonFunc (every second): the
+    // regeneration of the hero, the fractions add up (the plugin 0x10052430 / 0x10052600 / 0x10052570):
+    //   0 - hp: max(hp max, 400) / 360 a second (/ 800 when XARDAS_KNOWSSACTANOME is set), up to the max;
+    //   1 - stamina (only with RX_OldStamina): max(ATR_STAMINA_MAX*10, 360) / 360, up to ATR_STAMINA_MAX*10;
+    //   2 - mana: max(mana max, 133.3) / 400, up to the max
+    bindNb("RX_AST_BLESSING", [this](int32_t kind) {
+      auto* hero = world().player();
+      if(hero==nullptr || kind<0 || kind>2)
+        return;
+      auto& acc = nbStates[this].blessAcc[kind];
+      auto& h   = hero->handle();
+      if(kind==0 || kind==2) {
+        const auto cur = kind==0 ? ATR_HITPOINTS    : ATR_MANA;
+        const auto max = kind==0 ? ATR_HITPOINTSMAX : ATR_MANAMAX;
+        if(h.attribute[cur]>=h.attribute[max])
+          return;
+        if(kind==0) {
+          const int32_t knows = nbIntVar("XARDAS_KNOWSSACTANOME");
+          acc += float(std::max(h.attribute[max],400))/(knows!=0 ? 800.f : 360.f);
+          } else {
+          acc += std::max(float(h.attribute[max]),400.f/3.f)/400.f;
+          }
+        if(acc<1.f)
+          return;
+        const int32_t add = int32_t(acc);
+        acc -= float(add);
+        h.attribute[cur] = std::min(h.attribute[cur]+add,h.attribute[max]);
+        return;
+        }
+      if(nbIntVar("RX_OLDSTAMINA")<=0)
+        return;
+      auto* sta = vm.find_symbol_by_name("ATR_STAMINA");
+      auto* stm = vm.find_symbol_by_name("ATR_STAMINA_MAX");
+      if(sta==nullptr || stm==nullptr || sta->type()!=zenkit::DaedalusDataType::INT || stm->type()!=zenkit::DaedalusDataType::INT)
+        return;
+      const int32_t top = stm->get_int()*10;
+      if(sta->get_int()>=top)
+        return;
+      acc += float(std::max(top,360))/360.f;
+      if(acc<1.f)
+        return;
+      const int32_t add = int32_t(acc);
+      acc -= float(add);
+      sta->set_int(std::clamp(sta->get_int()+add,0,top));
+      });
     // RX_ToggleVobVisible(name, show) (0x1016f9b0): the vob of the name and its children are hidden or shown (the secrets
     // of the quests, EVT_XARDAS_SECRET_02). The collision follows the visual. Kept in the save-game
     bindNb("RX_TOGGLEVOBVISIBLE", [this](std::string_view name, int32_t show) {
@@ -4853,6 +4915,10 @@ void GameScript::tick(uint64_t dt) {
   // NB fix 176: the time of the game until the summons can be called to the hero again
   nb->second.summonCallCd -= std::min(nb->second.summonCallCd,dt);
   nbTransformTick(dt);   // NB fix 181
+  if(tickCount()>=nb->second.monsterStatsNext) {
+    nb->second.monsterStatsNext = tickCount()+1000;
+    nbMonsterStatsTick();   // NB fix 185
+    }
 
   // the delayed functions of NB (RX_CALLBACK*)
   if(!nb->second.callbacks.empty()) {
@@ -8494,6 +8560,43 @@ void GameScript::nbSummonsToggleMode() {
 ///    RX_ResetAnimsOnLoad, the sprint of before (RX_SaveSprintTime) back;
 ///  - HeroTransOpen 3 s without a transformation (the spell did not take): all 0, the bloodfly of the day not counted.
 /// Without it the first transformation was the only one: HeroTransOpen stayed and every later spell stopped at once.
+// NB fix 185: the plugin calls RX_AST_UpdateMonsterStats for every npc of the world once a second (0x1023c1a0, SELF = the
+// npc). The scripts (RX_ApplyMonsterStats) give the npc the life, the protection and the strength of the difficulty, once:
+// AIVAR[89] says it is done. On Nightmare (RX_IsLeg) 150% of the life, RX_MonsterProtRatio 150, RX_MonsterPower 200;
+// on the difficulty "Gothic" the options bOptionMonsterHealth/Power/Prot. Without this call the npcs had the life of
+// their instance (Im'Arah: 25000 instead of 37500 on Nightmare)
+void GameScript::nbMonsterStatsTick() {
+  auto* fn = vm.find_symbol_by_name("RX_AST_UPDATEMONSTERSTATS");
+  if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+    return;
+  auto& w    = world();
+  auto* hero = w.player();
+  auto  prevSelf = vm.global_self()->get_instance();
+  size_t done = 0;
+  for(uint32_t i=0; i<w.npcCount(); ++i) {
+    auto* npc = w.npcById(i);
+    if(npc==nullptr || npc==hero || npc->isDead())
+      continue;
+    auto& h = npc->handle();
+    if(h.aivar[89]!=0)
+      continue;   // done already (RX_ApplyMonsterStats sets it; it is in the save)
+    vm.global_self()->set_instance(npc->handlePtr());
+    try {
+      vm.call_function<void>(fn);
+      }
+    catch(const std::exception& e) {
+      Log::e("NB: RX_AST_UpdateMonsterStats failed: ",e.what());
+      break;
+      }
+    if(h.aivar[89]!=0)
+      ++done;
+    }
+  vm.global_self()->set_instance(prevSelf);
+  if(done>0)
+    nbCtx("monster stats: ",done," npcs (hp ratio ",nbIntVar("RX_MONSTERHPRATIO"),", power ",nbIntVar("RX_MONSTERPOWER"),
+          ", prot ",nbIntVar("RX_MONSTERPROTRATIO"),", nightmare ",nbIntVar("RX_NIGHTMARE"),")");
+  }
+
 void GameScript::nbTransformTick(uint64_t dt) {
   auto* hero = world().player();
   auto  nb   = nbStates.find(this);

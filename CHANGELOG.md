@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **184**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **186**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **183** – muzyka NB w lokacjach: motywy BassMusicController (mp3) z `BASSMUSICCONTROLLER_*.D`, m.in. dolina Adanosa – 🧪
-2. **182** – mod `nb-wisp` 1.3.2: ognik odesłany na czas przemiany bohatera, wraca po niej – ✅
-3. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – ✅
-4. **180** – okno zapisów modów Spine (eksport i import ZIP) przywrócone, z zapisami z folderu gry – 🧪
-5. **179** – scalenie z aktualizacją borsuczyny (23.11): deszcz, magiczne strzały, poprawki NPC i walki; konflikty z poprawkami NB rozwiązane – 🧪
+1. **185** – życie, siła i ochrona potworów według poziomu trudności (`RX_AST_UpdateMonsterStats`); Nightmare: 150% życia, m.in. bossowie – 🧪
+2. **184** – paczka 7 brakujących funkcji: błogosławieństwa Isgarotha (`RX_AST_Blessing`), `RX_SelectSpell` – 🧪
+3. **183** – muzyka NB w lokacjach: motywy BassMusicController (mp3) z `BASSMUSICCONTROLLER_*.D`, m.in. dolina Adanosa – ✅🧪
+4. **182** – mod `nb-wisp` 1.3.2: ognik odesłany na czas przemiany bohatera, wraca po niej – ✅
+5. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – ✅
 
 ---
 
@@ -252,7 +252,25 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 183. Muzyka NB w lokacjach (BassMusicController, mp3) – 🧪 (23.11.2026)
+### 185. Życie, siła i ochrona potworów według poziomu trudności (Nightmare) – 🧪 (23.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
+- **Zgłoszenie:** na poziomie Nightmare bossowie mają za mało życia (Im'Arah w wieży na pustyni Adanosa).
+- **Skrypty NB:** `RX_LoadDiffSettings` ustawia przy nowej grze: Nightmare – `RX_Nightmare`, `RX_MonsterHpRatio` 150, `RX_MonsterProtRatio` 150, `RX_MonsterPower` 200; poziom „Gothic” – według opcji `bOptionMonsterHealth` (50–150%), `bOptionMonsterPower` (100–200%), `bOptionMonsterProt` (100–150%); przełącznik poziomu w pluginie („Set diff GOTHIC”) daje życie i siłę 100%. `RX_ApplyMonsterStats` mnoży raz życie postaci (Nightmare: 150% – `RX_IsLeg`, także bossowie), ochronę (`RX_UpdateMonsterProt`), siłę, zręczność i obrażenia (`RX_MonsterPower`), dodaje 0–4% życia losowo, bossom +3000 ochrony przed odrzutem; `AIVAR[89]` = zrobione. Gracz i przyzwańce bez zmian.
+- **Przyczyna:** `RX_ApplyMonsterStats` woła tylko plugin: co sekundę `RX_AST_UpdateMonsterStats` dla każdej postaci świata (UNION_ABI.DLL 0x1023c1a0, SELF = postać). OpenGothic tego nie robił – wszystkie postacie miały wartości z instancji: Im'Arah 25000 życia zamiast 37500 (+0–4%) na Nightmare.
+- **Poprawka:** co sekundę `RX_AST_UpdateMonsterStats` dla żywych postaci świata bez `AIVAR[89]` (bez bohatera). Postacie, które już są w zapisie, dostają wartości poziomu trudności przy pierwszym wczytaniu (raz – `AIVAR[89]` jest w zapisie). Jak w oryginale razem z życiem rośnie siła i ochrona, więc na Nightmare potwory biją mocniej niż dotąd.
+- **Log:** `[ctx] monster stats: N npcs (hp ratio 150, power 200, prot 150, nightmare 1)`.
+- **Do sprawdzenia:** zapis z Nightmare przed Im'Arah – po wczytaniu w logu linia `monster stats`, pasek życia bossa schodzi wolniej (ok. 37500–39000 życia). Zwykłe potwory też silniejsze. Na poziomie „Gothic” wartości zapisane w grze przy jej starcie (preset pluginu „Gothic”: życie i siła 100% – Im'Arah ok. 25000–26000); liczby są w linii `monster stats` w logu.
+
+### 184. Paczka 7 brakujących funkcji (log z pustyni Adanosa) – 🧪 (23.11.2026)
+- **Plik:** `common/game/gamescript.cpp`
+- **Zgłoszenie:** log z pustyni Adanosa (walka z Im'Arah): `NB missing (save): 1 functions, 139 calls: RX_AST_BLESSING`, `not implemented call [RX_SELECTSPELL] from RX_CHANGESPELL (IMARAH, 38)`.
+- **Poprawki:**
+  - `RX_AST_Blessing(rodzaj)` – błogosławieństwa Isgarotha (`RX_IsGarothRegen`, `…RegenSta`, `…Mana`), wołane co sekundę z `RX_RegenCommonFunc`. Jak w pluginie, ułamki się sumują: 0 – życie: max(maks. życie, 400) / 360 na sekundę (/ 800, gdy ustawione `XARDAS_KNOWSSACTANOME`); 1 – wytrzymałość (tylko z `RX_OldStamina`): max(`ATR_STAMINA_MAX`×10, 360) / 360; 2 – mana: max(maks. mana, 133) / 400. Wszystko do wartości maksymalnej. Wcześniej błogosławieństwo było widać w panelu, ale nic nie regenerowało.
+  - `RX_SelectSpell(postać, czar)` – plugin wkłada runę do księgi czarów postaci i wybiera ją. W OpenGothic runę wybiera `AI_ReadySpell` zaraz po niej w `RX_ChangeSpell` (runę daje wcześniej `RX_CreateSpellRune`, poprawka 149), więc funkcja tylko sprawdza, czy runa jest (w logu `select spell: … has no rune`, gdy nie ma).
+- **Nie w tej paczce:** ostrzeżenia `C_NPC.AIVAR without an instance set` (`RX_IsCrabSmall`, `ZS_MM_Attack_Loop`, `C_PlayerIsFakeBandit`, `RX_IsSummonNpc`) – skrypty czytają zmienną z pustej postaci i dostają 0.
+- **Do sprawdzenia:** z błogosławieństwem Isgarotha życie / wytrzymałość / mana rosną same; w logu po zapisie bez `RX_AST_BLESSING` w `NB missing`. Im'Arah zmienia czary w fazach walki (burza ognia, mroczna kula, kula śmierci, mroczna włócznia).
+
+### 183. Muzyka NB w lokacjach (BassMusicController, mp3) – ✅🧪 (23.11.2026)
 - **Pliki:** `common/gamemusic.cpp`, `common/gamemusic.h`, `common/game/definitions/musicdefinitions.cpp`, `common/game/definitions/musicdefinitions.h`, `CMakeLists.txt`, 🆕 `common/utils/drmp3.cpp`, 🆕 `lib/dr_libs/dr_mp3.h` (+ `LICENSE`)
 - **Zgłoszenie:** w niektórych lokacjach nie ma muzyki (log z doliny Adanosa: `unable to load sound: "DarkSagaPirateCamp.sgt"`).
 - **Skrypty NB:** plugin BassMusicController czyta `System/Autorun/BASSMUSICCONTROLLER_NB.D` i `_MI.D` (w `AB_Scripts.vdf`): 137 motywów `instance NAZWA(C_MUSICTHEME_…) { file = "a.mp3|b.mp3"; vol = 0.3; }`, 81 plików mp3. Motyw o tej samej nazwie co w `Music.dat` jest grany z mp3 zamiast DirectMusic; 44 motywów nie ma w `Music.dat` wcale (np. `THF_DAY_FGT`, `PIR_NGT_STD`).
@@ -262,6 +280,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `GameMusic`: motyw BassMusicController grany przez dekoder dr_mp3 – pliki motywu po kolei, w losowej kolejności przy każdym starcie motywu, pojedynczy plik w pętli; inne próbkowanie niż 44100 Hz przeliczane liniowo, mono na oba kanały. Pliki czytane w osobnym wątku (do wczytania pierwszego – cisza). Zmiana motywu: stary wycisza się przez 2 s, nowy wchodzi przez 2 s; ta sama lista plików w kolejnej strefie gra dalej bez przerwy. Głośność muzyki z opcji i wyciszenia skryptów (116) / wczytywania (174) działają jak dla innych motywów.
   - W logu: `NB music: N BassMusicController themes, …` przy starcie i `NB music: <pliki>` przy zmianie motywu.
 - **Do sprawdzenia:** dolina Adanosa (płaskowyż) – gra muzyka z mp3; walka w strefie z motywem walki pluginu; przejście między strefami – płynne wyciszenie; muzyka wyłączona w opcjach – cisza. W `log.txt` liczba motywów i brak linii `mp3 files not found` (jeśli jest – podać, którego pliku brakuje).
+- **Test (23.11):** działa – na pustyni Adanosa gra muzyka (w logu `NB music: 143 BassMusicController themes, 83 playlists`). Do dalszego sprawdzania w innych lokacjach i w walce.
 
 ### 182. Ognik na czas przemiany bohatera – ✅ (23.11.2026)
 - **Pliki:** `mods/nb-wisp/index.js`, `mods/nb-wisp/manifest.json`, `mods/nb-wisp.zip` (wersja 1.3.2)
