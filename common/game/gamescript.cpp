@@ -9180,6 +9180,42 @@ void GameScript::nbSummonBossLog() {
     seen.clear();
   }
 
+/// NB fix 198: a summoned creature of the hero bitten by an enemy near it while its own target is far or out of sight
+/// turns to that enemy. The scripts do it with the change of the target (B_MM_AssessDamage, RX_SetReAttackNpc), but they
+/// tell the enemies apart by Hlp_GetInstanceID (AIV_LASTTARGET): a golem that has one desert snake as its target took the
+/// bites of another desert snake for the bites of its target and stood, 20 m from that target, until the hero hit the
+/// snake that bit it
+void GameScript::nbSummonHitBy(Npc& summon, Npc& attacker) {
+  if(summon.isPlayer() || attacker.isPlayer() || summon.isDown() || attacker.isDown() || &summon==&attacker)
+    return;
+  if(!nbIsSummon(summon) || nbIsSummon(attacker) || !summon.isEnemy(attacker))
+    return;
+  Npc* tg = summon.target();
+  if(tg==&attacker)
+    return;
+  constexpr float Near = 800.f, Far = 1500.f;
+  if(summon.qDistTo(attacker)>Near*Near)
+    return;
+  const bool tgGone = tg==nullptr || tg->isDown();
+  const bool tgFar  = !tgGone && summon.qDistTo(*tg)>Far*Far;
+  const bool tgHid  = !tgGone && !summon.canSeeNpc(*tg,false);
+  if(!tgGone && !tgFar && !tgHid)
+    return;
+  if(nbSummonsPassive())
+    return;   // the passive mode of the panel: the summons do not fight
+  auto* sepHum = vm.find_symbol_by_name("GIL_SEPERATOR_HUM");
+  const int32_t sep = sepHum!=nullptr && sepHum->type()==zenkit::DaedalusDataType::INT ? sepHum->get_int() : 16;
+  const ScriptFn st = int32_t(summon.guild())<sep ? ZS_Attack : ZS_MM_Attack;
+  if(!st.isValid())
+    return;
+  nbCtx("summon: ",summon.displayName()," turns to ",attacker.displayName()," that hits it; its target ",
+        tg!=nullptr ? tg->displayName() : std::string_view("-"),tgGone ? " is down" : tgFar ? " is far" : " is out of sight",
+        tg!=nullptr ? std::string(" (")+std::to_string(int(std::sqrt(summon.qDistTo(*tg))/100.f))+" m)" : std::string());
+  summon.setTarget(&attacker);
+  summon.clearAiQueue();
+  summon.aiPush(AiQueue::aiStartState(st,0,&attacker,nullptr,""));
+  }
+
 void GameScript::nbMonsterStatsTick() {
   auto* fn = vm.find_symbol_by_name("RX_AST_UPDATEMONSTERSTATS");
   if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)

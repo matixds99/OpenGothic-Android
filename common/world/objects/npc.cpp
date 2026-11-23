@@ -2793,6 +2793,7 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
     CombatFx::inst().onHit(*this,other,hitResult.value);
     changeAttribute(ATR_HITPOINTS,-hitResult.value,dontKill);
     owner.script().nbOnDamage(*this,other);   // NB fix 82: the music of the bosses
+    owner.script().nbSummonHitBy(*this,other);   // NB fix 198
 
     if(bMask&(COLL_APPLYVICTIMSTATE|COLL_DOEVERYTHING)) {
       owner.sendPassivePerc(*this,other,*this,PERC_ASSESSOTHERSDAMAGE);
