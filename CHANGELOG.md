@@ -16,7 +16,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
 1. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
-2. **195** – launcher: czwarta karta „Gothic II – New Balance” z okładką – 🧪
+2. **195** – launcher: czwarta karta „Gothic II – New Balance” z okładką – ✅
 3. **194** – ustawienie „Partial focus”: kroki w bok nie obracają bohatera do celu (bez krążenia wokół bossa) – ✅
 4. **193** – przywołańce przy bossie: wpis w logu, co widzą skrypty (`BIT_CAN_AT_BOSS`, liczba przywołańców, `ATR_INTELLECT`) – ✅ (golemy zgodnie ze skryptami)
 5. **192** – ataki specjalne Im'Arah: wachlarz ognistych pocisków, pioruny z falą, pociski jej czaru – ✅🧪 (wachlarz działa)
@@ -260,7 +260,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** to samo na liście obrażeń w czasie portu (`RX_ApplyDotDamage`, poprawka 106); w logu `[ctx] bleeding stopped: N`, gdy coś usunięto.
 - **Do sprawdzenia:** krwawienie bohatera (np. od przeciwnika z krwawieniem), wypicie esencji leczniczej – krwawienie (ubywanie życia) się kończy, w logu nie ma już `not implemented call [STOPPLAYERBLEEDING]`.
 
-### 195. Launcher: czwarta karta „Gothic II – New Balance” – 🧪 (23.11.2026)
+### 195. Launcher: czwarta karta „Gothic II – New Balance” – ✅ (23.11.2026)
 - **Pliki:** `android/java/org/opengothic/app/LauncherActivity.java`, nowy `android/launcher-assets/covers/newbalance.webp`
 - **Zgłoszenie:** w launcherze dodać czwartą kartę New Balance; tło z obrazka z logo NB, bez liczby 44.
 - **Poprawka:**
@@ -270,6 +270,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - okładka wyższa (640×1000), logo mniejsze i wyżej – na wąskiej karcie mieści się całe i nie wchodzi pod napis „Gothic II / New Balance”.
 - **Do sprawdzenia:** launcher – cztery karty w rzędzie; na karcie New Balance „Wybierz folder” → folder `Gothic II NB` → „Graj” uruchamia NB. Karta Gothic II zostaje dla zwykłej Noc Kruka (albo bez folderu).
 - **Test (23.11, zrzut):** karta jest i działa („Zainstalowane (GOTOWE)”, „Graj”); pierwsza okładka za szeroka – logo ucięte po bokach („Gothic I”), napis „New Balance” z logo pod tytułem karty. Okładka poprawiona.
+- **Test (23.11, drugi zrzut):** okładka poprawna – całe logo nad tytułem karty, karta zaznaczona jako ostatnio grana.
 
 ### 194. Ustawienie „Partial focus” – kroki w bok bez krążenia wokół celu – ✅ (23.11.2026)
 - **Pliki:** `common/game/playercontrol.cpp`, `common/game/playercontrol.h`, `common/utils/androidinput.cpp`, `common/utils/androidinput.h`, `common/ui/mobilecontrolsmodel.cpp`, `common/ui/mobilecontrolsmodel.h`
