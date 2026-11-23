@@ -173,6 +173,30 @@ DamageCalculator::Val DamageCalculator::swordDamage(Npc& nsrc, Npc& nother) {
       critChance = -1;
       }
 
+    // NB fix 186: the blow of a summoned creature of New Balance without a weapon (the stone golem of the necromancer):
+    // on the PC (Union) the strength is not in it - only the damage of the creature minus the protection, kind by kind.
+    // A kind that the protection stops gives 1, the whole blow at least 20. The screenshots from the PC: the golem
+    // (intelligence 292: blunt 297, fly 173) hits the archer of the builders (blunt 75, fly 50) for 345, the warrior
+    // crawler (blunt 675, fly 40) for 134, the ore eater (blunt 300, fly 300) for 20. With the strength of fix 155
+    // (751) OpenGothic gave about 1100-1300.
+    // Only the creatures that have their own damage (src.damage); the others hit by the strength as before
+    int ownDamage = 0;
+    for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i)
+      if((dtype & (1<<i))!=0)
+        ownDamage += std::max(src.damage[i],0);
+    if(tal==TALENT_UNKNOWN && ownDamage>0 && script.nbIsSummon(nsrc)) {
+      bool invincible = true;
+      for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i) {
+        if((dtype & (1<<i))==0 || other.protection[i]<0)
+          continue;   // not this kind, or immune
+        value += std::max(src.damage[i]-other.protection[i],1);
+        invincible = false;
+        }
+      if(!invincible)
+        value = std::max(value,20);
+      return Val(value,true,invincible);
+      }
+
     bool invincible = true;
     // NB fix 155: with several kinds of damage (the golems and the trolls: DAM_BLUNT|DAM_FLY, the magic weapons) Gothic 2
     // adds the strength once and shares the whole (strength + damage) among the kinds by their part of the damage.

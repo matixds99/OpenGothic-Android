@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **186**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **187**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **185** – życie, siła i ochrona potworów według poziomu trudności (`RX_AST_UpdateMonsterStats`); Nightmare: 150% życia, m.in. bossowie – 🧪
-2. **184** – paczka 7 brakujących funkcji: błogosławieństwa Isgarotha (`RX_AST_Blessing`), `RX_SelectSpell` – 🧪
-3. **183** – muzyka NB w lokacjach: motywy BassMusicController (mp3) z `BASSMUSICCONTROLLER_*.D`, m.in. dolina Adanosa – ✅🧪
-4. **182** – mod `nb-wisp` 1.3.2: ognik odesłany na czas przemiany bohatera, wraca po niej – ✅
-5. **181** – przemiany (krwiopijca od Nedtbeka i inne): stan przemiany z pluginu – HEROTRANS, czas zwoju, kolejna przemiana możliwa – ✅
+1. **186** – obrażenia przyzwanego kamiennego golema jak na PC: bez siły, obrażenia minus ochrona – 🧪
+2. **185** – życie, siła i ochrona potworów według poziomu trudności (`RX_AST_UpdateMonsterStats`); Nightmare: 150% życia, m.in. bossowie – 🧪
+3. **184** – paczka 7 brakujących funkcji: błogosławieństwa Isgarotha (`RX_AST_Blessing`), `RX_SelectSpell` – 🧪
+4. **183** – muzyka NB w lokacjach: motywy BassMusicController (mp3) z `BASSMUSICCONTROLLER_*.D`, m.in. dolina Adanosa – ✅🧪
+5. **182** – mod `nb-wisp` 1.3.2: ognik odesłany na czas przemiany bohatera, wraca po niej – ✅
 
 ---
 
@@ -251,6 +251,22 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 186. Obrażenia przyzwanego kamiennego golema (bez siły) – 🧪 (23.11.2026)
+- **Plik:** `common/game/damagecalculator.cpp`
+- **Zgłoszenie:** porównanie ze zrzutami z PC (Winlator, Union): golem zadaje w porcie kilka razy więcej.
+- **Skrypty NB (`Summoned_Golem`, `RX_SetGolemStats`):** siła 240 + 1,75×inteligencja, obrażenia obuchowe 200 + int/3, odrzutu 100 + int/4 (`DAM_BLUNT|DAM_FLY`), życie 4000 + 3×int.
+- **Porównanie (PC, golem 4876 życia → inteligencja 292: obuchowe 297, odrzutu 173; ochrona celów po 150% z Nightmare, odrzut bez zmian):**
+
+  | Cel | Ochrona obuch. / odrzut | PC | Port przed |
+  |---|---|---|---|
+  | Strzelec budowniczych | 75 / 50 | 345 | ok. 1285 (int 363) |
+  | Pustynny pełzacz wojownik | 675 / 40 | 134 | ok. 895 |
+  | Pożeracz rudy | 300 / 300 | 20 | – |
+
+- **Przyczyna:** na PC w ciosie przyzwańca nie ma siły – tylko jego obrażenia minus ochrona, osobno dla każdego rodzaju: 345 = (297−75) + (173−50). Port (poprawka 155) dodawał siłę (751–875) dzieloną między rodzaje.
+- **Poprawka:** cios przyzwanego stworzenia bez broni, które ma własne obrażenia (`damage`): suma po rodzajach (obrażenia − ochrona); rodzaj zatrzymany przez ochronę daje 1, cały cios co najmniej 20 (pełzacz 1 + 133 = 134, pożeracz rudy 20). Odporność (ochrona −1) jak dotąd. Przyzwańce bez własnych obrażeń i inne postacie – bez zmian (siła, poprawka 155).
+- **Do sprawdzenia:** golem na pustyni Adanosa – liczby nad celami zbliżone do PC (przy innej inteligencji inne: obuchowe 200 + int/3, odrzutu 100 + int/4). Inne przyzwańce (szkielety, demony) jak dotąd.
 
 ### 185. Życie, siła i ochrona potworów według poziomu trudności (Nightmare) – 🧪 (23.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`

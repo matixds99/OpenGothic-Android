@@ -48,7 +48,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/graphics/mdlvisual.cpp` (+ `.h`), `meshobjects.cpp` (+ `.h`), `visualobjects.cpp` (+ `.h`) | ukrywanie całej postaci (ciało, głowa, zbroja, broń) poza zasięgiem rysowania; efekty przedmiotów na broniach (`setItemFx`), cząsteczki Gallahada (`NB_VIS_*`); nakładka po nazwie (`hasOverlay`) | 146, 150, 151, 172 |
 | `common/graphics/effect.cpp` (+ `.h`), `common/graphics/pfx/pfxbucket.cpp`, `common/world/objects/pfxemitter.cpp`, `common/world/objects/item.cpp` (+ `.h`), `common/game/inventory.cpp` | efekty przedmiotów (`C_Item.effect`) na broniach i w świecie | 150, 179 |
 | `common/world/triggers/movetrigger.cpp` (+ `.h`) | windy z cząsteczkami jako wyglądem (czerwony dym `EVT_SMOKE_*`) | 153 |
-| `common/game/damagecalculator.cpp` | siła liczona raz przy kilku rodzajach obrażeń (golemy, trolle) | 155 |
+| `common/game/damagecalculator.cpp` | siła liczona raz przy kilku rodzajach obrażeń (golemy, trolle); cios przyzwańca z własnymi obrażeniami bez siły, jak na PC | 155, 186 |
 | `mods/nb-wisp/index.js` | ognik nie jest usuwany i przywoływany przy 40 m (tylko przy 100 m); odesłany na czas przemiany bohatera | 117–120, 154, 182 |
 | `common/graphics/drawcommands.cpp`, `shader/materials/visibility_pass.comp` | zasięg rysowania postaci w przebiegu widoczności (109), od 146 wyłączony – zasięg liczy `World::nbNpcRangeTick` | 109, 146 |
 | `common/physics/physicmeshshape.cpp` | siatka kolizji obiektu także z samymi materiałami `NB_MAT_*` | 141 |
