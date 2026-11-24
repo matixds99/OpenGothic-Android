@@ -759,19 +759,28 @@ void SaveSymbols::scriptsReport(zenkit::DaedalusVm& vm) {
   const char*    last  = "nb_symbols_last.txt";
   const char*    lastH = "nb_symbols_last.hash";
 
-  // the unbound functions of the plugin and of the engine (RX_* are listed by the log of the externals of NB)
+  // the unbound functions of the plugin and of the engine that the scripts call (RX_* are listed by the log of the
+  // externals of NB); NB fix 213: only the called ones - most of the rest are the unused functions of Gothic 1
   {
+    std::vector<bool> called(dat.size(),false);
+    for(uint32_t a=0, end=vm.size(); a<end;) {
+      const auto in = vm.instruction_at(a);
+      if(in.op==zenkit::DaedalusOpcode::BE && in.symbol<called.size())
+        called[in.symbol] = true;
+      a += std::max<uint32_t>(in.size,1);
+      }
     std::string list;
     size_t      n = 0;
     for(auto& s:dat) {
-      if(!s.is_external() || vm.has_external(&s) || s.name().rfind("RX_",0)==0)
+      if(!s.is_external() || vm.has_external(&s) || s.name().rfind("RX_",0)==0 || !called[s.index()])
         continue;
       if(n<60)
         list += s.name()+" ";
       ++n;
       }
     if(n>0)
-      Log::i("[scripts] functions of the engine or of the plugin that the port does not have: ",n,": ",list,n>60 ? "..." : "");
+      Log::i("[scripts] functions of the engine or of the plugin that the scripts call and the port does not have: ",n,": ",list,
+             n>60 ? "..." : "");
   }
 
   uint64_t lastHash = 0;

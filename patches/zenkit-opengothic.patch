@@ -1,5 +1,5 @@
 diff --git a/include/zenkit/DaedalusVm.hh b/include/zenkit/DaedalusVm.hh
-index 17a81ee..001cd32 100644
+index 17a81ee..6aa38f8 100644
 --- a/include/zenkit/DaedalusVm.hh
 +++ b/include/zenkit/DaedalusVm.hh
 @@ -331,6 +331,11 @@ namespace zenkit {
@@ -25,11 +25,12 @@ index 17a81ee..001cd32 100644
  		ZKAPI void unsafe_jump(uint32_t address);
  		ZKAPI std::shared_ptr<DaedalusInstance> unsafe_get_gi();
  		ZKAPI void unsafe_set_gi(std::shared_ptr<DaedalusInstance> i);
-@@ -1000,6 +1009,7 @@ namespace zenkit {
+@@ -1000,6 +1009,8 @@ namespace zenkit {
  		std::array<DaedalusStackFrame, stack_size> _m_stack;
  		uint16_t _m_stack_ptr {0};
  
 +		[[nodiscard]] std::string call_chain() const;
++		DaedalusSymbol* _m_instance_sym {nullptr};
  		std::vector<DaedalusCallStackFrame> _m_call_stack;
  		std::unordered_map<DaedalusSymbol*, std::function<void(DaedalusVm&)>> _m_externals;
  		std::unordered_map<uint32_t, std::function<void(DaedalusVm&)>> _m_function_overrides;
@@ -168,10 +169,10 @@ index 8797a87..d8c6786 100644
  			syn = std::make_shared<AiMove>();
  			break;
 diff --git a/src/DaedalusVm.cc b/src/DaedalusVm.cc
-index 0b4420e..793f41b 100644
+index 0b4420e..0a71da5 100644
 --- a/src/DaedalusVm.cc
 +++ b/src/DaedalusVm.cc
-@@ -86,6 +86,18 @@ namespace zenkit {
+@@ -86,6 +86,23 @@ namespace zenkit {
  		_m_item_sym = find_symbol_by_name("ITEM");
  	}
  
@@ -184,13 +185,18 @@ index 0b4420e..793f41b 100644
 +			if (n > 0) ret += " <- ";
 +			ret += it->function != nullptr ? it->function->name() : std::string("?");
 +		}
++		// OpenGothic NB fix 213: the symbol whose instance is missing (a character that is not in this world: "xyz.aivar")
++		if (_m_instance == nullptr && _m_instance_sym != nullptr && _m_instance_sym->get_instance() == nullptr) {
++			ret += "; no instance in ";
++			ret += _m_instance_sym->name();
++		}
 +		return ret;
 +	}
 +
  	std::shared_ptr<DaedalusInstance> DaedalusVm::init_opaque_instance(DaedalusSymbol* sym) {
  		auto cls = sym;
  		while (cls != nullptr && cls->type() != DaedalusDataType::CLASS) {
-@@ -118,6 +130,46 @@ namespace zenkit {
+@@ -118,6 +135,46 @@ namespace zenkit {
  		this->jump(address);
  	}
  
@@ -237,7 +243,7 @@ index 0b4420e..793f41b 100644
  	std::shared_ptr<DaedalusInstance> DaedalusVm::unsafe_get_gi() {
  		return _m_instance;
  	}
-@@ -330,7 +382,7 @@ namespace zenkit {
+@@ -330,7 +387,7 @@ namespace zenkit {
  					auto result = ref->get_int(idx, context.get()) + value;
  					ref->set_int(result, idx, context.get());
  				} else if (ref->is_member()) {
@@ -246,7 +252,7 @@ index 0b4420e..793f41b 100644
  				}
  
  				break;
-@@ -348,7 +400,7 @@ namespace zenkit {
+@@ -348,7 +405,7 @@ namespace zenkit {
  					auto result = ref->get_int(idx, context.get()) - value;
  					ref->set_int(result, idx, context.get());
  				} else if (ref->is_member()) {
@@ -255,7 +261,7 @@ index 0b4420e..793f41b 100644
  				}
  				break;
  			}
-@@ -365,7 +417,7 @@ namespace zenkit {
+@@ -365,7 +422,7 @@ namespace zenkit {
  					auto result = ref->get_int(idx, context.get()) * value;
  					ref->set_int(result, idx, context.get());
  				} else if (ref->is_member()) {
@@ -264,7 +270,7 @@ index 0b4420e..793f41b 100644
  				}
  
  				break;
-@@ -387,7 +439,7 @@ namespace zenkit {
+@@ -387,7 +444,7 @@ namespace zenkit {
  					auto result = ref->get_int(idx, context.get()) / value;
  					ref->set_int(result, idx, context.get());
  				} else if (ref->is_member()) {
@@ -273,7 +279,15 @@ index 0b4420e..793f41b 100644
  				}
  
  				break;
-@@ -548,8 +600,9 @@ namespace zenkit {
+@@ -412,6 +469,7 @@ namespace zenkit {
+ 					throw DaedalusVmException {"gmovi: no symbol found for index"};
+ 				}
+ 				_m_instance = sym->get_instance();
++				_m_instance_sym = sym; // OpenGothic NB fix 213: for the message of a missing instance
+ 				break;
+ 			}
+ 			case DaedalusOpcode::PUSHVV:
+@@ -548,8 +606,9 @@ namespace zenkit {
  		// Move function arguments further back, since we're currently at the call instruction and the
  		// arguments for the next call have already been pushed.
  		_m_stack_ptr -= params.size();
@@ -285,7 +299,7 @@ index 0b4420e..793f41b 100644
  		}
  
  		for (auto& l : locals) {
-@@ -699,6 +752,13 @@ namespace zenkit {
+@@ -699,6 +758,13 @@ namespace zenkit {
  			return std::get<int32_t>(v.value);
  		}
  
@@ -299,7 +313,7 @@ index 0b4420e..793f41b 100644
  		throw DaedalusVmException {"tried to pop_int but frame does not contain a int."};
  	}
  
-@@ -787,7 +847,7 @@ namespace zenkit {
+@@ -787,7 +853,7 @@ namespace zenkit {
  				throw DaedalusNoContextError {s};
  			}
  
@@ -308,7 +322,7 @@ index 0b4420e..793f41b 100644
  			return empty;
  		}
  
-@@ -1070,7 +1130,7 @@ namespace zenkit {
+@@ -1070,7 +1136,7 @@ namespace zenkit {
  				throw DaedalusNoContextError {sym};
  			}
  
@@ -317,7 +331,7 @@ index 0b4420e..793f41b 100644
  			return 0;
  		}
  
-@@ -1090,7 +1150,7 @@ namespace zenkit {
+@@ -1090,7 +1156,7 @@ namespace zenkit {
  				throw DaedalusNoContextError {sym};
  			}
  
@@ -326,7 +340,7 @@ index 0b4420e..793f41b 100644
  			return 0;
  		}
  
-@@ -1109,7 +1169,7 @@ namespace zenkit {
+@@ -1109,7 +1175,7 @@ namespace zenkit {
  		    !(_m_flags & DaedalusVmExecutionFlag::ALLOW_NULL_INSTANCE_ACCESS)) {
  			ref->set_int(value, index, context.get());
  		} else if (ref->is_member()) {
@@ -335,7 +349,7 @@ index 0b4420e..793f41b 100644
  		}
  	}
  
-@@ -1125,7 +1185,7 @@ namespace zenkit {
+@@ -1125,7 +1191,7 @@ namespace zenkit {
  		    !(_m_flags & DaedalusVmExecutionFlag::ALLOW_NULL_INSTANCE_ACCESS)) {
  			ref->set_float(value, index, context.get());
  		} else if (ref->is_member()) {
@@ -344,7 +358,7 @@ index 0b4420e..793f41b 100644
  		}
  	}
  
-@@ -1141,7 +1201,7 @@ namespace zenkit {
+@@ -1141,7 +1207,7 @@ namespace zenkit {
  		    !(_m_flags & DaedalusVmExecutionFlag::ALLOW_NULL_INSTANCE_ACCESS)) {
  			ref->set_string(value, index, context.get());
  		} else if (ref->is_member()) {

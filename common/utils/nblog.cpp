@@ -181,6 +181,13 @@ void NbLog::observe(bool error, const char* text) {
       add(KData,clip(m,60));
       return;
       }
+    // NB fix 213: the scripts read a character that is not in this world ("BDT_1071_Addon_Ramon.aivar" in
+    // C_PlayerIsFakeBandit outside of the addon world): 0, as on the PC - not an error of the port
+    if(const auto at = m.find("; no instance in "); at!=std::string_view::npos && m.find("without an instance set")!=std::string_view::npos) {
+      const auto who = m.substr(at+17);
+      if(who.find('.')==std::string_view::npos)
+        return;
+      }
     add(KScript,clip(m,140));
     return;
     }
@@ -210,7 +217,8 @@ bool NbLog::filter(const char* text) {
   // NB fix 211: the lines of every far character, of every camera and of every parsed chunk (two thirds of the log at the
   // normal level) - only in the full log
   if(lv<=Normal && (s.find("is far from the player, it does not walk to the way point")!=std::string_view::npos ||
-                    startsWith(s,"CsCamera: ") || startsWith(s,"[zenkit] Parsing ")))
+                    startsWith(s,"CsCamera: ") || startsWith(s,"[zenkit] Parsing ") ||
+                    (startsWith(s,"random animation ") && s.find("is not played")!=std::string_view::npos)))
     keep = false;
   else if(lv<=Quiet) {
     if(startsWith(s,"NB ai: ") && s.find(" STUCK 5 s")==std::string_view::npos)

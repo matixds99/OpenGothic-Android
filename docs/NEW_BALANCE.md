@@ -23,7 +23,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | 🆕 `common/utils/drmp3.cpp` | do folderu `common/utils/` | `gamemusic.cpp` (dekoder mp3 muzyki NB) | 183 |
 | 🆕 `lib/dr_libs/dr_mp3.h` (+ `LICENSE`) | do folderu `lib/dr_libs/` (dr_mp3 0.7.5, domena publiczna / MIT-0) | `utils/drmp3.cpp`, `gamemusic.cpp` | 183 |
 | 🆕 `android/launcher-assets/covers/newbalance.webp` | do folderu `android/launcher-assets/covers/`, obok `gothic2.webp` | `LauncherActivity.java` (okładka karty New Balance) | 195 |
-| 🆕 `common/utils/nblog.cpp` (+ `.h`) | do folderu `common/utils/` | `main.cpp`, `mainwindow.cpp`, `crashlog.cpp`, `npc.cpp`, `damagecalculator.cpp`, `androidinput.cpp` (znacznik, podsumowanie problemów, poziom logu) | 199–203, 204, 211 |
+| 🆕 `common/utils/nblog.cpp` (+ `.h`) | do folderu `common/utils/` | `main.cpp`, `mainwindow.cpp`, `crashlog.cpp`, `npc.cpp`, `damagecalculator.cpp`, `androidinput.cpp` (znacznik, podsumowanie problemów, poziom logu) | 199–203, 204, 211, 213 |
 
 > `lib/dr_libs` jest dopisany w `CMakeLists.txt` (poprawka 183) – plik `CMakeLists.txt` też trzeba podmienić.
 >
@@ -96,7 +96,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/game/playercontrol.cpp` | „lepki” focus przeciwnika w walce wręcz (bohater sam się do niego obraca) | 18 |
 | `common/ui/gamemenu.h` | nowe funkcje ekranu statystyk i zakładek dziennika | 8, 10, 15 |
 | `patches/tempest-opengothic.patch` (+ `patches/README.md`) | Tempest: gra nie zamyka się, gdy idzie w tło (wiadomość, ekran główny) – nowa powierzchnia Vulkana po powrocie, swapchain niszczony przy wyjściu w tło | 73, 74 |
-| `patches/zenkit-opengothic.patch` (`lib/ZenKit/src/DaedalusVm.cc`, `include/zenkit/DaedalusVm.hh`) | błędy skryptów „Accessing member … without an instance set” z łańcuchem wywołań („F <- G <- H”) | 210, 212 |
+| `patches/zenkit-opengothic.patch` (`lib/ZenKit/src/DaedalusVm.cc`, `include/zenkit/DaedalusVm.hh`) | błędy skryptów „Accessing member … without an instance set” z łańcuchem wywołań („F <- G <- H”) | 210, 212, 213 |
 | `common/ui/dialogmenu.cpp` / `.h` | odpowiedzi w dialogach na pergaminie jak na PC (dotyk, przewijanie); menu bohatera bez kamery dialogu | 72 |
 | `common/ui/inventorymenu.cpp` | okienko opisu przedmiotu (dotyk): wiersze nie nachodzą na nazwę i nie wychodzą poza okienko; w NB nagłówek „Złoto: N”; nowy wygląd ekwipunku: ramki, siatka 9 kolumn, kategorie w rzędzie, karta przedmiotu na pergaminie z przyciskami; tekstury Hedin's Advanced Inventory z `Hedin_Union_Adv_Inventory.vdf` w `Data`, gdy jest; znacznik „NOWY”: nieprzeczytane dokumenty (w zapisie, znika po przeczytaniu) i inne nowe przedmioty (bez zapisu, znika po wybraniu); mniejsze napisy karty, zdobyte bonusy po użyciu, polskie nazwy zakładek | 12, 69, 99, 104, 121, 122, 123, 156, 167, 169, 170, 206 |
 | 🆕 `common/ui/nbsalesmenu.cpp` | okno sprzedaży NB (jak okno pluginu, dotykowe) | 68, 69 |
@@ -108,7 +108,7 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/graphics/mesh/animationsolver.cpp` (+ `.h`) | nakładki zdejmowane i sprawdzane po nazwie (bez wczytywania, bez wielkości liter), wszystkie o tej nazwie | 172, 173 |
 | `common/resources.cpp` | pamięć modeli i animacji po nazwie wielkimi literami (jeden plik wczytany raz) | 172 |
 | `android/java/org/opengothic/app/SaveExport.java`, `SaveImport.java` | okno zapisów Spine (borsuczyna): zapisy także z folderu gry wybranego w launcherze (`GameRoots.linked`) i wgrywanie do niego | 180 |
-| 🆕 `common/game/savesymbols.cpp` (+ `.h`) | zapisy po aktualizacji skryptów NB: wpis `game/symtab` (nazwy funkcji i instancji skryptów zapisu), mapa starych numerów symboli na nowe (z nazw, ze zmiennych starego zapisu, z pliku `old_symbols*.txt`, z miejsca między znanymi) | 209, 211, 212 |
+| 🆕 `common/game/savesymbols.cpp` (+ `.h`) | zapisy po aktualizacji skryptów NB: wpis `game/symtab` (nazwy funkcji i instancji skryptów zapisu), mapa starych numerów symboli na nowe (z nazw, ze zmiennych starego zapisu, z pliku `old_symbols*.txt`, z miejsca między znanymi) | 209, 211, 212, 213 |
 | `common/game/serialize.cpp` (+ `.h`) | mapa symboli zapisu (`mapSymbol`): instancje postaci, funkcje stanów (`ScriptFn`), rutyna i stan startowy postaci | 209, 212 |
 | `common/world/objects/item.cpp`, `common/world/aiqueue.cpp`, `common/game/worldstatestorage.cpp` (+ `.h`) | mapa symboli zapisu: przedmioty i ich funkcje, przedmioty w kolejce AI, odwiedzone światy | 209, 211 |
 

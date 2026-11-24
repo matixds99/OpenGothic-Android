@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **213**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **214**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **212** – aktualizacje skryptów NB: raport przy starcie (co usunięte, nowe funkcje pluginu), nazwy starych skryptów zachowywane same, postacie rozpoznawane po id i imieniu – 🧪
-2. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – 🧪
-3. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – 🧪
-4. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
-5. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
+1. **213** – `C_PlayerIsFakeBandit`: Ramon spoza świata dodatku to nie błąd portu; raport tylko wywoływanych brakujących funkcji – 🧪
+2. **212** – aktualizacje skryptów NB: raport przy starcie (co usunięte, nowe funkcje pluginu), nazwy starych skryptów zachowywane same, postacie rozpoznawane po id i imieniu – 🧪
+3. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – ✅
+4. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – ✅
+5. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
 
 ---
 
@@ -252,6 +252,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 213. `C_PlayerIsFakeBandit` – postać spoza świata; raport brakujących funkcji, które skrypty wołają – 🧪 (24.11.2026)
+- **Pliki:** `lib/ZenKit/src/DaedalusVm.cc`, `lib/ZenKit/include/zenkit/DaedalusVm.hh` (`patches/zenkit-opengothic.patch`), `common/utils/nblog.cpp`, `common/game/savesymbols.cpp`
+- **Zgłoszenie (log):** `Accessing member "C_NPC.AIVAR" without an instance set (in C_PLAYERISFAKEBANDIT <- B_ASSESSPLAYER)` – ponad 100 razy w zamku; raport `[scripts]` wymienił 147 funkcji, których port nie ma; około 60 linii `random animation … of S_EAT is not played`.
+- **Skrypty NB:** `C_PlayerIsFakeBandit` sprawdza `… && CurrentLevel == ADDONWORLD_ZEN && (Player_HasTalkedToBanditCamp == TRUE || BDT_1071_Addon_Ramon.aivar[14] == TRUE)` – Daedalus liczy całe wyrażenie, więc poza światem dodatku czyta Ramona, którego tam nie ma (jak w oryginalnym G2). Wynik 0 – na PC tak samo. To nie błąd portu.
+- **Poprawka:**
+  - komunikat brakującej instancji podaje symbol: `…; no instance in BDT_1071_ADDON_RAMON` (ZenKit: symbol ostatniego `GMOVI`);
+  - taki komunikat dla postaci (nie parametru funkcji) nie jest liczony w podsumowaniu jako błąd skryptów;
+  - raport `[scripts]`: tylko funkcje, które skrypty naprawdę wywołują (reszta to nieużywane funkcje Gothic 1). Na tych skryptach 40, z tego nowe w aktualizacji: `Patrol_SetPath` (61 wywołań), `Patrol_Set` (24), `Patrol_NextWP`, `Npc_SetEffect`, `Karma_FanaticPickWeapon`, `Karma_GetItemMunition`; starsze: `UpdateKarma` (130), `Wld_ChangePortal` (44), `Itm_SetFlagActive` (41), `AI_PlayEffect` (17), `StartChangeWorldTime`, `Npc_IsDoingRoutine`, `OpenPocket`, `Mob_SetLockedByName`, `Wld_Open/CloseMoverIf…`, `AST_FreezeNpc`, `Npc_GetScroll`, `Wld_SetCondFunc` i inne;
+  - `random animation … is not played` tylko w pełnym logu.
+- **Do sprawdzenia:** w podsumowaniu nie ma `C_PLAYERISFAKEBANDIT`; w logu `[scripts] functions … that the scripts call and the port does not have: 40: …`.
+
 ### 212. Aktualizacje skryptów NB bez konfliktów: raport przy starcie, nazwy starych skryptów, postacie po id i imieniu – 🧪 (24.11.2026)
 - **Pliki:** `common/game/savesymbols.cpp`, `common/game/savesymbols.h`, `common/game/serialize.cpp`, `common/game/gamescript.cpp`, `lib/ZenKit/include/zenkit/DaedalusVm.hh` (`patches/zenkit-opengothic.patch`)
 - **Zgłoszenie:** po aktualizacji skryptów NB było zamieszanie (zapisy, przedmioty, nowe funkcje pluginu) – aktualizacje mają przechodzić bez problemów.
@@ -264,7 +275,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Czego nie da się przenieść (na PC tak samo):** liczby w zmiennych skryptów, które trzymają numer instancji (`Hlp_GetInstanceID` zapisane w zwykłej zmiennej), oraz to, co aktualizacja usunęła ze skryptów. Nowe funkcje pluginu trzeba dopisać do portu – raport je wymienia.
 - **Do sprawdzenia:** pierwszy start – w logu lista funkcji, których port nie ma; obok zapisów pojawia się `nb_symbols_last.txt`. Przy następnej aktualizacji skryptów – raport `[scripts] …` i `old_symbols_<odcisk>.txt`.
 
-### 211. Przedmioty odwiedzonych światów ze starych zapisów, krótszy log – 🧪 (24.11.2026)
+### 211. Przedmioty odwiedzonych światów ze starych zapisów, krótszy log – ✅ (24.11.2026)
 - **Pliki:** `common/game/savesymbols.cpp`, `common/game/savesymbols.h`, `common/world/objects/item.cpp`, `common/game/inventory.cpp`, `common/world/worldobjects.cpp`, `common/utils/nblog.cpp`, `common/mainwindow.cpp`
 - **Zgłoszenie (log):** po teleporcie do Khorinis `Loading unknown item from save` i przedmioty usunięte z ekwipunku: list u Xardasa i Gallahada, tarcze Cedrika i Jarvisa, stare zapiski Ahirona, zbroja upadłego paladyna. Do tego `[hero-ai] the hero moves by himself (333 m/s)` po teleporcie i 1394 linie `is far from the player, it does not walk to the way point` (dwie trzecie logu).
 - **Przyczyna:**
@@ -279,8 +290,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Uwaga:** zapis zrobiony na końcu tej gry ma już Khorinis bez tych 6 przedmiotów. Wczytany na początku zapis (sprzed teleportu) ma Khorinis z mapą starych numerów, więc z tą poprawką przedmioty wrócą.
 - **Awaria w pierwszej wersji (24.11.2026):** wygląd przedmiotów był liczony uruchamianiem kodu wszystkich instancji przedmiotów podczas wczytywania świata – po teleporcie `SIGSEGV` w `DaedalusVm::push_reference` (`init_instance` ← `itemByLook` ← `Inventory::implLoad`). Teraz kod jest tylko czytany.
 - **Do sprawdzenia:** wczytać zapis sprzed teleportu do Khorinis i przenieść się tam: w logu `… is the item FAKESCROLL …` itd., bez `dropped`.
+- **Test (24.11.2026):** po teleporcie do Khorinis wszystkie 6 przedmiotów rozpoznane (`[save] 'List' (Fakescroll.3ds) … is the item FAKESCROLL …`), tabela wyglądu 3596 przedmiotów w 11 ms, bez awarii.
 
-### 210. Aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`, łańcuch wywołań w błędach skryptów – 🧪 (24.11.2026)
+### 210. Aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`, łańcuch wywołań w błędach skryptów – ✅ (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `lib/ZenKit/src/DaedalusVm.cc`, `lib/ZenKit/include/zenkit/DaedalusVm.hh` (`patches/zenkit-opengothic.patch`)
 - **Zgłoszenie:** nowe skrypty NB (gałąź `NewBalance`, `nb-scripts/`) – sprawdzić log: `not implemented call [HLP_GETINTARRAYVALUE] from C_HEROHASSPIRITS ("karma_spirit_count", 0)` (28 razy na minutę), `Accessing member "C_NPC.AIVAR" without an instance set (in C_PLAYERISFAKEBANDIT)`.
 - **Plugin (UNION_ABI.DLL z aktualizacji):** `Hlp_GetIntArrayValue(nazwa, indeks)` (`0x101e7540`) – element zmiennej skryptów o tej nazwie (`zCParser::GetSymbol`), bez takiej zmiennej -1; `Hlp_SetIntArrayValue(nazwa, indeks, wartość)` (`0x101e7500`) – zapis elementu. Skrypty pytają o `karma_spirit_count`, `karma_l5_stamina`, `karma_l5_stamina_acc` (duchy i wytrzymałość karmy, `C_HeroHasSpirits`, `RX_RestoreStamina`, `RX_LearnPoisonResist`) – tych zmiennych nie ma w tej wersji skryptów, więc na PC też jest -1 (bez duchów, bez wytrzymałości L5).
@@ -289,6 +301,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - błąd „Accessing member … without an instance set” pokazuje łańcuch wywołań (do 5 funkcji: `C_PLAYERISFAKEBANDIT <- B_ASSESSPLAYER <- …`) – funkcja ma ten sam kod co przed aktualizacją, a w każdym miejscu skryptów dostaje `self`; następny log pokaże, kto ją woła bez postaci.
 - **Nowe funkcje pluginu w tej wersji, jeszcze nie w porcie:** patrole (`Patrol_Set` w 24 rutynach `Rtn_PatrolNW*`, `Patrol_SetPath` w 61 rutynach `Rtn_NW*_100300`, `Patrol_NextWP` w `ZS_Patrol_Walk_Loop`), `Npc_SetEffect` (oczy szkieletów, `RX_UpdateSkeletonEyes`), `Karma_FanaticPickWeapon` i `Karma_GetItemMunition` (`B_SetNpcSettings`), 11 innych `Karma_*` (bez wywołań w skryptach). Log pokaże je jako `not implemented call`.
 - **Do sprawdzenia:** brak `HLP_GETINTARRAYVALUE` w podsumowaniu; przy `C_PLAYERISFAKEBANDIT` w logu łańcuch funkcji.
+- **Test (24.11.2026):** `HLP_GETINTARRAYVALUE` nie ma w podsumowaniu; błąd pokazał łańcuch `C_PLAYERISFAKEBANDIT <- B_ASSESSPLAYER` (przyczyna – poprawka 213).
 
 ### 209. Zapisy po aktualizacji skryptów NB („Cannot init USE_RAWMEAT_MOUNT: not an instance”) – ✅🧪 (24.11.2026)
 - **Pliki:** 🆕 `common/game/savesymbols.cpp`, 🆕 `common/game/savesymbols.h`, `common/game/serialize.cpp`, `common/game/serialize.h`, `common/game/gamesession.cpp`, `common/game/gamescript.cpp`, `common/game/inventory.cpp`, `common/game/worldstatestorage.cpp`, `common/game/worldstatestorage.h`, `common/world/objects/item.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/aiqueue.cpp`, `common/world/worldobjects.cpp`
