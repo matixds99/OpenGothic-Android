@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **210**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **211**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
-2. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
-3. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – ✅
-4. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
-5. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – ✅
+1. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – 🧪
+2. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
+3. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
+4. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – ✅
+5. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
 
 ---
 
@@ -251,6 +251,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 210. Aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`, łańcuch wywołań w błędach skryptów – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `lib/ZenKit/src/DaedalusVm.cc`, `lib/ZenKit/include/zenkit/DaedalusVm.hh` (`patches/zenkit-opengothic.patch`)
+- **Zgłoszenie:** nowe skrypty NB (gałąź `NewBalance`, `nb-scripts/`) – sprawdzić log: `not implemented call [HLP_GETINTARRAYVALUE] from C_HEROHASSPIRITS ("karma_spirit_count", 0)` (28 razy na minutę), `Accessing member "C_NPC.AIVAR" without an instance set (in C_PLAYERISFAKEBANDIT)`.
+- **Plugin (UNION_ABI.DLL z aktualizacji):** `Hlp_GetIntArrayValue(nazwa, indeks)` (`0x101e7540`) – element zmiennej skryptów o tej nazwie (`zCParser::GetSymbol`), bez takiej zmiennej -1; `Hlp_SetIntArrayValue(nazwa, indeks, wartość)` (`0x101e7500`) – zapis elementu. Skrypty pytają o `karma_spirit_count`, `karma_l5_stamina`, `karma_l5_stamina_acc` (duchy i wytrzymałość karmy, `C_HeroHasSpirits`, `RX_RestoreStamina`, `RX_LearnPoisonResist`) – tych zmiennych nie ma w tej wersji skryptów, więc na PC też jest -1 (bez duchów, bez wytrzymałości L5).
+- **Poprawka:**
+  - obie funkcje jak w pluginie;
+  - błąd „Accessing member … without an instance set” pokazuje łańcuch wywołań (do 5 funkcji: `C_PLAYERISFAKEBANDIT <- B_ASSESSPLAYER <- …`) – funkcja ma ten sam kod co przed aktualizacją, a w każdym miejscu skryptów dostaje `self`; następny log pokaże, kto ją woła bez postaci.
+- **Nowe funkcje pluginu w tej wersji, jeszcze nie w porcie:** patrole (`Patrol_Set` w 24 rutynach `Rtn_PatrolNW*`, `Patrol_SetPath` w 61 rutynach `Rtn_NW*_100300`, `Patrol_NextWP` w `ZS_Patrol_Walk_Loop`), `Npc_SetEffect` (oczy szkieletów, `RX_UpdateSkeletonEyes`), `Karma_FanaticPickWeapon` i `Karma_GetItemMunition` (`B_SetNpcSettings`), 11 innych `Karma_*` (bez wywołań w skryptach). Log pokaże je jako `not implemented call`.
+- **Do sprawdzenia:** brak `HLP_GETINTARRAYVALUE` w podsumowaniu; przy `C_PLAYERISFAKEBANDIT` w logu łańcuch funkcji.
 
 ### 209. Zapisy po aktualizacji skryptów NB („Cannot init USE_RAWMEAT_MOUNT: not an instance”) – ✅🧪 (24.11.2026)
 - **Pliki:** 🆕 `common/game/savesymbols.cpp`, 🆕 `common/game/savesymbols.h`, `common/game/serialize.cpp`, `common/game/serialize.h`, `common/game/gamesession.cpp`, `common/game/gamescript.cpp`, `common/game/inventory.cpp`, `common/game/worldstatestorage.cpp`, `common/game/worldstatestorage.h`, `common/world/objects/item.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/aiqueue.cpp`, `common/world/worldobjects.cpp`

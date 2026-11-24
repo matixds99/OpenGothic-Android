@@ -2253,6 +2253,23 @@ void GameScript::initCommon() {
           return 0;
       return 1;
       });
+    // NB fix 210: Hlp_GetIntArrayValue(name, index) / Hlp_SetIntArrayValue(name, index, value) of the plugin (0x101e7540):
+    // an element of the int variable of the scripts with that name; a name that the scripts do not have gives -1 (the stamina
+    // and the spirits of the karma, "karma_spirit_count": not in the scripts of this version of NB - -1 on the PC too)
+    bindNb("HLP_GETINTARRAYVALUE", [this](std::string_view name, int32_t index) -> int32_t {
+      auto* s = vm.find_symbol_by_name(name);
+      if(s==nullptr)
+        return -1;
+      if(s->type()!=zenkit::DaedalusDataType::INT || index<0 || uint32_t(index)>=s->count())
+        return 0;
+      return s->get_int(uint16_t(index));
+      });
+    bindNb("HLP_SETINTARRAYVALUE", [this](std::string_view name, int32_t index, int32_t value) {
+      auto* s = vm.find_symbol_by_name(name);
+      if(s==nullptr || s->type()!=zenkit::DaedalusDataType::INT || s->is_const() || index<0 || uint32_t(index)>=s->count())
+        return;
+      s->set_int(value,uint16_t(index));
+      });
     // the music of the plugin (bosses, scenes): off / on / switched, the setting of the player stays as it is
     // NB fix 116: RX_MusicOff mutes the music of the game until RX_MusicOn (on the PC it writes musicEnabled into Gothic.ini).
     // Not by setEnabled: every option written by the scripts (Menu_WriteInt of bCanSaveGame when a fight starts) loaded
