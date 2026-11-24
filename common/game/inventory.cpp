@@ -155,6 +155,11 @@ void Inventory::implLoad(Npc* owner, World& world, Serialize &s) {
     helmet = armor;
     armor  = nullptr;
     }
+  // NB fix 207: the trophy is not a slot of the save either - the equipped item with ITEM_TROPHY
+  trophy = nullptr;
+  for(auto& i:items)
+    if(i->isEquipped() && (ItmFlags(i->handle().flags) & ITM_TROPHY)!=0 && trophy==nullptr)
+      trophy = i.get();
   for(auto& i:items) {
     if(!i->isEquipped() || (ItmFlags(i->handle().main_flag) & ITM_CAT_ARMOR)==0)
       continue;
@@ -412,6 +417,10 @@ void Inventory::unequip(Item *it, Npc &owner) {
     }
   if(ringR==it) {
     setSlot(ringR,nullptr,owner,false);
+    return;
+    }
+  if(trophy==it) {
+    setSlot(trophy,nullptr,owner,false);   // NB fix 207
     return;
     }
   if(melee==it) {
@@ -980,6 +989,12 @@ bool Inventory::use(size_t cls, Npc &owner, uint8_t slotHint, bool force) {
   if(mainflag & ITM_CAT_ARMOR)
     return setSlot(isHelmet(*it) ? helmet : armor,it,owner,force);
 
+  // NB fix 207: the trophies of New Balance (ITEM_TROPHY, the category of magic): one slot; the plugin equips them, the
+  // scripts do the rest (ON_EQUIP: the model at BIP01 PELVIS, the bonus; ON_UNEQUIP of the trophy that was there before).
+  // Here the button "Put on" did nothing - the item had no slot and no function of use
+  if(flag & ITM_TROPHY)
+    return setSlot(trophy,it,owner,force);
+
   if(flag & ITM_BELT)
     return setSlot(belt,it,owner,force);
 
@@ -1037,6 +1052,7 @@ void Inventory::invalidateCond(Npc &owner) {
   invalidateCond(amulet,owner);
   invalidateCond(ringL ,owner);
   invalidateCond(ringR ,owner);
+  invalidateCond(trophy,owner);   // NB fix 207
   invalidateCond(melee ,owner);
   invalidateCond(range ,owner);
   invalidateCond(shield,owner);

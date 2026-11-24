@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **207**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **208**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
-2. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – ✅
-3. **204** – log: `[idle]` także w zasięgu bez ciosu, w znaczniku odległość walki; porządki w podsumowaniu – ✅
-4. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
-5. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
+1. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – 🧪
+2. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
+3. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – ✅
+4. **204** – log: `[idle]` także w zasięgu bez ciosu, w znaczniku odległość walki; porządki w podsumowaniu – ✅
+5. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
 
 ---
 
@@ -251,6 +251,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 207. Trofea New Balance można założyć – 🧪 (24.11.2026)
+- **Pliki:** `common/game/inventory.cpp`, `common/game/inventory.h`, `common/game/constants.h`
+- **Zgłoszenie (zrzut):** trofeum „Grymuar” (Inteligencja +10, szansa na manę przy ataku magią) – „Załóż” nic nie robi.
+- **Skrypty NB:** 23 trofea mają `ITEM_KAT_MAGIC` i flagę `ITEM_TROPHY` (1 << 25, flaga New Balance, nieznana w Gothicu); zakłada je plugin, resztę robią skrypty: `ON_EQUIP` (np. `Equip_ItUt_MagicBookWC`: `B_ClearUseTrophy`, model trofeum na `BIP01 PELVIS`, `RX_GrimuarUsedWC`, inteligencja +10), `ON_UNEQUIP` – odwrotnie. Jedno trofeum naraz.
+- **Przyczyna:** w porcie przedmiot magii bez flagi pierścienia, amuletu ani pasa nie miał miejsca do założenia, a trofea nie mają funkcji użycia – „Załóż” kończyło się bez skutku.
+- **Poprawka:** osobne miejsce na trofeum (jak pas czy amulet): „Załóż” wywołuje `ON_EQUIP`, założenie innego trofeum najpierw zdejmuje poprzednie (`ON_UNEQUIP`), „Zdejmij” zdejmuje. Miejsce nie jest osobnym wpisem w zapisie – po wczytaniu wraca z przedmiotu oznaczonego jako założony (jak hełm, poprawka 39), więc stare save'y działają.
+- **Do sprawdzenia:** grymuar – „Załóż”: inteligencja +10, model przy pasie, przedmiot oznaczony jako założony; drugie trofeum – pierwsze się zdejmuje (inteligencja wraca); zapis i wczytanie – trofeum dalej założone.
 
 ### 206. „NOWY” tylko przy nieprzeczytanych nowych dokumentach – ✅ (24.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp`, `common/game/gamesession.cpp`

@@ -337,6 +337,7 @@ enum ItmFlags : uint32_t {
   ITM_MULTI      = 1 << 21,
   ITM_AMULET     = 1 << 22,
   ITM_BELT       = 1 << 24,
+  ITM_TROPHY     = 1 << 25, // NB fix 207: the trophy of New Balance (ITEM_TROPHY): its own slot, one at a time
   ITM_TORCH      = 1 << 28
   };
 

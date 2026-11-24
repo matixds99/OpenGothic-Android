@@ -175,6 +175,7 @@ class Inventory final {
     Item*                              amulet     = nullptr;
     Item*                              ringL      = nullptr;
     Item*                              ringR      = nullptr;
+    Item*                              trophy     = nullptr; // NB fix 207: not in the save - restored from the equipped items
 
     Item**                             active     = nullptr;
     Item*                              melee      = nullptr;
