@@ -1,4 +1,5 @@
 #include "gamesession.h"
+#include "savesymbols.h"
 #include "savegameheader.h"
 
 #include <Tempest/Log>
@@ -156,6 +157,12 @@ GameSession::GameSession(Serialize &fin) {
   vm.reset(new GameScript(*this));
   vm->initDialogs();
 
+  // NB fix 209: the symbols of the scripts of the save-game -> the symbols of the scripts now (an update of the scripts)
+  fin.setStage("game/symtab");
+  fin.setSymbolMap(SaveSymbols::build(fin,vm->getVm()));
+  for(auto& w:visitedWorlds)
+    w.symMap = SaveSymbols::compose(w.symMap,fin.symbolMap());
+
   if(true) {
     setWorld(std::unique_ptr<World>(new World(*this,wname,false,[&](int v){
       Gothic::inst().setLoadingProgress(int(v*0.55));
@@ -300,6 +307,9 @@ void GameSession::save(Serialize &fout, std::string_view name, const Pixmap& scr
   fout.setEntry("game/daedalus");
   vm->saveVar(fout);
   vm->dmaSave(fout);
+
+  // NB fix 209: the names of the functions and of the instances, for the scripts of a later update
+  SaveSymbols::write(fout,vm->getVm());
 
   // NB fix 127: the bonuses of the equipped items (change_atr) are in the attributes of this save-game
   fout.setEntry("game/item_effects");
@@ -498,6 +508,7 @@ auto GameSession::implChangeWorld(std::unique_ptr<GameSession>&& game,
   if(!wss.isEmpty()) {
     Tempest::MemReader rd {wss.storage.data(),wss.storage.size()};
     Serialize          fin{rd};
+    fin.setSymbolMap(wss.symMap);   // NB fix 209
     wrld->load(fin);
     }
 

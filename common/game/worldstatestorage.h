@@ -27,4 +27,6 @@ class WorldStateStorage final {
 
     std::string          name;
     std::vector<uint8_t> storage;
+    /// NB fix 209: the symbols of the scripts of this storage -> the symbols now (nullptr: the same scripts)
+    std::shared_ptr<const std::vector<uint32_t>> symMap;
   };

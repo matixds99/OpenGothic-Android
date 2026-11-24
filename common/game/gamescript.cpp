@@ -3845,13 +3845,23 @@ void GameScript::saveQuests(Serialize &fout) {
 
 void GameScript::loadQuests(Serialize& fin) {
   quests.load(fin);
-  uint32_t sz=0;
+  uint32_t sz=0, lostInfos=0;
   fin.read(sz);
   for(size_t i=0;i<sz;++i){
     uint32_t f=0,s=0;
     fin.read(f,s);
+    // NB fix 209: the character and the dialog are symbols of the scripts of the save-game
+    f = fin.mapSymbol(f);
+    s = fin.mapSymbol(s);
+    if(f==uint32_t(-1) || s==uint32_t(-1)) {
+      ++lostInfos;
+      continue;
+      }
     dlgKnownInfos.insert(std::make_pair(f,s));
     }
+
+  if(lostInfos>0)
+    Log::e("[save] the scripts are not the scripts of the save-game: ",lostInfos," of ",sz," known dialogs are lost (they may come again)");
 
   fin.read(gilAttitudes);
 
@@ -3970,6 +3980,7 @@ void GameScript::loadVar(Serialize &fin) {
           else if(dataClass==3) {
             uint32_t itmClass=0;
             fin.read(itmClass);
+            itmClass = fin.mapSymbol(itmClass);   // NB fix 209
             if(auto npc = world().npcById(id)) {
               auto itm = npc->getItem(itmClass);
               s->set_instance(itm ? itm->handlePtr() : nullptr);

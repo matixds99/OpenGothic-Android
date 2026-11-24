@@ -338,6 +338,7 @@ void Serialize::implWrite(const ScriptFn& fn) {
 void Serialize::implRead(ScriptFn& fn) {
   uint32_t v=0;
   implRead(v);
+  v = mapSymbol(v);   // NB fix 209: the function of the scripts of the save-game -> the function now
   if(v==std::numeric_limits<uint32_t>::max())
     fn.ptr = size_t(-1); else
     fn.ptr = v;
@@ -421,6 +422,7 @@ void Serialize::implWrite(const zenkit::INpc& h) {
 void Serialize::readNpc(zenkit::DaedalusVm& vm, std::shared_ptr<zenkit::INpc>& h) {
   uint32_t instanceSymbol=0;
   read(instanceSymbol);
+  instanceSymbol = mapSymbol(instanceSymbol);   // NB fix 209
 
   auto sym = vm.find_symbol_by_index(instanceSymbol);
 
@@ -437,6 +439,8 @@ void Serialize::readNpc(zenkit::DaedalusVm& vm, std::shared_ptr<zenkit::INpc>& h
   read(h->mission);
   read(h->fight_tactic,h->weapon,h->voice,h->voice_pitch,h->body_mass);
   read(h->daily_routine,h->start_aistate);
+  h->daily_routine = mapSymbolOr0(h->daily_routine);   // NB fix 209
+  h->start_aistate = mapSymbolOr0(h->start_aistate);
   read(h->spawnpoint,h->spawn_delay,h->senses,h->senses_range);
   read(h->aivar);
   read(h->wp,h->exp,h->exp_next,h->lp,h->bodystate_interruptable_override,h->no_focus);

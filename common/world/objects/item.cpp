@@ -39,14 +39,25 @@ Item::Item(World &owner, Serialize &fin, Type type)
 
   uint32_t instanceSymbol=0;
   fin.read(instanceSymbol);
+  const uint32_t savedSymbol = instanceSymbol;
+  instanceSymbol = fin.mapSymbol(instanceSymbol);   // NB fix 209: the item of the scripts of the save-game -> the item now
 
   auto& vm = owner.script().getVm();
   auto* sym = vm.find_symbol_by_index(instanceSymbol);
 
-  if (sym != nullptr) {
-    vm.allocate_instance(h, sym);
-    } else {
-    Tempest::Log::e("Loading unknown item from save: " , instanceSymbol);
+  bool known = false;
+  if(sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INSTANCE) {
+    // NB fix 209: a symbol of another class (a save-game of other scripts) is a lost item, not the end of the loading
+    try {
+      vm.allocate_instance(h, sym);
+      known = true;
+      }
+    catch(const zenkit::DaedalusVmException& e) {
+      Tempest::Log::e("Loading item from save: ",e.what());
+      }
+    }
+  if(!known) {
+    Tempest::Log::e("Loading unknown item from save: " , savedSymbol);
     }
 
   fin.read(h->id,h->name,h->name_id,h->hp,h->hp_max,h->main_flag);
@@ -56,6 +67,16 @@ Item::Item(World &owner, Serialize &fin, Type type)
   fin.read(h->owner,h->owner_guild,h->disguise_guild,h->visual,h->visual_change);
   fin.read(h->effect,h->visual_skin,h->scheme_name,h->material);
   fin.read(h->munition,h->spell,h->range,h->mag_circle);
+  // NB fix 209: the functions, the owner and the munition are symbols of the scripts too
+  if(fin.symbolMap()!=nullptr) {
+    h->magic      = fin.mapSymbolOr0(h->magic);
+    h->on_equip   = fin.mapSymbolOr0(h->on_equip);
+    h->on_unequip = fin.mapSymbolOr0(h->on_unequip);
+    for(auto& f:h->on_state)
+      f = fin.mapSymbolOr0(f);
+    h->owner      = fin.mapSymbolOr0(h->owner);
+    h->munition   = fin.mapSymbolOr0(h->munition);
+    }
   fin.read(h->description,h->text,h->count);
   fin.read(h->inv_zbias,h->inv_rot_x,h->inv_rot_y,h->inv_rot_z,h->inv_animate);
   fin.read(amount);

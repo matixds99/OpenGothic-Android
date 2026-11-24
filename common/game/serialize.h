@@ -7,6 +7,7 @@
 #include <Tempest/Matrix4x4>
 
 #include <vector>
+#include <memory>
 #include <unordered_set>
 #include <cstdint>
 #include <type_traits>
@@ -91,6 +92,24 @@ class Serialize {
 
     void setContext(World* ctx) { this->ctx=ctx; }
     std::string_view worldName() const;
+
+    /// NB fix 209: the indices of the symbols of the scripts of the save-game -> the indices of the scripts now
+    /// (nullptr: the same scripts; uint32_t(-1): the symbol is not in the scripts now, or its place is not known)
+    using SymbolMap = std::shared_ptr<const std::vector<uint32_t>>;
+    void             setSymbolMap(SymbolMap m) { symMap = std::move(m); }
+    const SymbolMap& symbolMap() const { return symMap; }
+    uint32_t         mapSymbol(uint32_t v) const {
+      if(symMap==nullptr || v==uint32_t(-1))
+        return v;
+      return v<symMap->size() ? (*symMap)[v] : uint32_t(-1);
+      }
+    /// the fields of the scripts (the functions of an item, the routine of a character): 0 is "none", a lost symbol too
+    int32_t          mapSymbolOr0(int32_t v) const {
+      if(symMap==nullptr || v<=0)
+        return v;
+      const uint32_t r = mapSymbol(uint32_t(v));
+      return r==uint32_t(-1) ? 0 : int32_t(r);
+      }
 
     // raw
     void writeBytes(const void* v,size_t sz);
@@ -322,6 +341,7 @@ class Serialize {
     std::string              tmpStr;
     std::unordered_set<std::string> outFileList;
     World*                   ctx       = nullptr;
+    SymbolMap                symMap;   // NB fix 209
 
     mz_zip_archive           impl      = {};
     std::string              entryName;

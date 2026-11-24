@@ -98,6 +98,11 @@ void WorldObjects::load(Serialize &fin) {
   fin.read(sz);
   for(size_t i=0; i<sz; ++i) {
     auto it = std::make_unique<Item>(owner,fin,Item::T_World);
+    if(uint32_t(it->clsId())==uint32_t(-1)) {
+      // NB fix 209: an item of the save-game that is not in the scripts now
+      Log::e("[save] an item in the world is not in the scripts now: '",it->handle().name,"', dropped");
+      continue;
+      }
     itemArr.emplace_back(std::move(it));
     items.add(itemArr.back().get());
     }

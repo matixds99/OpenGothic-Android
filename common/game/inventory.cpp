@@ -147,6 +147,38 @@ void Inventory::implLoad(Npc* owner, World& world, Serialize &s) {
   for(auto& i:numslot)
     i = readPtr(s);
 
+  // NB fix 209: the items that are not in the scripts now (a save-game of older scripts) are dropped
+  for(size_t i=0; i<items.size();) {
+    if(uint32_t(items[i]->clsId())!=uint32_t(-1)) {
+      ++i;
+      continue;
+      }
+    Item* lost = items[i].get();
+    auto  drop = [lost](Item*& slot) { if(slot==lost) slot = nullptr; };
+    drop(ammotSlot.item);
+    drop(stateSlot.item);
+    drop(armor);
+    drop(belt);
+    drop(amulet);
+    drop(ringL);
+    drop(ringR);
+    drop(melee);
+    drop(range);
+    drop(shield);
+    for(auto& n:numslot)
+      drop(n);
+    for(size_t r=0; r<mdlSlots.size();)
+      if(mdlSlots[r].item==lost) {
+        mdlSlots[r] = std::move(mdlSlots.back());
+        mdlSlots.pop_back();
+        } else {
+        ++r;
+        }
+    Tempest::Log::e("[save] an item of the save-game is not in the scripts now: '",lost->handle().name,"' x",lost->count(),
+                    owner!=nullptr ? " of " : "",owner!=nullptr ? owner->displayName() : std::string_view(),", dropped");
+    items.erase(items.begin()+std::ptrdiff_t(i));
+    }
+
   // NB fix 39: the helmet is not a slot of the save - it is the equipped armor with wear=WEAR_HEAD. Saves made before:
   // the helmet took the slot of the armor and the armor was taken off (the paladins - only the head was drawn).
   helmet = nullptr;
@@ -187,6 +219,8 @@ void Inventory::implLoad(Npc* owner, World& world, Serialize &s) {
   else if(3<=id && id<10)
     active=&numslot[id-3];
   s.read(curItem,stateItem);
+  curItem   = s.mapSymbolOr0(curItem);   // NB fix 209: the classes of the items
+  stateItem = s.mapSymbolOr0(stateItem);
 
   if(owner!=nullptr)
     updateView(*owner);

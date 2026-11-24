@@ -746,7 +746,8 @@ class Npc final {
 
     // ai state
     uint64_t                       aniWaitTime=0;
-    bool                           stateEnding    = false;   // the end function of the state runs now
+    bool                           stateEnding    = false;
+    bool                           nbRoutineLost  = false;   // NB fix 209: a function of the routine is not in the scripts now   // the end function of the state runs now
     uint64_t                       animRetrySince = 0;   // an animation of the queue that cannot start
     size_t                         aiLockSize = 0;    // the commands of a script that hold the player
     uint64_t                       aiLockTime = 0;

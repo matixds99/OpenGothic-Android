@@ -29,6 +29,9 @@ void AiQueue::load(Serialize& fin) {
     fin.read(i.point,i.func,i.i0,i.i1,i.s0);
     if(i.act==AI_PrintScreen)
       fin.read(i.i2,i.s1);
+    // NB fix 209: the item of these commands is a symbol of the scripts
+    if(i.act==AI_DropItem || i.act==AI_EquipArmor || i.act==AI_UseItem || i.act==AI_UseItemToState)
+      i.i0 = fin.mapSymbolOr0(i.i0);
     }
   syncIssued = syncCompleted = 0;
   if(fin.version()>=56)

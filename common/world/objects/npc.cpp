@@ -4,6 +4,7 @@
 
 #include <Tempest/Matrix4x4>
 #include <Tempest/Log>
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <unordered_map>
@@ -421,6 +422,7 @@ void Npc::load(Serialize &fin, size_t id, std::string_view directory) {
   {
   uint32_t currentSpellCastU32 = uint32_t(-1);
   fin.read(currentSpellCastU32);
+  currentSpellCastU32 = fin.mapSymbol(currentSpellCastU32);   // NB fix 209: the class of the rune
   currentSpellCast = (currentSpellCastU32==uint32_t(-1) ? size_t(-1) : currentSpellCastU32);
   }
   fin.read(reinterpret_cast<uint8_t&>(castLevel),castNextTime);
@@ -583,6 +585,14 @@ void Npc::loadAiState(Serialize& fin) {
     fin.read(i.start,i.end,i.callback,i.point);
     if(fin.version()>51)
       fin.read(i.fallbackName);
+    }
+  // NB fix 209: a state of the routine that is not in the scripts now (a save-game of older scripts): the routine is made
+  // again by its function at the first tick
+  if(fin.symbolMap()!=nullptr) {
+    const size_t was = routines.size();
+    routines.erase(std::remove_if(routines.begin(),routines.end(),[](const Routine& r){ return !r.callback.isValid(); }),
+                   routines.end());
+    nbRoutineLost = routines.size()!=was;
     }
   }
 
@@ -3351,6 +3361,14 @@ void Npc::tickAnimationTags() {
   }
 
 void Npc::tick(uint64_t dt) {
+  if(nbRoutineLost) {
+    // NB fix 209
+    nbRoutineLost = false;
+    if(hnpc->daily_routine>0 && !isPlayer()) {
+      Log::i("[save] ",displayName()," gets the routine again: a state of it is not in the scripts now");
+      excRoutine(size_t(hnpc->daily_routine));
+      }
+    }
   {
     // NB fix 98: QUICK speeds up the animations of the player
     float scale = 1.f;
