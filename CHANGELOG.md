@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – 🧪
+1. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
 2. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – ✅
 3. **204** – log: `[idle]` także w zasięgu bez ciosu, w znaczniku odległość walki; porządki w podsumowaniu – ✅
 4. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 206. „NOWY” tylko przy nieprzeczytanych nowych dokumentach – 🧪 (24.11.2026)
+### 206. „NOWY” tylko przy nieprzeczytanych nowych dokumentach – ✅ (24.11.2026)
 - **Pliki:** `common/ui/inventorymenu.cpp`, `common/game/gamesession.cpp`
 - **Zgłoszenie (zrzut):** w zakładce dokumentów 48 z 49 ma znacznik „NOWY”, także dawno przeczytane; ma być oznaczone tylko to, czego bohater nie przeczytał.
 - **Przyczyna:** lista nieprzeczytanych dokumentów (poprawka 122, zapisywana w save'ie) dostawała każdy dokument, którego liczba wzrosła względem migawki ekwipunku. Gdy migawka była zrobiona, zanim wrócił ekwipunek (wczytanie, zmiana świata), cały zbiór dokumentów trafiał na listę jako „nowy” i zostawał w zapisie – znikał dopiero po przeczytaniu każdego z osobna.
@@ -262,6 +262,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - każdy oznaczony dokument w logu: `[newdocs] new, not read yet: <instancja>`;
   - lista w save'ie w nowej wersji (`game/nb_newdocs2`): stara, zaśmiecona lista nie jest wczytywana – po wczytaniu save'a znaczników „NOWY” przy dokumentach nie ma, pojawią się przy następnych zdobytych. „Czytaj” zdejmuje znacznik jak dotąd.
 - **Do sprawdzenia:** wczytanie save'a – dokumenty bez „NOWY”; podniesienie nowego listu/mapy – „NOWY” tylko przy nim, po „Czytaj” znika; zmiana świata – znaczniki nie wracają.
+- **Test (24.11):** działa.
 
 ### 205. Zasięg walki do bryły długiego celu – golemy trafiają pustynnego węża – ✅ (24.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/game/fightalgo.cpp`
