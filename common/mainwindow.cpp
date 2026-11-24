@@ -2550,13 +2550,19 @@ void MainWindow::updateMobileControls() {
     // NB fix 134: the hero moves more than 2 m in a second while the stick and the arrows are not held - what moves him
     static Tempest::Vec3 lastPos;
     static uint64_t      lastAt = 0;
+    static const World*  lastWorld = nullptr;
     auto* pl = Gothic::inst().player();
     auto* w  = Gothic::inst().world();
+    if(w!=lastWorld) {
+      // NB fix 211: another world (a teleport, a loaded save-game): the jump of the hero is not a move by himself
+      lastWorld = w;
+      lastAt    = 0;
+      }
     if(pl!=nullptr && w!=nullptr && w->tickCount()>=lastAt+1000) {
       const auto pos   = pl->position();
       const bool still = fwd && back && !androidControls.held(Mobile::Key::StrafeLeft) &&
                          !androidControls.held(Mobile::Key::StrafeRight) && !androidControls.stickHeld();
-      if(lastAt!=0 && still && (pos-lastPos).length()>200.f && !pl->isInAir() && w->currentCs()==nullptr)
+      if(lastAt!=0 && still && (pos-lastPos).length()>200.f && (pos-lastPos).length()<3000.f && !pl->isInAir() && w->currentCs()==nullptr)
         Log::i("[hero-ai] the hero moves by himself (",int((pos-lastPos).length()/100.f)," m/s): ",pl->nbMoveDebug(),
                " | ",player.nbInputDebug());
       lastPos = pos;

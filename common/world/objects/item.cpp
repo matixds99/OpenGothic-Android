@@ -1,4 +1,5 @@
 #include "item.h"
+#include "game/savesymbols.h"
 
 #include <Tempest/Log>
 
@@ -42,24 +43,6 @@ Item::Item(World &owner, Serialize &fin, Type type)
   const uint32_t savedSymbol = instanceSymbol;
   instanceSymbol = fin.mapSymbol(instanceSymbol);   // NB fix 209: the item of the scripts of the save-game -> the item now
 
-  auto& vm = owner.script().getVm();
-  auto* sym = vm.find_symbol_by_index(instanceSymbol);
-
-  bool known = false;
-  if(sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INSTANCE) {
-    // NB fix 209: a symbol of another class (a save-game of other scripts) is a lost item, not the end of the loading
-    try {
-      vm.allocate_instance(h, sym);
-      known = true;
-      }
-    catch(const zenkit::DaedalusVmException& e) {
-      Tempest::Log::e("Loading item from save: ",e.what());
-      }
-    }
-  if(!known) {
-    Tempest::Log::e("Loading unknown item from save: " , savedSymbol);
-    }
-
   fin.read(h->id,h->name,h->name_id,h->hp,h->hp_max,h->main_flag);
   fin.read(reinterpret_cast<int&>(h->flags),h->weight,h->value,h->damage_type,h->damage_total,h->damage);
   fin.read(h->wear,h->protection,h->nutrition,h->cond_atr,h->cond_value,h->change_atr,h->change_value,h->magic);
@@ -82,6 +65,42 @@ Item::Item(World &owner, Serialize &fin, Type type)
   fin.read(amount);
   fin.read(pos,equipped,itSlot);
   fin.read(mat);
+
+  auto& vm = owner.script().getVm();
+  auto* sym = vm.find_symbol_by_index(instanceSymbol);
+  if(fin.symbolMap()!=nullptr && (sym==nullptr || sym->type()!=zenkit::DaedalusDataType::INSTANCE)) {
+    // NB fix 211: the place of the item in the old scripts is not known (a world that the save-game had only in its
+    // storage, so its items had no names in the variables): the item of the scripts now that looks the same
+    if(auto inst = SaveSymbols::itemByLook(vm,*h); inst!=nullptr) {
+      sym = vm.find_symbol_by_index(inst->symbol_index());
+      Tempest::Log::i("[save] '",h->name,"' (",h->visual,") of the save-game is the item ",
+                      sym!=nullptr ? sym->name().c_str() : "?"," of the scripts now");
+      {
+        h->magic      = inst->magic;
+        h->on_equip   = inst->on_equip;
+        h->on_unequip = inst->on_unequip;
+        for(size_t i=0; i<zenkit::IItem::state_count; ++i)
+          h->on_state[i] = inst->on_state[i];
+        h->owner      = inst->owner;
+        h->munition   = inst->munition;
+        }
+      }
+    }
+
+  bool known = false;
+  if(sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INSTANCE) {
+    // NB fix 209: a symbol of another class (a save-game of other scripts) is a lost item, not the end of the loading
+    try {
+      vm.allocate_instance(h, sym);
+      known = true;
+      }
+    catch(const zenkit::DaedalusVmException& e) {
+      Tempest::Log::e("Loading item from save: ",e.what());
+      }
+    }
+  if(!known) {
+    Tempest::Log::e("Loading unknown item from save: " , savedSymbol);
+    }
 
   if(type!=T_Inventory) {
     if(!FileExt::hasExt(hitem->visual,"ZEN"))

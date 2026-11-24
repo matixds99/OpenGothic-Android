@@ -207,7 +207,12 @@ bool NbLog::filter(const char* text) {
   if(lv>=Full)
     return true;
   bool keep = true;
-  if(lv<=Quiet) {
+  // NB fix 211: the lines of every far character, of every camera and of every parsed chunk (two thirds of the log at the
+  // normal level) - only in the full log
+  if(lv<=Normal && (s.find("is far from the player, it does not walk to the way point")!=std::string_view::npos ||
+                    startsWith(s,"CsCamera: ") || startsWith(s,"[zenkit] Parsing ")))
+    keep = false;
+  else if(lv<=Quiet) {
     if(startsWith(s,"NB ai: ") && s.find(" STUCK 5 s")==std::string_view::npos)
       keep = false;
     else if(startsWith(s,"NB trace: ") || startsWith(s,"DMG2") || startsWith(s,"[hero-ai] ") ||

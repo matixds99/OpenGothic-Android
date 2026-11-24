@@ -174,7 +174,7 @@ void Inventory::implLoad(Npc* owner, World& world, Serialize &s) {
         } else {
         ++r;
         }
-    Tempest::Log::e("[save] an item of the save-game is not in the scripts now: '",lost->handle().name,"' x",lost->count(),
+    Tempest::Log::e("[save] an item of the save-game is not found in the scripts now: '",lost->handle().name,"' x",lost->count(),
                     owner!=nullptr ? " of " : "",owner!=nullptr ? owner->displayName() : std::string_view(),", dropped");
     items.erase(items.begin()+std::ptrdiff_t(i));
     }

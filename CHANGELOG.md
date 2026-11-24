@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **211**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **212**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – 🧪
-2. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
-3. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
-4. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – ✅
-5. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
+1. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – 🧪
+2. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – 🧪
+3. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
+4. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
+5. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – ✅
 
 ---
 
@@ -251,6 +251,21 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 211. Przedmioty odwiedzonych światów ze starych zapisów, krótszy log – 🧪 (24.11.2026)
+- **Pliki:** `common/game/savesymbols.cpp`, `common/game/savesymbols.h`, `common/world/objects/item.cpp`, `common/game/inventory.cpp`, `common/world/worldobjects.cpp`, `common/utils/nblog.cpp`, `common/mainwindow.cpp`
+- **Zgłoszenie (log):** po teleporcie do Khorinis `Loading unknown item from save` i przedmioty usunięte z ekwipunku: list u Xardasa i Gallahada, tarcze Cedrika i Jarvisa, stare zapiski Ahirona, zbroja upadłego paladyna. Do tego `[hero-ai] the hero moves by himself (333 m/s)` po teleporcie i 1394 linie `is far from the player, it does not walk to the way point` (dwie trzecie logu).
+- **Przyczyna:**
+  - Khorinis był w zapisie (sprzed aktualizacji skryptów) tylko jako zapisany świat. Jego przedmioty nie miały nazw w zmiennych zapisu (nazwy mają tylko przedmioty świata, w którym bohater był przy zapisie), więc ich numery dało się przeliczyć tylko „po miejscu” (poprawka 209). Przy kilku przedmiotach to miejsce było niejednoznaczne. Te przedmioty są w nowych skryptach (`FAKESCROLL`, `ITAR_SHIELD_07_CEDRIK`, `ITAR_SHIELD_02`, `ITWR_AHIRONNOTE`, `ITAR_PAL_SKEL_P`), tylko pod innymi numerami.
+  - Porównanie starej kopii skryptów z nową wersją, „po miejscu”: przedmioty 3743 dobrze, 0 źle, 33 nieznane; postacie 5779 dobrze, 0 źle, 2 nieznane; dialogi 10 589 dobrze; funkcje 41 317 dobrze, 0 źle, 224 nieznane.
+  - Detektor `[hero-ai]` porównywał pozycję bohatera przed i po zmianie świata.
+- **Poprawka:**
+  - przedmiot z nieznanym numerem (tylko w zapisie innych skryptów) jest szukany wśród przedmiotów skryptów po wyglądzie: model, nazwa, opis, teksty, rodzaj, wartość, a gdy to nie wystarcza, model, nazwa i rodzaj. Przedmiot jest przyjmowany, gdy pasuje dokładnie jeden; jego funkcje (`on_equip`, `on_state`…) idą z jego instancji. Wszystkie przedmioty skryptów są robione raz, tylko przy takim zapisie (w logu `[save] the looks of N items`). W logu `[save] '<nazwa>' (<model>) of the save-game is the item <INSTANCJA> of the scripts now`;
+  - komunikat usunięcia: „not found in the scripts now”;
+  - przy poziomie logu „normal” bez linii `is far from the player…`, `CsCamera:` i `[zenkit] Parsing …` (są w pełnym logu);
+  - `[hero-ai]`: po zmianie świata pomiar od nowa, skoki ponad 30 m (teleport) pomijane.
+- **Uwaga:** zapis zrobiony na końcu tej gry ma już Khorinis bez tych 6 przedmiotów. Wczytany na początku zapis (sprzed teleportu) ma Khorinis z mapą starych numerów, więc z tą poprawką przedmioty wrócą.
+- **Do sprawdzenia:** wczytać zapis sprzed teleportu do Khorinis i przenieść się tam: w logu `… is the item FAKESCROLL …` itd., bez `dropped`.
 
 ### 210. Aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`, łańcuch wywołań w błędach skryptów – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `lib/ZenKit/src/DaedalusVm.cc`, `lib/ZenKit/include/zenkit/DaedalusVm.hh` (`patches/zenkit-opengothic.patch`)

@@ -3,6 +3,7 @@
 #include <Tempest/Log>
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
@@ -422,4 +423,75 @@ Serialize::SymbolMap SaveSymbols::compose(const Serialize::SymbolMap& inner, con
     (*ret)[i] = (v==uint32_t(-1) || v>=outer->size()) ? uint32_t(-1) : (*outer)[v];
     }
   return ret;
+  }
+
+namespace {
+
+struct ItemLooks {
+  const zenkit::DaedalusVm*                                       vm    = nullptr;
+  size_t                                                          count = 0;
+  std::vector<std::shared_ptr<zenkit::IItem>>                     items;
+  std::unordered_map<std::string,std::vector<size_t>>             strict, loose;
+  };
+
+std::string lookStrict(const zenkit::IItem& it) {
+  std::string k = upper(it.visual)+"|"+it.name+"|"+it.description+"|"+std::to_string(it.main_flag)+"|"+std::to_string(it.value);
+  for(auto& t:it.text)
+    k += "|"+t;
+  return k;
+  }
+
+std::string lookLoose(const zenkit::IItem& it) {
+  return upper(it.visual)+"|"+it.name+"|"+std::to_string(it.main_flag);
+  }
+
+bool isItemClass(zenkit::DaedalusVm& vm, const zenkit::DaedalusSymbol& s) {
+  if(s.type()!=DaedalusDataType::INSTANCE)
+    return false;
+  auto* p = vm.find_symbol_by_index(s.parent());
+  for(int depth=0; p!=nullptr && p->type()!=DaedalusDataType::CLASS && depth<8; ++depth)
+    p = vm.find_symbol_by_index(p->parent());
+  return p!=nullptr && p->name()=="C_ITEM";
+  }
+
+}
+
+std::shared_ptr<zenkit::IItem> SaveSymbols::itemByLook(zenkit::DaedalusVm& vm, const zenkit::IItem& saved) {
+  static ItemLooks looks;
+  if(looks.vm!=&vm || looks.count!=vm.symbols().size()) {
+    // all the items of the scripts once (only a save-game of other scripts comes here)
+    looks = ItemLooks();
+    looks.vm    = &vm;
+    looks.count = vm.symbols().size();
+    const auto t0 = std::chrono::steady_clock::now();
+    for(uint32_t i=0; i<looks.count; ++i) {
+      auto* s = vm.find_symbol_by_index(i);
+      if(s==nullptr || !isItemClass(vm,*s))
+        continue;
+      std::shared_ptr<zenkit::IItem> inst;
+      try {
+        inst = vm.init_instance<zenkit::IItem>(s);
+        }
+      catch(const std::exception&) {
+        continue;
+        }
+      if(inst==nullptr)
+        continue;
+      const size_t id = looks.items.size();
+      looks.items.push_back(inst);
+      looks.strict[lookStrict(*inst)].push_back(id);
+      looks.loose [lookLoose (*inst)].push_back(id);
+      }
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-t0).count();
+    Log::i("[save] the looks of ",looks.items.size()," items of the scripts (",ms," ms)");
+    }
+  for(auto* table:{&looks.strict,&looks.loose}) {
+    auto it = table->find(table==&looks.strict ? lookStrict(saved) : lookLoose(saved));
+    if(it==table->end())
+      continue;
+    if(it->second.size()==1)
+      return looks.items[it->second[0]];
+    return nullptr;   // more items look so: not known which one
+    }
+  return nullptr;
   }

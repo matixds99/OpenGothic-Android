@@ -17,4 +17,7 @@ namespace SaveSymbols {
   Serialize::SymbolMap   build(Serialize& fin, zenkit::DaedalusVm& vm);
   /// a map of a nested save (a visited world) and the map of the save that has it: nested -> now
   Serialize::SymbolMap   compose(const Serialize::SymbolMap& inner, const Serialize::SymbolMap& outer);
+  /// NB fix 211: the item of the scripts now that looks as the item of the save-game (the visual, the name, the texts):
+  /// the instance made by the scripts, nullptr when no item or more than one look so
+  std::shared_ptr<zenkit::IItem> itemByLook(zenkit::DaedalusVm& vm, const zenkit::IItem& saved);
   }
