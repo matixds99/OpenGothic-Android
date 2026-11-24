@@ -1111,11 +1111,13 @@ void InventoryMenu::drawSlot(Painter &p, DrawPass pass, const Inventory::Iterato
 
   if(pass==DrawPass::Back) {
     const bool selected = (!it.isValid() && id==0) || (id==sel.sel && &page==&active);
+    // NB fix 215: an item with ITEM_ACTIVE (Itm_SetFlagActive: the trophies of the scripts) is shown as worn
+    const bool worn     = it.isValid() && (it.isEquipped() || (uint32_t(it->handle().flags) & (1u<<30))!=0);
 #ifdef OPENGOTHIC_TOUCH_UI
     // NB fix 104: the slots of Hedin's inventory - lit (selected), green (equipped), both
     const Texture2d* hs = !hedin.on() ? nullptr :
-                          (selected && it.isEquipped()) ? hedin.selEquip :
-                          selected ? hedin.sel : it.isEquipped() ? hedin.equip : nullptr;
+                          (selected && worn) ? hedin.selEquip :
+                          selected ? hedin.sel : worn ? hedin.equip : nullptr;
     if(hs!=nullptr) {
       p.setBrush(*hs);
       p.drawRect(x,y,slotSize().w,slotSize().h,0,0,hs->w(),hs->h());
@@ -1133,7 +1135,7 @@ void InventoryMenu::drawSlot(Painter &p, DrawPass pass, const Inventory::Iterato
 #endif
       }
 
-    if(it.isEquipped() && selU!=nullptr
+    if(worn && selU!=nullptr
 #ifdef OPENGOTHIC_TOUCH_UI
        && !hedin.on()
 #endif

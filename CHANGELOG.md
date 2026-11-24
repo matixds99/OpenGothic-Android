@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **215**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **216**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **214** – patrole (`Patrol_Set`, `Patrol_SetPath`, `Patrol_NextWP`), oczy szkieletów (`Npc_SetEffect`), `Npc_HasMessage`, `Npc_HasSprintMoveset`, funkcje karmy jak na PC – 🧪
-2. **213** – `C_PlayerIsFakeBandit`: Ramon spoza świata dodatku to nie błąd portu; raport tylko wywoływanych brakujących funkcji – 🧪
-3. **212** – aktualizacje skryptów NB: raport przy starcie (co usunięte, nowe funkcje pluginu), nazwy starych skryptów zachowywane same, postacie rozpoznawane po id i imieniu – 🧪
-4. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – ✅
-5. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – ✅
+1. **215** – zamykanie zadań (`Log_GetTopicStatus`), zwoje postaci, trofea ze skryptów oznaczone jako noszone, mechanizmy (`Wld_Open/CloseMoverIf…`), `Npc_IsDoingRoutine`, `Npc_CanSeePlayerInRadius` – 🧪
+2. **214** – patrole (`Patrol_Set`, `Patrol_SetPath`, `Patrol_NextWP`), oczy szkieletów (`Npc_SetEffect`), `Npc_HasMessage`, `Npc_HasSprintMoveset`, funkcje karmy jak na PC – 🧪
+3. **213** – `C_PlayerIsFakeBandit`: Ramon spoza świata dodatku to nie błąd portu; raport tylko wywoływanych brakujących funkcji – 🧪
+4. **212** – aktualizacje skryptów NB: raport przy starcie (co usunięte, nowe funkcje pluginu), nazwy starych skryptów zachowywane same, postacie rozpoznawane po id i imieniu – 🧪
+5. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – ✅
 
 ---
 
@@ -251,6 +251,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 215. Zamykanie zadań, zwoje postaci, trofea ze skryptów, mechanizmy – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`
+- **Zgłoszenie:** dalsze funkcje pluginu, które skrypty wołają, a portu nie ma (raport poprawki 213).
+- **Plugin (UNION_ABI.DLL z aktualizacji):**
+  - `Log_GetTopicStatus(temat)` (`0x101a8280`): status tematu dziennika (1 trwa, 2 ukończone, 3 nieudane, 4 nieaktualne), bez tematu 0. Bez tej funkcji `B_CloseTopic_Now` nigdy nie zamykało zadań – zadania, które NB kończy samo („Zadanie zakończone!”), zostawały otwarte;
+  - `Npc_IsDoingRoutine(npc, nazwa)` (`0x101cddf0`): rutyna dnia postaci to `RTN_<nazwa>_<id>` (dialogi Martina, Pustelnika, notatki nekromanty, zwiadowca);
+  - `Itm_SetFlagActive(przedmiot, wł.)` (`0x101bc230`): flaga `ITEM_ACTIVE` przedmiotu – trofea zakładane przez skrypty (`USE_ItAt_*`: pazur, kieł, płyta przy pasie) są w ekwipunku oznaczone jak noszone;
+  - zwoje postaci: `Npc_HasScroll`, `Npc_GetScroll` (losowy zwój postaci – jego czar, `0x101cfa70`), `Npc_HasScrollExp` (tylko na Drodze Prób: `RX_RoadOfTrialsActiveValue` = 938491, bez zmiennej NB 222 i zwoju przemiany w chrząszcza) – bandyci i inni rzucają czary ze zwojów (`B_SelectSpell`); zwój to przedmiot kategorii run, który się zlicza, nie `ITRU_*` (`0x10088950`);
+  - `Wld_OpenMoverIfClosed` / `Wld_CloseMoverIfOpened(nazwa)` (`0x101cb450`, `0x101cb2e0`): mechanizm o tej nazwie dostaje sygnał tylko, gdy jest zamknięty / otwarty (bramy po śmierci smoków, magazyn Azgana, wieża Mrocznego Mówcy);
+  - `Npc_CanSeePlayerInRadius(promień)` (`0x101c7dd0`): żywa postać w promieniu widzi bohatera (otwieranie orkowej skrzyni).
+- **Jeszcze nie:** worki (`OpenPocket` – osobne okno z przedmiotami kategorii), `Wld_ChangePortal`, `AI_PlayEffect`, `StartChangeWorldTime` (skręty), szukanie roślin i tablic przez ognika (`FindPlants`, `PlantsInLoc`…), `Npc_SetFightRange` (królowa pełzaczy), `Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `AI_TurnToVob`, `AST_FreezeNpc`, `Ext_DarkScreen`, `Wld_SetCondFunc`, `InitFullSnc`.
+- **Do sprawdzenia:** zadania zamykane przez NB („Zadanie zakończone!”); trofeum z pazura po użyciu z zieloną ramką w ekwipunku.
 
 ### 214. Patrole, oczy szkieletów, `Npc_HasMessage`, `Npc_HasSprintMoveset`, karma – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/world.cpp`, `common/world/world.h`, `common/world/aiqueue.h`

@@ -2397,6 +2397,118 @@ void GameScript::initCommon() {
         return 0;
       return npc->hasOverlay("HUMANS_SPRINT.MDS") || npc->hasOverlay("HUMANS_MAGESPRINT.MDS") ? 1 : 0;
       });
+    // NB fix 215: Log_GetTopicStatus(topic) (0x101a8280): the status of the topic of the journal (1 running, 2 success,
+    // 3 failed, 4 obsolete), 0 without it. B_CloseTopic_Now closes the quests by it ("Zadanie zakończone!")
+    bindNb("LOG_GETTOPICSTATUS", [this](std::string_view topic) -> int32_t {
+      for(size_t i=0; i<quests.questCount(); ++i)
+        if(quests.quest(i).name==topic)
+          return int32_t(quests.quest(i).status);
+      return 0;
+      });
+    // NB fix 215: Npc_IsDoingRoutine(npc, name) (0x101cddf0): the daily routine of the character is RTN_<name>_<id>
+    bindNb("NPC_ISDOINGROUTINE", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view name) -> int32_t {
+      if(npcRef==nullptr || npcRef->daily_routine<=0)
+        return 0;
+      auto* rtn = vm.find_symbol_by_index(uint32_t(npcRef->daily_routine));
+      if(rtn==nullptr)
+        return 0;
+      std::string want = "RTN_"+std::string(name)+"_"+std::to_string(npcRef->id);
+      for(auto& c:want)
+        c = char(std::toupper(uint8_t(c)));
+      return rtn->name()==want ? 1 : 0;
+      });
+    // NB fix 215: Itm_SetFlagActive(item, on) (0x101bc230): the flag ITEM_ACTIVE (1<<30) of the item - the trophies of the
+    // scripts (USE_ItAt_*: the claw at the belt) are shown as worn in the inventory
+    bindNb("ITM_SETFLAGACTIVE", [](std::shared_ptr<zenkit::IItem> itm, int32_t on) {
+      if(itm==nullptr)
+        return;
+      auto fl = uint32_t(itm->flags);
+      fl = on!=0 ? (fl | (1u<<30)) : (fl & ~(1u<<30));
+      itm->flags = zenkit::ItemFlag(fl);
+      });
+    // NB fix 215: the scrolls of the characters (0x10088950: a spell item that stacks, not ITRU_*)
+    const auto nbIsScroll = [](const Item& it) {
+      auto& h = it.handle();
+      if((ItmFlags(h.main_flag) & ITM_CAT_RUNE)==0 || (ItmFlags(h.flags) & ITM_MULTI)==0)
+        return false;
+      return true;
+      };
+    const auto nbScrolls = [this,nbIsScroll](Npc& npc, std::vector<const Item*>* out) {
+      bool any = false;
+      for(auto it = npc.inventory().iterator(Inventory::T_Inventory); it.isValid(); ++it) {
+        if(!nbIsScroll(*it))
+          continue;
+        auto* sym = vm.find_symbol_by_index(uint32_t(it->clsId()));
+        if(sym!=nullptr && sym->name().rfind("ITRU_",0)==0)
+          continue;
+        any = true;
+        if(out!=nullptr)
+          out->push_back(&*it);
+        }
+      return any;
+      };
+    bindNb("NPC_HASSCROLL", [this,nbScrolls](std::shared_ptr<zenkit::INpc> npcRef) -> int32_t {
+      auto npc = findNpc(npcRef);
+      return npc!=nullptr && nbScrolls(*npc,nullptr) ? 1 : 0;
+      });
+    // Npc_GetScroll(npc) (0x101cfa70): the spell of a random scroll of the character, 0 without one
+    bindNb("NPC_GETSCROLL", [this,nbScrolls](std::shared_ptr<zenkit::INpc> npcRef) -> int32_t {
+      auto npc = findNpc(npcRef);
+      std::vector<const Item*> list;
+      if(npc==nullptr || !nbScrolls(*npc,&list) || list.empty())
+        return 0;
+      return list[size_t(std::rand())%list.size()]->handle().spell;
+      });
+    // Npc_HasScrollExp(npc) (0x101d4370): only on the Road of Trials (RX_RoadOfTrialsActiveValue == 938491): a scroll, not
+    // with the variable 222 of the character, not with the scroll of the transformation into a meatbug
+    bindNb("NPC_HASSCROLLEXP", [this,nbScrolls,intVar](std::shared_ptr<zenkit::INpc> npcRef) -> int32_t {
+      auto* road = intVar("RX_ROADOFTRIALSACTIVEVALUE");
+      if(road==nullptr || road->get_int()!=938491)
+        return 0;
+      auto npc = findNpc(npcRef);
+      if(npc==nullptr || !nbScrolls(*npc,nullptr))
+        return 0;
+      if(npc->newBalanceGetNpcVar(222)!=0)
+        return 0;
+      if(auto* meatbug = vm.find_symbol_by_name("ITSC_TRFMEATBUG"); meatbug!=nullptr && npc->itemCount(meatbug->index())>0)
+        return 0;
+      return 1;
+      });
+    // NB fix 215: Wld_OpenMoverIfClosed / Wld_CloseMoverIfOpened(name) (0x101cb450, 0x101cb2e0): the mover of this name gets
+    // the trigger only when it is closed / open (not while it moves)
+    const auto nbMoverIf = [this](std::string_view name, int32_t wantState) {
+      bool hit = false;
+      world().forEachTrigger([&](AbstractTrigger& t) {
+        if(hit || t.name()!=name)
+          return;
+        if(auto* mv = dynamic_cast<MoveTrigger*>(&t)) {
+          hit = true;
+          if(mv->moverState()==wantState) {
+            const TriggerEvent evt(std::string(name),"",world().tickCount(),TriggerEvent::T_Trigger);
+            world().triggerEvent(evt);
+            }
+          }
+        });
+      if(!hit)
+        Log::e("NB: no mover ",name);
+      };
+    bindNb("WLD_OPENMOVERIFCLOSED",  [nbMoverIf](std::string_view name) { nbMoverIf(name,2); });
+    bindNb("WLD_CLOSEMOVERIFOPENED", [nbMoverIf](std::string_view name) { nbMoverIf(name,0); });
+    // NB fix 215: Npc_CanSeePlayerInRadius(radius) (0x101c7dd0): a living character near the hero (in the radius, cm) sees
+    // him (ORCCHESTOPEN_S1: the orc chest is opened unseen)
+    bindNb("NPC_CANSEEPLAYERINRADIUS", [this](int32_t radius) -> int32_t {
+      auto* hero = world().player();
+      if(hero==nullptr)
+        return 0;
+      int32_t seen = 0;
+      world().detectNpc(hero->position(),float(radius),[&](Npc& n) {
+        if(seen!=0 || &n==hero || n.isDead())
+          return;
+        if(n.canSeeNpc(*hero,false) || n.canSeeNpc(*hero,true))
+          seen = 1;
+        });
+      return seen;
+      });
     // the music of the plugin (bosses, scenes): off / on / switched, the setting of the player stays as it is
     // NB fix 116: RX_MusicOff mutes the music of the game until RX_MusicOn (on the PC it writes musicEnabled into Gothic.ini).
     // Not by setEnabled: every option written by the scripts (Menu_WriteInt of bCanSaveGame when a fight starts) loaded
