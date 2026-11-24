@@ -117,6 +117,10 @@ std::string fmtTime(uint64_t ms) {
 
 }
 
+uint64_t NbLog::sinceStartMs() {
+  return sinceStart();
+  }
+
 void NbLog::setLevel(int lv) {
   logLevel.store(std::clamp(lv,0,2));
   }
@@ -150,6 +154,13 @@ void NbLog::observe(bool error, const char* text) {
     add(KStuck,std::move(key));
     return;
     }
+  if(startsWith(s,"unable to load archive")) {
+    add(KData,"archives that are not game archives (the DLLs and ZIPs of Union in Data)");   // NB fix 204
+    return;
+    }
+  if(startsWith(s,"unable to load sound fx")) {
+    return;   // NB fix 204: the file of the sound is in the line before it
+    }
   if(startsWith(s,"unable to load")) {
     // unable to load sound "x.wav" / unable to load sound fx: NAME / unable to load texture ...
     std::string_view name = quoted(s,'"','"');
@@ -165,7 +176,8 @@ void NbLog::observe(bool error, const char* text) {
     const auto m = s.substr(9);
     if(m.find("bytes remaining")!=std::string_view::npos || m.find("bytes overflowed")!=std::string_view::npos ||
        m.find("not fully parsed")!=std::string_view::npos || m.find("Unknown volume flags")!=std::string_view::npos ||
-       m.find("Unexpected value")!=std::string_view::npos || startsWith(m,"Parsing ")) {
+       m.find("Unexpected value")!=std::string_view::npos || startsWith(m,"Parsing ") ||
+       m.find("VDFS tool disk")!=std::string_view::npos) {
       add(KData,clip(m,60));
       return;
       }
@@ -176,8 +188,15 @@ void NbLog::observe(bool error, const char* text) {
     add(KScript,clip(s,140));
     return;
     }
-  if(error && !startsWith(s,"DMG2"))
-    add(KError,clip(s,120));
+  if(error && !startsWith(s,"DMG2")) {
+    // NB fix 204: not the broken rest of a binary path
+    size_t letters = 0;
+    for(char c:s)
+      if((c>='a' && c<='z') || (c>='A' && c<='Z'))
+        ++letters;
+    if(letters>=4)
+      add(KError,clip(s,120));
+    }
   }
 
 bool NbLog::filter(const char* text) {
@@ -298,7 +317,7 @@ int NbLog::mark() {
            ", life ",c.attribute(ATR_HITPOINTS),"/",c.attribute(ATR_HITPOINTSMAX),
            c.isDead() ? " (dead)" : c.isDown() ? " (down)" : "",", target ",
            tg==nullptr ? std::string("-") : tg->isPlayer() ? std::string("hero") : std::string(tg->displayName()),
-           ", weapon ",int(c.weaponState()),", body ",int(c.bodyStateMasked()),", ai [",c.nbAiQueueDesc(),"]");
+           c.nbFightInfo(),", weapon ",int(c.weaponState()),", body ",int(c.bodyStateMasked()),", ai [",c.nbAiQueueDesc(),"]");
     }
   if(near.size()>12)
     Log::i("[mark ",n,"]   ... ",near.size()-12," more within 30 m");

@@ -2164,7 +2164,7 @@ void MainWindow::render(){
       // NB fix 203: every 5 s only at the level "full" of the log; 30 s normal, 60 s quiet
       const int lv = NbLog::level();
       nextMemLog = t+(lv>=NbLog::Full ? 5000 : lv==NbLog::Normal ? 30000 : 60000);
-      Log::d("[mem] ",t/1000," s: ",CrashLog::memoryInfo());
+      Log::d("[mem] ",NbLog::sinceStartMs()/1000," s: ",CrashLog::memoryInfo());   // NB fix 204: the time since the start
       // what takes the address space, when it is big: the Mali crashes at about 420 GB of it, with 3 GB of the real memory in use
       if(lv>=NbLog::Full || t>=nextMapsLog) {
         nextMapsLog = t+120000;

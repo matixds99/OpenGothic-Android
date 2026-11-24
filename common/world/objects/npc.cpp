@@ -32,6 +32,16 @@
 
 using namespace Tempest;
 
+// NB fix 204: the blows that a character gave, took, and the stumbles it got from them - for [idle]
+struct NbBlowStat { uint32_t given = 0, taken = 0, stumbles = 0; };
+static std::unordered_map<const Npc*,NbBlowStat>& nbBlowStats() {
+  static std::unordered_map<const Npc*,NbBlowStat> m;
+  if(m.size()>4096)
+    m.clear();
+  return m;
+  }
+
+
 /// Returning NB: why a monster near the hero does not react (the state, the queue, the perceptions, the attitude).
 /// "NB ai" in the log, when the state or the target of the character changes (NB fix 52). false, once the AI works.
 static constexpr bool  NB_AI_TRACE      = true;
@@ -2778,9 +2788,16 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
 
       // NB fix 188: C_NPC.bodystate_interruptable_override - a blow does not interrupt the character at all, the stumble
       // too (the bosses of New Balance: Im'Arah stumbled at each spell of the hero and could not cast his own)
-      if((damageType & (1<<zenkit::DamageType::FLY))==0 && !noInter)
+      if((damageType & (1<<zenkit::DamageType::FLY))==0 && !noInter) {
         setAnimAngGet(lastHitType=='A' ? Anim::StumbleA  : Anim::StumbleB);
+        nbBlowStats()[this].stumbles++;   // NB fix 204
+        }
       }
+    }
+  if(hitResult.hasHit) {
+    // NB fix 204: for [idle]
+    nbBlowStats()[this].taken++;
+    nbBlowStats()[&other].given++;
     }
 
   // throw enemy
@@ -4232,7 +4249,8 @@ void Npc::tickRoutine() {
 /// does not move and does not strike for 8 s: one line in the log with what the engine sees (the golems that stood beside
 /// a snake with another snake 22 m away as the target). Again only after it has moved, struck or changed the target
 void Npc::nbWatchIdle() {
-  struct Idle { uint64_t next = 0, since = 0; Tempest::Vec3 pos; const Npc* tg = nullptr; bool logged = false; };
+  struct Idle { uint64_t next = 0, since = 0, reachSince = 0; Tempest::Vec3 pos; const Npc* tg = nullptr; bool logged = false, reachLogged = false;
+                NbBlowStat base; };
   static std::unordered_map<const Npc*,Idle> idle;
   const uint64_t now = owner.tickCount();
   const Npc*     pl  = owner.player();
@@ -4259,6 +4277,25 @@ void Npc::nbWatchIdle() {
   const float fd   = std::sqrt(fghAlgo.qDistTo(*this,*currentTarget));
   const float pref = fghAlgo.prefferedAttackDistance(*this,*currentTarget,owner.script());
   const bool  moved = (position()-e.pos).length()>40.f;
+  // NB fix 204: in reach of the target, but no blow lands for 8 s (the golems that a desert snake bit every second: each
+  // bite stopped their own blow) - the blows taken and the stumbles in that time
+  {
+    const NbBlowStat cur = nbBlowStats()[this];
+    if(e.tg!=currentTarget || fd>pref*1.3f || cur.given!=e.base.given) {
+      e.reachSince  = now;
+      e.reachLogged = false;
+      e.base        = cur;
+      }
+    else if(!e.reachLogged && now>=e.reachSince+8000) {
+      e.reachLogged = true;
+      Log::i("[idle] ",displayName().data()," in reach of ",
+             currentTarget->isPlayer() ? std::string("hero") : std::string(currentTarget->displayName()),
+             " for ",(now-e.reachSince)/1000," s without a blow: fight ",int(fd)," cm (reach ",int(pref),"), sees it ",
+             int(canSeeNpc(*currentTarget,false)),", blows taken ",cur.taken-e.base.taken,", stumbles ",cur.stumbles-e.base.stumbles,
+             ", attack anim ",int(isAttackAnim()),", ai [",aiQueue.describe(4),"], body ",int(bodyStateMasked()),
+             ", interruptable override ",int(hnpc->bodystate_interruptable_override));
+      }
+  }
   if(e.tg!=currentTarget || moved || isAttackAnim() || fd<=pref*1.3f) {
     e.pos    = position();
     e.since  = now;
@@ -5945,6 +5982,16 @@ std::string_view Npc::nbStateName() const {
 
 std::string Npc::nbAiQueueDesc() const {
   return aiQueue.describe(4);
+  }
+
+std::string Npc::nbFightInfo() {
+  if(currentTarget==nullptr)
+    return "";
+  const int fd   = int(std::sqrt(fghAlgo.qDistTo(*this,*currentTarget)));
+  const int pref = int(fghAlgo.prefferedAttackDistance(*this,*currentTarget,owner.script()));
+  auto& b = nbBlowStats()[this];
+  return ", fight "+std::to_string(fd)+"/"+std::to_string(pref)+" cm, sees "+std::to_string(int(canSeeNpc(*currentTarget,false)))+
+         ", blows given "+std::to_string(b.given)+" taken "+std::to_string(b.taken)+" stumbles "+std::to_string(b.stumbles);
   }
 
 bool Npc::isInRoutine(ScriptFn stateFn) const {

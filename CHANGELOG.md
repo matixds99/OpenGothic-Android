@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **204**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **205**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – 🧪
-2. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
-3. **197** – golemy stoją przy wrogu: szczegóły w logu (`STUCK 5 s`) – ✅ (dał przyczynę: cel 22 m dalej)
-4. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
-5. **195** – launcher: czwarta karta „Gothic II – New Balance” z okładką – ✅
+1. **204** – log: `[idle]` także w zasięgu bez ciosu (ciosy przyjęte, zachwiania), w znaczniku odległość walki; porządki w podsumowaniu – 🧪
+2. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
+3. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
+4. **197** – golemy stoją przy wrogu: szczegóły w logu (`STUCK 5 s`) – ✅ (dał przyczynę: cel 22 m dalej)
+5. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
 
 ---
 
@@ -252,7 +252,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 199–203. Rozbudowany log do zgłoszeń – 🧪 (24.11.2026)
+### 204. Log: golem w zasięgu bez ciosu, odległość walki w znaczniku, porządki w podsumowaniu – 🧪 (24.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp/.h`, `common/utils/nblog.cpp/.h`, `common/mainwindow.cpp`, `common/game/gamescript.cpp`
+- **Log (24.11, golemy i pustynny wąż):** po „Atak” celem golemów był wąż 26 m dalej (`STUCK … fight=2607/420 see=0`). Gdy wąż podszedł i gryzł golemy co ~1 s, znaczniki 1–2 pokazują golemy obok, w `ZS_MM_ATTACK`, z wężem jako celem i pustą kolejką AI – ale bez ani jednego ciosu; uderzyły dopiero, gdy wąż przerzucił się na bohatera (`reattack: turns to`). Poprawka 198 nie zadziałała, bo wąż już był ich celem. `[idle]` nie wypisał nic – sprawdzał tylko cel poza zasięgiem.
+- **Przypuszczenie:** każde ugryzienie przerywa cios golema (zachwianie – w porcie przy ciosie postaci w postać, bez `bodystate_interruptable_override`), więc golem nie kończy żadnego ciosu. Do potwierdzenia nowym wpisem.
+- **Poprawka (diagnostyka):**
+  - `[idle] … in reach of … for 8 s without a blow` – postać w zasięgu celu, która przez 8 s nie trafia: odległość walki / zasięg, czy widzi cel, ciosy przyjęte i zachwiania w tym czasie, czy trwa animacja ataku, `bodystate_interruptable_override`;
+  - w znaczniku przy każdej postaci z celem: odległość walki / zasięg, czy widzi cel, ciosy zadane / przyjęte / zachwiania od startu;
+  - podsumowanie: lista `NB: bound` to już informacja, nie błąd; archiwa DLL/ZIP Uniona i `VDFS tool disk` w ostrzeżeniach danych; bez dubli „sound fx” obok pliku dźwięku i bez resztek ścieżek binarnych; `[mem]` z czasem od startu.
+- **Do sprawdzenia:** golemy gryzione przez węża – w logu `[idle] … without a blow: … blows taken N, stumbles M`; przy M bliskim N przyczyną jest przerywanie ciosów.
+
+### 199–203. Rozbudowany log do zgłoszeń – ✅ (24.11.2026)
 - **Pliki:** nowe `common/utils/nblog.cpp` i `nblog.h`; `game/main.cpp`, `common/utils/crashlog.cpp/.h`, `common/world/objects/npc.cpp/.h`, `common/game/damagecalculator.cpp`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`
 - **Zgłoszenie:** log ma szybciej pokazywać błędy, zwłaszcza takie jak przy golemach, gdzie w logu nie było żadnego błędu, a postacie nic nie robiły; przyda się przy kolejnych bossach.
 - **199 – znacznik (przycisk MARK):** nowy przycisk na nakładce (u góry, obok LOG; można go przesunąć lub ukryć w edytorze nakładki). Dotknięcie dopisuje do logu blok `[mark N]`: czas od startu, świat, dzień i godzina gry, pozycja, życie, mana, broń i stan ciała bohatera, jego cel, oraz do 12 postaci w promieniu 30 m – odległość, stan AI, życie, cel, broń, stan ciała, kolejka AI. Na ekranie „Znacznik w logu: N”.
@@ -267,6 +277,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - wyjście z gry lub przejście do innej aplikacji – na końcu logu `==== NB summary`;
   - Ustawienia → „Log: quiet / normal / full” – log krótszy przy *quiet*;
   - przy stojących postaciach w walce – `[idle]` w logu.
+- **Test (24.11, log):** działa – 3 znaczniki `[mark 1–3]` z postaciami w pobliżu, podsumowanie przy wyjściu z gry. Do poprawy (poprawka 204): w „innych błędach” lista funkcji `NB: bound` (zapisana jako błąd) i resztki ścieżek binarnych, archiwa DLL/ZIP Uniona jako „brakujące pliki”, `VDFS tool disk detected` jako błąd skryptu, czas `[mem]` (9223372037106512 s).
 
 ### 198. Przywołaniec gryziony przez innego wroga odwraca się do niego – 🧪 (23.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/world/objects/npc.cpp`

@@ -3351,7 +3351,7 @@ void GameScript::initCommon() {
     std::string list;
     for(auto& n : nbBound)
       list += n + " ";
-    Log::e("NB: bound ",int(nbBound.size())," externals: ",list);
+    Log::i("NB: bound ",int(nbBound.size())," externals: ",list);   // NB fix 204: not an error (the summary)
     }
     // what is still missing, with the signature from GOTHIC.DAT
     for(uint32_t i=0; i<vm.symbols().size(); ++i) {

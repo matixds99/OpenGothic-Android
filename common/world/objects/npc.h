@@ -411,6 +411,7 @@ class Npc final {
     bool      isInState  (ScriptFn stateFn) const;
     std::string_view nbStateName() const;        // NB fix 199: the name of the AI state (ZS_ATTACK...), for the log
     std::string      nbAiQueueDesc() const;      // NB fix 199: the AI queue as text
+    std::string      nbFightInfo();              // NB fix 204: the fight distance to the target / the reach, for the marker
     bool      isInRoutine(ScriptFn stateFn) const;
     bool      wasInState (ScriptFn stateFn) const;
     uint64_t  stateTime() const;

@@ -16,6 +16,7 @@ namespace NbLog {
     Full   = 2,   // everything, as before
     };
 
+  uint64_t    sinceStartMs();   // NB fix 204: the time of the log lines
   void        setLevel(int level);
   int         level();
 
