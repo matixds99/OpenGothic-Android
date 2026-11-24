@@ -513,6 +513,8 @@ class Npc final {
     void      clearGoTo();
     void      stopWalking();
 
+    bool      nbHasGotoVob() const;          // NB fix 214: Npc_HasMessage(npc, 2, 2) - a walk to a character or an item
+    auto      nbPatrolNextPoint() const -> std::string;   // NB fix 214: Patrol_NextWP
     bool      canSeeNpc(const Npc& oth, bool freeLos) const;
     bool      canSeeItem(const Item& it, bool freeLos) const;
     bool      canSeeSource() const;

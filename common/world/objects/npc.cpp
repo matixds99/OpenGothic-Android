@@ -4685,6 +4685,39 @@ void Npc::commitSpell() {
     }
   }
 
+static bool nbEqualNoCase(std::string_view a, std::string_view b) {
+  if(a.size()!=b.size())
+    return false;
+  for(size_t i=0; i<a.size(); ++i)
+    if(std::toupper(uint8_t(a[i]))!=std::toupper(uint8_t(b[i])))
+      return false;
+  return true;
+  }
+
+bool Npc::nbHasGotoVob() const {
+  return aiQueue.has(AI_GoToNpc) || go2.flag==GoToHint::GT_Item;
+  }
+
+std::string Npc::nbPatrolNextPoint() const {
+  // NB fix 214: the plugin (0x10456cf0): the current entry of the routine of the character ends in 3 minutes at most and the
+  // character is at its way point - the way point of the entry that begins when it ends
+  if(routines.empty())
+    return {};
+  auto&         r     = currentRoutine();
+  const int64_t now   = owner.time().timeInDay().toInt()/(60*1000);
+  const int64_t end   = r.end.toInt()/(60*1000);
+  const int64_t left  = ((end-now)%1440+1440)%1440;
+  if(left>3)
+    return {};
+  auto name = std::string(r.wayPointName());
+  if(name.empty() || !nbEqualNoCase(name,hnpc->wp))
+    return {};
+  for(auto& i:routines)
+    if(&i!=&r && i.start==r.end)
+      return std::string(i.wayPointName());
+  return {};
+  }
+
 const Npc::Routine& Npc::currentRoutine(bool assertWp) const {
   // find routine for current time
   // if there is no such routine search counter clock-wise until one is found

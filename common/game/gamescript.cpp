@@ -2272,6 +2272,131 @@ void GameScript::initCommon() {
         return;
       s->set_int(value,uint16_t(index));
       });
+    // NB fix 214: Patrol_Set / Patrol_SetPath(npc, "WP1|WP2|...", hour, minute, wait, state) of the plugin (0x104567b0,
+    // 0x10455fa0): the patrol becomes the entries of the daily routine of the character, the whole day from hour:minute.
+    //  - Patrol_Set: from the first way point to every other one and back (WP2, WP1, WP3, WP1...);
+    //  - Patrol_SetPath: along the path and back (WP2..WPn, WPn-1..WP1).
+    // An entry lasts the length of the way / 833.33 cm a minute (rounded) + wait minutes, 2..1440 minutes. The round repeats
+    // 1440 / its length times; the rest of the day goes to the entries evenly when wait > 0, else to the last one.
+    const auto nbPatrol = [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view list, int32_t hour, int32_t minute,
+                                 int32_t wait, int32_t func, bool path) {
+      auto npc = findNpc(npcRef);
+      if(npc==nullptr)
+        return;
+      std::vector<const WayPoint*> wps;
+      size_t at = 0;
+      while(at<=list.size()) {
+        size_t end = list.find('|',at);
+        if(end==std::string_view::npos)
+          end = list.size();
+        auto name = list.substr(at,end-at);
+        while(!name.empty() && name.front()==' ')
+          name.remove_prefix(1);
+        while(!name.empty() && name.back()==' ')
+          name.remove_suffix(1);
+        if(!name.empty()) {
+          if(auto* wp = world().findPoint(name,false))
+            wps.push_back(wp); else
+            Log::e("NB: Patrol: unknown waypoint ",name," (",npc->displayName(),")");
+          }
+        at = end+1;
+        }
+      if(wps.size()<2 || func<=0) {
+        Log::e("NB: Patrol_Set failed: ",list);
+        return;
+        }
+      std::vector<const WayPoint*> seq;
+      if(path) {
+        for(size_t i=1; i<wps.size(); ++i)
+          seq.push_back(wps[i]);
+        for(size_t i=wps.size()-1; i-->0;)
+          seq.push_back(wps[i]);
+        } else {
+        for(size_t i=1; i<wps.size(); ++i) {
+          seq.push_back(wps[i]);
+          seq.push_back(wps[0]);
+          }
+        }
+      std::vector<int32_t> dur;
+      int32_t total = 0;
+      const WayPoint* prev = wps[0];
+      for(auto* wp:seq) {
+        float len = world().nbWayLength(*prev,*wp);
+        if(len<0)
+          len = -len-1.f;   // no way: the line between them, as the plugin
+        int32_t m = int32_t(std::round(len/833.3333f)) + wait;
+        m = std::clamp(m,2,1440);
+        dur.push_back(m);
+        total += m;
+        prev = wp;
+        }
+      const int32_t reps = std::max(1,1440/std::max(total,1));
+      const int32_t rest = std::max(0,1440-reps*total);
+      std::vector<int32_t> all;
+      for(int32_t r=0; r<reps; ++r)
+        all.insert(all.end(),dur.begin(),dur.end());
+      const int32_t n = int32_t(all.size());
+      if(wait>0) {
+        for(int32_t i=0; i<n; ++i)
+          all[size_t(i)] += rest/n + (i<rest%n ? 1 : 0);
+        } else if(n>0) {
+        all.back() += rest;
+        }
+      int32_t t = ((hour*60+minute)%1440+1440)%1440;
+      const int32_t stop = t+1440;
+      for(int32_t i=0; i<n && t<stop; ++i) {
+        const int32_t e = std::min(t+all[size_t(i)],stop);
+        npc->addRoutine(gtime((t/60)%24,t%60),gtime((e/60)%24,e%60),uint32_t(func),seq[size_t(i)%seq.size()]->name);
+        t = e;
+        }
+      nbCtx("patrol: ",npc->displayName(),", ",seq.size()," way points, a round ",total," min, ",n," entries");
+      };
+    bindNb("PATROL_SET", [nbPatrol](std::shared_ptr<zenkit::INpc> npc, std::string_view list, int32_t h, int32_t m,
+                                    int32_t wait, int32_t func) { nbPatrol(npc,list,h,m,wait,func,false); });
+    bindNb("PATROL_SETPATH", [nbPatrol](std::shared_ptr<zenkit::INpc> npc, std::string_view list, int32_t h, int32_t m,
+                                        int32_t wait, int32_t func) { nbPatrol(npc,list,h,m,wait,func,true); });
+    bindNb("PATROL_NEXTWP", [this](std::shared_ptr<zenkit::INpc> npcRef) -> std::string {
+      auto npc = findNpc(npcRef);
+      return npc!=nullptr ? npc->nbPatrolNextPoint() : std::string();
+      });
+    // NB fix 214: Npc_SetEffect(npc, n) (0x100e23d0): the effect of the character - 1 red, 2 green, 3 white eyes, else none
+    bindNb("NPC_SETEFFECT", [](std::shared_ptr<zenkit::INpc> npcRef, int32_t n) {
+      if(npcRef==nullptr)
+        return;
+      npcRef->effect = n==1 ? "SPELLFX_REDEYES" : n==2 ? "SPELLFX_GREENEYES" : n==3 ? "SPELLFX_WHITEEYES" : "";
+      });
+    // NB fix 214: the new karma of the plugin works only with varNewKarmaEnabled >= 0 (0x100ff7b0); these scripts do not have
+    // it (IsNewKarmaEnabled is FALSE), so on the PC these functions do nothing
+    bindNb("UPDATEKARMA",           [](int32_t, int32_t) {});
+    bindNb("UPDATEKARMATROPHY",     [](int32_t) {});
+    bindNb("KARMA_UPDATE_QUEST",    [](int32_t, int32_t) {});
+    bindNb("KARMA_PLAYATTACKSOUND", [](std::shared_ptr<zenkit::INpc>, std::shared_ptr<zenkit::INpc>, int32_t) {});
+    bindNb("KARMA_FANATICPICKWEAPON", [](std::shared_ptr<zenkit::INpc>, std::string_view, int32_t) -> int32_t { return 0; });
+    // Karma_GetItemMunition(item) (0x10152f90): the munition of the item, -1 without it
+    bindNb("KARMA_GETITEMMUNITION", [this](int32_t cls) -> int32_t {
+      auto* sym = vm.find_symbol_by_index(uint32_t(cls));
+      if(cls<0 || !nbIsItemSymbol(vm,sym))
+        return -1;
+      auto it = vm.init_instance<zenkit::IItem>(sym);
+      return it!=nullptr ? it->munition : -1;
+      });
+    // NB fix 214: Npc_HasMessage(npc, type, subtype) (0x1008b890): a message of the kind in the queue of the character; the
+    // scripts ask only (2, 2) - a walk to a character or an item (EV_GOTOVOB), ZS_MM_Attack_Loop
+    bindNb("NPC_HASMESSAGE", [this](std::shared_ptr<zenkit::INpc> npcRef, int32_t type, int32_t sub) -> int32_t {
+      auto npc = findNpc(npcRef);
+      if(npc==nullptr)
+        return 0;
+      if(type==2 && sub==2)
+        return npc->nbHasGotoVob() ? 1 : 0;
+      return 0;
+      });
+    // NB fix 214: Npc_HasSprintMoveset(npc) (0x101cb900): the sprint animations (HUMANS_SPRINT, HUMANS_MAGESPRINT) are on
+    bindNb("NPC_HASSPRINTMOVESET", [this](std::shared_ptr<zenkit::INpc> npcRef) -> int32_t {
+      auto npc = findNpc(npcRef);
+      if(npc==nullptr)
+        return 0;
+      return npc->hasOverlay("HUMANS_SPRINT.MDS") || npc->hasOverlay("HUMANS_MAGESPRINT.MDS") ? 1 : 0;
+      });
     // the music of the plugin (bosses, scenes): off / on / switched, the setting of the player stays as it is
     // NB fix 116: RX_MusicOff mutes the music of the game until RX_MusicOn (on the PC it writes musicEnabled into Gothic.ini).
     // Not by setEnabled: every option written by the scripts (Menu_WriteInt of bCanSaveGame when a fight starts) loaded

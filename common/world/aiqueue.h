@@ -34,6 +34,7 @@ class AiQueue {
     void     load(Serialize& fin);
 
     size_t   size() const { return aiActions.size(); }
+    bool     has(Action a) const { for(auto& i:aiActions) if(i.act==a) return true; return false; }   // NB fix 214
     void     clear();
     void     pushBack (AiAction&& a);
     void     pushFront(AiAction&& a);

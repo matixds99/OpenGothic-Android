@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **214**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **215**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **213** – `C_PlayerIsFakeBandit`: Ramon spoza świata dodatku to nie błąd portu; raport tylko wywoływanych brakujących funkcji – 🧪
-2. **212** – aktualizacje skryptów NB: raport przy starcie (co usunięte, nowe funkcje pluginu), nazwy starych skryptów zachowywane same, postacie rozpoznawane po id i imieniu – 🧪
-3. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – ✅
-4. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – ✅
-5. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
+1. **214** – patrole (`Patrol_Set`, `Patrol_SetPath`, `Patrol_NextWP`), oczy szkieletów (`Npc_SetEffect`), `Npc_HasMessage`, `Npc_HasSprintMoveset`, funkcje karmy jak na PC – 🧪
+2. **213** – `C_PlayerIsFakeBandit`: Ramon spoza świata dodatku to nie błąd portu; raport tylko wywoływanych brakujących funkcji – 🧪
+3. **212** – aktualizacje skryptów NB: raport przy starcie (co usunięte, nowe funkcje pluginu), nazwy starych skryptów zachowywane same, postacie rozpoznawane po id i imieniu – 🧪
+4. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – ✅
+5. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – ✅
 
 ---
 
@@ -251,6 +251,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 214. Patrole, oczy szkieletów, `Npc_HasMessage`, `Npc_HasSprintMoveset`, karma – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/world.cpp`, `common/world/world.h`, `common/world/aiqueue.h`
+- **Zgłoszenie:** funkcje pluginu, które skrypty wołają, a portu nie ma (raport poprawki 213) – zacząć od patroli i `UpdateKarma`.
+- **Plugin (UNION_ABI.DLL z aktualizacji):**
+  - `Patrol_Set` / `Patrol_SetPath(npc, "WP1|WP2|…", godzina, minuta, czekanie, stan)` (`0x104567b0`, `0x10455fa0`): patrol zamieniany na wpisy rutyny dnia postaci (jak `TA_*`), cała doba od godziny:minuty. `Patrol_Set` – od pierwszego punktu do każdego innego i z powrotem; `Patrol_SetPath` – wzdłuż ścieżki i z powrotem. Wpis trwa długość drogi po sieci punktów / 833,33 cm na minutę (zaokrąglone) + czekanie, 2–1440 minut; okrążenie powtarzane 1440 / jego długość razy, reszta doby rozdzielona równo (czekanie > 0) albo dodana do ostatniego wpisu. Brak drogi – linia prosta (jak plugin, „U: PATROL: no route”);
+  - `Patrol_NextWP(npc)` (`0x10456cf0`): gdy obecny wpis rutyny kończy się za 3 minuty lub mniej, a postać stoi przy jego punkcie – punkt następnego wpisu (`ZS_Patrol_Walk_Loop`), inaczej pusty;
+  - `Npc_SetEffect(npc, n)` (`0x100e23d0`): efekt postaci – 1 `SPELLFX_REDEYES`, 2 `SPELLFX_GREENEYES`, 3 `SPELLFX_WHITEEYES`, inaczej brak (`RX_UpdateSkeletonEyes`, opcja koloru oczu szkieletów);
+  - `Npc_HasMessage(npc, typ, podtyp)` (`0x1008b890`): wiadomość danego rodzaju w kolejce postaci; skrypty pytają tylko o (2, 2) – idzie do postaci lub przedmiotu (`ZS_MM_Attack_Loop`);
+  - `Npc_HasSprintMoveset(npc)` (`0x101cb900`): założone animacje sprintu `HUMANS_SPRINT` / `HUMANS_MAGESPRINT` (`ZS_Attack_Loop`, `ZS_MM_Attack_Loop`);
+  - nowa karma (`UpdateKarma` – 130 wywołań, `UpdateKarmaTrophy`, `Karma_Update_Quest`) działa tylko przy zmiennej `varNewKarmaEnabled` ≥ 0 (`0x100ff7b0`); tych skryptów nie ma (`IsNewKarmaEnabled` zwraca FALSE), więc na PC nic nie robią – w porcie tak samo, bez komunikatów o brakującej funkcji; `Karma_GetItemMunition(przedmiot)` – amunicja przedmiotu; `Karma_FanaticPickWeapon`, `Karma_PlayAttackSound` – fanatycy i strażnicy karmy, nieaktywni.
+- **Uwaga:** patrole w tych skryptach mają postacie karmy (`NPC_100300_K`, punkty `WP_NW_KARMA_SPAWN_*`), które wstawia wyłączony system karmy – będą działać, gdy NB go włączy.
+- **Do sprawdzenia:** szkielety – kolor oczu według opcji; w ataku potworów bez komunikatów o `NPC_HASMESSAGE`, `NPC_HASSPRINTMOVESET`, `UPDATEKARMA`.
 
 ### 213. `C_PlayerIsFakeBandit` – postać spoza świata; raport brakujących funkcji, które skrypty wołają – 🧪 (24.11.2026)
 - **Pliki:** `lib/ZenKit/src/DaedalusVm.cc`, `lib/ZenKit/include/zenkit/DaedalusVm.hh` (`patches/zenkit-opengothic.patch`), `common/utils/nblog.cpp`, `common/game/savesymbols.cpp`

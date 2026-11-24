@@ -1157,6 +1157,24 @@ void World::detectItem(const Tempest::Vec3& p, const float r, const std::functio
   wobj.detectItem(p.x,p.y,p.z,r,f);
   }
 
+float World::nbWayLength(const WayPoint& a, const WayPoint& b) const {
+  if(&a==&b)
+    return 0.f;
+  const WayPoint* begin = &a;
+  WayPath path = wmatrix->wayTo(&begin,1,a.position(),b);
+  float           len  = 0.f;
+  const WayPoint* prev = &a;
+  size_t          n    = 0;
+  while(auto p = path.pop()) {
+    len += (p->position()-prev->position()).length();
+    prev = p;
+    ++n;
+    }
+  if(n==0)
+    return -(a.position()-b.position()).length()-1.f;   // no way: the line, negative
+  return len;
+  }
+
 WayPath World::wayTo(const Npc &npc, const WayPoint &end) const {
   const auto npcPos = npc.centerPosition();
 

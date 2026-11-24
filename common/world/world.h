@@ -95,6 +95,8 @@ class World final {
     void                 detectItem(const Tempest::Vec3& p, const float r, const std::function<void(Item&)>& f);
 
     WayPath              wayTo(const Npc& pos,const WayPoint& end) const;
+    /// NB fix 214: the length of the way between two way points (the line between them when there is no way), < 0: no way
+    float                nbWayLength(const WayPoint& a, const WayPoint& b) const;
 
     WorldView*           view()     const { return wview.get();    }
     WorldSound*          sound()          { return &wsound;        }
