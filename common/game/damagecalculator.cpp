@@ -170,6 +170,19 @@ DamageCalculator::Val DamageCalculator::swordDamage(Npc& nsrc, Npc& nother) {
   auto& src    = nsrc.handle();
   auto& other  = nother.handle();
 
+  // NB fix 208: the protection of the target for this blow - the summons of the necromancer go through a part of the
+  // protection against edge and blunt (the magic power)
+  int32_t prot[zenkit::DamageType::NUM] = {};
+  for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i)
+    prot[i] = other.protection[i];
+  if(Gothic::inst().version().game==2) {
+    if(const int32_t pen = script.nbSummonArmorIgnore(nsrc); pen>0) {
+      for(unsigned int i : {unsigned(zenkit::DamageType::BLUNT),unsigned(zenkit::DamageType::EDGE)})
+        if(prot[i]>0)
+          prot[i] = prot[i]*(100-pen)/100;
+      }
+    }
+
   // Swords/Fists
   const int dtype      = damageTypeMask(nsrc);
   Talent    tal        = TALENT_UNKNOWN;
@@ -204,9 +217,9 @@ DamageCalculator::Val DamageCalculator::swordDamage(Npc& nsrc, Npc& nother) {
     if(tal==TALENT_UNKNOWN && ownDamage>0 && script.nbIsSummon(nsrc)) {
       bool invincible = true;
       for(unsigned int i=0; i<zenkit::DamageType::NUM; ++i) {
-        if((dtype & (1<<i))==0 || other.protection[i]<0)
+        if((dtype & (1<<i))==0 || prot[i]<0)
           continue;   // not this kind, or immune
-        value += std::max(src.damage[i]-other.protection[i],1);
+        value += std::max(src.damage[i]-prot[i],1);
         invincible = false;
         }
       if(!invincible)
@@ -234,15 +247,20 @@ DamageCalculator::Val DamageCalculator::swordDamage(Npc& nsrc, Npc& nother) {
           full = int((int64_t(str)+dmgSum)*std::max(src.damage[i],0)/dmgSum); else
           full = str/kinds;
         }
-      int vd = std::max(full - other.protection[i],0);
+      int vd = std::max(full - prot[i],0);
       if(src.hitchance[tal]<=critChance)
         vd = (vd-1)/10;
-      if(other.protection[i]>=0) { // Filter immune
+      if(prot[i]>=0) { // Filter immune
         value += vd;
         invincible = false;
         }
       }
 
+    // NB fix 208: the magic damage of a magic weapon of the hero (a staff, a magic blade)
+    if(const int32_t mag = script.nbMagicWeaponDamage(nsrc,nother); mag>0) {
+      value     += mag;
+      invincible = false;
+      }
     return Val(value,true,invincible);
     } else {
     bool invincible = true;
@@ -252,9 +270,9 @@ DamageCalculator::Val DamageCalculator::swordDamage(Npc& nsrc, Npc& nother) {
         continue;
       int vd = 0;
       if(nsrc.talentValue(tal)<=critChance)
-        vd = std::max(str +     src.damage[i] - other.protection[i],0); else
-        vd = std::max(str + mul*src.damage[i] - other.protection[i],0);
-      if(other.protection[i]>=0) { // Filter immune
+        vd = std::max(str +     src.damage[i] - prot[i],0); else
+        vd = std::max(str + mul*src.damage[i] - prot[i],0);
+      if(prot[i]>=0) { // Filter immune
         value += vd;
         invincible = false;
         }

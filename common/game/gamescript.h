@@ -241,6 +241,8 @@ class GameScript final {
     void             nbImarahEnd(Npc& npc, int32_t cooldown, bool resetTimer);
     void             nbSummonBossLog();              // NB fix 193
     void             nbSummonHitBy(Npc& summon, Npc& attacker);   // NB fix 198
+    int32_t          nbMagicWeaponDamage(Npc& src, Npc& target);  // NB fix 208: the magic damage of the staves and blades
+    int32_t          nbSummonArmorIgnore(Npc& src);               // NB fix 208: the necromancer: the summons ignore armor
     int32_t          nbSummonsCallCooldown();   // NB fix 176
     /// the summoned creatures of the hero go away; the pets stay (NIXDOG, PET_JINA), the wisp too when keepWisp
     size_t           nbResetSummons(bool keepWisp, bool print);

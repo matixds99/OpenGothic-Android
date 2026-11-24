@@ -9216,6 +9216,85 @@ void GameScript::nbSummonHitBy(Npc& summon, Npc& attacker) {
   summon.aiPush(AiQueue::aiStartState(st,0,&attacker,nullptr,""));
   }
 
+/// NB fix 208: the magic damage of the magic weapons of the hero (UNION_ABI.DLL 0x100dbb50, called by the hook of the
+/// damage 0x100dcbf0 for a blow of the hero with a one- or two-handed weapon, not transformed, not at a friend):
+///   base of the weapon (a table of the plugin: the blade of the adept 50 ... the blade of Beliar 475; the staves 50 ... 480)
+///   + the intelligence by the circle of the magic: no circle 1/8, 1st 1/5 (20%), 2nd 1/4, 3rd 1/2, 4th 70%, 5th and 6th 100%
+///   * (0.5 + (5 + the magic power (CountLearnSpell) + the skill of the weapon, 1H or 2H) / 200)
+/// minus the protection of the target against magic, added to the blow (when above 0)
+int32_t GameScript::nbMagicWeaponDamage(Npc& src, Npc& target) {
+  if(!src.isPlayer() || nbIntVar("HEROTRANS")!=0 || int(target.handle().type)==2)
+    return 0;
+  const auto ws = src.weaponState();
+  if(ws!=WeaponState::W1H && ws!=WeaponState::W2H)
+    return 0;
+  auto* w = src.inventory().activeWeapon();
+  if(w==nullptr)
+    return 0;
+  auto* sym = findSymbol(w->clsId());
+  if(sym==nullptr)
+    return 0;
+  std::string name(sym->name());
+  for(auto& c:name)
+    c = char(std::toupper(static_cast<unsigned char>(c)));
+  static const std::unordered_map<std::string,int32_t> base = {
+    {"ITMW_BLADE_ADEPT",50},  {"ITMW_BLADE_MAGE",90},  {"ITMW_BLADE_MAGE_YARK",145}, {"ITMW_BLADE_SPELL",250},
+    {"ITMW_BLADE_SENDER",275},{"ITMW_BLADE_STORM",300},{"ITMW_BLADE_ECLIPSE",350},   {"ITMW_BLADE_BELIARCLAW",350},
+    {"ITMW_BLADE_BELIARCLAW_SENYAK",410}, {"ITMW_BLADE_BELIAR",475},
+    {"ITMW_2H_STAFF_NEWBIE",50}, {"ITMW_STAFF_DRUID_01",50},
+    {"ITMW_2H_G3_STAFFDRUID_01",90}, {"ITMW_2H_G3_STAFFFIRE_01",90}, {"ITMW_2H_G3_STAFFWATER_01",90},
+    {"ITMW_2H_KMR_BLACKSTAFF_01",90}, {"ITMW_STAFF_DRUID_02",90}, {"ITMW_2H_YARIK",150},
+    {"ITMW_ADDON_STAB01",275}, {"ITMW_ADDON_STAB02",275}, {"ITMW_ADDON_STAB03",275}, {"ITMW_ADDON_STAB04",275},
+    {"ITMW_STAFF_DRUID_03",275}, {"ITMW_2H_MI_STAFF",300}, {"ITMW_2H_SERPENTSTAFF",325}, {"ITMW_STAFF_CLAW",335},
+    {"ITMW_STAFF_CLAWSENYAK",450}, {"ITMW_2H_DRAGONSTAFF_01",410}, {"ITMW_STAFF_BLOOD",480},
+    {"ITMW_2H_KMR_DAEMONSTAFF_01",430}, {"ITMW_2H_ORCSTAB",180}, {"ITMW_2H_ORCSTAFF_01",180},
+    };
+  auto it = base.find(name);
+  if(it==base.end())
+    return 0;
+  const int32_t intel  = nbIntVar("ATR_INTELLECT");
+  const int32_t power  = nbIntVar("COUNTLEARNSPELL");
+  const int32_t circle = src.talentSkill(TALENT_MAGE);
+  int32_t v = it->second;
+  switch(circle) {
+    case 0:  v += intel/8;         break;
+    case 1:  v += intel/5;         break;
+    case 2:  v += intel/4;         break;
+    case 3:  v += intel/2;         break;
+    case 4:  v += intel*70/100;    break;
+    default: v += intel;           break;
+    }
+  if(v<=0)
+    return 0;
+  const int32_t skill = src.handle().hitchance[w->is2H() ? TALENT_2H : TALENT_1H];
+  const int32_t dmg   = int32_t(double(v)*(double(5+power+skill)/200.0+0.5));
+  const int32_t prot  = target.protection(PROT_MAGIC);
+  if(prot<0)
+    return 0;   // immune to magic
+  const int32_t add   = std::max(dmg-prot,0);
+  static uint64_t lastLog = 0;
+  if(tickCount()>lastLog+3000) {
+    lastLog = tickCount();
+    nbCtx("magic weapon ",name,": base ",it->second,", intelligence ",intel," (circle ",circle,"), magic power ",power,
+          ", skill ",skill," -> ",dmg," magic, protection ",prot," -> +",add);
+    }
+  return add;
+  }
+
+/// NB fix 208: the necromancer (0x100611c8 in the hook of the damage 0x1005d440): a blow of a summoned creature goes
+/// through a part of the protection against edge and blunt: 5% with RX_NecroSummonBoostDamageLearned, and 5% + the magic
+/// power / 2 with RX_NecroRuneAuraActive_02. Returns the percent
+int32_t GameScript::nbSummonArmorIgnore(Npc& src) {
+  if(!nbIsSummon(src))
+    return 0;
+  int32_t pen = 0;
+  if(nbIntVar("RX_NECROSUMMONBOOSTDAMAGELEARNED")!=0)
+    pen += 5;
+  if(nbIntVar("RX_NECRORUNEAURAACTIVE_02")!=0)
+    pen += 5+nbIntVar("COUNTLEARNSPELL")/2;
+  return std::clamp(pen,0,100);
+  }
+
 void GameScript::nbMonsterStatsTick() {
   auto* fn = vm.find_symbol_by_name("RX_AST_UPDATEMONSTERSTATS");
   if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)

@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **208**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **209**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – ✅
-2. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
-3. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – ✅
-4. **204** – log: `[idle]` także w zasięgu bez ciosu, w znaczniku odległość walki; porządki w podsumowaniu – ✅
-5. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
+1. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
+2. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – ✅
+3. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
+4. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – ✅
+5. **204** – log: `[idle]` także w zasięgu bez ciosu, w znaczniku odległość walki; porządki w podsumowaniu – ✅
 
 ---
 
@@ -251,6 +251,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 208. Moc magiczna: obrażenia magiczne kosturów i mieczy magicznych, przebicie pancerza przywołańców nekromanty – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/game/damagecalculator.cpp`
+- **Zgłoszenie:** czy działa moc magiczna (arkusz „Kostury i miecze magiczne”: inteligencja wg kręgu, szansa 5% + moc + umiejętność broni).
+- **Moc magiczna** to `CountLearnSpell` (0–150). Skrypty, które jej używają (np. czar Severe Guru, mroczna niewidzialność), działały; nie było części pluginu.
+- **Plugin (UNION_ABI.DLL):**
+  - `0x100dbb50`, wołane przez hak obrażeń `0x100dcbf0` przy ciosie bohatera bronią jedno- lub dwuręczną (nie w przemianie, nie w przyjaciela): obrażenia magiczne broni = (podstawa broni z tabeli pluginu + inteligencja wg kręgu: bez kręgu 1/8, 1. krąg 1/5 (20%), 2. – 1/4, 3. – 1/2, 4. – 70%, 5. i 6. – 100%) × (0,5 + (5 + moc magiczna + umiejętność broni 1H/2H) / 200), minus ochrona celu przed magią, dodane do ciosu. Podstawy: ostrze adepta 50, ostrze maga 90, ostrze maga (Yark) 145, ostrze zaklęć 250, ostrze posłańca 275, ostrze burzy 300, ostrze zaćmienia i szpon Beliara 350, szpon Beliara (z duszą) 410, ostrze Beliara 475; kostur nowicjusza i druidów 1 – 50, kostury gildyjne (ognia, wody, druida), czarny kostur, kostur druidów 2 – 90, kostur Yarika 150, kostury z Jarkendaru i druidów 3 – 275, kostur z Wyspy 300, wężowy 325, szpon 335, szpon (Senyak) 450, smoczy 410, krwawy 480, demoniczny 430, orkowe 180;
+  - `0x100611c8` (hak obrażeń `0x1005d440`): cios przywołańca przechodzi przez część ochrony przed bronią sieczną i obuchową – 5% z `RX_NecroSummonBoostDamageLearned` oraz 5% + moc magiczna / 2 z `RX_NecroRuneAuraActive_02` (nekromanta).
+- **Poprawka:** oba – obrażenia magiczne doliczane do ciosu bohatera (w logu co 3 s `[ctx] magic weapon …` z wyliczeniem), przebicie ochrony przy ciosie przywołańca.
+- **Jeszcze nie:** moc magiczna w obrażeniach ognia rozchodzącego się po burzy ognia, eksplozji, deszczu meteorów i pirokinezie (`0x10062200`: (100/125/200/150 + INT/5) × (100 + moc/4)% jako podpalenie) – port nie ma jeszcze samego rozchodzenia się ognia; przebicie pancerza przez konkretne bronie (halabardy itp., tabele pluginu przy `0x10060f8c`).
+- **Do sprawdzenia:** cios kosturem lub mieczem magicznym – większe obrażenia, w logu `magic weapon <broń>: base …, intelligence … (circle …), magic power …, skill … -> … magic, protection … -> +…`.
 
 ### 207. Trofea New Balance można założyć – ✅ (24.11.2026)
 - **Pliki:** `common/game/inventory.cpp`, `common/game/inventory.h`, `common/game/constants.h`
