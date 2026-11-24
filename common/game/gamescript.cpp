@@ -5670,7 +5670,8 @@ void GameScript::tick(uint64_t dt) {
     st.spellsDirty = false;
     spells->refresh();
     auto* in = vm.find_symbol_by_name("ATR_INTELLECT");
-    nbCtx("spells: the damage counted again (intelligence ",in!=nullptr ? in->get_int() : 0,")");
+    nbCtx("spells: the damage counted again (intelligence ",in!=nullptr ? in->get_int() : 0,", magic power ",
+          nbIntVar("COUNTLEARNSPELL"),"%)");   // NB fix 208: the magic power in the log too
     }
   // NB fix 125: the visibility of the vobs that the scripts changed (RX_ToggleVobVisible) - the vobs of a world come
   // from its ZEN file, so it is put again on every new world (a load, a change of the world)

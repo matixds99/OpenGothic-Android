@@ -261,6 +261,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `0x100611c8` (hak obrażeń `0x1005d440`): cios przywołańca przechodzi przez część ochrony przed bronią sieczną i obuchową – 5% z `RX_NecroSummonBoostDamageLearned` oraz 5% + moc magiczna / 2 z `RX_NecroRuneAuraActive_02` (nekromanta).
 - **Poprawka:** oba – obrażenia magiczne doliczane do ciosu bohatera (w logu co 3 s `[ctx] magic weapon …` z wyliczeniem), przebicie ochrony przy ciosie przywołańca.
 - **Jeszcze nie:** moc magiczna w obrażeniach ognia rozchodzącego się po burzy ognia, eksplozji, deszczu meteorów i pirokinezie (`0x10062200`: (100/125/200/150 + INT/5) × (100 + moc/4)% jako podpalenie) – port nie ma jeszcze samego rozchodzenia się ognia; przebicie pancerza przez konkretne bronie (halabardy itp., tabele pluginu przy `0x10060f8c`).
+- **Runy:** moc magiczna była już w obrażeniach run (poprawka 126, jak w pluginie `0x10082190`: wartość × (1 + moc/100), przeliczane co 3 s); wpis w logu `spells: the damage counted again` pokazuje teraz też moc magiczną.
 - **Do sprawdzenia:** cios kosturem lub mieczem magicznym – większe obrażenia, w logu `magic weapon <broń>: base …, intelligence … (circle …), magic power …, skill … -> … magic, protection … -> +…`.
 
 ### 207. Trofea New Balance można założyć – ✅ (24.11.2026)
