@@ -260,11 +260,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Porównanie starej kopii skryptów z nową wersją, „po miejscu”: przedmioty 3743 dobrze, 0 źle, 33 nieznane; postacie 5779 dobrze, 0 źle, 2 nieznane; dialogi 10 589 dobrze; funkcje 41 317 dobrze, 0 źle, 224 nieznane.
   - Detektor `[hero-ai]` porównywał pozycję bohatera przed i po zmianie świata.
 - **Poprawka:**
-  - przedmiot z nieznanym numerem (tylko w zapisie innych skryptów) jest szukany wśród przedmiotów skryptów po wyglądzie: model, nazwa, opis, teksty, rodzaj, wartość, a gdy to nie wystarcza, model, nazwa i rodzaj. Przedmiot jest przyjmowany, gdy pasuje dokładnie jeden; jego funkcje (`on_equip`, `on_state`…) idą z jego instancji. Wszystkie przedmioty skryptów są robione raz, tylko przy takim zapisie (w logu `[save] the looks of N items`). W logu `[save] '<nazwa>' (<model>) of the save-game is the item <INSTANCJA> of the scripts now`;
+  - przedmiot z nieznanym numerem (tylko w zapisie innych skryptów) jest szukany wśród przedmiotów skryptów po wyglądzie: model, nazwa i wartość, a gdy to nie wystarcza, model i nazwa. Przedmiot jest przyjmowany, gdy pasuje dokładnie jeden; jego funkcje (`on_equip`, `on_unequip`, `on_state`…) idą z jego kodu. Wygląd przedmiotów jest czytany z kodu instancji (prototyp, instancja, wywoływane funkcje do 3 poziomów), kod nie jest uruchamiany; raz, tylko przy takim zapisie (w logu `[save] the looks of N items`). Na nowych skryptach: 3596 przedmiotów, wszystkie 6 utraconych rozpoznane jednoznacznie. W logu `[save] '<nazwa>' (<model>) of the save-game is the item <INSTANCJA> of the scripts now`;
   - komunikat usunięcia: „not found in the scripts now”;
   - przy poziomie logu „normal” bez linii `is far from the player…`, `CsCamera:` i `[zenkit] Parsing …` (są w pełnym logu);
   - `[hero-ai]`: po zmianie świata pomiar od nowa, skoki ponad 30 m (teleport) pomijane.
 - **Uwaga:** zapis zrobiony na końcu tej gry ma już Khorinis bez tych 6 przedmiotów. Wczytany na początku zapis (sprzed teleportu) ma Khorinis z mapą starych numerów, więc z tą poprawką przedmioty wrócą.
+- **Awaria w pierwszej wersji (24.11.2026):** wygląd przedmiotów był liczony uruchamianiem kodu wszystkich instancji przedmiotów podczas wczytywania świata – po teleporcie `SIGSEGV` w `DaedalusVm::push_reference` (`init_instance` ← `itemByLook` ← `Inventory::implLoad`). Teraz kod jest tylko czytany.
 - **Do sprawdzenia:** wczytać zapis sprzed teleportu do Khorinis i przenieść się tam: w logu `… is the item FAKESCROLL …` itd., bez `dropped`.
 
 ### 210. Aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`, łańcuch wywołań w błędach skryptów – 🧪 (24.11.2026)

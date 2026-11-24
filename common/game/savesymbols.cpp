@@ -427,22 +427,132 @@ Serialize::SymbolMap SaveSymbols::compose(const Serialize::SymbolMap& inner, con
 
 namespace {
 
-struct ItemLooks {
-  const zenkit::DaedalusVm*                                       vm    = nullptr;
-  size_t                                                          count = 0;
-  std::vector<std::shared_ptr<zenkit::IItem>>                     items;
-  std::unordered_map<std::string,std::vector<size_t>>             strict, loose;
+/// NB fix 211: what the code of an item instance writes into its fields, read from the code (it is not run: some instances
+/// call the functions of the game, which may not be called while a world is loaded)
+struct ItemLook {
+  uint32_t    symbol = 0;
+  std::string visual, name, description;
+  int32_t     value = 0, mainFlag = 0, munition = 0, owner = 0, magic = 0;
+  int32_t     onEquip = 0, onUnequip = 0, onState[zenkit::IItem::state_count] = {};
   };
 
-std::string lookStrict(const zenkit::IItem& it) {
-  std::string k = upper(it.visual)+"|"+it.name+"|"+it.description+"|"+std::to_string(it.main_flag)+"|"+std::to_string(it.value);
-  for(auto& t:it.text)
-    k += "|"+t;
-  return k;
+struct ItemLooks {
+  const zenkit::DaedalusVm*                             vm    = nullptr;
+  size_t                                                count = 0;
+  std::vector<ItemLook>                                 items;
+  std::unordered_map<std::string,std::vector<size_t>>   strict, loose;
+  };
+
+struct Members {
+  uint32_t visual=0, name=0, description=0, value=0, mainFlag=0, munition=0, owner=0, magic=0, onEquip=0, onUnequip=0, onState=0;
+  };
+
+uint32_t memberIndex(zenkit::DaedalusVm& vm, const char* name) {
+  auto* s = vm.find_symbol_by_name(name);
+  return s!=nullptr ? s->index() : uint32_t(-1);
   }
 
-std::string lookLoose(const zenkit::IItem& it) {
-  return upper(it.visual)+"|"+it.name+"|"+std::to_string(it.main_flag);
+void readLook(zenkit::DaedalusVm& vm, const Members& m, uint32_t address, ItemLook& look, int depth) {
+  using Op = zenkit::DaedalusOpcode;
+  struct Val { int kind = 0; int32_t i = 0; uint32_t sym = 0; uint8_t index = 0; };   // 0 unknown, 1 int, 2 symbol
+  std::vector<Val> st;
+  auto pop = [&st]() { Val v; if(!st.empty()) { v = st.back(); st.pop_back(); } return v; };
+  auto asInt = [&](const Val& v, int32_t& out) {
+    if(v.kind==1) { out = v.i; return true; }
+    if(v.kind!=2) return false;
+    if(v.sym==m.value)    { out = look.value;    return true; }
+    if(v.sym==m.mainFlag) { out = look.mainFlag; return true; }
+    auto* s = vm.find_symbol_by_index(v.sym);
+    if(s==nullptr || s->type()!=DaedalusDataType::INT || !s->is_const() || v.index>=s->count())
+      return false;
+    out = s->get_int(v.index);
+    return true;
+    };
+  auto asStr = [&](const Val& v, std::string& out) {
+    if(v.kind!=2) return false;
+    if(v.sym==m.name)        { out = look.name;        return true; }
+    if(v.sym==m.visual)      { out = look.visual;      return true; }
+    if(v.sym==m.description) { out = look.description; return true; }
+    auto* s = vm.find_symbol_by_index(v.sym);
+    if(s==nullptr || s->type()!=DaedalusDataType::STRING || !s->is_const() || v.index>=s->count())
+      return false;
+    out = s->get_string(v.index);
+    return true;
+    };
+  const uint32_t end = vm.size();
+  for(int n=0; n<4000 && address<end; ++n) {
+    const auto in = vm.instruction_at(address);
+    address += in.size;
+    switch(in.op) {
+      case Op::PUSHI:  st.push_back({1,in.immediate,0,0}); break;
+      case Op::PUSHV:
+      case Op::PUSHVI: st.push_back({2,0,in.symbol,0}); break;
+      case Op::PUSHVV: st.push_back({2,0,in.symbol,in.index}); break;
+      case Op::MOVI:
+      case Op::MOVVF: {
+        const Val dst = pop(), src = pop();
+        int32_t v = 0;
+        if(dst.kind!=2 || !asInt(src,v))
+          break;
+        if(dst.sym==m.value)          look.value     = v;
+        else if(dst.sym==m.mainFlag)  look.mainFlag  = v;
+        else if(dst.sym==m.munition)  look.munition  = v;
+        else if(dst.sym==m.owner)     look.owner     = v;
+        else if(dst.sym==m.magic)     look.magic     = v;
+        else if(dst.sym==m.onEquip)   look.onEquip   = v;
+        else if(dst.sym==m.onUnequip) look.onUnequip = v;
+        else if(dst.sym==m.onState && dst.index<zenkit::IItem::state_count) look.onState[dst.index] = v;
+        break;
+        }
+      case Op::MOVS: {
+        const Val dst = pop(), src = pop();
+        std::string v;
+        if(dst.kind!=2 || !asStr(src,v))
+          break;
+        if(dst.sym==m.visual)           look.visual      = v;
+        else if(dst.sym==m.name)        look.name        = v;
+        else if(dst.sym==m.description) look.description = v;
+        break;
+        }
+      case Op::MOVSS: case Op::MOVF: case Op::MOVVI: case Op::ADDMOVI: case Op::SUBMOVI: case Op::MULMOVI: case Op::DIVMOVI:
+        pop(); pop();
+        break;
+      case Op::BL: {
+        // a function that sets the fields of the item (as a prototype); its parameters and its result are not known
+        st.clear();
+        if(depth<3)
+          readLook(vm,m,uint32_t(in.address),look,depth+1);
+        st.push_back({});
+        break;
+        }
+      case Op::BE:
+        st.clear();
+        st.push_back({});
+        break;
+      case Op::GMOVI:
+        break;
+      case Op::RSR:
+        return;
+      case Op::B: case Op::BZ:
+        return;   // a condition: the rest is not read
+      case Op::PLUS: case Op::NEGATE: case Op::NOT: case Op::CMPL:
+        pop(); st.push_back({});
+        break;
+      case Op::NOP:
+        break;
+      default:
+        pop(); pop(); st.push_back({});   // the binary operations
+        break;
+      }
+    }
+  }
+
+std::string keyStrict(std::string_view visual, std::string_view name, int32_t value) {
+  return upper(visual)+"|"+std::string(name)+"|"+std::to_string(value);
+  }
+
+std::string keyLoose(std::string_view visual, std::string_view name) {
+  return upper(visual)+"|"+std::string(name);
   }
 
 bool isItemClass(zenkit::DaedalusVm& vm, const zenkit::DaedalusSymbol& s) {
@@ -459,39 +569,71 @@ bool isItemClass(zenkit::DaedalusVm& vm, const zenkit::DaedalusSymbol& s) {
 std::shared_ptr<zenkit::IItem> SaveSymbols::itemByLook(zenkit::DaedalusVm& vm, const zenkit::IItem& saved) {
   static ItemLooks looks;
   if(looks.vm!=&vm || looks.count!=vm.symbols().size()) {
-    // all the items of the scripts once (only a save-game of other scripts comes here)
     looks = ItemLooks();
     looks.vm    = &vm;
     looks.count = vm.symbols().size();
+    Members m;
+    m.visual      = memberIndex(vm,"C_ITEM.VISUAL");
+    m.name        = memberIndex(vm,"C_ITEM.NAME");
+    m.description = memberIndex(vm,"C_ITEM.DESCRIPTION");
+    m.value       = memberIndex(vm,"C_ITEM.VALUE");
+    m.mainFlag    = memberIndex(vm,"C_ITEM.MAINFLAG");
+    m.munition    = memberIndex(vm,"C_ITEM.MUNITION");
+    m.owner       = memberIndex(vm,"C_ITEM.OWNER");
+    m.magic       = memberIndex(vm,"C_ITEM.MAGIC");
+    m.onEquip     = memberIndex(vm,"C_ITEM.ON_EQUIP");
+    m.onUnequip   = memberIndex(vm,"C_ITEM.ON_UNEQUIP");
+    m.onState     = memberIndex(vm,"C_ITEM.ON_STATE");
     const auto t0 = std::chrono::steady_clock::now();
     for(uint32_t i=0; i<looks.count; ++i) {
       auto* s = vm.find_symbol_by_index(i);
       if(s==nullptr || !isItemClass(vm,*s))
         continue;
-      std::shared_ptr<zenkit::IItem> inst;
-      try {
-        inst = vm.init_instance<zenkit::IItem>(s);
-        }
-      catch(const std::exception&) {
-        continue;
-        }
-      if(inst==nullptr)
+      ItemLook look;
+      look.symbol = i;
+      // the prototype first (instance X(ItemPR_Y)), then the instance
+      if(auto* p = vm.find_symbol_by_index(s->parent()); p!=nullptr && p->type()==DaedalusDataType::PROTOTYPE)
+        readLook(vm,m,p->address(),look,0);
+      readLook(vm,m,s->address(),look,0);
+      if(look.visual.empty() || look.name.empty())
         continue;
       const size_t id = looks.items.size();
-      looks.items.push_back(inst);
-      looks.strict[lookStrict(*inst)].push_back(id);
-      looks.loose [lookLoose (*inst)].push_back(id);
+      looks.strict[keyStrict(look.visual,look.name,look.value)].push_back(id);
+      looks.loose [keyLoose (look.visual,look.name)].push_back(id);
+      looks.items.push_back(std::move(look));
       }
     const uint64_t ms = uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-t0).count());
     Log::i("[save] the looks of ",looks.items.size()," items of the scripts (",ms," ms)");
     }
-  for(auto* table:{&looks.strict,&looks.loose}) {
-    auto it = table->find(table==&looks.strict ? lookStrict(saved) : lookLoose(saved));
-    if(it==table->end())
+  const ItemLook* found = nullptr;
+  for(int pass=0; pass<2 && found==nullptr; ++pass) {
+    auto& table = pass==0 ? looks.strict : looks.loose;
+    auto  it    = table.find(pass==0 ? keyStrict(saved.visual,saved.name,saved.value) : keyLoose(saved.visual,saved.name));
+    if(it==table.end())
       continue;
-    if(it->second.size()==1)
-      return looks.items[it->second[0]];
-    return nullptr;   // more items look so: not known which one
+    if(it->second.size()!=1)
+      return nullptr;   // more items look so: not known which one
+    found = &looks.items[it->second[0]];
     }
-  return nullptr;
+  if(found==nullptr)
+    return nullptr;
+  auto* sym = vm.find_symbol_by_index(found->symbol);
+  if(sym==nullptr)
+    return nullptr;
+  // the fields of the scripts of that item (the rest of the item comes from the save-game)
+  auto ret = std::make_shared<zenkit::IItem>();
+  try {
+    vm.allocate_instance(ret,sym);
+    }
+  catch(const std::exception&) {
+    return nullptr;
+    }
+  ret->magic      = found->magic;
+  ret->on_equip   = found->onEquip;
+  ret->on_unequip = found->onUnequip;
+  for(size_t i=0; i<zenkit::IItem::state_count; ++i)
+    ret->on_state[i] = found->onState[i];
+  ret->owner      = found->owner;
+  ret->munition   = found->munition;
+  return ret;
   }
