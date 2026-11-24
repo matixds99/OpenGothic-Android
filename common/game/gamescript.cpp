@@ -353,6 +353,11 @@ struct NbState {
     };
   std::vector<Shot>                           shots;
   uint64_t                                    nextVobRepair = 0;   // NB fix 165
+  // NB fix 221: StartChangeWorldTime(n, f) of the plugin - the time of the game slows down to f and comes back, n*10 steps of 100 ms
+  uint64_t                                    slowStart     = 0;
+  int32_t                                     slowSteps     = 0;
+  float                                       slowFactor    = 1.f;
+  float                                       slowApplied   = 1.f;
   // NB fix 161: the companions go with the hero when he teleports (a jump of his position in the same world)
   const World*                                partyWorld    = nullptr;
   Tempest::Vec3                               partyHeroPos;
@@ -2509,6 +2514,175 @@ void GameScript::initCommon() {
         });
       return seen;
       });
+    // NB fix 219: the searches of the wisp in its dialog (0x101aafe0 FindPlants, 0x101ab7a0 FindPlantsRare, 0x101aa3a0
+    // PlantsInLoc, 0x101aa660 PlantsRareInLoc, 0x101ba8b0 FindPlates, 0x101b8d80 OldWisp_FindStealTargets). The items of the
+    // world: ITPL_* are the plants, the six rare ones by their names; the plates are ITWR_* STONEPLATE, DRUIDPLATE, DEMONPLATE.
+    // The plugin skips an item at the origin of the world (closer than 2.5 m to 0,0,0).
+    const auto nbFindKind = [this](Item& it) -> int {
+      if(it.position().length()<=250.f)
+        return 0;
+      const bool food = (uint32_t(it.mainFlag()) & 32u)!=0;   // the plants of the plugin: mainflag ITEM_KAT_FOOD
+      auto* sym = vm.find_symbol_by_index(uint32_t(it.clsId()));
+      if(sym==nullptr)
+        return 0;
+      std::string n(sym->name());
+      for(auto& c:n)
+        c = char(std::toupper(static_cast<unsigned char>(c)));
+      if(n.find("ITPL_")!=std::string::npos && food) {
+        for(const char* r:{"ITPL_DEX_HERB_01","ITPL_STRENGTH_HERB_01","ITPL_PERM_HERB","ITPL_XAGITTA_HERB_MIS","ITPL_SUPER_HERB","ITPL_CACTUSFLOWER"})
+          if(n.find(r)!=std::string::npos)
+            return 2;
+        return 1;
+        }
+      if(n.find("ITWR_")!=std::string::npos &&
+         (n.find("STONEPLATE")!=std::string::npos || n.find("DRUIDPLATE")!=std::string::npos || n.find("DEMONPLATE")!=std::string::npos))
+        return 3;
+      return 0;
+      };
+    const auto nbFindItems = [this,nbFindKind](uint32_t kinds, float radius) {
+      std::vector<Item*> ret;
+      auto* hero = world().player();
+      for(uint32_t i=0; auto* it = world().itmById(i); ++i) {
+        const int k = nbFindKind(*it);
+        if(k==0 || (kinds & (1u<<k))==0)
+          continue;
+        if(radius>0.f && (hero==nullptr || (it->position()-hero->position()).length()>radius))
+          continue;
+        ret.push_back(it);
+        }
+      return ret;
+      };
+    // the items go to the hero; the wisp tells what it brought (RX_WispFoundInLocation of AB_Translation.lbr, "name xN")
+    const auto nbFindTake = [this](const std::vector<Item*>& items, size_t max) -> int32_t {
+      auto* hero = world().player();
+      if(hero==nullptr)
+        return 0;
+      std::vector<std::pair<std::string,size_t>> got;
+      int32_t n = 0;
+      for(auto* itm:items) {
+        if(size_t(n)>=max)
+          break;
+        const std::string name(itm->displayName());
+        const size_t      cnt = std::max<size_t>(itm->count(),1);
+        if(auto ptr = world().takeItem(*itm)) {
+          hero->addItem(std::move(ptr));
+          ++n;
+          auto i = std::find_if(got.begin(),got.end(),[&](auto& g){ return g.first==name; });
+          if(i==got.end())
+            got.emplace_back(name,cnt); else
+            i->second += cnt;
+          }
+        }
+      auto& st = nbStates[this];
+      for(auto& g:got)
+        st.wispLines.emplace_back(std::string(NbTexts::get("RX_WispFoundInLocation"))+g.first+" x"+std::to_string(g.second),tickCount()+10000);
+      nbCtx("wisp: ",n," items of the location to the hero");
+      return n;
+      };
+    bindNb("FINDPLANTS", [this,nbFindItems,nbFindTake](int32_t) -> int32_t {
+      // up to 30 at a time, 20 on the Ancient Island (currentLevel 47)
+      auto* lvl = vm.find_symbol_by_name("CURRENTLEVEL");
+      const size_t max = (lvl!=nullptr && lvl->type()==zenkit::DaedalusDataType::INT && lvl->get_int()==47) ? 20 : 30;
+      return nbFindTake(nbFindItems(1u<<1,0.f),max);
+      });
+    bindNb("FINDPLANTSRARE", [nbFindItems,nbFindTake](int32_t radius) -> int32_t {
+      // "Znalezione rośliny i tabliczki": all the plants and the plates in the radius of the hero
+      return nbFindTake(nbFindItems((1u<<1)|(1u<<2)|(1u<<3),float(std::max(radius,1))),size_t(-1));
+      });
+    bindNb("PLANTSINLOC",     [nbFindItems]() -> int32_t { return int32_t(nbFindItems(1u<<1,0.f).size()); });
+    bindNb("PLANTSRAREINLOC", [nbFindItems]() -> int32_t { return int32_t(nbFindItems(1u<<2,0.f).size()); });
+    bindNb("FINDPLATES",      [nbFindItems](int32_t) -> int32_t { return int32_t(nbFindItems(1u<<3,0.f).size()); });
+    // the characters of the location that the hero has not robbed yet (aivar[AIV_PlayerHasPickedMyPocket] 0): living people,
+    // not the friends (npcType 2, 3) and not the guild 19, as 0x10055ea0 of the plugin
+    bindNb("OLDWISP_FINDSTEALTARGETS", [this]() -> int32_t {
+      int32_t n = 0;
+      for(uint32_t i=0; i<world().npcCount(); ++i) {
+        auto* npc = world().npcById(i);
+        if(npc==nullptr || npc->isPlayer() || npc->isDead() || npc->position().length()<=250.f)
+          continue;
+        auto& h = npc->handle();
+        if(h.guild>=21 || h.guild==19 || int(h.type)==2 || int(h.type)==3)   // GIL_SEPERATOR_HUM of NB: 21
+          continue;
+        if(h.aivar[6]==0)
+          ++n;
+        }
+      return n;
+      });
+    // NB fix 220: OpenPocket(bag, flags) (0x101a8d90): the bag shows the inventory of the hero with its kinds of items only
+    bindNb("OPENPOCKET", [this](std::shared_ptr<zenkit::IItem>, int32_t mask) {
+      auto* hero = world().player();
+      if(hero!=nullptr && mask!=0)
+        Gothic::inst().onOpenPocket(*hero,uint32_t(mask));
+      });
+    // NB fix 217: AI_PlayEffect(npc, fx, target, damage, type) (0x101c7c50 -> 0x10057e00): a message in the queue of the
+    // character - the effect flies at the target when the turn and the animation before it are done (Npc::nextAiAction)
+    bindNb("AI_PLAYEFFECT", [this](std::shared_ptr<zenkit::INpc> npcRef, std::string_view fx, std::shared_ptr<zenkit::INpc> tgRef,
+                                   int32_t damage, int32_t damageType) {
+      auto* npc = findNpc(npcRef);
+      if(npc==nullptr)
+        return;
+      npc->aiPush(AiQueue::aiPlayEffect(fx,findNpc(tgRef),damage,damageType));
+      });
+    // NB fix 217: Npc_SetFightRange(npc, r) (0x101cf9a0): the fight ranges of this character (FightAlgo)
+    bindNb("NPC_SETFIGHTRANGE", [this](std::shared_ptr<zenkit::INpc> npcRef, int32_t range) {
+      if(auto* npc = findNpc(npcRef))
+        npc->nbFightRange = std::max(range,0);
+      });
+    // NB fix 217: AST_FreezeNpc(npc, seconds, effect) (0x101b80c0): the magic arrows and bolts, the frost weapons freeze the
+    // victim. With the effect: the ice of SPELLFX_ICESPELL_SENDPERCEPTION_MagicArrow, and not again within 3 s. Not frozen
+    // (0x10055b80): the trolls, the dragons, the demons, the ice golems, the high priest of the skeletons, a stunned one
+    auto freezeCd = std::make_shared<std::unordered_map<const Npc*,uint64_t>>();
+    bindNb("AST_FREEZENPC", [this,freezeCd](std::shared_ptr<zenkit::INpc> npcRef, int32_t seconds, int32_t effect) {
+      auto* npc = findNpc(npcRef);
+      if(npc==nullptr || npc->isDead() || npc->isPlayer() || seconds<=0)
+        return;
+      const int32_t g = npc->handle().guild;
+      if(g==46 || g==48 || g==50 || g==52)   // the guilds of NB: GIL_ICEGOLEM, GIL_DEMON, GIL_TROLL, GIL_DRAGON
+        return;
+      if(auto* sym = vm.find_symbol_by_index(uint32_t(npc->handle().symbol_index())); sym!=nullptr && sym->name()=="SKELETON_MI_HIGH_PRIEST")
+        return;
+      if(npc->nbStateName()=="ZS_STUN")
+        return;
+      const uint64_t now = tickCount();
+      if(effect!=0) {
+        if(freezeCd->size()>4096)
+          freezeCd->clear();
+        auto& cd = (*freezeCd)[npc];
+        if(now<cd)
+          return;
+        cd = now+3000;
+        if(auto* vfx = Gothic::inst().loadVisualFx("SPELLFX_ICESPELL_SENDPERCEPTION_MagicArrow"))
+          npc->startEffect(*npc,*vfx);
+        }
+      npc->nbFreezeUntil = std::max(npc->nbFreezeUntil,now+uint64_t(seconds)*1000);
+      nbCtx("freeze: ",npc->displayName()," for ",seconds," s");
+      });
+    // NB fix 221: StartChangeWorldTime(n, factor) (0x101b9fe0 -> 0x10160b40): the joints of the templars slow the game down to
+    // the factor and back over n*10 steps of 100 ms (35 -> 35 s); not while it runs already
+    bindNb("STARTCHANGEWORLDTIME", [this](int32_t n, float factor) {
+      auto& st = nbStates[this];
+      if(n<=0 || !(factor>0.f) || factor>1.f || st.slowSteps>0)
+        return;
+      st.slowStart  = Application::tickCount();
+      st.slowSteps  = n*10;
+      st.slowFactor = factor;
+      nbCtx("slow time: to ",factor," over ",n," s");
+      });
+    // NB fix 221: Ext_DarkScreen(fade, hold, ?) (0x101d1a30): the screen goes black in fade ms, stays black hold ms and comes
+    // back in fade ms (the vampire scenes)
+    bindNb("EXT_DARKSCREEN", [](int32_t fade, int32_t hold, int32_t) {
+      auto& d = NbBars::darkScreen();
+      d.start = Application::tickCount();
+      d.fade  = std::max(fade,1);
+      d.hold  = std::max(hold,0);
+      });
+    // NB fix 221: InitFullSnc() (0x101d1890) reads the limits of the Full SnC+ mode into the plugin itself (max1hStr, maxHp...);
+    // the port does not have that mode - nothing to do. Cmd(text): a line of the console of the plugin - into the log
+    bindNb("INITFULLSNC", []() {});
+    bindNb("CMD", [traceSeen](std::string_view text) {
+      if(traceSeen->size()<2000 && ++(*traceSeen)[std::string("cmd|")+std::string(text)]<=3)
+        Log::i("NB cmd: ",text);
+      });
     // the music of the plugin (bosses, scenes): off / on / switched, the setting of the player stays as it is
     // NB fix 116: RX_MusicOff mutes the music of the game until RX_MusicOn (on the PC it writes musicEnabled into Gothic.ini).
     // Not by setEnabled: every option written by the scripts (Menu_WriteInt of bCanSaveGame when a fight starts) loaded
@@ -3304,6 +3478,75 @@ void GameScript::initCommon() {
         if(mob.isContainer())
           mob.inventory().clear(*this,mob,true);
         });
+      });
+    // NB fix 218: Mob_SetLockedByName(name, locked) (0x101cb140): oCMobLockable::SetLocked of the chests or the doors of this
+    // name (the three chests of the temple of Ashtar: the chosen one opens, the two others are emptied and opened)
+    bindNb("MOB_SETLOCKEDBYNAME", [nbMobs](std::string_view tag, int32_t locked) {
+      nbMobs(tag,[locked](Interactive& mob) {
+        if(mob.isContainer() || mob.isDoor())
+          mob.nbSetLocked(locked!=0);
+        });
+      });
+    // NB fix 218: Mob_RemoveItem_AB(name, item, count) (0x101a78e0): the items of this kind leave the chest (the bet of the
+    // race of Orlan: the gold of Rukhar)
+    bindNb("MOB_REMOVEITEM_AB", [this,nbMobs](std::string_view tag, int32_t item, int32_t count) {
+      if(item<=0 || count<=0)
+        return;
+      bool done = false;
+      nbMobs(tag,[&](Interactive& mob) {
+        if(done || !mob.isContainer() || mob.inventory().itemCount(size_t(item))==0)
+          return;
+        Inventory gone;
+        Inventory::transfer(gone,mob.inventory(),nullptr,size_t(item),size_t(count),world());
+        done = true;
+        });
+      });
+    // NB fix 218: Wld_SetCondFunc(name, func) (0x101bcaa0): the condition function of the mobs of this name (the chests of
+    // the temple of Ashtar: CondFunc_Thief_Chest...) - Interactive asks it before the use
+    bindNb("WLD_SETCONDFUNC", [nbMobs](std::string_view tag, std::string_view fn) {
+      std::string up(fn);
+      for(auto& c:up)
+        c = char(std::toupper(static_cast<unsigned char>(c)));
+      nbMobs(tag,[&up](Interactive& mob) { mob.nbSetConditionFunc(up); });
+      });
+    // NB fix 218: Wld_ChangePortal(room, guild) (0x101c7a90): the owner guild of the portal room, as Wld_AssignRoomToGuild
+    // (the towers of the city become public for a scout of the militia)
+    bindNb("WLD_CHANGEPORTAL", [this](std::string_view room, int32_t guild) {
+      world().assignRoomToGuild(room,guild);
+      });
+    // NB fix 218: AI_TurnToVob(npc, name, ?) (0x101e1a30): in the queue - the character turns to the vob of this name (a way
+    // point, a free point, a mover or a mob: the wall of the hidden room of Nefarius)
+    bindNb("AI_TURNTOVOB", [this,nbMobs](std::shared_ptr<zenkit::INpc> npcRef, std::string_view name, int32_t) {
+      auto* npc = findNpc(npcRef);
+      if(npc==nullptr)
+        return;
+      bool          found = false;
+      Tempest::Vec3 pos;
+      if(auto* wp = world().findPoint(name,false)) {
+        pos   = wp->position();
+        found = true;
+        }
+      if(!found) {
+        world().forEachTrigger([&](AbstractTrigger& t) {
+          if(!found && t.name()==name) {
+            pos   = t.position();
+            found = true;
+            }
+          });
+        }
+      if(!found) {
+        nbMobs(name,[&](Interactive& mob) {
+          if(!found) {
+            pos   = mob.position();
+            found = true;
+            }
+          });
+        }
+      if(!found) {
+        Log::e("NB: AI_TurnToVob - no vob ",name);
+        return;
+        }
+      npc->aiPush(AiQueue::aiTurnToPos(int(pos.x),int(pos.z)));
       });
     // a locked chest/door opened by the scripts (0) or closed again (1): only what the world has made with a lock
     const auto nbLock = [nbMobs](std::string_view tag, int32_t lock) {
@@ -5317,6 +5560,25 @@ void GameScript::tick(uint64_t dt) {
   if(tickCount()>=nb->second.nextVobRepair) {
     nb->second.nextVobRepair = tickCount()+5000;
     nbRepairVobTrees();   // NB fix 165
+    }
+  // NB fix 221: StartChangeWorldTime - the timer of the plugin (100 ms) takes the speed of the game down by an even step
+  // to the factor in the first half of the steps and back to 1 in the second half
+  if(st.slowSteps>0) {
+    const int64_t k    = int64_t((Application::tickCount()-st.slowStart)/100);
+    const int64_t half = std::max<int64_t>(st.slowSteps/2,1);
+    const float   step = (1.f-st.slowFactor)/float(half);
+    float f = 1.f;
+    if(k<half)
+      f = 1.f-step*float(k);
+    else if(k<st.slowSteps)
+      f = 1.f-step*float(st.slowSteps-k);
+    else
+      st.slowSteps = 0;
+    f = std::clamp(f,0.05f,1.f);
+    if(std::abs(f-st.slowApplied)>0.001f) {
+      st.slowApplied = f;
+      owner.setTimeMultiplyer(f);
+      }
     }
   // NB fix 82: the music of a boss fight plays again from the start; it ends 45 s after the last blow of the fight (the
   // player has run away) or with the death of the player, as the death of the boss does (RX_StopBossMusic)

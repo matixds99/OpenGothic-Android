@@ -86,7 +86,7 @@ auto AiQueue::describe(size_t max) const -> std::string {
     "UnEquipArmor","Output","OutputSvm","OutputSvmOverlay","ProcessInfo","StopProcessInfo","ContinueRoutine","AlignToFp",
     "AlignToWp","SetNpcsToState","SetWalkMode","FinishingMove","DrawWeapon","TakeItem","GotoItem","PointAtNpc","PointAt",
     "StopPointAt","PrintScreen","LookAt","WhirlToNpc","TurnAway","Synchronize","WaitTillEnd","AimAt","StopAim","ShootAt",
-    "DropItem","SndPlay","StopFx","ForceFall"
+    "DropItem","SndPlay","StopFx","ForceFall","PlayEffect","TurnToPos"
     };
   std::string ret;
   size_t n = 0;
@@ -279,6 +279,24 @@ AiQueue::AiAction AiQueue::aiSndPlay(std::string_view name) {
   AiAction a;
   a.act = AI_SndPlay;
   a.s0  = name;
+  return a;
+  }
+
+AiQueue::AiAction AiQueue::aiPlayEffect(std::string_view fx, Npc* target, int damage, int damageType) {
+  AiAction a;
+  a.act    = AI_PlayEffect;
+  a.s0     = fx;
+  a.target = target;
+  a.i0     = damage;
+  a.i1     = damageType;
+  return a;
+  }
+
+AiQueue::AiAction AiQueue::aiTurnToPos(int x, int z) {
+  AiAction a;
+  a.act = AI_TurnToPos;
+  a.i0  = x;
+  a.i1  = z;
   return a;
   }
 

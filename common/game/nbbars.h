@@ -30,6 +30,34 @@ namespace NbBars {
     all() = {};
     }
 
+  /// NB fix 221: Ext_DarkScreen of the plugin - the screen goes black (real ms of the application), the window draws it
+  struct DarkScreen {
+    uint64_t start = 0;
+    int      fade  = 0;
+    int      hold  = 0;
+    };
+
+  inline DarkScreen& darkScreen() {
+    static DarkScreen d;
+    return d;
+    }
+
+  /// the black of the screen at this moment, 0..1; 0 when it is over
+  inline float darkAlpha(uint64_t now) {
+    auto& d = darkScreen();
+    if(d.start==0 || now<d.start)
+      return 0.f;
+    const float t = float(now-d.start), f = float(d.fade), h = float(d.hold);
+    if(t<f)
+      return t/f;
+    if(t<f+h)
+      return 1.f;
+    if(t<f+h+f)
+      return 1.f-(t-f-h)/f;
+    d.start = 0;
+    return 0.f;
+    }
+
   /// NB fix 49: the inventory of the player is open (the window sets it every frame, Hlp_InventoryIsOpen reads it)
   inline bool& inventoryOpen() {
     static bool open = false;

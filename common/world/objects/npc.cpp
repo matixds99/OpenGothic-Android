@@ -2487,12 +2487,22 @@ bool Npc::implAttack(uint64_t dt) {
             return false;
           return true;
           });
-        if(near!=nullptr) {
+        // NB fix 216: a monster that stood at that way point already (the target 6-8 m away behind a rock or a corner)
+        // got a path of this one point again on every tick, reached it at once and stood there in the run animation for
+        // the whole fight (Smoczy zębacz: "stands 8 s, sees it 0"). AI_Attack of the original engine runs straight at the
+        // target in such a case, so it does that too: when the point is near or there is no way to it.
+        const float nearWp = 250.f;
+        if(near!=nullptr && qDistTo(near)>nearWp*nearWp) {
           if(near!=wayPath.last()) {
             wayPath = owner.wayTo(*this,*near);
-            go2.set(wayPath.first(), GT_Way);
+            if(wayPath.first()!=nullptr) {
+              go2.set(wayPath.first(), GT_Way);
+              return false;
+              }
             }
-          return false;
+          else if(go2.flag==GT_Way) {
+            return false;
+            }
           }
         }
       }
@@ -3377,6 +3387,8 @@ void Npc::tick(uint64_t dt) {
     if(isPlayer())
       scale *= nbQuickSpeed;
     scale *= nbSpeed;   // NB fix 101
+    if(nbFrozen())
+      scale = 0.001f;   // NB fix 217: AST_FreezeNpc - the animation stands still
     visual.pose().setTimeScale(scale,owner.tickCount());
   }
   static bool dbg = false;
@@ -3438,6 +3450,12 @@ void Npc::tick(uint64_t dt) {
               hnpc->attribute[ATR_REGENERATEHP],dt);
     tickRegen(hnpc->attribute[ATR_MANA],hnpc->attribute[ATR_MANAMAX],
               hnpc->attribute[ATR_REGENERATEMANA],dt);
+    }
+
+  if(nbFrozen() && !isPlayer()) {
+    // NB fix 217: AST_FreezeNpc (the ice arrows, the frost weapons) - no step, no blow, no command of the AI until it thaws
+    mvAlgo.tick(dt,MoveAlgo::WaitMove);
+    return;
     }
 
   if(waitTime>=owner.tickCount() || aniWaitTime>=owner.tickCount() || outWaitTime>owner.tickCount()) {
@@ -3766,6 +3784,36 @@ void Npc::nextAiAction(AiQueue& queue, uint64_t dt) {
       if(auto* fx = Gothic::inst().loadVisualFx(act.s0))
         stopEffect(*fx);
       break;
+    case AI_PlayEffect: {
+      // NB fix 217: AI_PlayEffect(self, fx, other, damage, type) of the plugin (0x101c7c50): after the turn and the animation
+      // of the queue the spell of the monster flies at the target (fire bolt of the Draconians, the web of the queen of the
+      // minecrawlers, the ice bolt) and hurts it like Wld_PlayEffect_Vec; at itself - the effect only (the ritual of Cronos)
+      Npc* tg = act.target!=nullptr ? act.target : this;
+      const VisualFx* vfx = Gothic::inst().loadVisualFx(act.s0);
+      if(tg!=this && !tg->isDead()) {
+        if(vfx!=nullptr) {
+          owner.script().nbShoot(*this,*tg,*vfx,act.i0,act.i1);
+          } else {
+          owner.script().nbVecDamage(*this,*tg,act.i0,act.i1);
+          }
+        }
+      else if(vfx!=nullptr) {
+        startEffect(*tg,*vfx);
+        }
+      break;
+      }
+    case AI_TurnToPos: {
+      // NB fix 218: AI_TurnToVob - the turn to the place of the vob, as AI_TurnToNpc
+      if(!prepareTurn()) {
+        queue.pushFront(std::move(act));
+        break;
+        }
+      const float dx = float(act.i0)-position().x;
+      const float dz = float(act.i1)-position().z;
+      if((dx*dx+dz*dz)>1.f && implTurnTo(dx,dz,AnimationSolver::TurnType::Std,dt))
+        queue.pushFront(std::move(act));
+      break;
+      }
     case AI_Wait:
       implAiWait(uint64_t(act.i0));
       break;
@@ -4696,6 +4744,10 @@ static bool nbEqualNoCase(std::string_view a, std::string_view b) {
 
 bool Npc::nbHasGotoVob() const {
   return aiQueue.has(AI_GoToNpc) || go2.flag==GoToHint::GT_Item;
+  }
+
+bool Npc::nbFrozen() const {
+  return nbFreezeUntil>owner.tickCount() && !isDead();
   }
 
 std::string Npc::nbPatrolNextPoint() const {
@@ -6714,6 +6766,8 @@ void Npc::updateAnimation(uint64_t dt, bool force) {
     if(isPlayer())
       scale *= nbQuickSpeed;
     scale *= nbSpeed;   // NB fix 101
+    if(nbFrozen())
+      scale = 0.001f;   // NB fix 217: AST_FreezeNpc - the animation stands still
     visual.pose().setTimeScale(scale,owner.tickCount());
   }
   const auto camera = Gothic::inst().camera();

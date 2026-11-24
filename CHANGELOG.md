@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **216**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **222**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **215** – zamykanie zadań (`Log_GetTopicStatus`), zwoje postaci, trofea ze skryptów oznaczone jako noszone, mechanizmy (`Wld_Open/CloseMoverIf…`), `Npc_IsDoingRoutine`, `Npc_CanSeePlayerInRadius` – 🧪
-2. **214** – patrole (`Patrol_Set`, `Patrol_SetPath`, `Patrol_NextWP`), oczy szkieletów (`Npc_SetEffect`), `Npc_HasMessage`, `Npc_HasSprintMoveset`, funkcje karmy jak na PC – 🧪
-3. **213** – `C_PlayerIsFakeBandit`: Ramon spoza świata dodatku to nie błąd portu; raport tylko wywoływanych brakujących funkcji – 🧪
-4. **212** – aktualizacje skryptów NB: raport przy starcie (co usunięte, nowe funkcje pluginu), nazwy starych skryptów zachowywane same, postacie rozpoznawane po id i imieniu – 🧪
-5. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – ✅
+1. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
+2. **220** – worki NB (`OpenPocket`): ekwipunek tylko z przedmiotami kategorii worka – 🧪
+3. **219** – ognik zbiera rośliny lokacji, liczy rośliny, tablice i nieokradzione postacie – 🧪
+4. **218** – skrzynie i drzwi po nazwie (`Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `Wld_SetCondFunc`), `Wld_ChangePortal`, `AI_TurnToVob` – 🧪
+5. **217** – czary potworów w kolejce (`AI_PlayEffect`), `Npc_SetFightRange`, zamrożenie (`AST_FreezeNpc`); **216** – potwory biegną do celu za przeszkodą – 🧪
 
 ---
 
@@ -252,6 +252,59 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 221. Skręty templariuszy (zwolnienie czasu), zaciemnienie ekranu, `InitFullSnc`, `Cmd` – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/nbbars.h`, `common/mainwindow.cpp`
+- **Zgłoszenie:** „Popraw co się da” – reszta funkcji pluginu z raportu poprawki 213.
+- **Plugin (UNION_ABI.DLL z aktualizacji):**
+  - `StartChangeWorldTime(n, f)` (`0x101b9fe0` → `0x10160b40`, zegar `0x10160a60`): po skręcie templariusz widzi świat w zwolnionym tempie – czynnik czasu gry (`ztimer`) spada równymi krokami co 100 ms do `f` przez pierwszą połowę z `n·10` kroków i wraca do 1 przez drugą (35 → 35 s, `f` 0,8–0,9). Gdy zwolnienie trwa, kolejny skręt go nie zaczyna od nowa. W porcie mnożnik czasu sesji (jak `ztimer` Marvina);
+  - `Ext_DarkScreen(zanik, czas, ?)` (`0x101d1a30`): ekran ciemnieje przez `zanik` ms, jest czarny przez `czas` ms i wraca przez `zanik` ms (sceny wampira: `RX_VampFriendQuest`, picie krwi);
+  - `InitFullSnc()` (`0x101d1890`) czyta limity trybu Full SnC+ do samego pluginu (`max1hStr`, `maxHp`…) – port nie ma tego trybu, funkcja nic nie robi; `Cmd(tekst)` – linia konsoli pluginu, do logu (`NB cmd:`, ta sama linia najwyżej 3 razy).
+- **Do sprawdzenia:** skręt templariusza (gildia templariuszy) – świat zwalnia na ok. 35 s i wraca; zaciemnienie w scenach wampira.
+
+### 220. Worki NB (`OpenPocket`) – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`, `common/ui/inventorymenu.h`, `common/gothic.h`, `common/mainwindow.cpp`
+- **Zgłoszenie:** jak 221.
+- **Plugin:** `OpenPocket(worek, flagi)` (`0x101a8d90`) nie jest osobnym pojemnikiem: na czas otwartego ekwipunku plugin wyjmuje z niego przedmioty spoza flag worka i same worki (`ITBG_*`), a zostawia przedmioty noszone (`0x40000000`). Worki: zbroje, tarcze i pasy; broń biała, dystansowa i amunicja; mikstury; runy i dokumenty; pierścienie i amulety.
+- **Poprawka:** użycie worka otwiera ekwipunek bohatera (albo zostawia otwarty) z filtrem: tylko przedmioty z tymi flagami (`mainflag | flags`) i noszone, bez worków. Zwykłe otwarcie ekwipunku pokazuje znów wszystko.
+- **Do sprawdzenia:** każdy z pięciu worków pokazuje tylko swoje przedmioty; po zamknięciu i otwarciu ekwipunku jest pełna lista.
+
+### 219. Ognik: zbieranie roślin i liczenie roślin, tablic i nieokradzionych postaci – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/nbtexts.h`
+- **Zgłoszenie:** jak 221.
+- **Plugin:** przedmioty świata (pomijane te przy początku układu, bliżej niż 2,5 m od 0,0,0); rośliny to `ITPL_*` z kategorią jedzenia, rzadkie – `dex_herb_01`, `strength_herb_01`, `perm_herb`, `xagitta_herb_mis`, `super_herb`, `cactusflower`; tablice – `ITWR_*` z `STONEPLATE`, `DRUIDPLATE`, `DEMONPLATE`.
+  - `FindPlants` (`0x101aafe0`): zwykłe rośliny lokacji idą do bohatera – do 30 naraz, na Starożytnej Wyspie (`currentLevel` 47) do 20; ognik mówi, co przyniósł (`RX_WispFoundInLocation` z `AB_Translation.lbr` + „nazwa xN”);
+  - `FindPlantsRare(promień)` (`0x101ab7a0`): wszystkie rośliny i tablice w promieniu bohatera („Znalezione rośliny i tabliczki”);
+  - `PlantsInLoc`, `PlantsRareInLoc`, `FindPlates` (`0x101aa3a0`, `0x101aa660`, `0x101ba8b0`): ile zwykłych roślin, rzadkich roślin, tablic zostało w lokacji;
+  - `OldWisp_FindStealTargets` (`0x101b8d80`): żywi ludzie lokacji, których bohater jeszcze nie okradł (`AIV_PlayerHasPickedMyPocket` 0), bez przyjaciół (`npcType` 2, 3) i gildii 19.
+- **Do sprawdzenia:** dialog ognika: „zbierz rośliny” (za rudę), liczniki roślin, tablic i nieokradzionych.
+
+### 218. Skrzynie i drzwi po nazwie, portale, obrót do obiektu – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/interactive.h`, `common/world/objects/npc.cpp`, `common/world/aiqueue.cpp`, `common/world/aiqueue.h`, `common/game/constants.h`
+- **Zgłoszenie:** jak 221.
+- **Plugin:**
+  - `Mob_SetLockedByName(nazwa, zamknięta)` (`0x101cb140`, `oCMobLockable::SetLocked`): trzy skrzynie świątyni Asztar – wybrana się otwiera, dwie pozostałe są opróżniane i otwierane;
+  - `Wld_SetCondFunc(nazwa, funkcja)` (`0x101bcaa0`): funkcja warunku mobów o tej nazwie (`CondFunc_Thief_Chest`…), zapisywana w save;
+  - `Mob_RemoveItem_AB(nazwa, przedmiot, ile)` (`0x101a78e0`): przedmioty znikają ze skrzyni (zakład z Orlanem: złoto Rukhara);
+  - `Wld_ChangePortal(pokój, gildia)` (`0x101c7a90`): gildia właściciela pokoju portalu, jak `Wld_AssignRoomToGuild` (wieże miasta publiczne dla zwiadowcy);
+  - `AI_TurnToVob(npc, nazwa, ?)` (`0x101e1a30`): w kolejce – obrót do punktu, mechanizmu albo moba o tej nazwie (ściana ukrytego pokoju Nefariusa); nowa akcja `AI_TurnToPos`.
+- **Do sprawdzenia:** świątynia Asztar (wybór skrzyni); zakład u Orlana; Nefarius przy ścianie.
+
+### 217. Czary potworów w kolejce (`AI_PlayEffect`), zasięg walki królowej pełzaczy, zamrożenie – 🧪 (24.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/fightalgo.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/aiqueue.cpp`, `common/world/aiqueue.h`, `common/game/constants.h`
+- **Zgłoszenie:** jak 221.
+- **Plugin:**
+  - `AI_PlayEffect(npc, efekt, cel, obrażenia, typ)` (`0x101c7c50` → `0x10057e00`): wiadomość w kolejce AI – po obrocie i animacji (`T_FISTATTACKMOVE`) efekt leci w cel i rani go jak `Wld_PlayEffect_Vec` (ognisty pocisk drakonian, sieć królowej pełzaczy, lodowy pocisk); efekt na siebie – tylko efekt (rytuał Cronosa). Nowa akcja kolejki `AI_PlayEffect`;
+  - `Npc_SetFightRange(npc, r)` (`0x101cf9a0`): zasięg podstawowy tej postaci `r`, pięści i G `r+50` zamiast wartości gildii (królowa pełzaczy: 180);
+  - `AST_FreezeNpc(npc, sekundy, efekt)` (`0x101b80c0`): magiczne strzały i bełty, broń mrozu zamrażają ofiarę na tyle sekund (animacja stoi, bez ruchu, ciosu i kolejki AI). Z efektem: lód `SPELLFX_ICESPELL_SENDPERCEPTION_MagicArrow` i nie częściej niż co 3 s. Odporne (`0x10055b80`): trolle, smoki, demony, lodowe golemy, `SKELETON_MI_HIGH_PRIEST`, postać w `ZS_STUN`.
+- **Do sprawdzenia:** drakonianie i królowa pełzaczy strzelają czarami; magiczna strzała zamraża potwora na 1 s.
+
+### 216. Potwór stał w walce, gdy cel był za przeszkodą – 🧪 (24.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`
+- **Zgłoszenie (log):** „Smoczy zębacz stands 8 s in ZS_MM_ATTACK – target … at 642 cm (reach 300), sees it 0, ai [(empty)]”: zębacze stały w animacji biegu, a golem był 6–8 m dalej za skałą.
+- **Przyczyna:** `Npc::implAttack` przy celu niewidocznym (promień trafia w przeszkodę) szukał punktu drogi przy celu i szedł do niego. Gdy potwór już przy tym punkcie stał, dostawał drogę z tego jednego punktu na każdej klatce, od razu ją kończył i stał tak przez całą walkę.
+- **Poprawka:** gdy punkt jest bliżej niż 2,5 m albo nie ma do niego drogi, potwór biegnie prosto na cel, jak `AI_Attack` oryginału.
+- **Do sprawdzenia:** potwory i przywołańcy za przeszkodą biegną do celu zamiast stać (w logu brak `[idle] … sees it 0`).
+
 ### 215. Zamykanie zadań, zwoje postaci, trofea ze skryptów, mechanizmy – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`
 - **Zgłoszenie:** dalsze funkcje pluginu, które skrypty wołają, a portu nie ma (raport poprawki 213).
@@ -262,7 +315,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - zwoje postaci: `Npc_HasScroll`, `Npc_GetScroll` (losowy zwój postaci – jego czar, `0x101cfa70`), `Npc_HasScrollExp` (tylko na Drodze Prób: `RX_RoadOfTrialsActiveValue` = 938491, bez zmiennej NB 222 i zwoju przemiany w chrząszcza) – bandyci i inni rzucają czary ze zwojów (`B_SelectSpell`); zwój to przedmiot kategorii run, który się zlicza, nie `ITRU_*` (`0x10088950`);
   - `Wld_OpenMoverIfClosed` / `Wld_CloseMoverIfOpened(nazwa)` (`0x101cb450`, `0x101cb2e0`): mechanizm o tej nazwie dostaje sygnał tylko, gdy jest zamknięty / otwarty (bramy po śmierci smoków, magazyn Azgana, wieża Mrocznego Mówcy);
   - `Npc_CanSeePlayerInRadius(promień)` (`0x101c7dd0`): żywa postać w promieniu widzi bohatera (otwieranie orkowej skrzyni).
-- **Jeszcze nie:** worki (`OpenPocket` – osobne okno z przedmiotami kategorii), `Wld_ChangePortal`, `AI_PlayEffect`, `StartChangeWorldTime` (skręty), szukanie roślin i tablic przez ognika (`FindPlants`, `PlantsInLoc`…), `Npc_SetFightRange` (królowa pełzaczy), `Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `AI_TurnToVob`, `AST_FreezeNpc`, `Ext_DarkScreen`, `Wld_SetCondFunc`, `InitFullSnc`.
+- **Jeszcze nie:** worki (`OpenPocket`), `Wld_ChangePortal`, `AI_PlayEffect`, `StartChangeWorldTime`, szukanie roślin przez ognika, `Npc_SetFightRange`, `Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `AI_TurnToVob`, `AST_FreezeNpc`, `Ext_DarkScreen`, `Wld_SetCondFunc`, `InitFullSnc` – zrobione w poprawkach 217–221.
 - **Do sprawdzenia:** zadania zamykane przez NB („Zadanie zakończone!”); trofeum z pazura po użyciu z zieloną ramką w ekwipunku.
 
 ### 214. Patrole, oczy szkieletów, `Npc_HasMessage`, `Npc_HasSprintMoveset`, karma – 🧪 (24.11.2026)

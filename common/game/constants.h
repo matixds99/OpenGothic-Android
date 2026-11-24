@@ -403,6 +403,8 @@ enum Action:uint32_t {
   AI_SndPlay,
   AI_StopFx,
   AI_ForceFall,    // the jump of a cutscene of a mod: the character goes off the edge
+  AI_PlayEffect,   // NB fix 217: AI_PlayEffect of the plugin - an effect (with its damage) at a character, in the queue
+  AI_TurnToPos,    // NB fix 218: AI_TurnToVob of the plugin - a turn to the place of a vob (i0 x, i1 z)
   };
 
 

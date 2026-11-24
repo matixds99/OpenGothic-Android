@@ -77,6 +77,8 @@ class AiQueue {
     static AiAction aiDropItem(int32_t id);
     static AiAction aiSndPlay(std::string_view name);
     static AiAction aiStopFx(std::string_view name);
+    static AiAction aiPlayEffect(std::string_view fx, Npc* target, int damage, int damageType);   // NB fix 217
+    static AiAction aiTurnToPos(int x, int z);                                                     // NB fix 218
     static AiAction aiStandup();
     static AiAction aiStandupQuick();
     static AiAction aiGoToPoint(const WayPoint &to);

@@ -75,6 +75,8 @@ class Interactive : public Vob {
                                                       onStateFunc.empty() && triggerTarget.empty() && owner.empty(); }
     std::string_view    keyName() const { return keyInstance; }
     void                setAsCracked(bool c) { isLockCracked = c; }
+    void                nbSetLocked(bool l) { locked = l; isLockCracked = !l; }          // NB fix 218: Mob_SetLockedByName
+    void                nbSetConditionFunc(std::string_view f) { conditionFunc = f; }    // NB fix 218: Wld_SetCondFunc
     void                setPickLockCode(std::string_view s) { pickLockStr = s; }
     bool                isCracked() const { return isLockCracked; }
     bool                isLocked() const { return (isContainer() || isDoor()) && locked && !isLockCracked; }

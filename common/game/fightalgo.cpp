@@ -232,30 +232,43 @@ void FightAlgo::onTakeHit() {
   queueId = zenkit::FightAiMove::NOP;
   }
 
+// NB fix 217: Npc_SetFightRange(npc, r) of the plugin (0x101cf9a0) writes the fight ranges of that one character over the
+// values of its guild: the base r, the fist range and the G range r+50 (the queen of the minecrawlers: 180)
+static float nbRangeBase(const Npc& n, const zenkit::IGuildValues& gv) {
+  return n.nbFightRange>=0 ? float(n.nbFightRange) : float(gv.fight_range_base[n.guild()]);
+  }
+
+static float nbRangeFist(const Npc& n, const zenkit::IGuildValues& gv) {
+  return n.nbFightRange>=0 ? float(n.nbFightRange+50) : float(gv.fight_range_fist[n.guild()]);
+  }
+
+static float nbRangeG(const Npc& n, const zenkit::IGuildValues& gv) {
+  return n.nbFightRange>=0 ? float(n.nbFightRange+50) : float(gv.fight_range_g[n.guild()]);
+  }
+
 float FightAlgo::qDistTo(const Npc& npc, const Npc& tg) const {
   return npc.fightQDistTo(tg);   // NB fix 205: to the box of a long target
   }
 
 float FightAlgo::baseDistance(const Npc& npc, const Npc& tg,  GameScript &owner) const {
   auto&  gv      = owner.guildVal();
-  float  baseTg  = float(gv.fight_range_base[tg .guild()]);
-  float  baseNpc = float(gv.fight_range_base[npc.guild()]);
+  float  baseTg  = nbRangeBase(tg, gv);
+  float  baseNpc = nbRangeBase(npc,gv);
   return baseTg + baseNpc;
   }
 
 float FightAlgo::prefferedAttackDistance(const Npc& npc, const Npc& tg,  GameScript &owner) const {
   auto&  gv      = owner.guildVal();
-  float  baseTg  = float(gv.fight_range_base[tg.guild()]);
-  float  baseNpc = float(gv.fight_range_base[npc.guild()]);
+  float  baseTg  = nbRangeBase(tg, gv);
+  float  baseNpc = nbRangeBase(npc,gv);
   return baseTg + baseNpc + weaponRange(owner,npc);
   }
 
 float FightAlgo::prefferedGDistance(const Npc& npc, const Npc& tg, GameScript &owner) const {
-  auto   gl      = npc.guild();
   auto&  gv      = owner.guildVal();
-  float  baseTg  = float(gv.fight_range_base[tg.guild()]);
-  float  baseNpc = float(gv.fight_range_base[npc.guild()]);
-  return float(baseTg + baseNpc + float(gv.fight_range_g[gl])) + weaponRange(owner,npc);
+  float  baseTg  = nbRangeBase(tg, gv);
+  float  baseNpc = nbRangeBase(npc,gv);
+  return float(baseTg + baseNpc + nbRangeG(npc,gv)) + weaponRange(owner,npc);
   }
 
 float FightAlgo::attackFinishDistance(GameScript &owner) const {
@@ -352,7 +365,7 @@ float FightAlgo::weaponRange(GameScript &owner, const Npc &npc) {
       return float(gv.fight_range_2ha[gl] + add);
     case WeaponState::NoWeapon:
     case WeaponState::Fist:
-      return float(gv.fight_range_fist[gl]);
+      return nbRangeFist(npc,gv);
     case WeaponState::Bow:
     case WeaponState::CBow:
       return float(bR);

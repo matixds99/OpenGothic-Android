@@ -91,6 +91,7 @@ class InventoryMenu : public Tempest::Widget {
 #endif
     void  close();
     void  open(Npc& pl);
+    void  openPocket(Npc& pl, uint32_t mask);   // NB fix 220
     void  trade(Npc& pl,Npc& tr);
     bool  ransack(Npc& pl,Npc& tr);
     void  open(Npc& pl,Interactive& chest);

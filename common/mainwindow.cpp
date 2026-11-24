@@ -268,6 +268,7 @@ void MainWindow::setupUi() {
   Gothic::inst().onOpenTrade   .bind(&inventory,&InventoryMenu::trade);
   Gothic::inst().onOpenPlayerSales.bind(&nbSales,&NbSalesMenu::open);
   Gothic::inst().onOpenCraft      .bind(&nbCraft,&NbCraftMenu::open);   // NB fix 70
+  Gothic::inst().onOpenPocket     .bind(&inventory,&InventoryMenu::openPocket);   // NB fix 220
   Gothic::inst().isNpcInDialogFn = std::bind(&DialogMenu::isNpcInDialog, &dialogs, std::placeholders::_1);
 
   Gothic::inst().onPrintScreen .bind(&dialogs,&DialogMenu::printScreen);
@@ -313,6 +314,11 @@ void MainWindow::paintEvent(PaintEvent& event) {
 
   if(world!=nullptr) {
     world->globalFx()->scrBlend(p,Rect(0,0,w(),h()));
+    }
+  // NB fix 221: Ext_DarkScreen
+  if(const float a = NbBars::darkAlpha(Application::tickCount()); a>0.f && world!=nullptr) {
+    p.setBrush(Brush(Color(0.f,0.f,0.f,a)));
+    p.drawRect(0,0,w(),h());
     }
 
   // NB fix 108: the screen of the death of New Balance (UNION_ABI.DLL 0x10222E00: bShowDeadScreen, YOU_DIE.TGA over the

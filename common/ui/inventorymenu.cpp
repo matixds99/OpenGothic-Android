@@ -29,6 +29,16 @@ static const InventoryMenu::Category CategoryOrder[InventoryMenu::CatCount] = {
   InventoryMenu::CatMisc
   };
 
+/// NB fix 220: a bag of New Balance (ITBG_*)
+static bool nbIsBag(const Item& item) {
+  auto* w = Gothic::inst().world();
+  auto* sym = w!=nullptr ? w->script().findSymbol(item.clsId()) : nullptr;
+  if(sym==nullptr)
+    return false;
+  const auto& n = sym->name();
+  return n.size()>=5 && (n.compare(0,5,"ITBG_")==0 || n.compare(0,5,"itbg_")==0);
+  }
+
 struct InventoryMenu::Page {
   Page()=default;
   Page(const Page&)=delete;
@@ -36,8 +46,16 @@ struct InventoryMenu::Page {
 
   Category category = CatAll;
   uint32_t scriptMask = 0;
+  uint32_t pocketMask = 0;   // NB fix 220: OpenPocket - only the items of these flags (and the worn ones), no bags
 
   bool matches(const Item& item) const {
+    if(pocketMask!=0) {
+      if(item.isEquipped())
+        return true;
+      if(nbIsBag(item))
+        return false;
+      return ((uint32_t(item.mainFlag()) | uint32_t(item.itemFlag())) & pocketMask)!=0;
+      }
     if(category==CatAll)
       return true;
 
@@ -199,6 +217,21 @@ void InventoryMenu::open(Npc &pl) {
   Gothic::inst().emitGlobalSound("INV_OPEN");
   //Gothic::inst().emitGlobalSound("INV_CHANGE");
   pl.world().script().dmaInventoryOpen(pl);
+  }
+
+// NB fix 220: OpenPocket(bag, flags) of the plugin (0x101a8d90): the bags of NB open the inventory of the hero with the
+// items of their kinds only (the plugin takes the others out for the time the inventory is open): armors, weapons, potions,
+// runes and documents, rings and amulets. The worn items stay in the list, the bags themselves do not
+void InventoryMenu::openPocket(Npc& pl, uint32_t mask) {
+  if(state!=State::Equip || player!=&pl)
+    open(pl);
+  if(state!=State::Equip || pagePl==nullptr)
+    return;
+  pagePl->pocketMask = mask;
+  pageLocal[0] = PageLocal();
+  pageLocal[1] = PageLocal();
+  adjustScroll();
+  update();
   }
 
 void InventoryMenu::trade(Npc &pl, Npc &tr) {

@@ -195,6 +195,7 @@ class Gothic final {
       };
     Tempest::Signal<void(Npc&,Npc&,const std::vector<NbSaleItem>&)> onOpenPlayerSales;
     // NB fix 70: the crafting window of the plugin (RX_OpenCraft) - for now the alchemy
+    Tempest::Signal<void(Npc&,uint32_t)>                                onOpenPocket;  // NB fix 220: the hero, the flags of the bag
     Tempest::Signal<void(Npc&,int32_t)>                                 onOpenCraft;   // the player, CRAFT_*
     bool                                                                nbSalesOpen = false; // the window is shown (no HUD of NB under it)
     std::function<bool(const Npc*)>                                     isNpcInDialogFn;
