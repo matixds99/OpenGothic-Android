@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – 🧪
+1. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
 2. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
 3. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – ✅
 4. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – ✅
@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 209. Zapisy po aktualizacji skryptów NB („Cannot init USE_RAWMEAT_MOUNT: not an instance”) – 🧪 (24.11.2026)
+### 209. Zapisy po aktualizacji skryptów NB („Cannot init USE_RAWMEAT_MOUNT: not an instance”) – ✅🧪 (24.11.2026)
 - **Pliki:** 🆕 `common/game/savesymbols.cpp`, 🆕 `common/game/savesymbols.h`, `common/game/serialize.cpp`, `common/game/serialize.h`, `common/game/gamesession.cpp`, `common/game/gamescript.cpp`, `common/game/inventory.cpp`, `common/game/worldstatestorage.cpp`, `common/game/worldstatestorage.h`, `common/world/objects/item.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/aiqueue.cpp`, `common/world/worldobjects.cpp`
 - **Zgłoszenie:** po wgraniu nowej aktualizacji skryptów NB zapis się nie wczytuje: „Unable to load the game – save-game 'gothicii_quicksave_5.sav': Cannot init USE_RAWMEAT_MOUNT: not an instance”.
 - **Przyczyna:** zapis portu trzyma numery symboli skryptów (instancje postaci i przedmiotów, funkcje stanów AI i rutyn, funkcje przedmiotów, znane dialogi). Nowy `GOTHIC.DAT` dodaje symbole, więc numery się przesuwają: numer przedmiotu z zapisu wskazuje teraz funkcję `USE_RAWMEAT_MOUNT`. Silnik na PC zapisuje nazwy, więc tam zapisy przechodzą aktualizacje.
@@ -263,6 +263,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - czego nie ma w nowych skryptach: przedmiot jest pomijany (wpis `[save] … dropped`), dialog zapomniany (może wrócić), stan rutyny – rutyna postaci tworzona od nowa przy pierwszym ticku; zły symbol przedmiotu nie przerywa już wczytywania.
 - **Sprawdzone:** symulacja na tablicy symboli NB (272 601) z losowymi zmianami: 60 zmian – 63 061 funkcji i instancji dobrze, 0 źle, 40 nieznanych; 300 zmian – 3 źle, 671 nieznanych.
 - **Do sprawdzenia:** wczytanie `gothicii_quicksave_5.sav`; w logu `[save] the scripts are not the scripts of the save-game …` z liczbami. Z plikiem `old_symbols_pl.txt` (nazwy skryptów z kopii na gałęzi NewBalance) obok zapisów – w logu `the names of old_symbols_pl.txt`. Potem nowy zapis i wczytanie go.
+- **Test (24.11.2026):** stary zapis po aktualizacji skryptów wczytuje się, działa. Do sprawdzenia przy następnej aktualizacji: zapis z `game/symtab`.
 
 ### 208. Moc magiczna: obrażenia magiczne kosturów i mieczy magicznych, przebicie pancerza przywołańców nekromanty – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/game/damagecalculator.cpp`
