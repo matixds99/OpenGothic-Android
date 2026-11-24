@@ -1100,6 +1100,59 @@ Tempest::Vec3 Npc::fightDistanceTo(const Npc& tg) const {
   return fightPoint(*this) - fightPoint(tg);
   }
 
+/// NB fix 205: the squared fight distance of FightAlgo. The scripts measure the reach "from Bip01 to the box" of the target
+/// (FAI_W = BASE + the weapon). The port measures it between two points, with the base of the target for its body - that
+/// is right for a man or a wolf, but a long creature (the desert snake: 6 m) is far longer than its base: the golems
+/// stood at its side, 4.1-4.2 m from its middle with the reach of 4.2 m, every blow at the edge of the reach and none
+/// landed (commitDamage: out of range), while the snake bit them. For a target whose box reaches out more than its base,
+/// the distance is from the fight point of the attacker to the box of the target (its rotation and scale) plus the base
+/// of the target - so the sums of the bases in the scripts stay right
+float Npc::fightQDistTo(const Npc& tg) const {
+  const Vec3 d  = fightDistanceTo(tg);
+  const auto sk = tg.visual.visualSkeleton();
+  if(sk==nullptr)
+    return d.quadLength();
+  const float baseTg = float(owner.script().guildVal().fight_range_base[tg.guild()]);
+  const auto& bMin = sk->bboxCol[0];
+  const auto& bMax = sk->bboxCol[1];
+
+  Vec3 zero = {}, ex = {1,0,0}, ez = {0,0,1};
+  const auto m = tg.transform();
+  m.project(zero);
+  m.project(ex);
+  m.project(ez);
+  ex -= zero;
+  ez -= zero;
+  ex.y = 0;
+  ez.y = 0;
+  const float lx = ex.length(), lz = ez.length();
+  if(lx<0.001f || lz<0.001f)
+    return d.quadLength();
+  const float halfX = (bMax.x-bMin.x)*0.5f*lx, halfZ = (bMax.z-bMin.z)*0.5f*lz;
+  if(std::max(halfX,halfZ)<=baseTg*1.2f)
+    return d.quadLength();   // an ordinary body: as before
+
+  // the fight point of the attacker in the axes of the box of the target
+  Vec3 me = position();
+  if(auto msk = visual.visualSkeleton()) {
+    Vec3 root = msk->rootTr, z0 = {};
+    transform().project(z0);
+    transform().project(root);
+    me = position()+(root-z0);
+    }
+  me.y = 0;
+  Vec3 o = tg.position();
+  o.y = 0;
+  const Vec3  rel = me-o;
+  const float px  = Vec3::dotProduct(rel,ex)/(lx*lx);
+  const float pz  = Vec3::dotProduct(rel,ez)/(lz*lz);
+  const float cx  = std::clamp(px,bMin.x,bMax.x);
+  const float cz  = std::clamp(pz,bMin.z,bMax.z);
+  const float dx  = (px-cx)*lx, dz = (pz-cz)*lz;
+  const float box = std::sqrt(dx*dx+dz*dz)+baseTg;
+  return box*box+d.y*d.y;
+  }
+
 uint8_t Npc::calcAniComb() const {
   if(currentTarget==nullptr)
     return 0;

@@ -233,7 +233,7 @@ void FightAlgo::onTakeHit() {
   }
 
 float FightAlgo::qDistTo(const Npc& npc, const Npc& tg) const {
-  return npc.fightDistanceTo(tg).quadLength();
+  return npc.fightQDistTo(tg);   // NB fix 205: to the box of a long target
   }
 
 float FightAlgo::baseDistance(const Npc& npc, const Npc& tg,  GameScript &owner) const {

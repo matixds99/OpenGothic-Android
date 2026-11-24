@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **205**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **206**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **204** – log: `[idle]` także w zasięgu bez ciosu (ciosy przyjęte, zachwiania), w znaczniku odległość walki; porządki w podsumowaniu – 🧪
-2. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
-3. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
-4. **197** – golemy stoją przy wrogu: szczegóły w logu (`STUCK 5 s`) – ✅ (dał przyczynę: cel 22 m dalej)
-5. **196** – `StopPlayerBleeding`: mikstury lecznicze zatrzymują krwawienie bohatera – 🧪
+1. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – 🧪
+2. **204** – log: `[idle]` także w zasięgu bez ciosu, w znaczniku odległość walki; porządki w podsumowaniu – ✅
+3. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
+4. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
+5. **197** – golemy stoją przy wrogu: szczegóły w logu (`STUCK 5 s`) – ✅ (dał przyczynę: cel 22 m dalej)
 
 ---
 
@@ -252,7 +252,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 204. Log: golem w zasięgu bez ciosu, odległość walki w znaczniku, porządki w podsumowaniu – 🧪 (24.11.2026)
+### 205. Zasięg walki do bryły długiego celu – golemy trafiają pustynnego węża – 🧪 (24.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/game/fightalgo.cpp`
+- **Zgłoszenie:** golemy stoją przy pustynnym wężu i dają się gryźć; na PC go biją.
+- **Log (204):** golem w zasięgu: odległość walki 411–418 cm przy zasięgu 420 cm, bez zachwiań (`bodystate_interruptable_override` = 1), 0 trafień; drugi golem 106 cm od węża – też 0. Wąż (6 m długości) gryzie golemy z 417 cm przy swoim zasięgu 500.
+- **Przyczyna:** skrypty opisują zasięg walki jako odległość „od Bip01 do bryły” celu (`FAI_W = BASE + broń`). Port mierzy ją między dwoma punktami (środki postaci, przy wężu – środek jego bryły) i dolicza bazę celu jako jego „promień” – dobre dla człowieka czy wilka, ale wąż jest dużo dłuższy niż jego baza (200). Golem przy boku węża stał więc ~4,15 m od jego środka, na samej granicy zasięgu 4,2 m: AI uznawała, że może uderzyć, a cios w chwili trafienia (`commitDamage`) był już poza zasięgiem. Golem zbyt blisko środka uznawany był za „za blisko” (odskok).
+- **Poprawka:** odległość walki do celu, którego bryła sięga dalej niż 1,2 × jego baza: od punktu walki atakującego do bryły celu (z jej obrotem i skalą), plus baza celu – sumy baz w skryptach zostają poprawne. Dla zwykłych postaci bez zmian. Dotyczy AI walki, trafień (`commitDamage`) i odległości w logu.
+- **Do sprawdzenia:** golemy przy pustynnym wężu – biją go od razu (w znaczniku „blows given” rośnie, bez `[idle] … without a blow`). Przy okazji: bohater też łatwiej trafia długie stwory (jak w Gothicu).
+
+### 204. Log: golem w zasięgu bez ciosu, odległość walki w znaczniku, porządki w podsumowaniu – ✅ (24.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h`, `common/utils/nblog.cpp/.h`, `common/mainwindow.cpp`, `common/game/gamescript.cpp`
 - **Log (24.11, golemy i pustynny wąż):** po „Atak” celem golemów był wąż 26 m dalej (`STUCK … fight=2607/420 see=0`). Gdy wąż podszedł i gryzł golemy co ~1 s, znaczniki 1–2 pokazują golemy obok, w `ZS_MM_ATTACK`, z wężem jako celem i pustą kolejką AI – ale bez ani jednego ciosu; uderzyły dopiero, gdy wąż przerzucił się na bohatera (`reattack: turns to`). Poprawka 198 nie zadziałała, bo wąż już był ich celem. `[idle]` nie wypisał nic – sprawdzał tylko cel poza zasięgiem.
 - **Przypuszczenie:** każde ugryzienie przerywa cios golema (zachwianie – w porcie przy ciosie postaci w postać, bez `bodystate_interruptable_override`), więc golem nie kończy żadnego ciosu. Do potwierdzenia nowym wpisem.
@@ -261,6 +269,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - w znaczniku przy każdej postaci z celem: odległość walki / zasięg, czy widzi cel, ciosy zadane / przyjęte / zachwiania od startu;
   - podsumowanie: lista `NB: bound` to już informacja, nie błąd; archiwa DLL/ZIP Uniona i `VDFS tool disk` w ostrzeżeniach danych; bez dubli „sound fx” obok pliku dźwięku i bez resztek ścieżek binarnych; `[mem]` z czasem od startu.
 - **Do sprawdzenia:** golemy gryzione przez węża – w logu `[idle] … without a blow: … blows taken N, stumbles M`; przy M bliskim N przyczyną jest przerywanie ciosów.
+- **Test (24.11, log):** `[idle] … in reach of Wąż pustynny for 8 s without a blow: fight 417 cm (reach 420) … blows taken 3, stumbles 0 … interruptable override 1` – golem się nie chwieje (przypuszczenie o przerywaniu odpada), stoi na samej granicy zasięgu; drugi golem 106 cm, też bez ciosu. Znaczniki: golemy 0 ciosów zadanych przy 4–9 przyjętych. Na PC golemy normalnie biją węża. Dalej: poprawka 205.
 
 ### 199–203. Rozbudowany log do zgłoszeń – ✅ (24.11.2026)
 - **Pliki:** nowe `common/utils/nblog.cpp` i `nblog.h`; `game/main.cpp`, `common/utils/crashlog.cpp/.h`, `common/world/objects/npc.cpp/.h`, `common/game/damagecalculator.cpp`, `common/mainwindow.cpp`, `common/ui/mobilecontrolsmodel.cpp/.h`, `common/utils/androidinput.cpp/.h`
