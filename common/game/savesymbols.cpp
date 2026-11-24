@@ -482,7 +482,7 @@ std::shared_ptr<zenkit::IItem> SaveSymbols::itemByLook(zenkit::DaedalusVm& vm, c
       looks.strict[lookStrict(*inst)].push_back(id);
       looks.loose [lookLoose (*inst)].push_back(id);
       }
-    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-t0).count();
+    const uint64_t ms = uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-t0).count());
     Log::i("[save] the looks of ",looks.items.size()," items of the scripts (",ms," ms)");
     }
   for(auto* table:{&looks.strict,&looks.loose}) {
