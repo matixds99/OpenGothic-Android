@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **206**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **207**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – 🧪
-2. **204** – log: `[idle]` także w zasięgu bez ciosu, w znaczniku odległość walki; porządki w podsumowaniu – ✅
-3. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
-4. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
-5. **197** – golemy stoją przy wrogu: szczegóły w logu (`STUCK 5 s`) – ✅ (dał przyczynę: cel 22 m dalej)
+1. **206** – znacznik „NOWY” tylko przy dokumentach, których bohater wcześniej nie miał (stara lista wyczyszczona) – 🧪
+2. **205** – zasięg walki do bryły długiego celu („od Bip01 do bryły”): golemy trafiają pustynnego węża – ✅
+3. **204** – log: `[idle]` także w zasięgu bez ciosu, w znaczniku odległość walki; porządki w podsumowaniu – ✅
+4. **199–203** – rozbudowany log: przycisk MARK, awaria w `log.txt`, wykrywanie zapętlonych i stojących postaci, podsumowanie problemów, poziom logu w ustawieniach – ✅
+5. **198** – przywołaniec gryziony przez wroga obok siebie odwraca się do niego, gdy jego cel jest daleko lub niewidoczny – 🧪
 
 ---
 
@@ -252,13 +252,25 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 205. Zasięg walki do bryły długiego celu – golemy trafiają pustynnego węża – 🧪 (24.11.2026)
+### 206. „NOWY” tylko przy nieprzeczytanych nowych dokumentach – 🧪 (24.11.2026)
+- **Pliki:** `common/ui/inventorymenu.cpp`, `common/game/gamesession.cpp`
+- **Zgłoszenie (zrzut):** w zakładce dokumentów 48 z 49 ma znacznik „NOWY”, także dawno przeczytane; ma być oznaczone tylko to, czego bohater nie przeczytał.
+- **Przyczyna:** lista nieprzeczytanych dokumentów (poprawka 122, zapisywana w save'ie) dostawała każdy dokument, którego liczba wzrosła względem migawki ekwipunku. Gdy migawka była zrobiona, zanim wrócił ekwipunek (wczytanie, zmiana świata), cały zbiór dokumentów trafiał na listę jako „nowy” i zostawał w zapisie – znikał dopiero po przeczytaniu każdego z osobna.
+- **Poprawka:**
+  - nowy jest tylko dokument, którego bohater wcześniej nie miał (druga kopia tego samego nie);
+  - więcej niż 8 dokumentów naraz to powrót ekwipunku, nie nowe – bez znaczników (w logu `[newdocs] N documents at once`);
+  - każdy oznaczony dokument w logu: `[newdocs] new, not read yet: <instancja>`;
+  - lista w save'ie w nowej wersji (`game/nb_newdocs2`): stara, zaśmiecona lista nie jest wczytywana – po wczytaniu save'a znaczników „NOWY” przy dokumentach nie ma, pojawią się przy następnych zdobytych. „Czytaj” zdejmuje znacznik jak dotąd.
+- **Do sprawdzenia:** wczytanie save'a – dokumenty bez „NOWY”; podniesienie nowego listu/mapy – „NOWY” tylko przy nim, po „Czytaj” znika; zmiana świata – znaczniki nie wracają.
+
+### 205. Zasięg walki do bryły długiego celu – golemy trafiają pustynnego węża – ✅ (24.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/game/fightalgo.cpp`
 - **Zgłoszenie:** golemy stoją przy pustynnym wężu i dają się gryźć; na PC go biją.
 - **Log (204):** golem w zasięgu: odległość walki 411–418 cm przy zasięgu 420 cm, bez zachwiań (`bodystate_interruptable_override` = 1), 0 trafień; drugi golem 106 cm od węża – też 0. Wąż (6 m długości) gryzie golemy z 417 cm przy swoim zasięgu 500.
 - **Przyczyna:** skrypty opisują zasięg walki jako odległość „od Bip01 do bryły” celu (`FAI_W = BASE + broń`). Port mierzy ją między dwoma punktami (środki postaci, przy wężu – środek jego bryły) i dolicza bazę celu jako jego „promień” – dobre dla człowieka czy wilka, ale wąż jest dużo dłuższy niż jego baza (200). Golem przy boku węża stał więc ~4,15 m od jego środka, na samej granicy zasięgu 4,2 m: AI uznawała, że może uderzyć, a cios w chwili trafienia (`commitDamage`) był już poza zasięgiem. Golem zbyt blisko środka uznawany był za „za blisko” (odskok).
 - **Poprawka:** odległość walki do celu, którego bryła sięga dalej niż 1,2 × jego baza: od punktu walki atakującego do bryły celu (z jej obrotem i skalą), plus baza celu – sumy baz w skryptach zostają poprawne. Dla zwykłych postaci bez zmian. Dotyczy AI walki, trafień (`commitDamage`) i odległości w logu.
 - **Do sprawdzenia:** golemy przy pustynnym wężu – biją go od razu (w znaczniku „blows given” rośnie, bez `[idle] … without a blow`). Przy okazji: bohater też łatwiej trafia długie stwory (jak w Gothicu).
+- **Test (24.11):** golemy naprawione – biją pustynnego węża.
 
 ### 204. Log: golem w zasięgu bez ciosu, odległość walki w znaczniku, porządki w podsumowaniu – ✅ (24.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h`, `common/utils/nblog.cpp/.h`, `common/mainwindow.cpp`, `common/game/gamescript.cpp`

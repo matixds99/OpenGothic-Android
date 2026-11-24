@@ -372,15 +372,32 @@ void InventoryMenu::nbFindNew(Npc& pl) {
       n.first  += it.count();
       n.second  = &(*it);
       }
+    // NB fix 206: a document is new only when the hero gets one that he did not have (a new letter, a new map) - not a
+    // second copy of one he has. Many documents at once are the inventory coming back (a load, a change of the world
+    // before the snapshot), not new ones: all 49 documents of the hero were marked new, read or not
+    std::vector<size_t> newDocs;
     for(auto& [cls,n]:now) {
       if(docs->find(cls)!=docs->end() || nbFresh.find(cls)!=nbFresh.end())
         continue;
       auto was = nbSeen.find(cls);
-      if(n.first<=(was==nbSeen.end() ? 0 : was->second))
+      const size_t had = was==nbSeen.end() ? 0 : was->second;
+      if(n.first<=had)
         continue;
-      if(nbIsDocument(*n.second))
-        docs->insert(cls); else
+      if(nbIsDocument(*n.second)) {
+        if(had==0)
+          newDocs.push_back(cls);
+        } else {
         nbFresh.insert(cls);   // NB fix 123
+        }
+      }
+    if(newDocs.size()>8) {
+      Log::i("[newdocs] ",newDocs.size()," documents at once - the inventory coming back, not new ones");
+      } else {
+      for(auto cls:newDocs) {
+        docs->insert(cls);
+        if(auto* sym = pl.world().script().findSymbol(cls))
+          Log::i("[newdocs] new, not read yet: ",sym->name());
+        }
       }
     }
   nbSnapshot(pl);

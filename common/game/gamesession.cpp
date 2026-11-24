@@ -191,8 +191,10 @@ GameSession::GameSession(Serialize &fin) {
     }
 
   // NB fix 122: the unread documents (older save-games do not have them)
-  fin.setStage("game/nb_newdocs");
-  if(fin.setEntry("game/nb_newdocs")) {
+  // NB fix 206: the version 2 of the list; the list of the version 1 had the documents that were not new (all of them, read
+  // or not) and is not taken - the marks begin again with the next documents
+  fin.setStage("game/nb_newdocs2");
+  if(fin.setEntry("game/nb_newdocs2")) {
     uint32_t count = 0;
     fin.read(count);
     for(uint32_t i=0; i<count; ++i) {
@@ -309,7 +311,7 @@ void GameSession::save(Serialize &fout, std::string_view name, const Pixmap& scr
   for(auto cls:newDocs)
     if(auto* sym = vm->findSymbol(cls))
       names.emplace_back(sym->name());
-  fout.setEntry("game/nb_newdocs");
+  fout.setEntry("game/nb_newdocs2");   // NB fix 206
   fout.write(uint32_t(names.size()));
   for(auto& n:names)
     fout.write(n);
