@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **212**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **213**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – 🧪
-2. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – 🧪
-3. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
-4. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
-5. **207** – trofea New Balance (`ITEM_TROPHY`, np. grymuar) można założyć – własne miejsce na trofeum – ✅
+1. **212** – aktualizacje skryptów NB: raport przy starcie (co usunięte, nowe funkcje pluginu), nazwy starych skryptów zachowywane same, postacie rozpoznawane po id i imieniu – 🧪
+2. **211** – przedmioty odwiedzonych światów ze starych zapisów rozpoznawane po wyglądzie; log bez linii dalekich postaci, kamer i parsowania – 🧪
+3. **210** – aktualizacja skryptów NB z 21.11.2026: `Hlp_GetIntArrayValue`/`Hlp_SetIntArrayValue` pluginu; łańcuch wywołań w błędach skryptów – 🧪
+4. **209** – zapisy po aktualizacji skryptów NB: numery symboli (postacie, przedmioty, funkcje stanów, dialogi) przeliczane po nazwach; nowe zapisy mają nazwy (`game/symtab`) – ✅🧪
+5. **208** – obrażenia magiczne kosturów i mieczy magicznych (inteligencja wg kręgu, moc magiczna, umiejętność broni); przywołańce nekromanty przebijają pancerz – 🧪
 
 ---
 
@@ -251,6 +251,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 212. Aktualizacje skryptów NB bez konfliktów: raport przy starcie, nazwy starych skryptów, postacie po id i imieniu – 🧪 (24.11.2026)
+- **Pliki:** `common/game/savesymbols.cpp`, `common/game/savesymbols.h`, `common/game/serialize.cpp`, `common/game/gamescript.cpp`, `lib/ZenKit/include/zenkit/DaedalusVm.hh` (`patches/zenkit-opengothic.patch`)
+- **Zgłoszenie:** po aktualizacji skryptów NB było zamieszanie (zapisy, przedmioty, nowe funkcje pluginu) – aktualizacje mają przechodzić bez problemów.
+- **Stan po 209–211:** nowe zapisy mają nazwy wszystkich funkcji i instancji (`game/symtab`), także dla odwiedzonych światów (`worlds/<świat>.symmap`), więc kolejna aktualizacja przelicza je po nazwach; nieznany przedmiot jest szukany po wyglądzie. Zostawały: przemianowane postacie, brak informacji, co aktualizacja zmieniła, i nazwy starych skryptów potrzebne zapisom sprzed 209.
+- **Poprawka:**
+  - **raport przy starcie** (raz na uruchomienie, po wczytaniu skryptów): porównanie z tablicą symboli poprzedniego startu (`nb_symbols_last.txt` + `nb_symbols_last.hash` obok zapisów). Po aktualizacji w logu: `[scripts] the scripts are not the scripts of the last start (… symbols, now …): N new functions and instances, M removed: …` oraz `[scripts] new functions of the plugin: PATROL_SET (not in the port) …`;
+  - **nazwy starych skryptów zachowywane same:** przy zmianie skryptów poprzednia tablica zostaje jako `old_symbols_<odcisk>.txt` – zapisy bez `game/symtab` biorą z niej dokładne nazwy (poprawka 209), bez ręcznego wgrywania plików;
+  - za każdym startem lista funkcji silnika i pluginu (poza `RX_*`, które już są w logu NB), których port nie ma: `[scripts] functions of the engine or of the plugin that the port does not have: …` (ZenKit: `DaedalusVm::has_external`);
+  - **postacie:** postać z nieznanym symbolem (przemianowana instancja albo nieznane miejsce w starych skryptach) jest szukana po id i imieniu z kodu instancji (kod tylko czytany); przyjmowana, gdy pasuje jedna. W nowych skryptach 2290 par id/imię, 2281 jednoznacznych. W logu `[save] '<imię>' (id N) of the save-game is the character <INSTANCJA> of the scripts now`; zły symbol postaci nie przerywa już wczytywania.
+- **Czego nie da się przenieść (na PC tak samo):** liczby w zmiennych skryptów, które trzymają numer instancji (`Hlp_GetInstanceID` zapisane w zwykłej zmiennej), oraz to, co aktualizacja usunęła ze skryptów. Nowe funkcje pluginu trzeba dopisać do portu – raport je wymienia.
+- **Do sprawdzenia:** pierwszy start – w logu lista funkcji, których port nie ma; obok zapisów pojawia się `nb_symbols_last.txt`. Przy następnej aktualizacji skryptów – raport `[scripts] …` i `old_symbols_<odcisk>.txt`.
 
 ### 211. Przedmioty odwiedzonych światów ze starych zapisów, krótszy log – 🧪 (24.11.2026)
 - **Pliki:** `common/game/savesymbols.cpp`, `common/game/savesymbols.h`, `common/world/objects/item.cpp`, `common/game/inventory.cpp`, `common/world/worldobjects.cpp`, `common/utils/nblog.cpp`, `common/mainwindow.cpp`

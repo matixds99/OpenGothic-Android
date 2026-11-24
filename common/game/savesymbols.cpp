@@ -637,3 +637,217 @@ std::shared_ptr<zenkit::IItem> SaveSymbols::itemByLook(zenkit::DaedalusVm& vm, c
   ret->munition   = found->munition;
   return ret;
   }
+
+namespace {
+
+struct NpcLooks {
+  const zenkit::DaedalusVm*                                vm    = nullptr;
+  size_t                                                   count = 0;
+  std::unordered_map<std::string,std::vector<uint32_t>>    byKey;
+  };
+
+bool isNpcClass(zenkit::DaedalusVm& vm, const zenkit::DaedalusSymbol& s) {
+  if(s.type()!=DaedalusDataType::INSTANCE)
+    return false;
+  auto* p = vm.find_symbol_by_index(s.parent());
+  for(int depth=0; p!=nullptr && p->type()!=DaedalusDataType::CLASS && depth<8; ++depth)
+    p = vm.find_symbol_by_index(p->parent());
+  return p!=nullptr && p->name()=="C_NPC";
+  }
+
+/// the id and the name that the code of the instance writes (only its own lines, the functions it calls are not read)
+bool readNpcLook(zenkit::DaedalusVm& vm, uint32_t address, uint32_t mId, uint32_t mName, int32_t& id, std::string& name) {
+  using Op = zenkit::DaedalusOpcode;
+  struct Val { int kind = 0; int32_t i = 0; uint32_t sym = 0; uint8_t index = 0; };
+  std::vector<Val> st;
+  auto pop = [&st]() { Val v; if(!st.empty()) { v = st.back(); st.pop_back(); } return v; };
+  bool hasId = false, hasName = false;
+  const uint32_t end = vm.size();
+  for(int n=0; n<4000 && address<end && !(hasId && hasName); ++n) {
+    const auto in = vm.instruction_at(address);
+    address += in.size;
+    switch(in.op) {
+      case Op::PUSHI:  st.push_back({1,in.immediate,0,0}); break;
+      case Op::PUSHV:
+      case Op::PUSHVI: st.push_back({2,0,in.symbol,0}); break;
+      case Op::PUSHVV: st.push_back({2,0,in.symbol,in.index}); break;
+      case Op::MOVI: {
+        const Val dst = pop(), src = pop();
+        if(dst.kind!=2 || dst.sym!=mId)
+          break;
+        if(src.kind==1) {
+          id = src.i;
+          hasId = true;
+          }
+        else if(src.kind==2) {
+          auto* s = vm.find_symbol_by_index(src.sym);
+          if(s!=nullptr && s->type()==DaedalusDataType::INT && s->is_const() && src.index<s->count()) {
+            id    = s->get_int(src.index);
+            hasId = true;
+            }
+          }
+        break;
+        }
+      case Op::MOVS: {
+        const Val dst = pop(), src = pop();
+        if(dst.kind!=2 || dst.sym!=mName || dst.index!=0 || src.kind!=2)
+          break;
+        auto* s = vm.find_symbol_by_index(src.sym);
+        if(s!=nullptr && s->type()==DaedalusDataType::STRING && s->is_const() && src.index<s->count()) {
+          name    = s->get_string(src.index);
+          hasName = true;
+          }
+        break;
+        }
+      case Op::BL: case Op::BE:
+        st.clear();
+        st.push_back({});
+        break;
+      case Op::RSR: case Op::B: case Op::BZ:
+        return hasId && hasName;
+      case Op::GMOVI: case Op::NOP:
+        break;
+      case Op::PLUS: case Op::NEGATE: case Op::NOT: case Op::CMPL:
+        pop(); st.push_back({});
+        break;
+      case Op::MOVSS: case Op::MOVF: case Op::MOVVF: case Op::MOVVI:
+      case Op::ADDMOVI: case Op::SUBMOVI: case Op::MULMOVI: case Op::DIVMOVI:
+        pop(); pop();
+        break;
+      default:
+        pop(); pop(); st.push_back({});
+        break;
+      }
+    }
+  return hasId && hasName;
+  }
+
+}
+
+zenkit::DaedalusSymbol* SaveSymbols::npcByLook(zenkit::DaedalusVm& vm, int32_t id, std::string_view name) {
+  static NpcLooks looks;
+  if(looks.vm!=&vm || looks.count!=vm.symbols().size()) {
+    looks = NpcLooks();
+    looks.vm    = &vm;
+    looks.count = vm.symbols().size();
+    const uint32_t mId   = memberIndex(vm,"C_NPC.ID");
+    const uint32_t mName = memberIndex(vm,"C_NPC.NAME");
+    for(uint32_t i=0; i<looks.count; ++i) {
+      auto* s = vm.find_symbol_by_index(i);
+      if(s==nullptr || !isNpcClass(vm,*s))
+        continue;
+      int32_t     nid = 0;
+      std::string nname;
+      if(readNpcLook(vm,s->address(),mId,mName,nid,nname))
+        looks.byKey[std::to_string(nid)+"|"+nname].push_back(i);
+      }
+    }
+  auto it = looks.byKey.find(std::to_string(id)+"|"+std::string(name));
+  if(it==looks.byKey.end() || it->second.size()!=1)
+    return nullptr;
+  return vm.find_symbol_by_index(it->second[0]);
+  }
+
+void SaveSymbols::scriptsReport(zenkit::DaedalusVm& vm) {
+  static bool done = false;
+  if(done)
+    return;
+  done = true;
+
+  auto&          dat   = vm.symbols();
+  const uint64_t hash  = fingerprint(vm);
+  const char*    last  = "nb_symbols_last.txt";
+  const char*    lastH = "nb_symbols_last.hash";
+
+  // the unbound functions of the plugin and of the engine (RX_* are listed by the log of the externals of NB)
+  {
+    std::string list;
+    size_t      n = 0;
+    for(auto& s:dat) {
+      if(!s.is_external() || vm.has_external(&s) || s.name().rfind("RX_",0)==0)
+        continue;
+      if(n<60)
+        list += s.name()+" ";
+      ++n;
+      }
+    if(n>0)
+      Log::i("[scripts] functions of the engine or of the plugin that the port does not have: ",n,": ",list,n>60 ? "..." : "");
+  }
+
+  uint64_t lastHash = 0;
+  {
+    std::ifstream in(lastH);
+    in >> lastHash;
+  }
+  if(lastHash==hash)
+    return;
+
+  std::vector<std::string> now(dat.size());
+  for(size_t i=0; i<dat.size(); ++i)
+    if(!isTemp(dat[i].name()))
+      now[i] = dat[i].name();
+
+  std::vector<std::string> before;
+  {
+    std::ifstream in(last,std::ios::binary);
+    std::string   line;
+    while(std::getline(in,line)) {
+      if(!line.empty() && line.back()=='\r')
+        line.pop_back();
+      before.push_back(line);
+      }
+  }
+
+  if(lastHash!=0 && !before.empty()) {
+    std::unordered_map<std::string,bool> inNow;
+    for(auto& s:dat)
+      if(refByName(s))
+        inNow[s.name()] = true;
+    std::unordered_map<std::string,bool> inBefore;
+    for(auto& n:before)
+      if(!n.empty())
+        inBefore[n] = true;
+
+    std::string removed, addedExt;
+    size_t      nRemoved = 0, nAdded = 0, nExt = 0;
+    for(auto& n:before) {
+      if(n.empty() || inNow.count(n)>0 || n.find('.')!=std::string::npos)
+        continue;
+      auto* s = vm.find_symbol_by_name(n);
+      if(s!=nullptr)
+        continue;   // a variable now, or the same name
+      if(nRemoved<40)
+        removed += n+" ";
+      ++nRemoved;
+      }
+    for(auto& s:dat) {
+      if(!refByName(s) || inBefore.count(s.name())>0 || s.name().find('.')!=std::string::npos)
+        continue;
+      ++nAdded;
+      if(s.is_external()) {
+        addedExt += s.name()+(vm.has_external(&s) ? "" : " (not in the port)")+" ";
+        ++nExt;
+        }
+      }
+    Log::i("[scripts] the scripts are not the scripts of the last start (",before.size()," symbols, now ",dat.size(),"): ",
+           nAdded," new functions and instances, ",nRemoved," removed",nRemoved>0 ? ": " : "",removed,nRemoved>40 ? "..." : "");
+    if(nExt>0)
+      Log::i("[scripts] new functions of the plugin: ",addedExt);
+    // the names of the old scripts, for the save-games without game/symtab
+    const std::string keep = "old_symbols_"+std::to_string(lastHash)+".txt";
+    std::ofstream out(keep,std::ios::binary);
+    for(auto& n:before)
+      out << n << '\n';
+    Log::i("[scripts] the names of the old scripts are kept in ",keep);
+  }
+
+  {
+    std::ofstream out(last,std::ios::binary);
+    for(auto& n:now)
+      out << n << '\n';
+  }
+  {
+    std::ofstream out(lastH);
+    out << hash << '\n';
+  }
+  }

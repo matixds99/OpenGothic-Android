@@ -1,8 +1,20 @@
 diff --git a/include/zenkit/DaedalusVm.hh b/include/zenkit/DaedalusVm.hh
-index 17a81ee..7b79d9f 100644
+index 17a81ee..001cd32 100644
 --- a/include/zenkit/DaedalusVm.hh
 +++ b/include/zenkit/DaedalusVm.hh
-@@ -638,6 +638,10 @@ namespace zenkit {
+@@ -331,6 +331,11 @@ namespace zenkit {
+ 		pop_reference();
+ 		[[nodiscard]] ZKAPI bool top_is_reference() const;
+ 
++		/// \brief OpenGothic NB fix 212: true if a C++ function is registered for the external
++		[[nodiscard]] bool has_external(DaedalusSymbol const* sym) const {
++			return sym != nullptr && _m_externals.find(const_cast<DaedalusSymbol*>(sym)) != _m_externals.end();
++		}
++
+ 		/// \brief Registers a Daedalus external function.
+ 		///
+ 		/// <p>External functions are a way for Daedalus scripts to execute more complicated code in the C++ world
+@@ -638,6 +643,10 @@ namespace zenkit {
  		///
  		/// \param sym The symbol to unsafe_call.
  		ZKAPI void unsafe_call(DaedalusSymbol const* sym);
@@ -13,7 +25,7 @@ index 17a81ee..7b79d9f 100644
  		ZKAPI void unsafe_jump(uint32_t address);
  		ZKAPI std::shared_ptr<DaedalusInstance> unsafe_get_gi();
  		ZKAPI void unsafe_set_gi(std::shared_ptr<DaedalusInstance> i);
-@@ -1000,6 +1004,7 @@ namespace zenkit {
+@@ -1000,6 +1009,7 @@ namespace zenkit {
  		std::array<DaedalusStackFrame, stack_size> _m_stack;
  		uint16_t _m_stack_ptr {0};
  

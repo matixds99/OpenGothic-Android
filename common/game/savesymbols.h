@@ -20,4 +20,10 @@ namespace SaveSymbols {
   /// NB fix 211: the item of the scripts now that looks as the item of the save-game (the visual, the name, the texts):
   /// the instance made by the scripts, nullptr when no item or more than one look so
   std::shared_ptr<zenkit::IItem> itemByLook(zenkit::DaedalusVm& vm, const zenkit::IItem& saved);
+  /// NB fix 212: the character of the scripts now with that id and that name (a renamed instance), nullptr: none or more
+  zenkit::DaedalusSymbol*        npcByLook(zenkit::DaedalusVm& vm, int32_t id, std::string_view name);
+  /// NB fix 212: once a start - the scripts compared with the scripts of the last start (nb_symbols_last.txt next to the
+  /// save-games): what an update has removed and added, the new functions of the plugin that the port does not have yet;
+  /// the names of the old scripts stay in old_symbols_<fingerprint>.txt (the save-games made before NB fix 209 use them)
+  void                           scriptsReport(zenkit::DaedalusVm& vm);
   }

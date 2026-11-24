@@ -24,6 +24,7 @@
 #include "game/compatibility/directmemory.h"
 #include "game/definitions/spelldefinitions.h"
 #include "game/serialize.h"
+#include "game/savesymbols.h"
 #include "utils/string_frm.h"
 #include "world/objects/npc.h"
 #include "game/fightalgo.h"
@@ -1130,6 +1131,7 @@ GameScript::GameScript(GameSession &owner)
   Gothic::inst().setupVmCommonApi(vm);
   aiDefaultPipe.reset(new GlobalOutput(*this));
   initCommon();
+  SaveSymbols::scriptsReport(vm);   // NB fix 212: an update of the scripts since the last start
   initSettings();
   Gothic::inst().onSettingsChanged.bind(this,&GameScript::initSettings);
   }

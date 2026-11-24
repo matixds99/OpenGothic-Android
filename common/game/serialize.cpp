@@ -1,4 +1,5 @@
 #include "serialize.h"
+#include "savesymbols.h"
 
 #include <cstring>
 #include <exception>
@@ -426,13 +427,26 @@ void Serialize::readNpc(zenkit::DaedalusVm& vm, std::shared_ptr<zenkit::INpc>& h
 
   auto sym = vm.find_symbol_by_index(instanceSymbol);
 
-  if (sym != nullptr) {
-    vm.allocate_instance(h, sym);
+  read(h->id,h->name,h->slot,h->effect, reinterpret_cast<int32_t&>(h->type));
+  if(symMap!=nullptr && (sym==nullptr || sym->type()!=zenkit::DaedalusDataType::INSTANCE)) {
+    // NB fix 212: a character whose instance is not known (renamed, or its place in the old scripts is not known):
+    // the instance of the scripts with the same id and the same name
+    if(auto* look = SaveSymbols::npcByLook(vm,h->id,h->name[0])) {
+      Tempest::Log::i("[save] '",h->name[0],"' (id ",h->id,") of the save-game is the character ",look->name()," of the scripts now");
+      sym = look;
+      }
+    }
+  if(sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INSTANCE) {
+    try {
+      vm.allocate_instance(h, sym);
+      }
+    catch(const zenkit::DaedalusVmException& e) {
+      Tempest::Log::e("Cannot load serialized NPC ", instanceSymbol, ": ", e.what());
+      }
     } else {
     Tempest::Log::e("Cannot load serialized NPC ", instanceSymbol, ": Symbol not found.");
     }
 
-  read(h->id,h->name,h->slot,h->effect, reinterpret_cast<int32_t&>(h->type));
   read(reinterpret_cast<int32_t&>(h->flags));
   read(h->attribute,h->hitchance,h->protection,h->damage);
   read(h->damage_type,h->guild,h->level);
