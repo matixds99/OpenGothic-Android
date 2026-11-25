@@ -839,6 +839,10 @@ bool Npc::checkHealth(bool onChange, bool allowUnconscious) {
   if(isDead()) {
     return false;
     }
+  // NB fix 244: while the music of a boss plays every blow that takes the last life of the hero kills him (a weapon, a spell,
+  // a special attack), he is never knocked out
+  if(isPlayer() && allowUnconscious && !isUnconscious() && owner.script().nbBossFightOn())
+    allowUnconscious = false;
   if(isUnconscious() && allowUnconscious) {
     return false;
     }

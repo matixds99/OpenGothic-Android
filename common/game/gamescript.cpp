@@ -11566,6 +11566,11 @@ bool GameScript::nbIsTrainingDummy(const Npc& npc) {
   return AIV_MM_REAL_ID<std::size(h.aivar) && h.aivar[AIV_MM_REAL_ID]==id->get_int();
   }
 
+bool GameScript::nbBossFightOn() {
+  // NB fix 244: a boss fight - RX_MusicBoss of the scripts (set by RX_StartBossMusic also with the music off) or the music itself
+  return nbIntVar("RX_MUSICBOSS")>0 || Gothic::inst().isBossMusic();
+  }
+
 bool GameScript::nbIsSummon(const Npc& npc) {
   // NB fix 81: RX_IsSummonNpc of the scripts - the summoned creatures of New Balance carry RX_SUMMON_ID in aivar[91]
   auto* id = vm.find_symbol_by_name("RX_SUMMON_ID");

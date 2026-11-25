@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **244**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **245**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 244. W walce z bossem ostatni cios zabija bohatera, nigdy nie zostaje 1 życia – 🧪 (26.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/npc.cpp`
+- **Zgłoszenie (26.11):** gdy gra muzyka bossa, każdy cios (broń, magia, atak specjalny), który zbija życie bohatera do zera, ma zabijać; bohater nigdy nie zostaje z 1 życia (ogłuszony).
+- **Poprawka:** `Npc::checkHealth` – dla gracza `allowUnconscious` jest wyłączone, gdy trwa walka z bossem (`GameScript::nbBossFightOn`: `RX_MUSICBOSS` skryptów > 0 lub gra muzyka bossa). Razem z 243 (ataki specjalne przez `hurtBy`) żaden cios w walce z bossem nie ogłusza bohatera. Poza walką z bossem bez zmian (ogłuszenie przez ludzi niewrogich).
+- **Do sprawdzenia:** w walce z Im'Arah / Zeldem / innym bossem śmiertelny cios (miecz, czar, fala) kończy się `[ctx] death: killer: …`, bez `hero(down)`.
 
 ### 243. Ataki specjalne bossów zabijają bohatera, zamiast go ogłuszać – 🧪 (26.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`
