@@ -9636,9 +9636,22 @@ void GameScript::nbMageBlinkTick() {
       if(++c.second<4)
         continue;
       }
-    const auto bs = npc->bodyStateMasked();
-    if(bs!=BS_RUN && bs!=BS_WALK)
-      continue;   // the plugin teleports a mage that runs to its enemy
+    // NB fix 240: the plugin (0x102b1db8-0x102b1f49) does not test the body state but the animation that plays: one of
+    // T_1HRUNSTRAFEL/R, S_1HRUN, S_1HRUNL, S_MAGRUN, S_MAGRUNL, T_MAGRUNSTRAFEL/R. The PC log: a teleport every ~7.5 s
+    // (3.3 s of the animation + 8 ticks of 0.5 s), here it took 8-10 s as BS_RUN/BS_WALK missed the strafes
+    {
+    static const char* const runAnis[] = {"T_1HRUNSTRAFEL","T_1HRUNSTRAFER","S_1HRUN","S_1HRUNL",
+                                          "S_MAGRUN","S_MAGRUNL","T_MAGRUNSTRAFEL","T_MAGRUNSTRAFER"};
+    bool runs = false;
+    for(auto& l:npc->animationLayers()) {
+      for(const char* a:runAnis)
+        if(l.name==a) { runs = true; break; }
+      if(runs)
+        break;
+      }
+    if(!runs)
+      continue;
+    }
     if(nbMageBlink(*npc,*t,dist)) {
       c = {0,0};
       // the enemy far away without a bow or a spell: the next teleport later (the plugin: -(10..20) and -(5..10))

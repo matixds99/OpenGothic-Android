@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **240**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **241**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 240. Teleport magów: warunek z pluginu to animacja biegu, nie stan ciała – 🧪 (26.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `tools/pc-logger/` (nowe)
+- **Zgłoszenie (26.11):** logger na PC (wtyczka `nblog.dll` w Winlatorze, hooki w `UNION_ABI.DLL`) pokazał prawdziwe teleporty Im'Arah: 4 w jednej walce co 7,7 / 8,2 / 6,7 s (średnio ok. 7,5 s), pierwszy 4,1 s po pierwszym `teleport_eligible` (8 cykli po 0,5 s). Na Androidzie wychodziło ok. 8–10 s.
+- **Plugin (`UNION_ABI.DLL`, pętla 0x102b1ba0, teleport 0x102b1410):** po licznikach (widzi wroga ≥ 8, nie widzi ≥ 4) sprawdza, czy gra się jedna z animacji: `T_1HRUNSTRAFEL/R`, `S_1HRUN`, `S_1HRUNL`, `S_MAGRUN`, `S_MAGRUNL`, `T_MAGRUNSTRAFEL/R`. Nie sprawdza stanu ciała.
+- **Przyczyna:** port wymagał `BS_RUN`/`BS_WALK`; podczas uników bokiem (strafe) i innych animacji biegu ten warunek nie był spełniony, więc teleport czekał na „dobry” moment.
+- **Poprawka:** `nbMageBlinkTick` sprawdza warstwy animacji postaci według powyższej listy.
+- **Do sprawdzenia:** w logu `blink: Im'Arah teleports …` co ok. 7–8 s (bez przerw 10+ s), także Zeld; teleport nadal się zdarza, gdy postać biegnie.
 
 ### 239. Teleport Zelda i magów zgodnie z pluginem; wycofane naprowadzanie 238 – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/bullet.cpp`, `common/world/bullet.h`, `common/world/worldobjects.cpp`
