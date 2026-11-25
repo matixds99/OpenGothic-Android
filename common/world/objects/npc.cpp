@@ -3325,7 +3325,9 @@ void Npc::hurtBy(Npc& other, int32_t dmg) {
     }
 
   currentOther = &other;
-  changeAttribute(ATR_HITPOINTS,-dmg,true);
+  // NB fix 243: the special attacks of the bosses (Im'Arah's wave) kill the hero as the plugin does; knocked out (1 life, "down")
+  // he was only for a character, and the hero lay with 1 life while the boss walked away
+  changeAttribute(ATR_HITPOINTS,-dmg,!isPlayer());
   }
 
 int32_t Npc::takePuppetDamage() {

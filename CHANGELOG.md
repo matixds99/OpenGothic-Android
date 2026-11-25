@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **243**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **244**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 243. Ataki specjalne bossów zabijają bohatera, zamiast go ogłuszać – 🧪 (26.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`
+- **Zgłoszenie (26.11, log z Im'Arah):** „ten strzał, co dostałem na końcu, powinien być śmiertelny” – po fali błyskawicy (`the wave, 750 damage`, życie bohatera 639) bohater leżał z 1 życia (`hero(down)`, `T_STAND_2_WOUNDEDB`), a Im'Arah odeszła.
+- **Przyczyna:** ataki specjalne (`nbVecDamage`) biją przez `Npc::hurtBy`, a ta wołała `changeAttribute(…, true)` (dozwolone ogłuszenie). `checkHealth` ogłusza człowieka, gdy jego postawa wobec napastnika nie jest wroga; bohater wobec Im'Arah nie jest, więc zamiast zginąć zostawał z 1 życia. Zwykłe czary i uderzenia idą inną drogą (`takeDamage`) i zabijały.
+- **Poprawka:** `hurtBy` zabija bohatera (`allowUnconscious` tylko dla postaci, nie dla gracza).
+- **Do sprawdzenia:** po fali / wachlarzu ognia, który zbija życie bohatera do 0, bohater ginie (`[ctx] death: killer: Im'Arah`), nie leży ogłuszony.
 
 ### 242. Reakcja bossów na obrażenia: RX_OnDamageBossTactics – 🧪 (26.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
