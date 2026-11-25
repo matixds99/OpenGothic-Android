@@ -11578,6 +11578,23 @@ bool GameScript::nbIsSummon(const Npc& npc) {
 
 void GameScript::nbOnDamage(Npc& target, Npc& attacker) {
   nbBossHit(target,attacker);   // NB fix 100
+  // NB fix 242: the last call of RX_OnDamage (the plugin calls it at every damage): RX_OnDamageBossTactics(attacker, target) -
+  // the reaction of the bosses to the blows: a heal, an explosion or a ball by the chance, the rage at 15-30% of life. The PC log
+  // (Im'Arah, 9 calls in 33 s, right after AI_OnGetDamage) has it, the port never called it. It runs at every exit of this function
+  struct BossTactics {
+    GameScript& gs; Npc& target; Npc& attacker;
+    ~BossTactics() {
+      auto* fn = gs.vm.find_symbol_by_name("RX_ONDAMAGEBOSSTACTICS");
+      if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
+        return;
+      try {
+        gs.vm.call_function<void>(fn,attacker.handlePtr(),target.handlePtr());
+        }
+      catch(const std::exception& e) {
+        Log::e("NB: RX_OnDamageBossTactics failed: ",e.what());
+        }
+      }
+    } bossTactics {*this,target,attacker};
   // NB fix 82: the part of RX_OnDamage (the plugin calls it at every damage) for the music of the bosses: the player or his
   // summoned creature fights a boss (RX_IsBoss) - RX_CheckMusicBoss chooses and starts the music, or keeps it on
   auto* isBoss = vm.find_symbol_by_name("RX_ISBOSS");
