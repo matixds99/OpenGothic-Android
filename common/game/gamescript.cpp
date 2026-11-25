@@ -378,6 +378,7 @@ struct NbState {
   std::vector<int32_t>                        varLast;
   std::vector<uint8_t>                        varCnt;
   std::vector<uint8_t>                        varTotal;   // NB fix 230: the changes since the world was loaded
+  std::vector<uint8_t>                        varUp;      // NB fix 232: the steps up one after another
   std::vector<uint8_t>                        varMute;
   const void*                                 aivOwner = nullptr;
   std::vector<std::string>                    aivName;
@@ -10678,6 +10679,7 @@ void GameScript::nbHeroWatchTick() {
     st.varLast.assign(st.varIdx.size(),0);
     st.varCnt .assign(st.varIdx.size(),0);
     st.varTotal.assign(st.varIdx.size(),0);
+    st.varUp.assign(st.varIdx.size(),0);
     st.varMute.assign(st.varIdx.size(),0);
     for(size_t k=0; k<st.varIdx.size(); ++k)
       st.varLast[k] = vm.find_symbol_by_index(st.varIdx[k])->get_int(st.varElem[k]);
@@ -10740,9 +10742,20 @@ void GameScript::nbHeroWatchTick() {
     // NB fix 230: also the counters of every kill (RX_STATEXP, MONSTERKILLED, RANKPOINTS...): 15 lines in all, then left out
     if(st.varTotal[k]<255)
       ++st.varTotal[k];
-    if(st.varCnt[k]>8 || st.varTotal[k]>15) {
+    // NB fix 232: a counter (only up: the experience, the kills, the rank) is left out after 6 steps; the summons are never
+    // left out (RX_SUMMONCOUNT was, after 9 summons and deaths of golems in 5 min)
+    if(v>was) {
+      if(st.varUp[k]<255)
+        ++st.varUp[k];
+      } else {
+      st.varUp[k] = 0;
+      }
+    const std::string vn = varName(k);
+    const bool keep = vn.find("SUMMON")!=std::string::npos || vn.find("ISUP")!=std::string::npos ||
+                      vn.find("ALIVE")!=std::string::npos  || vn.find("_ACTIVE")!=std::string::npos;
+    if(!keep && (st.varCnt[k]>8 || st.varTotal[k]>15 || st.varUp[k]>=6)) {
       st.varMute[k] = 1;
-      Log::i("[var] ",varName(k),": changes all the time, left out");
+      Log::i("[var] ",vn,": ",st.varUp[k]>=6 ? "a counter" : "changes all the time",", left out");
       continue;
       }
     if(lines<40) {
@@ -10794,7 +10807,7 @@ void GameScript::nbHeroWatchTick() {
       continue;
     if(st.aivTotal[k]<255)
       ++st.aivTotal[k];
-    if(++st.aivCnt[k]>8 || st.aivTotal[k]>15) {
+    if(++st.aivCnt[k]>8 || st.aivTotal[k]>15 || (v==was+1 && st.aivTotal[k]>=6)) {
       st.aivMute[k] = 1;
       Log::i("[hero] aivar[",int(k),"] ",st.aivName[k],": changes all the time, left out");
       continue;
@@ -10907,6 +10920,15 @@ size_t GameScript::nbResetSummons(bool keepWisp, bool print) {
       return;
     gone.push_back(&n);
     });
+  // NB fix 232: the creatures that fought a removed summon lose it as the target (after loading a save they stood with
+  // a golem 690 m away as the target: "[AGGRO] ... out of range 69358", until the leash after 6 s)
+  if(!gone.empty()) {
+    for(uint32_t i=0, cnt=world().npcCount(); i<cnt; ++i) {
+      auto* n = world().npcById(i);
+      if(n!=nullptr && n->target()!=nullptr && std::find(gone.begin(),gone.end(),n->target())!=gone.end())
+        n->setTarget(nullptr);
+      }
+    }
   for(auto* n:gone)
     world().removeNpc(*n);
   nbSummonsAlive = 0;

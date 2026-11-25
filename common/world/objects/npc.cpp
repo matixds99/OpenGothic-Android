@@ -4609,7 +4609,9 @@ void Npc::tickEffectHits() {
 void Npc::tickLooseWeapon() {
   // A character that walks about with a weapon in hand and has nothing to fight puts it away. The scripts do it with the perception
   // of the removed weapon or at the end of the state, and when it is missed the character goes on with the weapon (and talks with it).
-  if(isPlayer() || isMonster() || isDown() || isTalk() || currentTarget!=nullptr || owner.script().hasDma()) {
+  // NB fix 232: only the humans - the orcs of New Balance (guilds above GIL_SEPERATOR_ORC, not monsters) stand guard with
+  // the weapon in hand (ZS_Stand_WP) and drew it again at once: 40 lines "puts the weapon away" in one log
+  if(isPlayer() || !isHuman() || isDown() || isTalk() || currentTarget!=nullptr || owner.script().hasDma()) {
     looseWeaponSince = 0;
     return;
     }
@@ -6102,7 +6104,8 @@ bool Npc::perceptionProcess(Npc &pl) {
                " body=",int(bodyStateMasked())," ai=[",aiQueue.describe(4),"] inAir=",int(isInAir())," move=",int(mvAlgo.state()),
                " go2=",int(go2.flag),(go2.npc!=nullptr ? std::string(" ")+std::string(go2.npc->displayName()) : std::string()),
                " wait=",left(waitTime)," ani=",left(aniWaitTime)," out=",left(outWaitTime)," fai=",left(faiWaitTime),
-               " walk=",int(walkMode())," cast=",int(currentSpellCast!=size_t(-1)),
+               " walk=",int(walkMode())," cast=",int(currentSpellCast!=size_t(-1)),"/",int(castLevel),
+               " frozen=",int(nbFrozen())," down=",int(isDown())," policy=",int(processPolicy()),   // NB fix 232
                " fight=",fightD,"/",fightPref," see=",int(currentTarget!=nullptr && canSeeNpc(*currentTarget,false)));
         }
       }

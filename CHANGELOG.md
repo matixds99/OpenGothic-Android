@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **232**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **233**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – 🧪
-2. **230** – poprawki loggera: flagi przyzwańców nie są już wyciszane, tekst stale na ekranie raz, przyzwańcy w całym świecie z odległością, `[hero] says` dla odmów głosem – 🧪
-3. **229** – logger bohatera: komunikaty skryptów z funkcją, która je pokazała (`[print]`), stan bohatera, przyzwańcy i animacje (`[hero]`), zmiany zmiennych skryptów (`[var]`) – ✅🧪
-4. **228** – flagi „sługa już przyzwany” (Hubaxis, Krayt, Jina, Tesvall, mroczny sługa…) zerowane, gdy sługi nie ma w świecie – ✅
-5. **227** – przyzwańcy nekromanty: leczenie (`RX_SummonHeal`), aury szybkości i spowolnienia (`RX_ApplyBuffToSummons`), przywołanie przy celu – 🧪
+1. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – 🧪
+2. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – ✅🧪
+3. **230** – poprawki loggera: flagi przyzwańców nie są już wyciszane, tekst stale na ekranie raz, przyzwańcy w całym świecie z odległością, `[hero] says` dla odmów głosem – ✅🧪
+4. **229** – logger bohatera: komunikaty skryptów z funkcją, która je pokazała (`[print]`), stan bohatera, przyzwańcy i animacje (`[hero]`), zmiany zmiennych skryptów (`[var]`) – ✅🧪
+5. **228** – flagi „sługa już przyzwany” (Hubaxis, Krayt, Jina, Tesvall, mroczny sługa…) zerowane, gdy sługi nie ma w świecie – ✅
 
 ---
 
@@ -252,14 +252,30 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 231. Przyzwańcy i potwory stojący na granicy zasięgu – 🧪 (25.11.2026)
+### 232. Logger: zmienne przyzwańców i liczniki; orkowie z bronią; cel po usuniętym przyzwańcu – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`
+- **Zgłoszenie (log z 25.11, 19:05):**
+  - `[var] RX_SUMMONCOUNT: changes all the time, left out` – po 9 przywołaniach i śmierciach golemów w 5 min logger przestał pokazywać licznik przyzwańców;
+  - liczniki każdego zabicia (`RX_STATEXP`, `MONSTERKILLED`, `RANKPOINTS`, `*_B1`) wciąż po kilkanaście linii;
+  - 40 linii „[Czarny ork wojownik] walks about with a weapon in hand in ZS_STAND_WP, it puts the weapon away” – orkowie NB stoją na straży z bronią, port co 10 s kazał im ją chować, a skrypt od razu ją wyciągał;
+  - po wczytaniu zapisu („summons removed: 1”) potwory miały za cel usuniętego golema 690 m dalej (`[AGGRO] … out of range 69358`) i stały, aż smycz po 6 s go zgubiła.
+- **Poprawka:**
+  - zmienne z `SUMMON`, `ISUP`, `ALIVE`, `_ACTIVE` w nazwie nigdy nie są wyciszane;
+  - zmienna, która 6 razy z rzędu tylko rośnie, to licznik – wyciszana z dopiskiem „a counter”; tak samo `aivar` bohatera rosnący o 1 (licznik czarów `aivar[20]`);
+  - chowanie broni na spacerze (`tickLooseWeapon`) tylko dla ludzi, nie dla orków;
+  - przy usuwaniu przyzwańców (wczytanie, zmiana świata, śmierć bohatera) postacie, które miały któregoś za cel, tracą ten cel;
+  - linia `STUCK 5 s` ma też `cast=…/castLevel`, `frozen`, `down`, `policy` – dwa razy golem stał 5 s zaraz po przywołaniu z kolejką `[SetWalkMode]` bez widocznej przyczyny.
+- **Do sprawdzenia:** `[var] RX_SUMMONCOUNT` przy każdym przywołaniu; brak serii „puts the weapon away” przy orkach; po wczytaniu potwory od razu zachowują się normalnie.
+
+### 231. Przyzwańcy i potwory stojący na granicy zasięgu – ✅🧪 (25.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`
 - **Zgłoszenie (log z loggerem 229):** Hubaxis miał cel (polna bestia, czarny goblin, czarny wilk), ale przez długie minuty stał w miejscu, a nie atakował. Linia `[AGGRO] [Hubaxis] [Czarny goblin] is out of range 2802 > 2800` powtórzyła się około 280 razy, zawsze przy 2800–2807 cm, czyli dokładnie przy jego zasięgu zmysłów (`senses_range`). Atakował dopiero na rozkaz („summons: 1 attack …”).
 - **Przyczyna:** pościg w porcie przełączał się dokładnie na zasięgu. Bliżej niż zasięg cel za przeszkodą był osiągany po punktach drogi, a dalej – prosto na cel. Droga naokoło skały na chwilę wyprowadzała stwora poza zasięg, więc wracał do biegu prosto, w tę samą przeszkodę, znów w zasięg, znów na drogę… i tak w kółko na granicy.
 - **Poprawka:** droga do celu (punkt drogi przy celu) jest kontynuowana także wtedy, gdy na chwilę prowadzi dalej niż zasięg. Gdy stwór jest poza zasięgiem dłużej niż 6 s, i tak gubi cel (`tickAggroLeash`, jak dotąd). Linia `[AGGRO] … is out of range` raz na 10 s dla tego samego celu, a nie przy każdym kroku.
 - **Do sprawdzenia:** Hubaxis (i potwory) dochodzi do celu za skałą, ogrodzeniem, na zboczu, zamiast stać w miejscu.
+- **Test (25.11, log):** Hubaxis atakuje wilki, gobliny i polne bestie bez rozkazu; ani jednej linii `[AGGRO] [Hubaxis] … out of range` (poprzednio ~280), wszystkich linii `[AGGRO]` 83 zamiast 283.
 
-### 230. Poprawki loggera bohatera – 🧪 (25.11.2026)
+### 230. Poprawki loggera bohatera – ✅🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
 - **Zgłoszenie (log z loggerem 229):**
   - nauka zmiennych (pierwsze 20 s) wyciszyła akurat `RX_DEMONHUB_ACTIVE`, `RX_SUMMONCOUNT`, `RX_STATUSBAR_SUMMON` (gracz przywołał Hubaxisa w tych 20 s), a po wczytaniu przy rozmowie – flagi okien;
@@ -275,6 +291,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - przyzwańcy z całego świata, z odległością: `[hero] summons (1): SUMKHUBI 1080/1080 52 m`;
   - `[hero] says $DOESNTWORK (SPELL_LOGIC_TELEPORTXARDAS <- SPELL_PROCESSMANA)` – co bohater mówi sam (`AI_OutputSVM`), bo to często odmowa skryptu bez tekstu.
 - **Do sprawdzenia:** w logu są `[var] RX_DEMONHUB_ACTIVE` przy przywołaniu i śmierci, `Strzały` raz, odmowa teleportu w walce z `[hero] says`.
+- **Test (25.11, log):** działa: `[hero] says $DOESNTWORK (AI_OUTPUTSVM <- B_SAY <- SPELL_LOGIC_TELEPORTXARDAS …)`, `Strzały` raz na wczytanie, przyzwańcy z odległością, linie jednej funkcji razem. `RX_SUMMONCOUNT` został jednak wyciszony po 9 przywołaniach i śmierciach golemów w 5 min – poprawka w 232.
 
 ### 229. Logger bohatera: komunikaty, stan, przyzwańcy, zmienne skryptów – ✅🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/gothic.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `patches/zenkit-opengothic.patch` (`DaedalusVm::call_chain` publiczne)
