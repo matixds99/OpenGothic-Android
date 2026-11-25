@@ -305,7 +305,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** gdy punkt jest bliżej niż 2,5 m albo nie ma do niego drogi, potwór biegnie prosto na cel, jak `AI_Attack` oryginału.
 - **Do sprawdzenia:** potwory i przywołańcy za przeszkodą biegną do celu zamiast stać (w logu brak `[idle] … sees it 0`).
 
-### 215. Zamykanie zadań, zwoje postaci, trofea ze skryptów, mechanizmy – 🧪 (24.11.2026)
+### 215. Zamykanie zadań, zwoje postaci, trofea ze skryptów, mechanizmy – ✅🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`
 - **Zgłoszenie:** dalsze funkcje pluginu, które skrypty wołają, a portu nie ma (raport poprawki 213).
 - **Plugin (UNION_ABI.DLL z aktualizacji):**
@@ -317,6 +317,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `Npc_CanSeePlayerInRadius(promień)` (`0x101c7dd0`): żywa postać w promieniu widzi bohatera (otwieranie orkowej skrzyni).
 - **Jeszcze nie:** worki (`OpenPocket`), `Wld_ChangePortal`, `AI_PlayEffect`, `StartChangeWorldTime`, szukanie roślin przez ognika, `Npc_SetFightRange`, `Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `AI_TurnToVob`, `AST_FreezeNpc`, `Ext_DarkScreen`, `Wld_SetCondFunc`, `InitFullSnc` – zrobione w poprawkach 217–221.
 - **Do sprawdzenia:** zadania zamykane przez NB („Zadanie zakończone!”); trofeum z pazura po użyciu z zieloną ramką w ekwipunku.
+- **Test (25.11.2026):** pazur po założeniu oznaczony w ekwipunku jako założony ✅. Zamykanie zadań przez NB jeszcze niesprawdzone.
 
 ### 214. Patrole, oczy szkieletów, `Npc_HasMessage`, `Npc_HasSprintMoveset`, karma – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/world.cpp`, `common/world/world.h`, `common/world/aiqueue.h`
