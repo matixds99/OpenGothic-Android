@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **225**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **226**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
-2. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
-3. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
-4. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
-5. **220** – worki NB (`OpenPocket`): ekwipunek tylko z przedmiotami kategorii worka – 🧪 (do sprawdzenia)
+1. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
+2. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
+3. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
+4. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
+5. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
 
 ---
 
@@ -252,6 +252,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 225. Status zadań w logu – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`
+- **Zgłoszenie (log, test 215):** nauka języka orków („Tajemnica języka orków”) – w logu tylko wpisy dziennika, nie widać, czy zadanie zostało zamknięte.
+- **Skrypty:** w NB `LOG_SUCCESS` = 4 (w silniku to „nieaktualne”: misja wykonana, jeszcze nie zamknięta), a `LOG_CLOSED` = 2. `USE_ItWr_OrcLanguage` ustawia 4, potem `B_CloseTopic_Now` (status 4 i zmienna misji 4) zmienia na 2, gra dźwięk `QUEST_DONE` i pokazuje „Zadanie zakończone!”. Bez `Log_GetTopicStatus` (poprawka 215) ten krok nic nie robił.
+- **Poprawka:** każda zmiana statusu zadania w logu: `journal status: <temat> -> running / closed / failed / success (4)`.
+- **Do sprawdzenia:** po zakończeniu zadania w logu `-> success (4)`, zaraz potem `-> closed`, na ekranie „Zadanie zakończone!”.
+
 ### 224. Golemy nie umiały wejść po schodach – krążyły pod bohaterem – 🧪 (25.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/game/movealgo.cpp`
 - **Zgłoszenie (2 nagrania + log):** „golemy nie umią poruszać się schodami tylko krążą. Na PC bez problemu wchodzą po schodach i szukają celu”. Wieża Xardasa, kręcone schody: log „[blocked] Przywołany kamienny golem … hint 1 from - to -” (podążanie za bohaterem) i „hint 3” (pościg za szkieletem) dziesiątki razy, golem wspinał się z y 1945 do 3236 przez minuty.
@@ -352,6 +359,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Jeszcze nie:** worki (`OpenPocket`), `Wld_ChangePortal`, `AI_PlayEffect`, `StartChangeWorldTime`, szukanie roślin przez ognika, `Npc_SetFightRange`, `Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `AI_TurnToVob`, `AST_FreezeNpc`, `Ext_DarkScreen`, `Wld_SetCondFunc`, `InitFullSnc` – zrobione w poprawkach 217–221.
 - **Do sprawdzenia:** zadania zamykane przez NB („Zadanie zakończone!”); trofeum z pazura po użyciu z zieloną ramką w ekwipunku.
 - **Test (25.11.2026):** pazur po założeniu oznaczony w ekwipunku jako założony ✅. Zamykanie zadań przez NB jeszcze niesprawdzone.
+- **Test (25.11.2026, log):** nauka języka orków – wpisy dziennika są, ale log nie pokazywał statusu zadania; dodane w poprawce 225.
 
 ### 214. Patrole, oczy szkieletów, `Npc_HasMessage`, `Npc_HasSprintMoveset`, karma – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/world.cpp`, `common/world/world.h`, `common/world/aiqueue.h`

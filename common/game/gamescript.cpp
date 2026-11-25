@@ -8271,8 +8271,13 @@ void GameScript::log_settopicstatus(std::string_view topicName, int status) {
   if(status==int32_t(QuestLog::Status::Running) ||
      status==int32_t(QuestLog::Status::Success) ||
      status==int32_t(QuestLog::Status::Failed ) ||
-     status==int32_t(QuestLog::Status::Obsolete))
+     status==int32_t(QuestLog::Status::Obsolete)) {
+    // NB fix 225: the status of the topic in the log - NB: LOG_SUCCESS is 4 (the "obsolete" of the engine, a mission done,
+    // not closed yet), B_CloseTopic_Now turns it into 2 (LOG_CLOSED: "Zadanie zakończone!")
+    static const char* names[] = {"-","running","closed","failed","success (4)"};
+    nbCtx("journal status: ",topicName," -> ",names[status]);
     quests.setStatus(topicName,QuestLog::Status(status));
+    }
   }
 
 void GameScript::logMoveToTop(std::string_view topic) {
