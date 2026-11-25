@@ -43,8 +43,8 @@ class Bullet final : public DynamicWorld::BulletCallback {
     void     setTarget(const Npc* n);
     // NB fix 84: the spell of the player follows its target (the projectiles of Gothic: a moving creature is hit, the
     // touch screen aims only at the start)
-    void     setHoming(Npc* n, float turnDegPerSec = 0.f) { homing = n; homingTurn = turnDegPerSec; }   // NB fix 238: 0 - follows at once
-    void     tickHoming(uint64_t dt);
+    void     setHoming(Npc* n) { homing = n; }
+    void     tickHoming();
 
     Flg      flags()     const { return flg;  }
     ItemMaterial itemMaterial() const;
@@ -76,7 +76,6 @@ class Bullet final : public DynamicWorld::BulletCallback {
     World*                    wrld=nullptr;
     Npc*                      ow=nullptr;
     Npc*                      homing=nullptr;   // NB fix 84
-    float                     homingTurn=0.f;   // NB fix 238: the turn of the projectile, degrees a second (0: at once)
     Tempest::Vec3             nbStart;          // NB fix 238: where it was shot from (the log)
 
     DamageCalculator::Damage  dmg        = {};

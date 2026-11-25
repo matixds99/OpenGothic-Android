@@ -9554,24 +9554,60 @@ void GameScript::nbSummonsToggleMode() {
 // on the difficulty "Gothic" the options bOptionMonsterHealth/Power/Prot. Without this call the npcs had the life of
 // their instance (Im'Arah: 25000 instead of 37500 on Nightmare)
 // NB fix 189: the mages of New Balance teleport near their enemy (UNION_ABI.DLL 0x102542d0, every 500 ms; the chosen place
-// 0x10253b40, the teleport itself is the special attack 11, 0x1007b230). Only the npcs of the list of the plugin
-// (0x10253fc0), in ZS_Attack/ZS_MM_Attack with the weapon out, an enemy that lives at most 30 m away and no special
+// 0x10253b40, the teleport itself is the special attack 11, 0x1007b230). The npcs the plugin chooses
+// (0x10253fc0, see fix 239), in ZS_Attack/ZS_MM_Attack with the weapon out, an enemy that lives at most 30 m away and no special
 // attack going on (AIVRX_SPECIAL_ATTACK). The enemy seen: 8 checks (4 s), not seen: 4 checks (2 s); then the teleport,
-// when the npc runs (the plugin: S_MAGRUN, S_1HRUN, the strafes). Im'Arah not while ImarahHeals is set
+// when the npc runs (the plugin: S_MAGRUN, S_1HRUN, the strafes). Who may teleport: NB fix 239 below
 void GameScript::nbMageBlinkTick() {
-  static const char* names[] = {
-    "IMARAH","SKELETON_ARCHEMAGEDUNGEON","MADNESS_CONJURER","KDF_511_DARON","RIGELLION","DEMENTOR_UD",
-    "DMT_DEMENTOR_SCOUTCAV_01","PAL_6104_RITTER_MAGE","AD_BOSS6","AL_BOSS7","SAURON_INT",
+  // NB fix 239: who teleports - the plugin (0x102b1890), not a list of names. Fix 189 took the names of that function for
+  // the list, but most of them are the ones it leaves out. The plugin:
+  //  - not with AIVRX_SPELL_NECROMAGE_DEBUFF_COUNTER (259) or AIVRX_SPELL_DARKMAGE_DEBUFF_COUNTER (261) above 0;
+  //  - Im'Arah while ImarahHeals is 0;
+  //  - otherwise not frozen (AIVRX_FREEZETIME), not SKELETON_ARCHEMAGEDUNGEON / MADNESS_CONJURER / KDF_511_DARON /
+  //    RIGELLION / DEMENTOR_UD / DMT_DEMENTOR_SCOUTCAV_01, AIV_ENEMYOVERRIDE 0, and then: the guild GIL_DMT with
+  //    AIV_MAGICUSER = MAGIC_ALWAYS (the dark mages: Zeld), AIV_MM_REAL_ID = ID_SKELETON_MAGE, or PAL_6104_RITTER_MAGE,
+  //    AD_BOSS6, AL_BOSS7, SAURON_INT.
+  // The loop (0x102b1ba0) skips the npcs with AIVRX_NPC_DARKCONTROL 1 (under the control of the hero)
+  static const char* excluded[] = {
+    "SKELETON_ARCHEMAGEDUNGEON","MADNESS_CONJURER","KDF_511_DARON","RIGELLION","DEMENTOR_UD","DMT_DEMENTOR_SCOUTCAV_01",
     };
+  static const char* included[] = {"PAL_6104_RITTER_MAGE","AD_BOSS6","AL_BOSS7","SAURON_INT"};
   auto* zsA  = vm.find_symbol_by_name("ZS_ATTACK");
   auto* zsMM = vm.find_symbol_by_name("ZS_MM_ATTACK");
   auto* imar = vm.find_symbol_by_name("IMARAH");
-  std::set<uint32_t> ids;
-  for(auto* n:names)
-    if(auto* sym = vm.find_symbol_by_name(n); sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INSTANCE)
-      ids.insert(sym->index());
-  if(ids.empty() || (zsA==nullptr && zsMM==nullptr))
+  if(zsA==nullptr && zsMM==nullptr)
     return;
+  auto symIds = [this](const char* const* list, size_t n) {
+    std::set<uint32_t> r;
+    for(size_t i=0; i<n; ++i)
+      if(auto* sym = vm.find_symbol_by_name(list[i]); sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INSTANCE)
+        r.insert(sym->index());
+    return r;
+    };
+  const std::set<uint32_t> idsOut = symIds(excluded,std::size(excluded));
+  const std::set<uint32_t> idsIn  = symIds(included,std::size(included));
+  const int32_t gilDmt     = nbIntVar("GIL_DMT");
+  const int32_t magAlways  = nbIntVar("MAGIC_ALWAYS");
+  const int32_t idSkMage   = nbIntVar("ID_SKELETON_MAGE");
+  auto eligible = [&](Npc& npc) {
+    constexpr int32_t AIVRX_FREEZETIME = 0, NECRO_DEBUFF = 259, DARK_DEBUFF = 261;
+    constexpr size_t  AIV_MM_REAL_ID = 43, AIV_MAGICUSER = 51, AIV_ENEMYOVERRIDE = 61;
+    if(npc.newBalanceGetNpcVar(NECRO_DEBUFF)>0 || npc.newBalanceGetNpcVar(DARK_DEBUFF)>0)
+      return false;
+    const uint32_t inst = npc.handle().symbol_index();
+    if(imar!=nullptr && inst==imar->index())
+      return nbIntVar("IMARAHHEALS")<=0;
+    if(npc.newBalanceGetNpcVar(AIVRX_FREEZETIME)>0 || idsOut.count(inst)>0)
+      return false;
+    auto& h = npc.handle();
+    if(h.aivar[AIV_ENEMYOVERRIDE]!=0)
+      return false;
+    if(h.guild==gilDmt && h.aivar[AIV_MAGICUSER]==magAlways)
+      return true;
+    if(h.aivar[AIV_MM_REAL_ID]==idSkMage)
+      return true;
+    return idsIn.count(inst)>0;
+    };
   constexpr int32_t AIVRX_SPECIAL_ATTACK = 100;
   auto& st = nbStates[this];
   auto& w  = world();
@@ -9579,10 +9615,8 @@ void GameScript::nbMageBlinkTick() {
     auto* npc = w.npcById(i);
     if(npc==nullptr || npc->isPlayer() || npc->isDead() || npc->isDown())
       continue;
-    const uint32_t inst = npc->handle().symbol_index();
-    if(ids.find(inst)==ids.end())
-      continue;
-    if(imar!=nullptr && inst==imar->index() && nbIntVar("IMARAHHEALS")>0)
+    constexpr int32_t AIVRX_NPC_DARKCONTROL = 24;
+    if(npc->newBalanceGetNpcVar(AIVRX_NPC_DARKCONTROL)==1 || !eligible(*npc))
       continue;
     if(npc->weaponState()==WeaponState::NoWeapon)
       continue;

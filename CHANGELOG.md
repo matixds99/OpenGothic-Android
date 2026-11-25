@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **239**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **240**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **238** – pociski czarów postaci podążają za celem (do 120°/s), a nie lecą w miejsce, gdzie bohater stał (56 z 63 Kul śmierci Zelda w ścianę) – 🧪
-2. **237** – bossy NB (`bodystate_interruptable_override`) nie są odrzucane ciosami (golemy przewracały Zelda co cios, nie mógł czarować) – ✅
-3. **236** – czary bohatera przelatują przez jego przyzwańców i towarzyszy; `[shot]` w logu: co trafił każdy pocisk czaru; liczniki rzuconych czarów w `[fight]`; flagi trajektorii efektów bez względu na wielkość liter – ✅
-4. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – ✅
-5. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
+1. **239** – Zeld i inni magowie teleportują się krótko do wroga: wybór teleportujących się zgodnie z pluginem (gildia DMT z `AIV_MAGICUSER`=MAGIC_ALWAYS, szkieletowi magowie…) zamiast listy nazw; wycofane naprowadzanie z 238 (Gothic go nie ma) – 🧪
+2. **238** – pociski czarów postaci podążają za celem (do 120°/s), a nie lecą w miejsce, gdzie bohater stał (56 z 63 Kul śmierci Zelda w ścianę) – ⏸ wycofane przez 239
+3. **237** – bossy NB (`bodystate_interruptable_override`) nie są odrzucane ciosami (golemy przewracały Zelda co cios, nie mógł czarować) – ✅
+4. **236** – czary bohatera przelatują przez jego przyzwańców i towarzyszy; `[shot]` w logu: co trafił każdy pocisk czaru; liczniki rzuconych czarów w `[fight]`; flagi trajektorii efektów bez względu na wielkość liter – ✅
+5. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – ✅
 
 ---
 
@@ -252,7 +252,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 238. Pociski czarów postaci podążają za celem – 🧪 (25.11.2026)
+### 239. Teleport Zelda i magów zgodnie z pluginem; wycofane naprowadzanie 238 – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/bullet.cpp`, `common/world/bullet.h`, `common/world/worldobjects.cpp`
+- **Zgłoszenie (25.11):** kąt 120° nie istnieje w Gothic i dodałem go bez zgody; Zeld jest trudny, bo teleportuje się na krótki dystans (fazy bossa).
+- **Wycofane:** naprowadzanie pocisków czarów postaci (238). Pociski NPC lecą prosto, jak w Gothic. Zostaje tylko droga pocisku w `[shot]` i stare naprowadzanie pocisku bohatera (84).
+- **Plugin (`UNION_ABI.DLL` 0x102b1890, wywołane z pętli 0x102b1ba0 co 500 ms):** teleport (fix 189/190) wykonuje się dla postaci, które wybiera ta funkcja, a nie dla listy nazw z 189. Reguły: nie przy liczniku osłabienia nekromanty/mrocznego maga (`AIVRX_SPELL_*_DEBUFF_COUNTER` > 0); Im'Arah gdy `ImarahHeals` = 0; poza tym nie zamrożona, nie `SKELETON_ARCHEMAGEDUNGEON`, `MADNESS_CONJURER`, `KDF_511_DARON`, `RIGELLION`, `DEMENTOR_UD`, `DMT_DEMENTOR_SCOUTCAV_01`, `AIV_ENEMYOVERRIDE` = 0, a następnie: gildia `GIL_DMT` z `AIV_MAGICUSER` = `MAGIC_ALWAYS` (mroczni magowie, w tym Zeld `DMT_12987_ITUSELD`), `AIV_MM_REAL_ID` = `ID_SKELETON_MAGE`, albo `PAL_6104_RITTER_MAGE`, `AD_BOSS6`, `AL_BOSS7`, `SAURON_INT`. Pomijani: postacie pod kontrolą bohatera (`AIVRX_NPC_DARKCONTROL` = 1).
+- **Przyczyna:** 189 wziął nazwy z tej funkcji za listę teleportujących się, a to głównie wyjątki; Zeld nie był na liście, więc w ogóle się nie teleportował. Skrypty nie mają krótkiego teleportu bossów (są tylko `AI_Teleport` do trwałych miejsc) – to funkcja pluginu.
+- **Poprawka:** `nbMageBlinkTick` wybiera postacie według powyższych reguł (jak się odpowiada przy `GIL_DMT`/`MAGIC_ALWAYS`, instancje wykluczone i dodane po nazwie).
+- **Do sprawdzenia:** w logu `blink: Zeld teleports … cm` podczas walki z Zeldem (co kilka sekund, gdy biegnie do bohatera); Zeld nie teleportuje się przy ucieczce dłużej niż reguły pluginu pozwalają.
+
+### 238. Pociski czarów postaci podążają za celem – ⏸ wycofane przez 239 (25.11.2026)
 - **Pliki:** `common/world/bullet.cpp`, `common/world/bullet.h`, `common/world/worldobjects.cpp`, `common/world/objects/npc.cpp`
 - **Zgłoszenie (log 25.11, 22:58):** „wciąż on jest za słaby” – `[shot]`: Zeld wystrzelił 63 Kule śmierci, 56 trafiło w ścianę lub ziemię, 1 w bohatera (i 4 w golemy/szkielety).
 - **Przyczyna:** pocisk czaru postaci leciał prosto w punkt, gdzie bohater stał w chwili rzutu; z 11–16 m bohater w ruchu zawsze schodził z linii. W Gothic pociski czarów (trajektoria `TARGET` ich efektów) podążają za celem; w porcie podążał tylko pocisk bohatera (84).
