@@ -281,6 +281,7 @@ struct NbState {
   uint64_t                                    imarahNext  = 0;    // the choice once a second
   int32_t                                     imarahEvery = 0;    // the seconds between the attacks (0x105701a0)
   std::unordered_map<const Npc*,uint64_t>     summonBossLog;      // NB fix 193: a summon at a boss, in the log once
+  std::unordered_map<const Npc*,uint64_t>     summonSwitch;       // NB fix 222: the last change of the target of a summon (nbSummonHitBy)
   // NB fix 132: the second enemy of a character, to turn to (RX_SetReAttackNpc) - the slot AIVRX_ReAttack_Slot keeps the key
   std::unordered_map<int32_t,std::weak_ptr<zenkit::INpc>> reattack;
   std::unordered_map<const Npc*,uint64_t>     bodyEmptySince;        // NB fix 136: a dead body found empty, since when
@@ -9726,11 +9727,24 @@ void GameScript::nbSummonHitBy(Npc& summon, Npc& attacker) {
   constexpr float Near = 800.f, Far = 1500.f;
   if(summon.qDistTo(attacker)>Near*Near)
     return;
+  // NB fix 222: "out of sight" was Npc_CanSeeNpc with the view angle (+-100 degrees): a golem between two dragon snappers
+  // did not see the one it fought, behind it at 1-2 m, at each bite of the other one - it took the biter as the target, then
+  // the bite of the first one turned it back, and so on: every change starts ZS_MM_Attack anew (the queue cleared, the turn
+  // and the blow broken off), so the golem stood among them and hit seldom. Now: the free line of sight (a wall, a rock),
+  // a target within the reach of a blow is never "out of sight", and one change of the target in 3 s at most.
   const bool tgGone = tg==nullptr || tg->isDown();
   const bool tgFar  = !tgGone && summon.qDistTo(*tg)>Far*Far;
-  const bool tgHid  = !tgGone && !summon.canSeeNpc(*tg,false);
+  const bool tgNear = !tgGone && summon.qDistTo(*tg)<400.f*400.f;
+  const bool tgHid  = !tgGone && !tgNear && !summon.canSeeNpc(*tg,true);
   if(!tgGone && !tgFar && !tgHid)
     return;
+  auto& sw = nbStates[this].summonSwitch;
+  if(sw.size()>256)
+    sw.clear();
+  const uint64_t now = tickCount();
+  if(!tgGone && now<sw[&summon]+3000)
+    return;
+  sw[&summon] = now;
   if(nbSummonsPassive())
     return;   // the passive mode of the panel: the summons do not fight
   auto* sepHum = vm.find_symbol_by_name("GIL_SEPERATOR_HUM");

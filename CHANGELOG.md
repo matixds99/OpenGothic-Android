@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **222**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **223**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
-2. **220** – worki NB (`OpenPocket`): ekwipunek tylko z przedmiotami kategorii worka – 🧪
-3. **219** – ognik zbiera rośliny lokacji, liczy rośliny, tablice i nieokradzione postacie – 🧪
-4. **218** – skrzynie i drzwi po nazwie (`Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `Wld_SetCondFunc`), `Wld_ChangePortal`, `AI_TurnToVob` – 🧪
-5. **217** – czary potworów w kolejce (`AI_PlayEffect`), `Npc_SetFightRange`, zamrożenie (`AST_FreezeNpc`); **216** – potwory biegną do celu za przeszkodą – 🧪
+1. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
+2. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
+3. **220** – worki NB (`OpenPocket`): ekwipunek tylko z przedmiotami kategorii worka – 🧪 (do sprawdzenia)
+4. **219** – ognik zbiera rośliny lokacji, liczy rośliny, tablice i nieokradzione postacie – ✅🧪
+5. **218** – skrzynie i drzwi po nazwie (`Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `Wld_SetCondFunc`), `Wld_ChangePortal`, `AI_TurnToVob` – 🧪
 
 ---
 
@@ -252,6 +252,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 222. Przywołany golem między dwoma zębaczami zmieniał cel przy każdym ugryzieniu – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`
+- **Zgłoszenie (log, test 216):** golem wśród dwóch smoczych zębaczy: „turns to Smoczy zębacz that hits it; its target Smoczy zębacz is out of sight (1 m)” kilkanaście razy pod rząd; „STUCK 5 s … ai=[SetWalkMode]”.
+- **Przyczyna:** poprawka 198 (przywołaniec zwraca się do wroga, który go gryzie, gdy jego cel jest daleko albo niewidoczny) sprawdzała widoczność z kątem widzenia (±100°). Zębacz, z którym golem walczył, stał za nim w odległości 1–2 m i był „niewidoczny”, więc każde ugryzienie drugiego zębacza zmieniało cel, a potem ugryzienie pierwszego zmieniało go z powrotem. Każda zmiana zaczyna `ZS_MM_Attack` od nowa (czyści kolejkę, przerywa obrót i cios) – golem stał między nimi i rzadko trafiał. To błąd portu, nie skryptów.
+- **Poprawka:** „niewidoczny” to teraz brak wolnej linii wzroku (ściana, skała) bez kąta; cel bliżej niż 4 m nigdy nie jest „niewidoczny”; najwyżej jedna zmiana celu na 3 s (poza celem martwym lub powalonym).
+- **Log:** linia `STUCK 5 s` tylko wtedy, gdy kolejka AI naprawdę stoi. Wcześniej ta sama akcja dodawana raz za razem od nowa (np. `SetWalkMode` przy każdym ponownym starcie stanu) też wyglądała na zablokowaną kolejkę.
+- **Do sprawdzenia:** golem przeciw dwóm lub więcej potworom – trzyma jeden cel i bije regularnie; w logu mniej linii „turns to … out of sight”.
+
 ### 221. Skręty templariuszy (zwolnienie czasu), zaciemnienie ekranu, `InitFullSnc`, `Cmd` – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/nbbars.h`, `common/mainwindow.cpp`
 - **Zgłoszenie:** „Popraw co się da” – reszta funkcji pluginu z raportu poprawki 213.
@@ -267,8 +275,9 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Plugin:** `OpenPocket(worek, flagi)` (`0x101a8d90`) nie jest osobnym pojemnikiem: na czas otwartego ekwipunku plugin wyjmuje z niego przedmioty spoza flag worka i same worki (`ITBG_*`), a zostawia przedmioty noszone (`0x40000000`). Worki: zbroje, tarcze i pasy; broń biała, dystansowa i amunicja; mikstury; runy i dokumenty; pierścienie i amulety.
 - **Poprawka:** użycie worka otwiera ekwipunek bohatera (albo zostawia otwarty) z filtrem: tylko przedmioty z tymi flagami (`mainflag | flags`) i noszone, bez worków. Zwykłe otwarcie ekwipunku pokazuje znów wszystko.
 - **Do sprawdzenia:** każdy z pięciu worków pokazuje tylko swoje przedmioty; po zamknięciu i otwarciu ekwipunku jest pełna lista.
+- **Test (25.11.2026):** jeszcze nie – do sprawdzenia przy okazji (użyć worka z ekwipunku).
 
-### 219. Ognik: zbieranie roślin i liczenie roślin, tablic i nieokradzionych postaci – 🧪 (24.11.2026)
+### 219. Ognik: zbieranie roślin i liczenie roślin, tablic i nieokradzionych postaci – ✅🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/nbtexts.h`
 - **Zgłoszenie:** jak 221.
 - **Plugin:** przedmioty świata (pomijane te przy początku układu, bliżej niż 2,5 m od 0,0,0); rośliny to `ITPL_*` z kategorią jedzenia, rzadkie – `dex_herb_01`, `strength_herb_01`, `perm_herb`, `xagitta_herb_mis`, `super_herb`, `cactusflower`; tablice – `ITWR_*` z `STONEPLATE`, `DRUIDPLATE`, `DEMONPLATE`.
@@ -277,6 +286,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `PlantsInLoc`, `PlantsRareInLoc`, `FindPlates` (`0x101aa3a0`, `0x101aa660`, `0x101ba8b0`): ile zwykłych roślin, rzadkich roślin, tablic zostało w lokacji;
   - `OldWisp_FindStealTargets` (`0x101b8d80`): żywi ludzie lokacji, których bohater jeszcze nie okradł (`AIV_PlayerHasPickedMyPocket` 0), bez przyjaciół (`npcType` 2, 3) i gildii 19.
 - **Do sprawdzenia:** dialog ognika: „zbierz rośliny” (za rudę), liczniki roślin, tablic i nieokradzionych.
+- **Test (25.11.2026):** zbieranie roślin za rudę działa (w logu „wisp: 30 items of the location to the hero”) ✅. Liczniki – do sprawdzenia.
 
 ### 218. Skrzynie i drzwi po nazwie, portale, obrót do obiektu – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/interactive.h`, `common/world/objects/npc.cpp`, `common/world/aiqueue.cpp`, `common/world/aiqueue.h`, `common/game/constants.h`
@@ -304,6 +314,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna:** `Npc::implAttack` przy celu niewidocznym (promień trafia w przeszkodę) szukał punktu drogi przy celu i szedł do niego. Gdy potwór już przy tym punkcie stał, dostawał drogę z tego jednego punktu na każdej klatce, od razu ją kończył i stał tak przez całą walkę.
 - **Poprawka:** gdy punkt jest bliżej niż 2,5 m albo nie ma do niego drogi, potwór biegnie prosto na cel, jak `AI_Attack` oryginału.
 - **Do sprawdzenia:** potwory i przywołańcy za przeszkodą biegną do celu zamiast stać (w logu brak `[idle] … sees it 0`).
+- **Test (25.11.2026, log):** zębacze nie stały już przy golemie za przeszkodą; golem między dwoma zębaczami ciągle zmieniał cel – poprawka 222. Zostały: zębacz w płytkiej wodzie przy brzegu, 9–10 m pod bohaterem stojącym wyżej (`[blocked]` o zbocze – bohater poza zasięgiem, jak na PC); zębacz „w powietrzu” 5 s (`inAir=1 body=10`), najpewniej na grzbiecie golema – do obserwacji.
 
 ### 215. Zamykanie zadań, zwoje postaci, trofea ze skryptów, mechanizmy – ✅🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`

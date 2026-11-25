@@ -3504,6 +3504,7 @@ void Npc::nextAiAction(AiQueue& queue, uint64_t dt) {
   if(queue.size()==0)
     return;
   auto act = queue.pop();
+  ++nbAiPops;   // NB fix 222: the STUCK line of the log - the queue was taken, not stuck
   switch(act.act) {
     case AI_None: break;
     case AI_LookAtNpc:{
@@ -5970,11 +5971,13 @@ bool Npc::perceptionProcess(Npc &pl) {
            " spell=",(nbBoss && invent.activeWeapon()!=nullptr && invent.activeWeapon()->isSpellOrRune() ? invent.activeWeapon()->spellId() : -1),
            " body=",int(bodyStateMasked())," ai=[",aiQueue.describe(4),"]");
     // NB fix 54: the same not empty AI queue for 5 s near the hero - what blocks the monster
+    // NB fix 222: the same queue at two samples is not stuck when an action was taken in between (the golem started
+    // ZS_MM_Attack anew again and again: SetWalkMode at each sample, but a new one each time)
     if(aiQueue.size()>0) {
       static std::unordered_map<const void*,std::tuple<std::string,uint64_t,bool>> stall;
       if(stall.size()>4096)
         stall.clear();
-      auto  desc = aiQueue.describe(4);
+      auto  desc = aiQueue.describe(4)+"#"+std::to_string(nbAiPops);
       auto& e    = stall[this];
       if(std::get<0>(e)!=desc) {
         e = {desc,owner.tickCount(),false};
@@ -5991,7 +5994,7 @@ bool Npc::perceptionProcess(Npc &pl) {
           fightPref = int(fghAlgo.prefferedAttackDistance(*this,*currentTarget,owner.script()));
           }
         Log::i("NB ai: ",displayName().data()," STUCK 5 s: state=",stName," weapon=",int(weaponState()),
-               " body=",int(bodyStateMasked())," ai=[",desc,"] inAir=",int(isInAir())," move=",int(mvAlgo.state()),
+               " body=",int(bodyStateMasked())," ai=[",aiQueue.describe(4),"] inAir=",int(isInAir())," move=",int(mvAlgo.state()),
                " go2=",int(go2.flag),(go2.npc!=nullptr ? std::string(" ")+std::string(go2.npc->displayName()) : std::string()),
                " wait=",left(waitTime)," ani=",left(aniWaitTime)," out=",left(outWaitTime)," fai=",left(faiWaitTime),
                " walk=",int(walkMode())," cast=",int(currentSpellCast!=size_t(-1)),
