@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **228**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **229**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **227** – przyzwańcy nekromanty: leczenie (`RX_SummonHeal`), aury szybkości i spowolnienia (`RX_ApplyBuffToSummons`), przywołanie przy celu – 🧪
-2. **226** – potwory znów atakują po imporcie zapisu z PC (`RX_GamePaused` z trybu wieloosobowego zerowane) – ✅
-3. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
-4. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
-5. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
+1. **228** – flagi „sługa już przyzwany” (Hubaxis, Krayt, Jina, Tesvall, mroczny sługa…) zerowane, gdy sługi nie ma w świecie – 🧪
+2. **227** – przyzwańcy nekromanty: leczenie (`RX_SummonHeal`), aury szybkości i spowolnienia (`RX_ApplyBuffToSummons`), przywołanie przy celu – 🧪
+3. **226** – potwory znów atakują po imporcie zapisu z PC (`RX_GamePaused` z trybu wieloosobowego zerowane) – ✅
+4. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
+5. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
 
 ---
 
@@ -251,6 +251,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 228. „Hubaxis jest już przyzwany…” choć Hubaxisa nie ma – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`
+- **Zgłoszenie (zrzut ekranu, bez logu):** czar przywołania Hubaxisa odpowiada „Hubaxis jest już przyzwany...”, a Hubaxisa nigdzie nie ma.
+- **Skrypty i plugin:** `Spell_Logic_SumKhub` odmawia, gdy `RX_DemonHub_Active` = 1. Skrypty tylko ustawiają tę flagę (przy przywołaniu), a zeruje ją wyłącznie plugin (`0x10184eb0`), gdy przyzwaniec ginie albo znika ze świata. To samo dla innych zwierzaków i sług: `Crait` → `CraitIsUp`, `SumKhubi` → `RX_DemonHub_Active`, `DSnapper` → `DSnapperIsUp`, `DK_Pet` → `DarkPetIsUp`, `PET_JINA` → `JinaWolfIsUp`, `Summoned_SkeletonUniq` → `SkeletonUniqIsUp`, `Scavenger_Hero_Mount` → `RX_ScavSummoned`, `Summoned_Dragon` → `DragonStaffAlive`. W porcie nikt ich nie zerował – po pierwszej śmierci (albo zmianie świata) danego sługi czar odmawiał na zawsze.
+- **Poprawka:** co 2 s – flaga włączona, a w świecie nie ma żywej postaci tej instancji: flaga 0 (w logu `summon flag … off`). Działa też na istniejących zapisach.
+- **Do sprawdzenia:** Hubaxis znów daje się przywołać (najpóźniej 2 s po wczytaniu); po jego śmierci – od razu.
 
 ### 227. Przyzwańcy nekromanty: leczenie, aury, przywołanie przy celu – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/nbtexts.h`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`

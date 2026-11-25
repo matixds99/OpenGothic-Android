@@ -20,6 +20,7 @@
 #include <map>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "game/compatibility/directmemory.h"
 #include "game/definitions/spelldefinitions.h"
@@ -360,6 +361,7 @@ struct NbState {
   float                                       slowFactor    = 1.f;
   float                                       slowApplied   = 1.f;
   uint64_t                                    nextAuraCheck = 0;   // NB fix 227
+  uint64_t                                    nextSummonFlags = 0; // NB fix 228
   // NB fix 161: the companions go with the hero when he teleports (a jump of his position in the same world)
   const World*                                partyWorld    = nullptr;
   Tempest::Vec3                               partyHeroPos;
@@ -5760,6 +5762,41 @@ void GameScript::tick(uint64_t dt) {
           if(!n.isDead() && !n.isPlayer() && (g==37 || g==26 || g==55) && nbIsSummon(n))
             n.nbAuraSpeed = k;
           });
+        }
+      }
+    }
+  // NB fix 228: the flags "this summon is up" of the scripts (Hubaxis, Krayt, Jina, Tesvall, the dark servant...): the
+  // scripts only set them, the plugin clears them when that creature dies or leaves the world (0x10184eb0). Without it the
+  // spell said "Hubaxis jest już przyzwany..." for ever after the first Hubaxis was gone. Every 2 s: a flag on and no living
+  // creature of its instance in this world - off
+  if(Application::tickCount()>=st.nextSummonFlags) {
+    st.nextSummonFlags = Application::tickCount()+2000;
+    static const std::pair<const char*,const char*> flags[] = {
+      {"CRAIT","CRAITISUP"}, {"SUMKHUBI","RX_DEMONHUB_ACTIVE"}, {"DSNAPPER","DSNAPPERISUP"}, {"DK_PET","DARKPETISUP"},
+      {"PET_JINA","JINAWOLFISUP"}, {"SUMMONED_SKELETONUNIQ","SKELETONUNIQISUP"}, {"SCAVENGER_HERO_MOUNT","RX_SCAVSUMMONED"},
+      {"SUMMONED_DRAGON","DRAGONSTAFFALIVE"},
+      };
+    bool any = false;
+    for(auto& f:flags)
+      if(nbIntVar(f.second)!=0)
+        any = true;
+    if(any && world().player()!=nullptr) {
+      std::unordered_set<std::string> alive;
+      for(uint32_t i=0; i<world().npcCount(); ++i) {
+        auto* n = world().npcById(i);
+        if(n==nullptr || n->isDead())
+          continue;
+        if(auto* sym = vm.find_symbol_by_index(uint32_t(n->handle().symbol_index())))
+          alive.insert(sym->name());
+        }
+      for(auto& f:flags) {
+        auto* v = vm.find_symbol_by_name(f.second);
+        if(v==nullptr || v->type()!=zenkit::DaedalusDataType::INT || v->is_member() || v->get_int()==0)
+          continue;
+        if(alive.find(f.first)!=alive.end())
+          continue;
+        nbCtx("summon flag ",f.second," off: no ",f.first," alive in this world");
+        v->set_int(0);
         }
       }
     }
