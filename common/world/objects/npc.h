@@ -388,6 +388,7 @@ class Npc final {
     int32_t   nbFightRange = -1;                 // NB fix 217: Npc_SetFightRange - the base fight range of this character
     uint64_t  nbFreezeUntil = 0;                 // NB fix 217: AST_FreezeNpc - the character stands frozen until then
     bool      nbFrozen() const;
+    const WayPoint* nbDetour() const { return nbDetourWp; }   // NB fix 224
     uint32_t  nbAiPops = 0;                      // NB fix 222: the actions taken from the AI queue (the log)
     static inline int32_t nbSplashPct = 0;       // NB fix 106: the blow of the splash - the percent of its damage
     bool      nbIsWaiting() const;               // NB fix 101: RX_IsWaiting - AI_Wait goes on
@@ -802,6 +803,12 @@ class Npc final {
     const WayPoint*                currentFp      =nullptr;
     FpLock                         currentFpLock;
     WayPath                        wayPath;
+    // NB fix 224: AI_GotoNpc along the way points when the character cannot go straight to the other one (another floor,
+    // a winding stair): the next point, the rest of the way, the next check
+    const WayPoint*                nbDetourWp   = nullptr;
+    WayPath                        nbDetourPath;
+    uint64_t                       nbDetourNext = 0;
+    void                           nbDetourTick();
 
     MoveAlgo                       mvAlgo;
     FightAlgo                      fghAlgo;

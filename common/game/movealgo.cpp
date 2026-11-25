@@ -605,6 +605,8 @@ Tempest::Vec3 MoveAlgo::npcMoveSpeed(uint64_t dt, MvFlags moveFlg) {
     dp.z = turned.z;
     }
   if(moveFlg!=WaitMove) {
+    if(auto* dw = npc.nbDetour(); dw!=nullptr && npc.go2.npc!=nullptr && npc.go2.flag==Npc::GT_Way)
+      return go2WpMoveSpeed(dp,dw->position());   // NB fix 224: along the way points to the other character
     if(npc.go2.npc)
       return go2NpcMoveSpeed(dp,*npc.go2.npc);
 

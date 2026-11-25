@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **224**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **225**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
-2. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
-3. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
-4. **220** – worki NB (`OpenPocket`): ekwipunek tylko z przedmiotami kategorii worka – 🧪 (do sprawdzenia)
-5. **219** – ognik zbiera rośliny lokacji, liczy rośliny, tablice i nieokradzione postacie – ✅🧪
+1. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
+2. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
+3. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
+4. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
+5. **220** – worki NB (`OpenPocket`): ekwipunek tylko z przedmiotami kategorii worka – 🧪 (do sprawdzenia)
 
 ---
 
@@ -252,6 +252,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
+### 224. Golemy nie umiały wejść po schodach – krążyły pod bohaterem – 🧪 (25.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/game/movealgo.cpp`
+- **Zgłoszenie (2 nagrania + log):** „golemy nie umią poruszać się schodami tylko krążą. Na PC bez problemu wchodzą po schodach i szukają celu”. Wieża Xardasa, kręcone schody: log „[blocked] Przywołany kamienny golem … hint 1 from - to -” (podążanie za bohaterem) i „hint 3” (pościg za szkieletem) dziesiątki razy, golem wspinał się z y 1945 do 3236 przez minuty.
+- **Przyczyna:**
+  - `AI_GotoNpc` (przywołańce idą za bohaterem w `ZS_MM_Rtn_Summoned`) w porcie szło zawsze prosto na postać, a krok był przycinany do odległości w poziomie – golem pod bohaterem dreptał w kółko w klatce schodowej. Silnik oryginału idzie wtedy po punktach drogi;
+  - pościg w walce (`implAttack`) szedł po punktach drogi tylko wtedy, gdy promień do celu trafiał w przeszkodę. Cel piętro wyżej widoczny przez otwór klatki = prosto w ściany schodów; punkt przy celu brany tylko z jego stożka widzenia.
+- **Poprawka:**
+  - `AI_GotoNpc`: gdy druga postać jest na innym poziomie (1,5 m) albo za ścianą – droga po punktach do punktu przy niej (na jej poziomie, widocznego od niej), sprawdzana co 0,8 s; na tym samym poziomie i w zasięgu wzroku – jak dotąd prosto. Krok liczony do następnego punktu drogi, nie do postaci;
+  - pościg: cel ponad 2 m wyżej lub niżej – też po punktach drogi; punkt przy celu także za jego plecami (wolna linia wzroku, ten sam poziom).
+- **Do sprawdzenia:** golemy w wieży Xardasa idą za bohaterem po schodach na górę i w dół; w walce wbiegają po schodach do szkieletów.
+
 ### 223. Przywołane golemy pojawiały się piętro niżej i krążyły pod bohaterem – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/world/world.cpp`
 - **Zgłoszenie:** „byłem na górze i atakowali szkielety, później przywołałem je a one na dole się pojawiły i mieli problem wejść na górę tylko się kręcili w koło”. Log: wieża Xardasa – bohater na 2. piętrze (y 2838), golemy na niższym (y ≈ 1950) „[blocked] … hint 1 from DT_E2_01 to DT_E2_01” i „stands 8 s … sees it 0”.
@@ -262,6 +273,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `fixNpcPositionNear`: poziomem jest ziemia pod bohaterem; punkt musi być na tym poziomie (60 cm, potem 2 m – schody), widoczny od bohatera na wysokości kolan (bez ściany, barierki ani krawędzi między nimi) i postać musi się tam zmieścić; inaczej pierwszy taki punkt bez sprawdzania miejsca, w ostateczności przy bohaterze. Nigdy inne piętro;
   - początek drogi (`World::wayTo`): gdy w stożku widzenia nie ma punktu – punkt widoczny za plecami, potem najbliższy na tym samym piętrze (3 m w pionie), dopiero na końcu jakikolwiek.
 - **Do sprawdzenia:** przywołanie golemów i PRZYWOŁAJ z panelu na piętrze (wieża, schody, mosty) – stają obok bohatera na jego poziomie; golem na dole znajduje schody do góry.
+- **Test (25.11.2026):** golemy przywoływane na piętrze, po schodach dalej krążyły – poprawka 224.
 
 ### 222. Przywołany golem między dwoma zębaczami zmieniał cel przy każdym ugryzieniu – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`

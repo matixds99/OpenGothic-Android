@@ -2073,6 +2073,7 @@ bool Npc::implGoTo(uint64_t dt) {
 bool Npc::implGoTo(uint64_t dt, float destDist) {
   if(go2.flag==GT_No) {
     goStuckTime = 0;
+    nbDetourWp  = nullptr;   // NB fix 224
     return false;
     }
 
@@ -2131,6 +2132,27 @@ bool Npc::implGoTo(uint64_t dt, float destDist) {
       }
     }
 
+  // NB fix 224: going to a character (the summons follow the hero: AI_GotoNpc) went straight at it - from the floor below
+  // a golem walked round under the hero in the winding stair of the tower of Xardas. The original engine goes along the way
+  // points when the other one cannot be reached straight; here: the other one is on another level (1.5 m) or behind a wall
+  if(go2.npc!=nullptr && go2.flag==GT_Way)
+    nbDetourTick(); else
+    nbDetourWp = nullptr;
+  if(nbDetourWp!=nullptr) {
+    const auto dw = nbDetourWp->position()-position();
+    if(setGoToLadder()) {
+      mvAlgo.tick(dt);
+      return true;
+      }
+    if(mvAlgo.checkLastBounce() && implTurnTo(dw.x,dw.z,AnimationSolver::TurnType::Std,dt)) {
+      mvAlgo.tick(dt);
+      return true;
+      }
+    setAnim(AnimationSolver::Move);
+    mvAlgo.tick(dt);
+    return true;
+    }
+
   auto target = go2.target();
   auto dpos   = target - position();
 
@@ -2173,6 +2195,50 @@ bool Npc::implGoTo(uint64_t dt, float destDist) {
     return true;
     }
   return false;
+  }
+
+void Npc::nbDetourTick() {
+  if(nbDetourWp!=nullptr && MoveAlgo::isClose(*this,*nbDetourWp)) {
+    nbDetourWp = nbDetourPath.pop();
+    if(nbDetourWp==nullptr)
+      nbDetourNext = 0;   // the end of the way: look again
+    }
+  const uint64_t now = owner.tickCount();
+  if(now<nbDetourNext)
+    return;
+  nbDetourNext = now+800;
+
+  const Npc& tg     = *go2.npc;
+  const float dy    = std::abs(tg.position().y-position().y);
+  const bool  direct = dy<150.f && canSeeNpc(tg,true);
+  if(direct) {
+    nbDetourWp = nullptr;
+    nbDetourPath.clear();
+    return;
+    }
+  auto* goal = owner.findWayPoint(tg.position(),[&tg](const WayPoint& wp) {
+    return std::abs(wp.position().y-tg.position().y)<250.f && tg.canRayHitPoint(wp.position()+Tempest::Vec3(0,50,0),true);
+    });
+  if(goal==nullptr)
+    goal = owner.findWayPoint(tg.position());
+  if(goal==nullptr) {
+    nbDetourWp = nullptr;
+    return;
+    }
+  if(nbDetourWp!=nullptr && nbDetourPath.last()==goal)
+    return;   // on the way already
+  WayPath path = owner.wayTo(*this,*goal);
+  const WayPoint* next = path.pop();
+  if(next==nullptr) {
+    // at the point of the other one: the last steps straight
+    nbDetourWp = nullptr;
+    nbDetourPath.clear();
+    return;
+    }
+  nbDetourPath = std::move(path);
+  nbDetourWp   = next;
+  if(nbDetourPath.last()==nullptr)
+    nbDetourPath.add(*next);   // remember the goal of a one-point way
   }
 
 bool Npc::implAttack(uint64_t dt) {
@@ -2481,12 +2547,21 @@ bool Npc::implAttack(uint64_t dt) {
     if(!prGRange && distance<range*range) {
       // if npc is reasonably far, we can switch to propper pathfinding
       const auto hit = owner.physic()->ray(this->collosionCenter(), currentTarget->collosionCenter());
-      if(hit.hasCol) {
+      // NB fix 224: a target on another level (2 m) is reached along the way points too, even when it can be seen (the
+      // stairwell of a tower: straight up the golem walked into the walls of the winding stair)
+      const bool otherLevel = std::abs(currentTarget->position().y-position().y)>200.f;
+      if(hit.hasCol || otherLevel) {
         auto near = owner.findWayPoint(currentTarget->position(), [this](const WayPoint &wp) {
           if(!currentTarget->canRayHitPoint(wp.pos))
             return false;
           return true;
           });
+        // NB fix 224: not only the points in the view cone of the target: one it sees behind it, on its own level
+        if(near==nullptr) {
+          near = owner.findWayPoint(currentTarget->position(), [this](const WayPoint &wp) {
+            return std::abs(wp.pos.y-currentTarget->position().y)<250.f && currentTarget->canRayHitPoint(wp.pos,true);
+            });
+          }
         // NB fix 216: a monster that stood at that way point already (the target 6-8 m away behind a rock or a corner)
         // got a path of this one point again on every tick, reached it at once and stood there in the run animation for
         // the whole fight (Smoczy zębacz: "stands 8 s, sees it 0"). AI_Attack of the original engine runs straight at the
