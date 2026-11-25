@@ -73,7 +73,6 @@ Te pliki trzeba **dodać**, nie podmieniać. Bez nich build się nie uda.
 | `common/gothic.cpp` (+ `.h`) | muzyka walki z bossem NB (`playBossMusic`, `stopBossMusic`, `tickBossMusic`) | 82 |
 | `common/world/objects/npc.cpp` | `takeDamage` → `nbBeforeHit`/`nbOnDamage` (muzyka bossów, zachwianie, obalenie NB); `commitSpell` – pocisk czaru gracza leci za celem; `resetAttack`, `nbQuickSpeed` (szybki atak); `RX_CallDamage` i splash w `takeDamage` (`nbSplashPct`); `setItemFx` (efekty przedmiotów na broniach); reakcja na trafienie tylko od celu (`nbReactToHit`) | 82, 83, 84, 95, 98, 106, 150, 152, 235 |
 | `common/world/bullet.cpp` (+ `.h`) | `setHoming`/`tickHoming` – pocisk czaru gracza skręca do celu; z bliska trafia od razu | 84, 102, 236 |
-| `common/world/bullet.h` | pola dziennika pocisków (`nbLogShot`, `nbOwnerName`) | 236 |
 | `common/graphics/visualfx.cpp` | flagi trajektorii efektów bez względu na wielkość liter (`fixed` NB) | 236 |
 | `common/world/world.cpp` | fokus: zamknięta skrzynia z bronią w ręku (siła) albo z runą otwierania (magia); ukrywanie obiektów z częściami (`setVobVisualTree`); pocisk z punktu modelu (`shootBulletFrom` – kamień trolla) | 80, 125, 128 |
 | `common/world/objects/vob.cpp` (+ `.h`) | `setVobVisualTree` – widoczność obiektu i jego części (`RX_ToggleVobVisible`) | 125 |
