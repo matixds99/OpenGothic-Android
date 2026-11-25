@@ -346,7 +346,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** potwory i przywołańcy za przeszkodą biegną do celu zamiast stać (w logu brak `[idle] … sees it 0`).
 - **Test (25.11.2026, log):** zębacze nie stały już przy golemie za przeszkodą; golem między dwoma zębaczami ciągle zmieniał cel – poprawka 222. Zostały: zębacz w płytkiej wodzie przy brzegu, 9–10 m pod bohaterem stojącym wyżej (`[blocked]` o zbocze – bohater poza zasięgiem, jak na PC); zębacz „w powietrzu” 5 s (`inAir=1 body=10`), najpewniej na grzbiecie golema – do obserwacji.
 
-### 215. Zamykanie zadań, zwoje postaci, trofea ze skryptów, mechanizmy – ✅🧪 (24.11.2026)
+### 215. Zamykanie zadań, zwoje postaci, trofea ze skryptów, mechanizmy – ✅ (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/ui/inventorymenu.cpp`
 - **Zgłoszenie:** dalsze funkcje pluginu, które skrypty wołają, a portu nie ma (raport poprawki 213).
 - **Plugin (UNION_ABI.DLL z aktualizacji):**
@@ -360,6 +360,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** zadania zamykane przez NB („Zadanie zakończone!”); trofeum z pazura po użyciu z zieloną ramką w ekwipunku.
 - **Test (25.11.2026):** pazur po założeniu oznaczony w ekwipunku jako założony ✅. Zamykanie zadań przez NB jeszcze niesprawdzone.
 - **Test (25.11.2026, log):** nauka języka orków – wpisy dziennika są, ale log nie pokazywał statusu zadania; dodane w poprawce 225.
+- **Test (25.11.2026):** po przeczytaniu „Języka orków” był dźwięk zakończonego zadania – `B_CloseTopic_Now` zamyka zadania ✅.
 
 ### 214. Patrole, oczy szkieletów, `Npc_HasMessage`, `Npc_HasSprintMoveset`, karma – 🧪 (24.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/world/world.cpp`, `common/world/world.h`, `common/world/aiqueue.h`
