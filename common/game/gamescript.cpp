@@ -359,6 +359,7 @@ struct NbState {
   int32_t                                     slowSteps     = 0;
   float                                       slowFactor    = 1.f;
   float                                       slowApplied   = 1.f;
+  uint64_t                                    nextAuraCheck = 0;   // NB fix 227
   // NB fix 161: the companions go with the hero when he teleports (a jump of his position in the same world)
   const World*                                partyWorld    = nullptr;
   Tempest::Vec3                               partyHeroPos;
@@ -3623,6 +3624,134 @@ void GameScript::initCommon() {
       });
     bindNb("AI_STANDUP_SUMMONED", [forSummons]() { forSummons([](Npc& n) { n.aiPush(AiQueue::aiStandup()); }); });
 
+    // NB fix 227: the summons of the necromancer (the plugin 0x103f63d0: the summoned creatures of the hero, aivar[91] ==
+    // RX_SUMMON_ID; the undead ones: GIL_SUMMONED_SKELETON 37, GIL_SUMMONED_GOBBO_SKELETON 26, guild 55)
+    const auto forUndeadSummons = [forSummons](auto fn) {
+      forSummons([&](Npc& n) {
+        const int32_t g = n.handle().guild;
+        if(g==37 || g==26 || g==55)
+          fn(n);
+        });
+      };
+    // RX_SummonHeal (0x101cfd20 -> 0x103f70f0): the spell gives the life of the hero to his undead: it costs 150 points of
+    // life for each circle of magic, every hurt one gets five times as much back (SPELLFX_DARKAURAEFFECT). Not enough life:
+    // RX_NecroSummonerNoHealth and the price
+    bindNb("RX_SUMMONHEAL", [this,forUndeadSummons]() {
+      auto* hero = world().player();
+      if(hero==nullptr)
+        return;
+      std::vector<Npc*> list;
+      forUndeadSummons([&](Npc& n) { list.push_back(&n); });
+      if(list.empty())
+        return;
+      const int32_t cost = hero->talentSkill(TALENT_MAGE)*150;
+      const int32_t heal = cost*5;
+      if(hero->attribute(ATR_HITPOINTS)<=cost) {
+        Gothic::inst().onPrint(std::string(NbTexts::get("RX_NecroSummonerNoHealth"))+std::to_string(cost));
+        return;
+        }
+      hero->changeAttribute(ATR_HITPOINTS,-cost,false);
+      auto* vfx = Gothic::inst().loadVisualFx("SPELLFX_DARKAURAEFFECT");
+      int healed = 0;
+      for(auto* n:list) {
+        if(n->attribute(ATR_HITPOINTS)>=n->attribute(ATR_HITPOINTSMAX))
+          continue;
+        n->changeAttribute(ATR_HITPOINTS,heal,false);
+        if(vfx!=nullptr)
+          n->startEffect(*n,*vfx);
+        ++healed;
+        }
+      nbCtx("summon heal: ",cost," life of the hero, +",heal," to ",healed," of ",list.size());
+      });
+    // RX_ApplyBuffToSummons(mode) (0x101cfce0 -> 0x103f6820), the auras of the necromancer:
+    //  0 - RX_NecroRuneAuraActive_03 and RX_NecroRuneAura_2: the undead summons are faster, 100% + 5% for each circle
+    //      (AIVRX_NPC_SPEED), SPELLFX_DARKAURAEFFECT; off - back to 100%
+    //  1 - RX_NecroRuneAuraActive_04 and RX_NecroRuneAura_3: the others around (not the summons, the friends, the party, the
+    //      bosses, a frozen one) are slower by countLearnSpell/2 + 5 % for an hour (AIVRX_NPC_SLOW, _SLOWTIME),
+    //      SPELLFX_SLOWDOWN_VIS; off - the slowness ends
+    bindNb("RX_APPLYBUFFTOSUMMONS", [this,forUndeadSummons](int32_t mode) {
+      auto* hero = world().player();
+      if(hero==nullptr)
+        return;
+      if(mode==0) {
+        const bool on = nbIntVar("RX_NECRORUNEAURAACTIVE_03")!=0 && nbIntVar("RX_NECRORUNEAURA_2")!=0;
+        const float k = on ? float(100+5*hero->talentSkill(TALENT_MAGE))/100.f : 1.f;
+        auto* vfx = on ? Gothic::inst().loadVisualFx("SPELLFX_DARKAURAEFFECT") : nullptr;
+        int cnt = 0;
+        forUndeadSummons([&](Npc& n) {
+          n.nbAuraSpeed = k;
+          n.nbAuraUntil = 0;
+          if(vfx!=nullptr)
+            n.startEffect(n,*vfx);
+          ++cnt;
+          });
+        nbCtx("aura of the summons: speed ",int(k*100),"% for ",cnt);
+        }
+      else if(mode==1) {
+        const bool on = nbIntVar("RX_NECRORUNEAURAACTIVE_04")!=0 && nbIntVar("RX_NECRORUNEAURA_3")!=0;
+        const int32_t slow = nbIntVar("COUNTLEARNSPELL")/2+5;
+        auto* vfx = on ? Gothic::inst().loadVisualFx("SPELLFX_SLOWDOWN_VIS") : nullptr;
+        int cnt = 0;
+        world().detectNpc(hero->position(),2000.f,[&](Npc& n) {
+          if(n.isPlayer() || n.isDead() || n.isUnconscious() || nbIsSummon(n))
+            return;
+          auto& h = n.handle();
+          if(int(h.type)==2 || h.aivar[15]!=0 || h.aivar[90]!=0 || personAttitude(n,*hero)==ATT_FRIENDLY)
+            return;   // a friend, a member of the party, a boss
+          if(n.nbStateName()=="ZS_MAGICFREEZE")
+            return;
+          if(on) {
+            n.nbAuraSpeed = std::max(0.2f,1.f-float(slow)/100.f);
+            n.nbAuraUntil = tickCount()+3600000;
+            if(vfx!=nullptr)
+              n.startEffect(n,*vfx);
+            } else {
+            n.nbAuraSpeed = 1.f;
+            n.nbAuraUntil = 0;
+            }
+          ++cnt;
+          });
+        nbCtx("aura of slowness: ",on ? slow : 0,"% for ",cnt);
+        }
+      });
+    // RX_IsValidTargetToSummon / RX_SummonNpcToTarget(instance, time) (0x101b8930, 0x101b8950): with KEY_NONTARGET_ACTION
+    // the plugin shows a mark on the ground under the sight and summons the creature there (oCSpawnManager::SummonNpc).
+    // The port has no such mark: the target is the character in the focus of the hero, else 5 m before him
+    bindNb("RX_ISVALIDTARGETTOSUMMON", [this]() -> int32_t {
+      auto it = nbStates.find(this);
+      auto* f = it!=nbStates.end() ? findNpc(it->second.focusNpc.lock()) : nullptr;
+      return (f!=nullptr && !f->isDead()) ? 1 : 0;
+      });
+    bindNb("RX_SUMMONNPCTOTARGET", [this](int32_t instance, float) {
+      auto* hero = world().player();
+      if(hero==nullptr || instance<=0)
+        return;
+      auto it = nbStates.find(this);
+      auto* f = it!=nbStates.end() ? findNpc(it->second.focusNpc.lock()) : nullptr;
+      Tempest::Vec3 at;
+      if(f!=nullptr && !f->isDead()) {
+        at = f->position();
+        } else {
+        const float a = hero->rotationRad();
+        at = hero->position()+Tempest::Vec3(std::cos(a)*500.f,0.f,std::sin(a)*500.f);
+        }
+      auto* npc = world().addNpc(size_t(instance),at);
+      if(npc==nullptr)
+        return;
+      fixNpcPositionNear(*npc,at,hero->rotation()+180.f,150.f);
+      nbCtx("summon at the target: ",npc->displayName(),f!=nullptr ? std::string(" at ")+std::string(f->displayName()) : std::string(" before the hero"));
+      });
+    // RX_GetArenaSummonCount (0x101d06b0): the summons of the hero in the arena (a counter of the plugin) - those alive
+    bindNb("RX_GETARENASUMMONCOUNT", [forSummons]() -> int32_t {
+      int32_t n = 0;
+      forSummons([&](Npc&) { ++n; });
+      return n;
+      });
+    // RX_AgroNpcOnSummon(self, other) (0x101d8620): only with ISNEWLEGFEATURES (the "realmode" of the plugin - off in the
+    // port): the monsters around the attacked summon join the fight against it. RX_AgroNpcOnSummon_Clear ends it
+    bindNb("RX_AGRONPCONSUMMON",       [](std::shared_ptr<zenkit::INpc>, std::shared_ptr<zenkit::INpc>) {});
+    bindNb("RX_AGRONPCONSUMMON_CLEAR", [](std::shared_ptr<zenkit::INpc>) {});
+
     // the plugin refreshes the texts of its window of the inventory; the summons of the multiplayer
     bindNb("UPDATEITEMSINFOININV", []() {});
     // NB fix 59: the change of the world by the scripts (teleport stones and runes of NB, the transfer items, the
@@ -5618,6 +5747,20 @@ void GameScript::tick(uint64_t dt) {
     if(sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INT && sym->count()>0 && sym->get_int()!=0) {
       nbCtx("multiplayer flag ",name," was ",sym->get_int()," - 0 in a single game");
       sym->set_int(0);
+      }
+    }
+  // NB fix 227: the aura of speed of the necromancer (RX_ApplyBuffToSummons(0)) on the undead summons that came after it
+  if(Application::tickCount()>=st.nextAuraCheck) {
+    st.nextAuraCheck = Application::tickCount()+1000;
+    if(nbIntVar("RX_NECRORUNEAURAACTIVE_03")!=0 && nbIntVar("RX_NECRORUNEAURA_2")!=0) {
+      if(auto* hero = world().player()) {
+        const float k = float(100+5*hero->talentSkill(TALENT_MAGE))/100.f;
+        world().detectNpc(hero->position(),5000.f,[&](Npc& n) {
+          const int32_t g = n.handle().guild;
+          if(!n.isDead() && !n.isPlayer() && (g==37 || g==26 || g==55) && nbIsSummon(n))
+            n.nbAuraSpeed = k;
+          });
+        }
       }
     }
   // NB fix 221: StartChangeWorldTime - the timer of the plugin (100 ms) takes the speed of the game down by an even step

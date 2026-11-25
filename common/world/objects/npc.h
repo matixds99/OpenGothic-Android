@@ -388,6 +388,9 @@ class Npc final {
     int32_t   nbFightRange = -1;                 // NB fix 217: Npc_SetFightRange - the base fight range of this character
     uint64_t  nbFreezeUntil = 0;                 // NB fix 217: AST_FreezeNpc - the character stands frozen until then
     bool      nbFrozen() const;
+    float     nbAuraSpeed = 1.f;                 // NB fix 227: RX_ApplyBuffToSummons - faster summons, slower enemies
+    uint64_t  nbAuraUntil = 0;                   //   till then (0: while the aura lasts)
+    float     nbAuraScale() const;
     const WayPoint* nbDetour() const { return nbDetourWp; }   // NB fix 224
     uint32_t  nbAiPops = 0;                      // NB fix 222: the actions taken from the AI queue (the log)
     static inline int32_t nbSplashPct = 0;       // NB fix 106: the blow of the splash - the percent of its damage

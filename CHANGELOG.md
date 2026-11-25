@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **227**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **228**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **226** – potwory znów atakują po imporcie zapisu z PC (`RX_GamePaused` z trybu wieloosobowego zerowane) – ✅
-2. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
-3. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
-4. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
-5. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
+1. **227** – przyzwańcy nekromanty: leczenie (`RX_SummonHeal`), aury szybkości i spowolnienia (`RX_ApplyBuffToSummons`), przywołanie przy celu – 🧪
+2. **226** – potwory znów atakują po imporcie zapisu z PC (`RX_GamePaused` z trybu wieloosobowego zerowane) – ✅
+3. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
+4. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
+5. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
 
 ---
 
@@ -251,6 +251,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 227. Przyzwańcy nekromanty: leczenie, aury, przywołanie przy celu – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/nbtexts.h`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`
+- **Zgłoszenie:** „Zaczynaj” – przegląd przyzwańców: funkcje pluginu, których skrypty używają, a port ich nie miał.
+- **Plugin:** przyzwańcy bohatera to postacie z `aivar[91]` = `RX_SUMMON_ID`, a nieumarli to gildie 37 (`GIL_SUMMONED_SKELETON`), 26 (`GIL_SUMMONED_GOBBO_SKELETON`) i 55.
+  - `RX_SummonHeal` (`0x101cfd20` → `0x103f70f0`, czar `SPELL_CAST_SUMMON_HEAL`): bohater oddaje swoim nieumarłym 150 punktów życia za każdy krąg magii, a każdy ranny dostaje pięć razy tyle (`SPELLFX_DARKAURAEFFECT`). Gdy życia jest za mało – napis `RX_NecroSummonerNoHealth` z ceną.
+  - `RX_ApplyBuffToSummons(tryb)` (`0x101cfce0` → `0x103f6820`), aury nekromanty: przełączane czarami `AURA_SUMMON_03/04`:
+    - 0 (`RX_NecroRuneAuraActive_03` i `RX_NecroRuneAura_2`) – nieumarli przyzwańcy szybsi: 100% + 5% za krąg (`AIVRX_NPC_SPEED`); po wyłączeniu – 100%. Przyzwańcy przywołani później dostają aurę w ciągu sekundy;
+    - 1 (`RX_NecroRuneAuraActive_04` i `RX_NecroRuneAura_3`) – postacie wokół wolniejsze o `countLearnSpell/2 + 5` % na godzinę (`AIVRX_NPC_SLOW`, `SPELLFX_SLOWDOWN_VIS`); pomijane: przyzwańcy, przyjaciele, drużyna, bossowie, zamrożeni. Po wyłączeniu – koniec spowolnienia.
+  - `RX_IsValidTargetToSummon` / `RX_SummonNpcToTarget` (`0x101b8930`, `0x101b8950`): z klawiszem `KEY_NONTARGET_ACTION` plugin pokazuje znacznik na ziemi pod celownikiem i przywołuje tam. Port nie ma znacznika (ani tego klawisza): celem jest postać w fokusie, inaczej 5 m przed bohaterem.
+  - `RX_GetArenaSummonCount` – żywi przyzwańcy bohatera; `RX_AgroNpcOnSummon(_Clear)` – tylko w trybie „realmode” pluginu (`IsNewLegFeatures`, w porcie wyłączony), puste.
+- **Jeszcze nie:** pupil rycerza śmierci (`RX_ApplyDKRune`, `RX_HealPetDarkRune`, `RX_UpdateDKPet_AST`, `RX_ResetDKRunes` – osobny system pluginu), `RX_NecromantProc_Control` (efekty run nekromanty przy ciosie), `RX_ResetTotems` (arena).
+- **Do sprawdzenia:** czar leczenia przyzwańców nekromanty (życie bohatera spada, szkielety się leczą); aura szybkości przyzwańców i aura spowolnienia wrogów (włączanie i wyłączanie tym samym czarem).
 
 ### 226. Wilki, gobliny i szczury nie atakowały po imporcie zapisu z PC – ✅ (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`

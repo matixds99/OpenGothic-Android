@@ -44,6 +44,7 @@ namespace NbTexts {
       {"sWispSearch", "Co\x9C znaleziono!"},
       {"sWispName", "Ognik"},
       {"RX_WispFoundInLocation", "Ognik znalaz\xB3: "},   // NB fix 219
+      {"RX_NecroSummonerNoHealth", "Za ma\xB3o \xBFycia, potrzeba: "},   // NB fix 227
       {"itemGold", "Z\xB3oto: "},
       {"sAcquired", "Zdobyto: "},
       {"sDay", "Dzie\xF1: "},

@@ -3462,6 +3462,7 @@ void Npc::tick(uint64_t dt) {
     if(isPlayer())
       scale *= nbQuickSpeed;
     scale *= nbSpeed;   // NB fix 101
+    scale *= nbAuraScale();   // NB fix 227: the auras of the necromancer
     if(nbFrozen())
       scale = 0.001f;   // NB fix 217: AST_FreezeNpc - the animation stands still
     visual.pose().setTimeScale(scale,owner.tickCount());
@@ -4820,6 +4821,12 @@ static bool nbEqualNoCase(std::string_view a, std::string_view b) {
 
 bool Npc::nbHasGotoVob() const {
   return aiQueue.has(AI_GoToNpc) || go2.flag==GoToHint::GT_Item;
+  }
+
+float Npc::nbAuraScale() const {
+  if(nbAuraSpeed==1.f || (nbAuraUntil!=0 && nbAuraUntil<owner.tickCount()))
+    return 1.f;
+  return nbAuraSpeed;
   }
 
 bool Npc::nbFrozen() const {
@@ -6844,6 +6851,7 @@ void Npc::updateAnimation(uint64_t dt, bool force) {
     if(isPlayer())
       scale *= nbQuickSpeed;
     scale *= nbSpeed;   // NB fix 101
+    scale *= nbAuraScale();   // NB fix 227: the auras of the necromancer
     if(nbFrozen())
       scale = 0.001f;   // NB fix 217: AST_FreezeNpc - the animation stands still
     visual.pose().setTimeScale(scale,owner.tickCount());
