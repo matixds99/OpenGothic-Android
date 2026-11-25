@@ -982,6 +982,13 @@ void World::unregisterVob(std::string_view name, Vob* vob) {
       }
   }
 
+Vob* World::nbFindVob(std::string_view name) const {
+  if(name.empty())
+    return nullptr;
+  auto it = vobNames.find(upperName(name));
+  return it==vobNames.end() ? nullptr : it->second;
+  }
+
 size_t World::setVobVisualTree(std::string_view name, bool show, bool collide) {
   size_t count = 0;
   auto   range = vobNames.equal_range(upperName(name));

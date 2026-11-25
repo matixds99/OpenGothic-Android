@@ -163,6 +163,7 @@ int32_t nbOreParse(const Interactive& mob, int32_t kind) {
 // the state of NB of one GameScript (kept here, so gamescript.h stays as it is)
 struct NbState {
   std::vector<NbCallback>  callbacks;
+  std::unordered_map<std::string,std::pair<int32_t,int32_t>> reinarChoices;   // NB fix 234: the text of a choice -> the item, the money
   zenkit::DaedalusSymbol*  cycle           = nullptr;
   uint64_t                 lastCycleSecond = uint64_t(-1);
   // the loops that the Union plugin calls by the name (UNION_ABI.DLL):
@@ -3861,6 +3862,108 @@ void GameScript::initCommon() {
       nbCtx(who," sales window: ",st.salesList.size()," items",self==nullptr ? " (no SELF)" : "");
       };
     // the categories: the numbers of the tables of the plugin, the names (cp1250) as the groups of its window
+    // NB fix 234: RX_Form_Reinar_SellWeapon (UNION_ABI.DLL 0x101c0d30) - Reinar buys rare weapons: a choice of the dialog
+    // for every such weapon of the hero (not worn), "'Name' - price monet (kind)". The prices are a table of the plugin
+    // (0x101bdf70); choosing one sets RX_ReinarItemId / RX_ReinarItemMoney (0x10347100) and calls
+    // DIA_VLK_989_Reinar_SellWeapon_Common. A smith's apprentice (Player_IsApprentice 2) does not sell Harad's weapons
+    bindNb("RX_FORM_REINAR_SELLWEAPON", [this]() {
+      static const std::pair<const char*,int32_t> prices[] = {
+        {"ItMw_Morgenstern",150},{"ITMW_KORD_AXT",150},{"ItMw_Inquisitor",200},{"ItMw_Rabenschnabel",200},{"ITMW_2H_MACE_107",250},
+        {"ItMw_2H_Volebir",500},{"ItMw_2H_IceHammer",700},{"ItMw_Drakesaebel",300},{"ITMW_1H_CREST",200},{"ItMw_Orkschlaechter",350},
+        {"itmw_normardsword",350},{"ITMW_1H_BLACKSWORD",600},{"ItMw_Schlachtaxt",200},{"ITMW_2H_KMR_SOULSWORD_01",400},
+        {"ItMw_Drachenschneide",800},{"ItMw_RuneAxeAncient",800},{"ITMW_2H_KMR_RHOBAR_01",850},{"ItMw_DemonHand",700},
+        {"itmw_2h_urizel",1000},{"itmw_2h_urizel_nomagic",500},{"itmw_runenschwert",150},{"itmw_2h_nordmarwarhammer",300},
+        {"itmw_drachen_sword_02",400},{"itmw_1h_sigil",600},{"ITMW_2H_SIGIL",600},{"ITMW_2H_KMR_WITCHCLAYMORE_01",350},
+        {"itmw_1h_lostsoul",800},{"itmw_axe_blood",700},{"itmw_1h_ancienthammer",600},{"itmw_2h_sharpteeth",800},
+        {"itmw_1h_molagbarmace",800},{"itmw_1h_sword_long_05",600},{"itmw_sturmbringer",600},{"itmw_fearund",700},
+        {"itmw_1h_kmr_snakesword_01",300},{"itmw_1h_g3a_daemonblade_01",600},{"itmw_1h_ginnoksword",600},{"ITMW_VENGEANCE_ANNA",200},
+        {"ITMW_BLADE_MAGE_YARK",150},{"ITMW_BLADE_SPELL",250},{"ITMW_BLADE_SENDER",300},{"ITMW_BLADE_storm",350},
+        {"ITMW_BLADE_ECLIPSE",400},{"ITMW_BLADE_BELIARCLAW",500},{"ITMW_BLADE_BELIARCLAW_SENYAK",550},{"ITMW_BLADE_BELIAR",700},
+        {"ItMw_Speer_Blood",700},{"ItMw_Sword_Blood",900},{"ITMI_TARACOTHAMMER",400},{"ItMw_Krummschwert",200},
+        {"ItMw_1H_GoldBrand_Greg",250},{"ITMW_TORLOF_AXT",300},{"ITMW_SENTENCA_SWORD",200},{"ITMW_JARVIS_WAFFER",200},
+        {"ITMW_ZWEIHAENDER_GORNAKOSH",150},{"ITMW_WOLF_WAFFER",200},{"ITMW_SCORPIONSPEC",200},{"ITMW_2H_AXE_GESTATH",150},
+        {"ANGAR_SCHWERT",200},{"ITMW_2H_MASIAF_TIAMANT",200},{"ITMW_2H_MASIAF_HANIAR",200},{"ITMW_2H_MASIAF_OSAIR",200},
+        {"ITMW_2H_MASIAF_NROZAS",200},{"ITMW_2H_MASIAF_HANIAR_Demon",300},{"ITMW_2H_SERPENTSTAFF",300},{"ITMW_2H_MI_STAFF",400},
+        {"ITMW_2H_DRAGONSTAFF_01",700},{"ITMW_2H_KMR_DAEMONSTAFF_01",800},{"ItMw_Staff_Blood",850},{"ItMw_SilverRapier",300},
+        {"ItMw_ChiefRapier_07",350},{"ItMw_ChiefRapier_08",500},{"ItMw_1H_GoldBrand",600},{"itmw_BLOOD_KATANA",800},
+        {"ItMw_Addon_Betty",250},{"ITMW_2h_cap_flamberge",200},{"ITMW_2H_ARMORDESTR",500},{"ITMW_2h_holywrath",400},
+        {"ItMw_1H_Blessed_03",500},{"ItMw_2H_Blessed_03_Gewin",200},{"ITMW_DARKSWORD_ELITE",400},{"ITMW_1H_XARADRIM",300},
+        {"ITMW_1H_DEATHBRINGER",500},{"ItMw_Berserkeraxt",700},{"ITMW_2H_DRAGONMASTER",800},{"ItMw_2H_DarkSoul",700},
+        {"ITMW_2H_OrcHumanClaymore",350},{"ITMW_TAMPLIER_SPECIAL_2H_SWORD_5",350},{"ItMw_Speer_Silver",200},{"ITMW_1H_WOLF",200},
+        {"ITMW_2H_WOLF",200},{"ItMw_spearNPC_Falk",150},{"ITMW_SWORD_NEW_05",200},{"ItMw_1H_ChelDrak_Left_Hero",350},
+        {"ItMw_1H_ChelDrak_Right_Hero",350},{"ITMW_1H_MOONBLADE_LEFT",300},{"ITMW_1H_MOONBLADE_RIGHT",300},
+        {"ItMw_1H_Ancient_Left",200},{"ItMw_1H_Ancient_Right",200},{"ITMW_1H_DUAL_ORE_RIGHT",100},{"ITMW_1H_DUAL_ORE_LEFT",100},
+        {"ItMw_Avabul_Dagger",300},{"ITMW_1H_SWORD_ORCSLAYER_01",200},{"ITMW_ASGARDSWORD",200},{"ITMW_SWORD_NEW_04",350},
+        {"ITMW_1H_DUAL_TWILIGHT_RIGHT",300},{"ITMW_1H_DUAL_TWILIGHT_LEFT",300},{"ItMw_Zweihaender3",180},
+        {"itmw_1h_assblade_left",200},{"itmw_1h_assblade_right",200},{"itmw_halleberde_04",500},{"itmw_halleberde_03",350},
+        {"itmw_2h_orcstaff_01",600},{"itmw_oremaster",600},{"itmw_2h_kmr_axe_h_02",200},{"orc_blade",300},
+        {"itmw_2h_warhammer_steel",350},{"itmw_1h_assblade_hero",200},{"itmw_speer_04",350},{"itmw_demonspear",650},
+        {"itmw_speer_03",300},{"itmw_butcherspeer",350},{"itmw_speer_goblindemon",300},{"itmw_speer_02",250},
+        {"itmw_heavyswordspear",250},{"itmw_1h_kmr_greatlong_01",300},{"itmw_2h_knighthammer",400},
+        {"itmw_tamplier_special_2h_sword_1",300},{"itmw_tamplier_special_2h_sword_2",500},{"itmw_tamplier_special_2h_sword_3",700},
+        {"itmw_tamplier_special_2h_sword_4",900},{"itmw_sword_new_02",400},{"itmw_2h_g3a_orcaxe_03",300},{"itmw_axe_new_04",900},
+        {"itmw_axe_new_03",800},{"itmw_axe_new_02",500},{"itrw_crossbow_h_03",500},{"itrw_whitebow",400},{"itrw_defeater",300},
+        {"itrw_bow_m_06",400},{"itrw_bow_double_01",600},{"itrw_g3_long_bow_02",250},{"itrw_kmr_kadat_bow_01",350},
+        {"itrw_kmr_darklong_bow_01",250},{"itrw_shadowbow",450},{"itrw_kmr_shadows_bow_01",200},{"itrw_g3_silentdeath_bow_01",250},
+        {"itrw_bow_bones",400},{"itrw_g4_oak_bow_01",600},{"itrw_holybow",500},{"itrw_bow_blood",1100},
+        {"Itmw_speer_silver_strong",300},{"Itmw_silverrapier_strong",300},{"itmw_2h_kmr_greatorcaxe_01",200},
+        {"itmw_speer_bandit",300},{"itmw_oldshabbyspear",300},{"itmw_2h_xaradrim",500},{"itmw_1h_dexsword_16",600},
+        {"itmw_1h_dexsword_15",550},{"itmw_1h_dexsword_14",500},{"itmw_1h_dexsword_13",450},{"itmw_1h_dexsword_11",400},
+        {"itmw_1h_dexsword_10",350},{"itmw_1h_dexsword_09",300},{"itmw_1h_dexswordarena_6",200},{"itmw_chiefrapier_arena",300},
+        {"itmw_speer_brahim_npc",300},{"itrw_bow_arena",200},{"ITMW_2H_NewOrcHuman_03",400},{"ITMW_2H_NewOrcHuman_04",500},
+        {"itmw_speer_aw",400},
+        };
+      static const char* harad[] = {"ITMW_2H_GARAD_05","ITMW_ELBASTARDO","ITMW_2H_GARAD_04","ITMW_RUBINKLINGE","ITMW_2H_GARAD_03",
+        "ITMW_SCHWERT4","ITMW_2H_GARAD_02","ITMW_SCHWERT1","ITMW_2H_GARAD_01","ITMW_1H_COMMON_01","ITMW_2H_WOLF","ITMW_1H_WOLF",
+        "ITMW_1H_SIGIL","ITMW_2H_SIGIL"};
+      auto& st   = nbStates[this];
+      auto* hero = world().player();
+      auto* info = vm.find_symbol_by_name("DIA_VLK_989_REINAR_SELLWEAPON");
+      auto* fn   = vm.find_symbol_by_name("DIA_VLK_989_REINAR_SELLWEAPON_COMMON");
+      st.reinarChoices.clear();
+      if(hero==nullptr || info==nullptr || fn==nullptr)
+        return;
+      std::string coin = " monet";
+      if(auto* c = vm.find_symbol_by_name("RX_REINARSELLWEAPONMONEY"); c!=nullptr && c->type()==zenkit::DaedalusDataType::STRING)
+        coin = c->get_string();
+      int32_t apprentice = 0;
+      if(auto* a = vm.find_symbol_by_name("PLAYER_ISAPPRENTICE"))
+        apprentice = a->get_int();
+      int n = 0;
+      for(auto& [name,price]:prices) {
+        std::string up(name);
+        for(auto& c:up)
+          c = char(std::toupper(uint8_t(c)));
+        auto* sym = vm.find_symbol_by_name(up);
+        if(sym==nullptr || hero->itemCount(sym->index())==0)
+          continue;
+        if(apprentice==2 && std::find_if(std::begin(harad),std::end(harad),[&](const char* h){ return up==h; })!=std::end(harad))
+          continue;
+        // the weapon must not be worn: one more of it is enough
+        const Item* it = nullptr;
+        bool worn = false;
+        for(auto i = hero->inventory().iterator(Inventory::T_Inventory); i.isValid(); ++i)
+          if(i->clsId()==sym->index()) {
+            it = &(*i);
+            if(i.isEquipped() && i.count()<=1)
+              worn = true;
+            }
+        if(it==nullptr || worn)
+          continue;
+        std::string label = "'"+std::string(it->displayName())+"' - "+std::to_string(price)+coin;
+        const int32_t fl = it->itemFlag();
+        if(it->mainFlag()==ITM_CAT_NF) {
+          const bool two = (uint32_t(fl) & (ITM_2HD_SWD|ITM_2HD_AXE))!=0;
+          if(auto* t = vm.find_symbol_by_name(two ? "RX_INV_DESCWEAPON_TYPE_TWO" : "RX_INV_DESCWEAPON_TYPE_ONE"))
+            label += " ("+t->get_string()+")";
+          }
+        st.reinarChoices[label] = {int32_t(sym->index()),price};
+        info_addchoice(int(info->index()),label,int(fn->index()));
+        ++n;
+        }
+      nbCtx("Reinar: ",n," weapons to sell");
+      });
+    bindNb("RX_CLOSEPLAYERINVENTORY", []() { Gothic::inst().onCloseInventory(); });   // NB fix 234
     bindNb("RX_FORM_CONST_SELLITEMS", [fixedSales]() {
       fixedSales("Constantino",{"Mikstury","Rzadkie ro\x9Cliny","Ro\x9Cliny","Trofea","Serca golem\xF3w"},{
         {"ITPO_PERM_STR",800,0},{"ITPO_PERM_DEX",800,0},{"ITPO_PERM_HEALTH",1000,0},{"ITPO_PERM_HEALTH_CRAFT",1200,0},
@@ -5067,6 +5170,15 @@ void GameScript::exec(const GameScript::DlgChoice &dlg, Npc& player, Npc& npc) {
   // NB fix 124: RX_ClearCurrentDialog (the choice "Wróć" of NB) clears the choices of this info
   auto* nb       = nbStates.count(this) ? &nbStates[this] : nullptr;
   auto* prevInfo = nb!=nullptr ? nb->curInfo : nullptr;
+  // NB fix 234: a weapon of the list of Reinar - its item and its money for DIA_VLK_989_Reinar_SellWeapon_Common
+  if(nb!=nullptr) {
+    if(auto r = nb->reinarChoices.find(dlg.title); r!=nb->reinarChoices.end()) {
+      if(auto* v = vm.find_symbol_by_name("RX_REINARITEMID"))
+        v->set_int(r->second.first);
+      if(auto* v = vm.find_symbol_by_name("RX_REINARITEMMONEY"))
+        v->set_int(r->second.second);
+      }
+    }
   if(nb!=nullptr)
     nb->curInfo = &info;
   try {

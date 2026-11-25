@@ -269,6 +269,7 @@ void MainWindow::setupUi() {
   Gothic::inst().onOpenPlayerSales.bind(&nbSales,&NbSalesMenu::open);
   Gothic::inst().onOpenCraft      .bind(&nbCraft,&NbCraftMenu::open);   // NB fix 70
   Gothic::inst().onOpenPocket     .bind(&inventory,&InventoryMenu::openPocket);   // NB fix 220
+  Gothic::inst().onCloseInventory .bind(&inventory,&InventoryMenu::close);        // NB fix 234
   Gothic::inst().isNpcInDialogFn = std::bind(&DialogMenu::isNpcInDialog, &dialogs, std::placeholders::_1);
 
   Gothic::inst().onPrintScreen .bind(&dialogs,&DialogMenu::printScreen);

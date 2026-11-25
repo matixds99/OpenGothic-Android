@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **234**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **235**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
-2. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – ✅
-3. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – ✅🧪
-4. **230** – poprawki loggera: flagi przyzwańców nie są już wyciszane, tekst stale na ekranie raz, przyzwańcy w całym świecie z odległością, `[hero] says` dla odmów głosem – ✅🧪
-5. **229** – logger bohatera: komunikaty skryptów z funkcją, która je pokazała (`[print]`), stan bohatera, przyzwańcy i animacje (`[hero]`), zmiany zmiennych skryptów (`[var]`) – ✅🧪
+1. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
+2. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
+3. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – ✅
+4. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – ✅🧪
+5. **230** – poprawki loggera: flagi przyzwańców nie są już wyciszane, tekst stale na ekranie raz, przyzwańcy w całym świecie z odległością, `[hero] says` dla odmów głosem – ✅🧪
 
 ---
 
@@ -251,6 +251,21 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 234. Reinar kupuje bronie; start poziomu w nazwanym obiekcie; zamknięcie ekwipunku – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/world/worldobjects.cpp`, `common/world/world.cpp`, `common/world/world.h`, `common/gothic.h`, `common/mainwindow.cpp`
+- **Zgłoszenie (log 25.11, 21:39, „Napraw tą grę”):**
+  - Reinar (miasto, `DIA_VLK_989_Reinar_SellWeapon`): „not implemented call [RX_FORM_REINAR_SELLWEAPON]” – rozmowa o sprzedaży broni była pusta, tylko „Wróć”;
+  - runa Vatrasa do kryjówki zabójcy Lothara (`ItMi_DarkTransfer`, `Wld_ChangeLevel_AB(ITUSELDTOWER.ZEN, ITUSELDTOWER_START)`): „insertPlayer: invalid waypoint, using fallback” i „void under the feet” – punktu o tej nazwie nie ma wśród punktów drogi;
+  - „not implemented call [RX_CLOSEPLAYERINVENTORY]” z tej samej runy.
+- **Plugin:**
+  - `RX_Form_Reinar_SellWeapon` (UNION_ABI.DLL 0x101c0d30): dla każdej broni bohatera z tabeli pluginu (171 broni z cenami, 0x101bdf70; nie założonej) dodaje wybór „'Nazwa' - cena monet (Jednoręczna/Dwuręczna)”; czeladnik Harada (`Player_IsApprentice` 2) nie sprzedaje broni Harada (0x101c0980). Wybór ustawia `RX_ReinarItemId` i `RX_ReinarItemMoney` (0x10347100) i woła `DIA_VLK_989_Reinar_SellWeapon_Common` – skrypty dają złoto, zabierają broń i budują listę od nowa;
+  - Gothic szuka startu zmiany poziomu po nazwie obiektu (nie tylko punktu drogi/startu).
+- **Poprawka:**
+  - `RX_FORM_REINAR_SELLWEAPON` jak wyżej (w porcie wybory zapamiętane po tekście, przed wywołaniem funkcji ustawiane są obie zmienne);
+  - `insertPlayer`: gdy nie ma punktu o tej nazwie, bohater staje przy obiekcie świata o tej nazwie (na ziemi pod nim), w logu „the start '…' is a vob”;
+  - `RX_CLOSEPLAYERINVENTORY` zamyka ekwipunek.
+- **Do sprawdzenia:** u Reinara lista broni z cenami i sprzedaż (złoto, broń znika, lista się odświeża); runa Vatrasa – bohater pojawia się przy wejściu do wieży, nie w środku mapy.
 
 ### 233. Stwory utknięte w drodze do nieosiągalnego punktu – 🧪 (25.11.2026)
 - **Pliki:** `common/game/movealgo.cpp`, `common/game/gamescript.cpp`

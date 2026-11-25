@@ -228,6 +228,7 @@ class World final {
     /// the vobs of the world by name (upper case): a script of a mod shows, hides or changes the collision of them
     void                 registerVob  (std::string_view name, Vob* vob);
     void                 unregisterVob(std::string_view name, Vob* vob);
+    Vob*                 nbFindVob(std::string_view name) const;   // NB fix 234: a vob by its name (a start of a level that is not a point)
     size_t               setVobVisual (std::string_view name, bool show, bool collide);
     bool                 vobPosition  (std::string_view name, Tempest::Vec3& pos) const;
 

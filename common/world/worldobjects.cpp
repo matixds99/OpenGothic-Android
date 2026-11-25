@@ -12,6 +12,7 @@
 #include "world/triggers/triggerworldstart.h"
 #include "world/triggers/abstracttrigger.h"
 #include "world.h"
+#include "physics/dynamicworld.h"
 #include "utils/workers.h"
 #include "utils/dbgpainter.h"
 #include "utils/fileext.h"
@@ -382,6 +383,23 @@ Npc* WorldObjects::addNpc(size_t npcInstance, const Vec3& pos) {
 Npc* WorldObjects::insertPlayer(std::unique_ptr<Npc> &&npc, std::string_view at) {
   auto pos = owner.findPoint(at);
   if(pos==nullptr) {
+    // NB fix 234: the start of a level can be any vob with that name, not only a way point or a start point (Gothic
+    // looks for a vob by the name) - the rune of Vatras to the tower of Ituseld (ITUSELDTOWER_START) put the hero at
+    // the start of the world instead, "void under the feet"
+    if(auto* v = owner.nbFindVob(at)) {
+      auto  p   = v->position();
+      if(auto* phy = owner.physic()) {
+        auto ray = phy->ray(p+Vec3(0,50,0),p-Vec3(0,1000,0));
+        if(ray.hasCol)
+          p.y = ray.v.y;
+        }
+      Log::i("insertPlayer: the start '",at,"' is a vob, the hero is put at it");
+      npc->setPosition  (p);
+      npc->attachToPoint(owner.findWayPoint(p));
+      npc->updateTransform();
+      npcArr.emplace_back(std::move(npc));
+      return npcArr.back().get();
+      }
     Log::e("insertPlayer: invalid waypoint, using fallback");
     // freemine.zen
     pos = &owner.startPoint();
