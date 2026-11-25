@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **237**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **238**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **236** – czary bohatera przelatują przez jego przyzwańców i towarzyszy; `[shot]` w logu: co trafił każdy pocisk czaru; liczniki rzuconych czarów w `[fight]`; flagi trajektorii efektów bez względu na wielkość liter – 🧪
-2. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – ✅
-3. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
-4. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
-5. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – ✅
+1. **237** – bossy NB (`bodystate_interruptable_override`) nie są odrzucane ciosami (golemy przewracały Zelda co cios, nie mógł czarować) – 🧪
+2. **236** – czary bohatera przelatują przez jego przyzwańców i towarzyszy; `[shot]` w logu: co trafił każdy pocisk czaru; liczniki rzuconych czarów w `[fight]`; flagi trajektorii efektów bez względu na wielkość liter – ✅
+3. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – ✅
+4. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
+5. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
 
 ---
 
@@ -252,7 +252,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 236. Czary bohatera przez przyzwańców; dziennik pocisków (`[shot]`) – 🧪 (25.11.2026)
+### 237. Bossy NB nie są odrzucane ciosami – 🧪 (25.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`
+- **Zgłoszenie (log 25.11, 22:39):** Zeld prawie nie atakuje. `[fight]`: w 330 liniach leżał (`body 12` = BS_LIE) 126 razy i spadał (`body 10`) 25 razy; czar zaczął tylko 7 razy, przy 400 decyzjach AI walki. Ciosy kamiennych golemów mają obrażenia obuchowe + „lot” (`dtype=18` = BLUNT|FLY) – każdy odrzucał go na ziemię.
+- **Przyczyna:** `C_NPC.bodystate_interruptable_override` (Zeld ma 1, jak inni bossowie NB) wyłączało w porcie zachwianie (188), ale nie odrzucenie – a odrzucenie z leżeniem to najmocniejsze przerwanie.
+- **Poprawka:** postać z `bodystate_interruptable_override` nie jest odrzucana ciosem z „lotem” (obrażenia liczą się jak dotąd).
+- **Do sprawdzenia:** Zeld z golemami obok – stoi i rzuca Kule śmierci (w `[fight]` rośnie `shot`, `body` rzadko 10/12).
+
+### 236. Czary bohatera przez przyzwańców; dziennik pocisków (`[shot]`) – ✅ (25.11.2026)
 - **Pliki:** `common/world/bullet.cpp`, `common/world/bullet.h`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/graphics/visualfx.cpp`
 - **Zgłoszenie (log 25.11, 22:12):** „nie mogę zadać obrażeń” – golemy stały przed Zeldem, a każda runa bohatera trafiała w golema (`DMG2: ranged attacker='' player=1 target='Przywołany kamienny golem' … value=0`) i znikała. Zeld rzucał Kulę śmierci (mana −60, `body 28`), ale żaden jego pocisk nikogo nie trafił.
 - **Przyczyna (pierwsza część):** pocisk bohatera zatrzymywał się na każdej postaci; „przyjacielski ogień” liczył się tylko dla pocisków NPC (i nawet wtedy pocisk znikał na sojuszniku, tylko bez obrażeń).
@@ -262,6 +269,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - w `[fight]` przy czarze: `begun` (ile razy zaczął rzucać) i `shot` (ile pocisków wystrzelił);
   - flagi trajektorii efektów (`emTrjMode`) bez względu na wielkość liter – „unknown trajectory flag: "fixed"” z poprzednich logów: efekt NB tracił trajektorię.
 - **Do sprawdzenia:** runy bohatera trafiają Zelda zza golemów; log walki z Zeldem – linie `[shot] Zeld…` pokażą, gdzie podziewają się jego Kule śmierci (ściana / sojusznik / nic) i czy w ogóle są wystrzeliwane (`shot` w `[fight]`).
+- **Test (25.11, 22:39):** runy bohatera trafiają Zelda zza golemów (44 trafienia, życie 37875 → 27197). Zeld wystrzelił 7 Kul śmierci w kilka minut (3 trafiły bohatera, 11 w ścianę/ziemię) – za mało; `[fight]` pokazał dlaczego (237).
 
 ### 235. Śledzenie walki w logu (`[fight]`) – ✅ (25.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/game/gamescript.cpp`

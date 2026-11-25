@@ -2960,7 +2960,10 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
     }
 
   // throw enemy
-  if(hitResult.hasHit && (damageType & (1<<zenkit::DamageType::FLY))) {
+  // NB fix 237: not a character with C_NPC.bodystate_interruptable_override (the bosses of New Balance) - a blow does not
+  // interrupt it, being thrown is the strongest interruption of all: every blow of the stone golems (blunt + fly) threw
+  // Zeld to the ground, in the log he lay or fell in 150 of 330 lines of [fight] and cast 7 times in 5 minutes
+  if(hitResult.hasHit && (damageType & (1<<zenkit::DamageType::FLY)) && hnpc->bodystate_interruptable_override==0) {
     mvAlgo.accessDamFly(x-other.x, z-other.z, lastHitType);
     }
 
