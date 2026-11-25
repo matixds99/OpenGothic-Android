@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **229**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **230**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **228** – flagi „sługa już przyzwany” (Hubaxis, Krayt, Jina, Tesvall, mroczny sługa…) zerowane, gdy sługi nie ma w świecie – 🧪
-2. **227** – przyzwańcy nekromanty: leczenie (`RX_SummonHeal`), aury szybkości i spowolnienia (`RX_ApplyBuffToSummons`), przywołanie przy celu – 🧪
-3. **226** – potwory znów atakują po imporcie zapisu z PC (`RX_GamePaused` z trybu wieloosobowego zerowane) – ✅
-4. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
-5. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
+1. **229** – logger bohatera: komunikaty skryptów z funkcją, która je pokazała (`[print]`), stan bohatera, przyzwańcy i animacje (`[hero]`), zmiany zmiennych skryptów (`[var]`) – 🧪
+2. **228** – flagi „sługa już przyzwany” (Hubaxis, Krayt, Jina, Tesvall, mroczny sługa…) zerowane, gdy sługi nie ma w świecie – 🧪
+3. **227** – przyzwańcy nekromanty: leczenie (`RX_SummonHeal`), aury szybkości i spowolnienia (`RX_ApplyBuffToSummons`), przywołanie przy celu – 🧪
+4. **226** – potwory znów atakują po imporcie zapisu z PC (`RX_GamePaused` z trybu wieloosobowego zerowane) – ✅
+5. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
 
 ---
 
@@ -251,6 +251,19 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 229. Logger bohatera: komunikaty, stan, przyzwańcy, zmienne skryptów – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/gothic.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `patches/zenkit-opengothic.patch` (`DaedalusVm::call_chain` publiczne)
+- **Zgłoszenie:** propozycja gracza po błędzie z Hubaxisem (228) – „logger na graczu”: jakich ma przyzwańców, jakie zmienne się zmieniają, jakiej runy lub broni używa, jak zachowują się animacje. Błąd z Hubaxisem był widoczny tylko na ekranie (odmowa skryptu), w logu nie było nic.
+- **Poprawka:** log zapisuje tylko zmiany, żeby nie urósł:
+  - `[print] tekst (FUNKCJA <- FUNKCJA…)` – każdy komunikat skryptów na ekranie (`Print`, `PrintScreen`, `AI_PrintScreen`, `AI_Print*`, `RX_PrintP`, `PrintScreenColor`…) z łańcuchem funkcji, które go pokazały. Odmowy NB („… jest już przyzwany”, „za mało…”) mają od razu nazwę funkcji i warunku do sprawdzenia w skryptach. Ten sam tekst raz na 10 s, najwyżej 20 linii na 10 s.
+  - `[hero] spell refused: …` – logika czaru (`Spell_Logic_*`) odmówiła rzucenia (`SPL_SENDSTOP`), z numerem czaru i maną.
+  - `[hero] guild / in hands / armor / melee / ranged / transformation` – co 0,5 s, linia przy zmianie: gildia, broń w rękach (runa lub zwój z numerem czaru), zbroja i hełm, bronie przy pasie, przemiana.
+  - `[hero] summons (N): Instancja hp/max, …` – lista przyzwańców bohatera (`aivar[91]` = `RX_SUMMON_ID`) przy każdej zmianie składu: przywołany, zginął, zniknął.
+  - `[hero] anim: …` – animacje akcji bohatera (ciosy, czary, mikstury, obiekty, trafienia), bez chodu, biegu, stania, skoków i pływania; najwyżej 20 linii na 10 s.
+  - `[var] ZMIENNA: a -> b` – co 2 s zmiany wszystkich globalnych zmiennych liczbowych skryptów (około 12,7 tys. wartości, bez zmiennych lokalnych funkcji), np. flagi przyzwańców, etapy zadań, liczniki NB. Pierwsze 20 s po wczytaniu świata to nauka: zmienne, które zmieniły się więcej niż raz (zegary, liczniki pętli), są pomijane (lista w logu: `[var] left out`). Zmienna zmieniająca się więcej niż 8 razy w 5 min też zostaje pominięta (`changes all the time, left out`). Najwyżej 40 linii na raz.
+  - `[hero] aivar[N] AIV_…: a -> b` – zmiany zmiennych samego bohatera (`aivar`) z nazwami stałych `AIV_*`/`AIVRX_*`, z tym samym pomijaniem.
+- **Do sprawdzenia:** log po kilku minutach gry: czy nie jest zbyt głośny (jakie zmienne zalewają `[var]`), czy przy przywołaniu i śmierci przyzwańca są linie `[hero] summons`, czy odmowa czaru ma `[print]` z nazwą funkcji.
 
 ### 228. „Hubaxis jest już przyzwany…” choć Hubaxisa nie ma – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`

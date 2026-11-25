@@ -214,6 +214,7 @@ class Npc final {
     std::string      nbMoveDebug() const;
     /// NB fix 146: the character is not drawn (beyond the range of drawing of characters); its AI goes on
     void             nbSetHidden(bool h) { visual.nbSetHidden(h); }
+    void             nbAnimLayers(std::vector<Pose::LayerInfo>& out) const;   // NB fix 229: for the log of the hero
     auto       displayPosition() const -> Tempest::Vec3;
     void       setVisual    (std::string_view visual);
     void       setVisual    (const Skeleton*  visual);

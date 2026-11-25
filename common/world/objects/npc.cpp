@@ -4823,6 +4823,11 @@ bool Npc::nbHasGotoVob() const {
   return aiQueue.has(AI_GoToNpc) || go2.flag==GoToHint::GT_Item;
   }
 
+// NB fix 229: the animations that play now (the watch of the hero in the log)
+void Npc::nbAnimLayers(std::vector<Pose::LayerInfo>& out) const {
+  visual.pose().layerInfo(out,owner.tickCount());
+  }
+
 float Npc::nbAuraScale() const {
   if(nbAuraSpeed==1.f || (nbAuraUntil!=0 && nbAuraUntil<owner.tickCount()))
     return 1.f;
@@ -5699,6 +5704,10 @@ Npc::BeginCastResult Npc::beginCastSpell() {
   switch(code) {
     case SPL_SENDSTOP:
     case SPL_DONTINVEST:
+      // NB fix 229: the logic of the spell refused the cast (Spell_Logic_*: the price, a condition of NB) - in the log
+      if(isPlayer())
+        Log::i("[hero] spell refused: ",active->displayName()," (spell ",active->spellId(),", ",
+               code==SPL_SENDSTOP ? "SPL_SENDSTOP" : "SPL_DONTINVEST",", mana ",attribute(ATR_MANA),")");
       setAnim(Anim::MagNoMana);
       castLevel        = CS_NoCast;
       currentSpellCast = size_t(-1);

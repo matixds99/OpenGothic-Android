@@ -1160,9 +1160,10 @@ void Gothic::setupVmCommonApi(zenkit::DaedalusVm& vm) {
   vm.register_external("introducechapter", [this](std::string_view title, std::string_view subtitle, std::string_view img, std::string_view sound, int time){ introducechapter(title, subtitle, img, sound, time); });
   vm.register_external("playvideo",        [this](std::string_view name){ return playvideo(name); });
   vm.register_external("playvideoex",      [this](std::string_view name, bool a, bool b){ return playvideoex(name, a, b); });
-  vm.register_external("printscreen",      [this](std::string_view msg, int posx, int posy, std::string_view font, int timesec){ return printscreen(msg, posx, posy, font, timesec); });
-  vm.register_external("printdialog",      [this](int dialognr, std::string_view msg, int posx, int posy, std::string_view font, int timesec){ return printdialog(dialognr, msg, posx, posy, font, timesec); });
-  vm.register_external("print",            [this](std::string_view msg){ print(msg); });
+  // NB fix 229: "[print]" in the log - the message and the functions of the scripts that showed it
+  vm.register_external("printscreen",      [this,&vm](std::string_view msg, int posx, int posy, std::string_view font, int timesec){ GameScript::nbPrintLog(vm,msg); return printscreen(msg, posx, posy, font, timesec); });
+  vm.register_external("printdialog",      [this,&vm](int dialognr, std::string_view msg, int posx, int posy, std::string_view font, int timesec){ GameScript::nbPrintLog(vm,msg); return printdialog(dialognr, msg, posx, posy, font, timesec); });
+  vm.register_external("print",            [this,&vm](std::string_view msg){ GameScript::nbPrintLog(vm,msg); print(msg); });
 
   vm.register_external("doc_create",          [this](){ return doc_create(); });
   vm.register_external("doc_createmap",       [this](){ return doc_createmap(); });

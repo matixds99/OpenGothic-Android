@@ -1,5 +1,5 @@
 diff --git a/include/zenkit/DaedalusVm.hh b/include/zenkit/DaedalusVm.hh
-index 17a81ee..6aa38f8 100644
+index 17a81ee..b37580a 100644
 --- a/include/zenkit/DaedalusVm.hh
 +++ b/include/zenkit/DaedalusVm.hh
 @@ -331,6 +331,11 @@ namespace zenkit {
@@ -25,11 +25,18 @@ index 17a81ee..6aa38f8 100644
  		ZKAPI void unsafe_jump(uint32_t address);
  		ZKAPI std::shared_ptr<DaedalusInstance> unsafe_get_gi();
  		ZKAPI void unsafe_set_gi(std::shared_ptr<DaedalusInstance> i);
-@@ -1000,6 +1009,8 @@ namespace zenkit {
+@@ -996,10 +1005,15 @@ namespace zenkit {
+ 		/// \brief Obtain a random free temporary string index.
+ 		uint32_t get_free_string();
+ 
++	public:
++		/// \brief The functions of the scripts that run now, the innermost first (OpenGothic: also for the log of the game)
++		[[nodiscard]] ZKAPI std::string call_chain() const;
++
+ 	private:
  		std::array<DaedalusStackFrame, stack_size> _m_stack;
  		uint16_t _m_stack_ptr {0};
  
-+		[[nodiscard]] std::string call_chain() const;
 +		DaedalusSymbol* _m_instance_sym {nullptr};
  		std::vector<DaedalusCallStackFrame> _m_call_stack;
  		std::unordered_map<DaedalusSymbol*, std::function<void(DaedalusVm&)>> _m_externals;

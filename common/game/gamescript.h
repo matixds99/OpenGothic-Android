@@ -214,6 +214,7 @@ class GameScript final {
     int32_t          nbIntVar(std::string_view name);
     bool             nbNextHitIgnore(Npc& hero);              // NB fix 164: ItPo_HitPotion          // a global int of the scripts (-1: none)
     void             nbPartyTeleportTick();                    // NB fix 161
+    void             nbHeroWatchTick();                        // NB fix 229
     void             nbPartyFocusTick();                       // NB fix 163
     /// 0: the player does not open locks now; 1: by strength (a melee weapon drawn, RX_ForcePickLock); 2: by magic (the
     /// rune of the unlocking drawn); 3: with lock picks (no weapon, the talent and 100 of dexterity)
@@ -257,6 +258,8 @@ class GameScript final {
     int32_t          nbOreStock(const Interactive& mob) const;
     /// NB fix 136: a window that may show the inventory of a body is open (the bodies are not removed then)
     static inline bool nbUiBusy = false;
+    /// NB fix 229: "[print]" in the log - a message of the scripts on the screen and the functions that showed it
+    static void      nbPrintLog(zenkit::DaedalusVm& vm, std::string_view text);
     void             nbBossHit(Npc& target, Npc& attacker);    // NB fix 100: AI_OnHit_, AI_OnGetDamage_ of the bosses
     void             nbBossTick();                             // NB fix 100: AI_OnTick_, AI_OnBreak_ every second
     zenkit::DaedalusSymbol* nbInstanceFunc(std::string_view prefix, Npc& npc);

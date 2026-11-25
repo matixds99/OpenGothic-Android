@@ -20,6 +20,7 @@
 #include <map>
 #include <type_traits>
 #include <unordered_map>
+#include <cstring>
 #include <unordered_set>
 
 #include "game/compatibility/directmemory.h"
@@ -362,6 +363,26 @@ struct NbState {
   float                                       slowApplied   = 1.f;
   uint64_t                                    nextAuraCheck = 0;   // NB fix 227
   uint64_t                                    nextSummonFlags = 0; // NB fix 228
+  // NB fix 229: the watch of the hero - what he has and does, and the variables of the scripts that changed
+  uint64_t                                    heroWatchNext = 0;
+  std::string                                 heroGuild, heroWeapon, heroArmor, heroMelee, heroRange, heroSummons, heroTrans;
+  std::string                                 heroAnim;
+  uint64_t                                    heroAnimWindow = 0;
+  int                                         heroAnimLines  = 0;
+  const void*                                 varWorld = nullptr;
+  uint64_t                                    varLearnUntil = 0;
+  uint64_t                                    varNext = 0;
+  uint64_t                                    varCntStart = 0;
+  std::vector<uint32_t>                       varIdx;    // the symbol
+  std::vector<uint16_t>                       varElem;   // the element of an array
+  std::vector<int32_t>                        varLast;
+  std::vector<uint8_t>                        varCnt;
+  std::vector<uint8_t>                        varMute;
+  const void*                                 aivOwner = nullptr;
+  std::vector<std::string>                    aivName;
+  std::vector<int32_t>                        aivLast;
+  std::vector<uint8_t>                        aivCnt;
+  std::vector<uint8_t>                        aivMute;
   // NB fix 161: the companions go with the hero when he teleports (a jump of his position in the same world)
   const World*                                partyWorld    = nullptr;
   Tempest::Vec3                               partyHeroPos;
@@ -1874,16 +1895,17 @@ void GameScript::initCommon() {
       });
     bindNb("RX_PRINTDEBUGINFOFUNC",  [](std::string_view)     {});
     bindNb("RX_PRINTPERF",           [](std::string_view, int32_t) {});
-    bindNb("RX_PRINTP",              [](std::string_view msg) { Gothic::inst().onPrint(std::string(msg).c_str()); });
+    bindNb("RX_PRINTP",              [this](std::string_view msg) { nbPrintLog(vm,msg); Gothic::inst().onPrint(std::string(msg).c_str()); });
     // the messages of NB on the screen (the plugin draws them; bound only if they are externals in GOTHIC.DAT)
-    bindNb("AI_PRINT",               [](std::string_view msg) { Gothic::inst().onPrint(std::string(msg).c_str()); });
-    bindNb("AI_PRINTRED",            [](std::string_view msg) { Gothic::inst().onPrint(std::string(msg).c_str()); });
-    bindNb("AI_PRINTBONUS",          [](std::string_view msg) { Gothic::inst().onPrint(std::string(msg).c_str()); });
-    bindNb("AI_FASTPRINTSKILLCRAFT", [](std::string_view msg) { Gothic::inst().onPrint(std::string(msg).c_str()); });
-    bindNb("AI_NOTICEPRINT",         [](int32_t, int32_t, std::string_view msg) { Gothic::inst().onPrint(std::string(msg).c_str()); });
+    bindNb("AI_PRINT",               [this](std::string_view msg) { nbPrintLog(vm,msg); Gothic::inst().onPrint(std::string(msg).c_str()); });
+    bindNb("AI_PRINTRED",            [this](std::string_view msg) { nbPrintLog(vm,msg); Gothic::inst().onPrint(std::string(msg).c_str()); });
+    bindNb("AI_PRINTBONUS",          [this](std::string_view msg) { nbPrintLog(vm,msg); Gothic::inst().onPrint(std::string(msg).c_str()); });
+    bindNb("AI_FASTPRINTSKILLCRAFT", [this](std::string_view msg) { nbPrintLog(vm,msg); Gothic::inst().onPrint(std::string(msg).c_str()); });
+    bindNb("AI_NOTICEPRINT",         [this](int32_t, int32_t, std::string_view msg) { nbPrintLog(vm,msg); Gothic::inst().onPrint(std::string(msg).c_str()); });
     // NB fix 45: the other messages of the plugin. Without them a refusal was silent, e.g. at a teacher
     // (B_TeachStamina: AI_PrintItemInfo / AI_PrintClr "not enough learning points / gold", "improve by +1"...)
-    const auto nbPrint = [](std::string_view msg) {
+    const auto nbPrint = [this](std::string_view msg) {
+      nbPrintLog(vm,msg);   // NB fix 229
       if(!msg.empty())
         Gothic::inst().onPrint(std::string(msg).c_str());
       };
@@ -1901,7 +1923,8 @@ void GameScript::initCommon() {
     bindNb("AI_PRINTPOS",       [nbPrint](std::string_view msg, int32_t, int32_t, std::string_view, int32_t, int32_t) { nbPrint(msg); });
     bindNb("AI_PRINTPOS_CLEAR", []() {});
     bindNb("AI_PRINTCLRSCREEN", []() {});
-    bindNb("PRINTSCREENCOLOR",  [](std::string_view msg, int32_t x, int32_t y, std::string_view font, int32_t time, std::string_view color) {
+    bindNb("PRINTSCREENCOLOR",  [this](std::string_view msg, int32_t x, int32_t y, std::string_view font, int32_t time, std::string_view color) {
+      nbPrintLog(vm,msg);   // NB fix 229
       // NB fix 62: the colors of OpenGothic fonts: red (the karma without the prayer of the day: "#FF0000"), yellow
       auto type = Resources::FontType::Normal;
       if(color.size()==7 && color[0]=='#') {
@@ -5656,6 +5679,7 @@ void GameScript::tick(uint64_t dt) {
   // NB fix 176: the time of the game until the summons can be called to the hero again
   nb->second.summonCallCd -= std::min(nb->second.summonCallCd,dt);
   nbTransformTick(dt);   // NB fix 181
+  nbHeroWatchTick();     // NB fix 229
   if(tickCount()>=nb->second.monsterStatsNext) {
     nb->second.monsterStatsNext = tickCount()+1000;
     nbMonsterStatsTick();   // NB fix 185
@@ -8412,6 +8436,7 @@ void GameScript::ai_pointatnpc(std::shared_ptr<zenkit::INpc> npcRef, std::shared
   }
 
 int GameScript::ai_printscreen(std::string_view msg, int posx, int posy, std::string_view font, int timesec) {
+  nbPrintLog(vm,msg);   // NB fix 229
   auto npc = findNpc(vm.global_self());
   if(npc==nullptr)
     npc = owner.player();
@@ -10411,6 +10436,316 @@ void GameScript::nbPartyFocusTick() {
 // NB fix 161: the companions of the hero (AIV_PARTYMEMBER) and his summoned creatures go with him when he teleports (a
 // rune, a scroll, a script): his position jumps by more than 30 m from one frame to the next in the same world. Only those
 // that were with him (up to 30 m from where he was) come; who waits somewhere else stays there
+/// NB fix 229: a line of the log for every message of the scripts on the screen, with the functions that showed it - the
+/// refusals of NB are such messages ("Hubaxis jest już przyzwany..." of Spell_Logic_SumKhub). The same text once in 10 s.
+/// NB fix 229: an animation of the walk (the run, the stand, the turn, the jump, the swim... with any weapon) - not logged
+static bool nbIsLocomotion(const std::string& n) {
+  if(n.rfind("R_",0)==0 || n.rfind("C_",0)==0)
+    return true;   // the random moves at the stand, the looks
+  static const char* weap[] = {"FIST","1H","2H","BOW","CBOW","MAG"};
+  static const char* loco[] = {"RUN","WALK","SNEAK","STAND","TURN","JUMP","FALL","SWIM","DIVE","STRAFE","WATCH","AIM"};
+  size_t pos = 0;
+  bool   any = false;
+  while(pos<=n.size()) {
+    size_t e = n.find('_',pos);
+    if(e==std::string::npos)
+      e = n.size();
+    std::string_view t(n.data()+pos,e-pos);
+    pos = e+1;
+    if(t.empty() || t=="S" || t=="T" || t=="2")
+      continue;
+    for(auto w:weap)
+      if(t.rfind(w,0)==0 && t.size()>std::strlen(w)) {
+        t.remove_prefix(std::strlen(w));
+        break;
+        }
+    bool ok = false;
+    for(auto l:loco)
+      if(t.rfind(l,0)==0)
+        ok = true;
+    if(!ok)
+      return false;
+    any = true;
+    }
+  return any;
+  }
+
+void GameScript::nbPrintLog(zenkit::DaedalusVm& vm, std::string_view text) {
+  if(text.size()<=2)
+    return;   // the glyphs of the icons of PrintStatusBars
+  static std::unordered_map<std::string,uint64_t> seen;
+  if(seen.size()>2000)
+    seen.clear();
+  const uint64_t now = Application::tickCount();
+  std::string key(text);
+  auto it = seen.find(key);
+  if(it!=seen.end() && now<it->second+10000)
+    return;
+  seen[key] = now;
+  // at most 20 lines in 10 s (a function of the scripts that shows a counter every second)
+  static uint64_t window = 0;
+  static int      lines  = 0, skipped = 0;
+  if(now>window+10000) {
+    if(skipped>0)
+      Log::i("[print] ... ",skipped," more messages left out");
+    window  = now;
+    lines   = 0;
+    skipped = 0;
+    }
+  if(++lines>20) {
+    ++skipped;
+    return;
+    }
+  const std::string chain = vm.call_chain();
+  if(chain=="?")
+    Log::i("[print] ",text); else
+    Log::i("[print] ",text," (",chain,")");
+  }
+
+/// NB fix 229: the watch of the hero (the idea of the player: "a logger on the player"). Every 0.5 s: the guild, the
+/// weapon in the hands (the rune, the spell), the armor and the weapons at the belt, the transformation, the summoned
+/// creatures - a line when one of them changes. The animations of the actions (not the walk, the run, the stand), at most
+/// 20 lines in 10 s. Every 2 s: the variables of the scripts and the aivars of the hero that changed (the ones that change
+/// all the time - the timers, the counters - are left out: more than once in the first 20 s, more than 8 times in 5 min).
+void GameScript::nbHeroWatchTick() {
+  auto nb = nbStates.find(this);
+  auto* hero = world().player();
+  if(nb==nbStates.end() || hero==nullptr)
+    return;
+  auto& st = nb->second;
+  const uint64_t now = Application::tickCount();
+
+  const auto instName = [this](const Item* it) -> std::string {
+    if(it==nullptr)
+      return "-";
+    auto* sym = vm.find_symbol_by_index(uint32_t(it->clsId()));
+    return sym!=nullptr ? sym->name() : std::string("?");
+    };
+
+  // the animations of the actions
+  {
+    std::vector<Pose::LayerInfo> lays;
+    hero->nbAnimLayers(lays);
+    std::string cur;
+    for(auto& l:lays) {
+      if(l.seq==nullptr)
+        continue;
+      const std::string& n = l.seq->name;
+      if(nbIsLocomotion(n))
+        continue;
+      if(!cur.empty())
+        cur += " + ";
+      cur += n;
+      }
+    if(!cur.empty() && cur!=st.heroAnim) {
+      if(now>st.heroAnimWindow+10000) {
+        st.heroAnimWindow = now;
+        st.heroAnimLines  = 0;
+        }
+      if(++st.heroAnimLines<=20)
+        Log::i("[hero] anim: ",cur);
+      }
+    st.heroAnim = cur;
+  }
+
+  if(now>=st.heroWatchNext) {
+    st.heroWatchNext = now+500;
+    const auto report = [](const char* what, std::string& was, const std::string& cur) {
+      if(cur==was)
+        return;
+      if(!was.empty())
+        Log::i("[hero] ",what,": ",was," -> ",cur); else
+        Log::i("[hero] ",what,": ",cur);
+      was = cur;
+      };
+    auto& inv = const_cast<Inventory&>(hero->inventory());
+
+    report("guild",st.heroGuild,std::to_string(hero->handle().guild)+" (true "+std::to_string(hero->trueGuild())+")");
+
+    static const char* wsName[] = {"none","fist","1h","2h","bow","cbow","magic"};
+    const auto ws = uint8_t(hero->weaponState());
+    std::string w = ws<7 ? wsName[ws] : "?";
+    if(hero->weaponState()==WeaponState::Mage) {
+      const Item* sp = inv.activeWeapon();
+      w += " "+instName(sp);
+      if(sp!=nullptr)
+        w += " (spell "+std::to_string(sp->spellId())+")";
+      }
+    else if(hero->weaponState()!=WeaponState::NoWeapon && hero->weaponState()!=WeaponState::Fist) {
+      w += " "+instName(inv.activeWeapon());
+      }
+    report("in hands",st.heroWeapon,w);
+    report("armor",st.heroArmor,instName(inv.currentArmor())+(inv.currentHelmet()!=nullptr ? " + "+instName(inv.currentHelmet()) : std::string()));
+    report("melee",st.heroMelee,instName(inv.currentMeleeWeapon()));
+    report("ranged",st.heroRange,instName(inv.currentRangedWeapon()));
+
+    std::string trans = "-";
+    if(hero->isTransformed()) {
+      auto* sym = vm.find_symbol_by_index(hero->handle().symbol_index());
+      trans = sym!=nullptr ? sym->name() : std::string("?");
+      }
+    report("transformation",st.heroTrans,trans);
+
+    // the summoned creatures: the names (the life only in the line of a change)
+    std::vector<std::pair<std::string,std::string>> sum;
+    world().detectNpc(hero->position(),5000.f,[&](Npc& n) {
+      if(n.isDead() || n.isPlayer() || !nbIsSummon(n))
+        return;
+      auto* sym = vm.find_symbol_by_index(n.handle().symbol_index());
+      std::string nm = sym!=nullptr ? sym->name() : std::string("?");
+      sum.emplace_back(nm,nm+" "+std::to_string(n.attribute(ATR_HITPOINTS))+"/"+std::to_string(n.attribute(ATR_HITPOINTSMAX)));
+      });
+    std::sort(sum.begin(),sum.end());
+    std::string key, full;
+    for(auto& i:sum) {
+      if(!key.empty()) { key += ", "; full += ", "; }
+      key  += i.first;
+      full += i.second;
+      }
+    if(key.empty()) {
+      key  = "-";
+      full = "-";
+      }
+    if(key!=st.heroSummons) {
+      Log::i("[hero] summons (",int(sum.size()),"): ",full);
+      st.heroSummons = key;
+      }
+    }
+
+  if(now<st.varNext)
+    return;
+  st.varNext = now+2000;
+
+  // the variables of the scripts
+  if(st.varWorld!=&world()) {
+    st.varWorld = &world();
+    st.varIdx.clear();
+    st.varElem.clear();
+    for(uint32_t i=0; i<vm.symbols().size(); ++i) {
+      auto* sym = vm.find_symbol_by_index(i);
+      if(sym==nullptr || sym->type()!=zenkit::DaedalusDataType::INT || sym->is_const() || sym->is_member() || sym->is_external())
+        continue;
+      if(sym->name().find('.')!=std::string::npos || sym->count()==0 || sym->count()>64)
+        continue;   // the local variables of the functions
+      for(uint32_t e=0; e<sym->count(); ++e) {
+        st.varIdx .push_back(i);
+        st.varElem.push_back(uint16_t(e));
+        }
+      }
+    st.varLast.assign(st.varIdx.size(),0);
+    st.varCnt .assign(st.varIdx.size(),0);
+    st.varMute.assign(st.varIdx.size(),0);
+    for(size_t k=0; k<st.varIdx.size(); ++k)
+      st.varLast[k] = vm.find_symbol_by_index(st.varIdx[k])->get_int(st.varElem[k]);
+    st.varLearnUntil = now+20000;
+    st.varCntStart   = now;
+    Log::i("[var] watch: ",int(st.varIdx.size())," variables of the scripts");
+    return;
+    }
+
+  const bool learn = now<st.varLearnUntil;
+  if(now>st.varCntStart+300000) {
+    st.varCntStart = now;
+    std::fill(st.varCnt.begin(),st.varCnt.end(),0);
+    std::fill(st.aivCnt.begin(),st.aivCnt.end(),0);
+    }
+
+  const auto varName = [&](size_t k) {
+    auto* sym = vm.find_symbol_by_index(st.varIdx[k]);
+    std::string n = sym->name();
+    if(sym->count()>1)
+      n += "["+std::to_string(st.varElem[k])+"]";
+    return n;
+    };
+
+  int lines = 0, more = 0;
+  for(size_t k=0; k<st.varIdx.size(); ++k) {
+    const int32_t v = vm.find_symbol_by_index(st.varIdx[k])->get_int(st.varElem[k]);
+    if(v==st.varLast[k])
+      continue;
+    const int32_t was = st.varLast[k];
+    st.varLast[k] = v;
+    if(st.varMute[k])
+      continue;
+    if(st.varCnt[k]<255)
+      ++st.varCnt[k];
+    if(learn)
+      continue;
+    if(st.varCnt[k]>8) {
+      st.varMute[k] = 1;
+      Log::i("[var] ",varName(k),": changes all the time, left out");
+      continue;
+      }
+    if(lines<40) {
+      Log::i("[var] ",varName(k),": ",was," -> ",v);
+      ++lines;
+      } else {
+      ++more;
+      }
+    }
+  if(more>0)
+    Log::i("[var] ... and ",more," more");
+
+  if(!learn && st.varLearnUntil!=0) {
+    // the end of the first 20 s: the variables that changed more than once are the timers and the counters
+    std::string muted;
+    int cnt = 0;
+    for(size_t k=0; k<st.varIdx.size(); ++k) {
+      if(st.varCnt[k]>=2 && !st.varMute[k]) {
+        st.varMute[k] = 1;
+        if(++cnt<=30)
+          muted += (muted.empty() ? "" : ", ")+varName(k);
+        }
+      }
+    Log::i("[var] left out (change all the time): ",cnt>0 ? muted : std::string("-"),cnt>30 ? " ..." : "");
+    st.varLearnUntil = 0;
+    }
+
+  // the variables of the hero himself (aivar), with the names of the constants AIV_* / AIVRX_*
+  const auto& h = hero->handle();
+  if(st.aivName.empty()) {
+    st.aivName.assign(zenkit::INpc::aivar_count,std::string());
+    for(uint32_t i=0; i<vm.symbols().size(); ++i) {
+      auto* sym = vm.find_symbol_by_index(i);
+      if(sym==nullptr || sym->type()!=zenkit::DaedalusDataType::INT || !sym->is_const() || sym->count()!=1)
+        continue;
+      const auto& n = sym->name();
+      if(n.rfind("AIV_",0)!=0 && n.rfind("AIVRX_",0)!=0)
+        continue;
+      const int32_t v = sym->get_int();
+      if(v<0 || v>=int32_t(zenkit::INpc::aivar_count))
+        continue;
+      auto& dst = st.aivName[size_t(v)];
+      if(dst.empty())
+        dst = n;
+      else if(dst.find('/')==std::string::npos)
+        dst += "/"+n;
+      }
+    }
+  if(st.aivOwner!=&h) {
+    st.aivOwner = &h;
+    st.aivLast.assign(h.aivar,h.aivar+zenkit::INpc::aivar_count);
+    st.aivCnt .assign(zenkit::INpc::aivar_count,0);
+    st.aivMute.assign(zenkit::INpc::aivar_count,0);
+    return;
+    }
+  for(size_t k=0; k<zenkit::INpc::aivar_count; ++k) {
+    const int32_t v = h.aivar[k];
+    if(v==st.aivLast[k])
+      continue;
+    const int32_t was = st.aivLast[k];
+    st.aivLast[k] = v;
+    if(st.aivMute[k])
+      continue;
+    if(++st.aivCnt[k]>8) {
+      st.aivMute[k] = 1;
+      Log::i("[hero] aivar[",int(k),"] ",st.aivName[k],": changes all the time, left out");
+      continue;
+      }
+    Log::i("[hero] aivar[",int(k),"] ",st.aivName[k],": ",was," -> ",v);
+    }
+  }
+
 void GameScript::nbPartyTeleportTick() {
   auto& st   = nbStates[this];
   auto* hero = world().player();
