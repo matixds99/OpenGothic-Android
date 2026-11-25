@@ -8,3 +8,11 @@ Log: `Gothic II\System\Autorun\nblog.txt`. Bez `nblog.cfg` DLL nic nie robi. Zł
 **nblog.cfg:** `SELF`/`OTHER` = indeksy symboli, `MINMS` = ta sama funkcja nie częściej niż co N ms, dalej linie `pozycja nazwa`.
 
 **Budowa:** `./build.sh` (clang + lld-link, bez Windows SDK). Dla `Gothic2.exe` z symbolami (hook `zCParser::DoStack` 0x791960).
+
+## Porównanie z OpenGothic
+
+`nbcompare.py` zestawia `nblog.txt` (PC) z `nbcalls.txt` (OpenGothic zapisuje go, gdy w folderze gry leży `nblog.cfg` lub `nbcalls.cfg`, ta sama lista funkcji):
+
+```
+python3 tools/nbcompare.py nblog.txt nbcalls.txt --anchor AI_ONGETDAMAGE_IMARAH --npc "Im'Arah"
+```

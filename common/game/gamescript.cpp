@@ -1,5 +1,6 @@
 #include "gamescript.h"
 #include "utils/fileext.h"
+#include "utils/nbcalls.h"
 
 #include <set>
 
@@ -1153,6 +1154,7 @@ GameScript::GameScript(GameSession &owner)
   if (vm.global_self() == nullptr || vm.global_other() == nullptr || vm.global_item() == nullptr ||
       vm.global_victim() == nullptr || vm.global_hero() == nullptr)
     throw std::runtime_error("Cannot find script symbol SELF, OTHER, ITEM, VICTIM, or HERO! Cannot proceed!");
+  NbCalls::hook(vm);   // NB fix 241: the tracer of calls for the comparison with PC (only with nbcalls.cfg / nblog.cfg)
 
   vmLang = Gothic::inst().settingsGetI("GAME", "language");
   vm.register_exception_handler([](zenkit::DaedalusVm& v, const zenkit::DaedalusScriptError& exc, const zenkit::DaedalusInstruction& instr) {

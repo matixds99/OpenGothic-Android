@@ -1,8 +1,18 @@
 diff --git a/include/zenkit/DaedalusVm.hh b/include/zenkit/DaedalusVm.hh
-index 17a81ee..b37580a 100644
+index 17a81ee..d2602ab 100644
 --- a/include/zenkit/DaedalusVm.hh
 +++ b/include/zenkit/DaedalusVm.hh
-@@ -331,6 +331,11 @@ namespace zenkit {
+@@ -103,6 +103,9 @@ namespace zenkit {
+ 	public:
+ 		static constexpr auto stack_size = 2048;
+ 
++		/// \brief Optional: called at the start of every call of a script function (the call tracer of OpenGothic, NB fix 241).
++		std::function<void(DaedalusVm&, DaedalusSymbol const*)> on_call;
++
+ 		/// \brief Creates a DaedalusVM DaedalusInstance for the given script.
+ 		/// \param scr The script to load into the VM.
+ 		ZKAPI explicit DaedalusVm(DaedalusScript&& scr, uint8_t flags = DaedalusVmExecutionFlag::NONE);
+@@ -331,6 +334,11 @@ namespace zenkit {
  		pop_reference();
  		[[nodiscard]] ZKAPI bool top_is_reference() const;
  
@@ -14,7 +24,7 @@ index 17a81ee..b37580a 100644
  		/// \brief Registers a Daedalus external function.
  		///
  		/// <p>External functions are a way for Daedalus scripts to execute more complicated code in the C++ world
-@@ -638,6 +643,10 @@ namespace zenkit {
+@@ -638,6 +646,10 @@ namespace zenkit {
  		///
  		/// \param sym The symbol to unsafe_call.
  		ZKAPI void unsafe_call(DaedalusSymbol const* sym);
@@ -25,7 +35,7 @@ index 17a81ee..b37580a 100644
  		ZKAPI void unsafe_jump(uint32_t address);
  		ZKAPI std::shared_ptr<DaedalusInstance> unsafe_get_gi();
  		ZKAPI void unsafe_set_gi(std::shared_ptr<DaedalusInstance> i);
-@@ -996,10 +1005,15 @@ namespace zenkit {
+@@ -996,10 +1008,15 @@ namespace zenkit {
  		/// \brief Obtain a random free temporary string index.
  		uint32_t get_free_string();
  
@@ -176,7 +186,7 @@ index 8797a87..d8c6786 100644
  			syn = std::make_shared<AiMove>();
  			break;
 diff --git a/src/DaedalusVm.cc b/src/DaedalusVm.cc
-index 0b4420e..0a71da5 100644
+index 0b4420e..ddfebab 100644
 --- a/src/DaedalusVm.cc
 +++ b/src/DaedalusVm.cc
 @@ -86,6 +86,23 @@ namespace zenkit {
@@ -203,7 +213,15 @@ index 0b4420e..0a71da5 100644
  	std::shared_ptr<DaedalusInstance> DaedalusVm::init_opaque_instance(DaedalusSymbol* sym) {
  		auto cls = sym;
  		while (cls != nullptr && cls->type() != DaedalusDataType::CLASS) {
-@@ -118,6 +135,46 @@ namespace zenkit {
+@@ -104,6 +121,7 @@ namespace zenkit {
+ 	}
+ 
+ 	void DaedalusVm::unsafe_call(DaedalusSymbol const* sym) {
++		if (on_call) on_call(*this, sym);
+ 		push_call(sym);
+ 		jump(sym->address());
+ 
+@@ -118,6 +136,46 @@ namespace zenkit {
  		this->jump(address);
  	}
  
@@ -250,7 +268,7 @@ index 0b4420e..0a71da5 100644
  	std::shared_ptr<DaedalusInstance> DaedalusVm::unsafe_get_gi() {
  		return _m_instance;
  	}
-@@ -330,7 +387,7 @@ namespace zenkit {
+@@ -330,7 +388,7 @@ namespace zenkit {
  					auto result = ref->get_int(idx, context.get()) + value;
  					ref->set_int(result, idx, context.get());
  				} else if (ref->is_member()) {
@@ -259,7 +277,7 @@ index 0b4420e..0a71da5 100644
  				}
  
  				break;
-@@ -348,7 +405,7 @@ namespace zenkit {
+@@ -348,7 +406,7 @@ namespace zenkit {
  					auto result = ref->get_int(idx, context.get()) - value;
  					ref->set_int(result, idx, context.get());
  				} else if (ref->is_member()) {
@@ -268,7 +286,7 @@ index 0b4420e..0a71da5 100644
  				}
  				break;
  			}
-@@ -365,7 +422,7 @@ namespace zenkit {
+@@ -365,7 +423,7 @@ namespace zenkit {
  					auto result = ref->get_int(idx, context.get()) * value;
  					ref->set_int(result, idx, context.get());
  				} else if (ref->is_member()) {
@@ -277,7 +295,7 @@ index 0b4420e..0a71da5 100644
  				}
  
  				break;
-@@ -387,7 +444,7 @@ namespace zenkit {
+@@ -387,7 +445,7 @@ namespace zenkit {
  					auto result = ref->get_int(idx, context.get()) / value;
  					ref->set_int(result, idx, context.get());
  				} else if (ref->is_member()) {
@@ -286,7 +304,7 @@ index 0b4420e..0a71da5 100644
  				}
  
  				break;
-@@ -412,6 +469,7 @@ namespace zenkit {
+@@ -412,6 +470,7 @@ namespace zenkit {
  					throw DaedalusVmException {"gmovi: no symbol found for index"};
  				}
  				_m_instance = sym->get_instance();
@@ -294,7 +312,7 @@ index 0b4420e..0a71da5 100644
  				break;
  			}
  			case DaedalusOpcode::PUSHVV:
-@@ -548,8 +606,9 @@ namespace zenkit {
+@@ -548,8 +607,9 @@ namespace zenkit {
  		// Move function arguments further back, since we're currently at the call instruction and the
  		// arguments for the next call have already been pushed.
  		_m_stack_ptr -= params.size();
@@ -306,7 +324,7 @@ index 0b4420e..0a71da5 100644
  		}
  
  		for (auto& l : locals) {
-@@ -699,6 +758,13 @@ namespace zenkit {
+@@ -699,6 +759,13 @@ namespace zenkit {
  			return std::get<int32_t>(v.value);
  		}
  
@@ -320,7 +338,7 @@ index 0b4420e..0a71da5 100644
  		throw DaedalusVmException {"tried to pop_int but frame does not contain a int."};
  	}
  
-@@ -787,7 +853,7 @@ namespace zenkit {
+@@ -787,7 +854,7 @@ namespace zenkit {
  				throw DaedalusNoContextError {s};
  			}
  
@@ -329,7 +347,7 @@ index 0b4420e..0a71da5 100644
  			return empty;
  		}
  
-@@ -1070,7 +1136,7 @@ namespace zenkit {
+@@ -1070,7 +1137,7 @@ namespace zenkit {
  				throw DaedalusNoContextError {sym};
  			}
  
@@ -338,7 +356,7 @@ index 0b4420e..0a71da5 100644
  			return 0;
  		}
  
-@@ -1090,7 +1156,7 @@ namespace zenkit {
+@@ -1090,7 +1157,7 @@ namespace zenkit {
  				throw DaedalusNoContextError {sym};
  			}
  
@@ -347,7 +365,7 @@ index 0b4420e..0a71da5 100644
  			return 0;
  		}
  
-@@ -1109,7 +1175,7 @@ namespace zenkit {
+@@ -1109,7 +1176,7 @@ namespace zenkit {
  		    !(_m_flags & DaedalusVmExecutionFlag::ALLOW_NULL_INSTANCE_ACCESS)) {
  			ref->set_int(value, index, context.get());
  		} else if (ref->is_member()) {
@@ -356,7 +374,7 @@ index 0b4420e..0a71da5 100644
  		}
  	}
  
-@@ -1125,7 +1191,7 @@ namespace zenkit {
+@@ -1125,7 +1192,7 @@ namespace zenkit {
  		    !(_m_flags & DaedalusVmExecutionFlag::ALLOW_NULL_INSTANCE_ACCESS)) {
  			ref->set_float(value, index, context.get());
  		} else if (ref->is_member()) {
@@ -365,7 +383,7 @@ index 0b4420e..0a71da5 100644
  		}
  	}
  
-@@ -1141,7 +1207,7 @@ namespace zenkit {
+@@ -1141,7 +1208,7 @@ namespace zenkit {
  		    !(_m_flags & DaedalusVmExecutionFlag::ALLOW_NULL_INSTANCE_ACCESS)) {
  			ref->set_string(value, index, context.get());
  		} else if (ref->is_member()) {

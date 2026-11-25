@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **241**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **242**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 241. Skaner wywołań funkcji: porównanie PC (Winlator) z OpenGothic – 🧪 (26.11.2026)
+- **Pliki:** nowe `common/utils/nbcalls.cpp/.h`, `tools/nbcompare.py`, `lib/ZenKit` (`DaedalusVm::on_call`, `patches/zenkit-opengothic.patch`), `common/game/gamescript.cpp`
+- **Pomysł (26.11):** skoro `nblog.dll` zapisuje na PC wywołania funkcji skryptów, port ma zapisywać to samo, a program ma je zestawiać.
+- **Jak:** z `nblog.cfg` (lub `nbcalls.cfg`) w folderze gry OpenGothic zapisuje `nbcalls.txt` w tym samym formacie co `nblog.txt` (`[ms] NAZWA self=.. other=..`, ta sama lista funkcji, ta sama zasada „nie częściej niż co MINMS”). Bez pliku konfiguracji nic nie robi. `python3 tools/nbcompare.py nblog.txt nbcalls.txt --anchor AI_ONGETDAMAGE_IMARAH --npc "Im'Arah"` liczy od pierwszego trafienia bossa i wypisuje dla każdej funkcji liczbę wywołań, tempo na sekundę, medianę odstępu i czas pierwszego wywołania w obu wersjach, z oznaczeniem funkcji tylko na PC (`<<`), tylko w porcie (`>>`) i o tempie różnym ponad 1,7× (`!`).
+- **Do sprawdzenia:** skopiuj `nblog.cfg` do folderu gry na Androidzie, zagraj tę samą walkę (Im'Arah), wyślij `nbcalls.txt`; razem z `nblog.txt` z PC da to porównanie.
 
 ### 240. Teleport magów: warunek z pluginu to animacja biegu, nie stan ciała – 🧪 (26.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `tools/pc-logger/` (nowe)
