@@ -4790,6 +4790,12 @@ void Npc::commitSpell() {
     // NB fix 84: the projectile of the player follows the creature he aims at
     if(isPlayer() && currentTarget!=nullptr)
       b.setHoming(currentTarget);
+    // NB fix 238: the projectile of a character (the Death Ball, the fire ball... - the TARGET trajectory of their
+    // effects in Gothic) follows its target, turning at most 120 degrees a second. Before it flew straight to where the
+    // hero stood: 56 of the 63 Death Balls of Zeld hit the wall behind the hero
+    else if(!isPlayer() && currentTarget!=nullptr) {
+      b.setHoming(currentTarget,120.f);
+      }
     visual.setMagicWeaponKey(owner,SpellFxKey::Init);
     } else {
     // NOTE: use pfx_ppsIsLoopingChg ?

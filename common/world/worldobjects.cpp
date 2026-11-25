@@ -238,7 +238,7 @@ void WorldObjects::tick(uint64_t dt, uint64_t dtPlayer) {
     return b.isFinished();
     });
   for(auto& b:bullets)
-    b.tickHoming();   // NB fix 84
+    b.tickHoming(dt);   // NB fix 84, 238
 
   for(size_t i=0; i<effects.size();) {
     if(effects[i].timeUntil<owner.tickCount()) {

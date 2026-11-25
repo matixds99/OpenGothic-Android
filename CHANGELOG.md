@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **238**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **239**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **237** – bossy NB (`bodystate_interruptable_override`) nie są odrzucane ciosami (golemy przewracały Zelda co cios, nie mógł czarować) – 🧪
-2. **236** – czary bohatera przelatują przez jego przyzwańców i towarzyszy; `[shot]` w logu: co trafił każdy pocisk czaru; liczniki rzuconych czarów w `[fight]`; flagi trajektorii efektów bez względu na wielkość liter – ✅
-3. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – ✅
-4. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
-5. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
+1. **238** – pociski czarów postaci podążają za celem (do 120°/s), a nie lecą w miejsce, gdzie bohater stał (56 z 63 Kul śmierci Zelda w ścianę) – 🧪
+2. **237** – bossy NB (`bodystate_interruptable_override`) nie są odrzucane ciosami (golemy przewracały Zelda co cios, nie mógł czarować) – ✅
+3. **236** – czary bohatera przelatują przez jego przyzwańców i towarzyszy; `[shot]` w logu: co trafił każdy pocisk czaru; liczniki rzuconych czarów w `[fight]`; flagi trajektorii efektów bez względu na wielkość liter – ✅
+4. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – ✅
+5. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
 
 ---
 
@@ -252,12 +252,21 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 237. Bossy NB nie są odrzucane ciosami – 🧪 (25.11.2026)
+### 238. Pociski czarów postaci podążają za celem – 🧪 (25.11.2026)
+- **Pliki:** `common/world/bullet.cpp`, `common/world/bullet.h`, `common/world/worldobjects.cpp`, `common/world/objects/npc.cpp`
+- **Zgłoszenie (log 25.11, 22:58):** „wciąż on jest za słaby” – `[shot]`: Zeld wystrzelił 63 Kule śmierci, 56 trafiło w ścianę lub ziemię, 1 w bohatera (i 4 w golemy/szkielety).
+- **Przyczyna:** pocisk czaru postaci leciał prosto w punkt, gdzie bohater stał w chwili rzutu; z 11–16 m bohater w ruchu zawsze schodził z linii. W Gothic pociski czarów (trajektoria `TARGET` ich efektów) podążają za celem; w porcie podążał tylko pocisk bohatera (84).
+- **Poprawka:** pocisk czaru postaci podąża za jej celem, skręcając najwyżej 120° na sekundę – trafia biegnącego bohatera, ale szybki unik w ostatniej chwili wciąż działa. `[shot]` ma też drogę pocisku (skąd, dokąd, ile cm).
+- **Uwaga:** obrażenia bohatera w tej walce: Furia Beliara 583 magii − ochrona Zelda 397 = 186 za trafienie (życie i ochrona bossów ×1,5 z ustawienia trudności NB „monster stats … hp ratio 150, prot 150”).
+- **Do sprawdzenia:** Kule śmierci Zelda trafiają (w `[shot] Zeld … hits hero` zamiast `the world`).
+
+### 237. Bossy NB nie są odrzucane ciosami – ✅ (25.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`
 - **Zgłoszenie (log 25.11, 22:39):** Zeld prawie nie atakuje. `[fight]`: w 330 liniach leżał (`body 12` = BS_LIE) 126 razy i spadał (`body 10`) 25 razy; czar zaczął tylko 7 razy, przy 400 decyzjach AI walki. Ciosy kamiennych golemów mają obrażenia obuchowe + „lot” (`dtype=18` = BLUNT|FLY) – każdy odrzucał go na ziemię.
 - **Przyczyna:** `C_NPC.bodystate_interruptable_override` (Zeld ma 1, jak inni bossowie NB) wyłączało w porcie zachwianie (188), ale nie odrzucenie – a odrzucenie z leżeniem to najmocniejsze przerwanie.
 - **Poprawka:** postać z `bodystate_interruptable_override` nie jest odrzucana ciosem z „lotem” (obrażenia liczą się jak dotąd).
 - **Do sprawdzenia:** Zeld z golemami obok – stoi i rzuca Kule śmierci (w `[fight]` rośnie `shot`, `body` rzadko 10/12).
+- **Test (25.11, 22:58):** Zeld już nie leży (`body 12` ani razu, `body 10` raz), rzuca często (`body 28` w 51 liniach, 63 Kule śmierci), ale 56 z nich trafiło w ścianę – 238.
 
 ### 236. Czary bohatera przez przyzwańców; dziennik pocisków (`[shot]`) – ✅ (25.11.2026)
 - **Pliki:** `common/world/bullet.cpp`, `common/world/bullet.h`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/graphics/visualfx.cpp`

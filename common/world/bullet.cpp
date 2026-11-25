@@ -95,6 +95,8 @@ int32_t Bullet::spellId() const {
 
 void Bullet::setOrigin(Npc *n) {
   ow = n;
+  if(obj!=nullptr)
+    nbStart = obj->position();   // NB fix 238
   vfx.setOrigin(n);
   // NB fix 236: the name for the log, while the owner surely lives
   auto* pl = wrld->player();
@@ -106,7 +108,7 @@ Npc *Bullet::origin() const {
   return ow;
   }
 
-void Bullet::tickHoming() {
+void Bullet::tickHoming(uint64_t dt) {
   if(homing==nullptr || obj==nullptr || isFinished())
     return;
   // the target is checked every tick: it may be gone from the world, dead or down
@@ -135,6 +137,22 @@ void Bullet::tickHoming() {
     }
   if(speed<=0.f)
     return;
+  // NB fix 238: a projectile of a character turns only so fast - it follows the hero, but a quick step aside dodges it
+  if(homingTurn>0.f && dt>0) {
+    const auto  a   = cur/speed;
+    const auto  b   = to/len;
+    const float cs  = std::clamp(a.x*b.x+a.y*b.y+a.z*b.z,-1.f,1.f);
+    const float ang = std::acos(cs);
+    const float mx  = homingTurn*float(M_PI)/180.f*float(dt)/1000.f;
+    if(ang>mx && ang>1e-4f) {
+      const float t = mx/ang;
+      auto d = a*(1.f-t)+b*t;
+      const float dl = d.length();
+      if(dl>1e-5f)
+        setDirection(d*(speed/dl));
+      return;
+      }
+    }
   setDirection(to*(speed/len));
   }
 
@@ -207,8 +225,10 @@ void Bullet::nbLogShot(const std::string& what) {
     }
   if(++lines>6)
     return;
+  const auto p = obj!=nullptr ? obj->position() : Tempest::Vec3();
   Tempest::Log::i("[shot] ",ow->isPlayer() ? std::string("hero") : std::string(ow->displayName()),
-                  " spell ",spellId()," hits ",what);
+                  " spell ",spellId()," hits ",what," after ",int((p-nbStart).length())," cm (from ",int(nbStart.x)," ",int(nbStart.y),
+                  " ",int(nbStart.z)," to ",int(p.x)," ",int(p.y)," ",int(p.z),")");
   }
 
 bool Bullet::onCollide(Npc& npc) {
