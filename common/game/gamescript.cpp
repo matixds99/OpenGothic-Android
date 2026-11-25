@@ -5610,6 +5610,16 @@ void GameScript::tick(uint64_t dt) {
     nb->second.nextVobRepair = tickCount()+5000;
     nbRepairVobTrees();   // NB fix 165
     }
+  // NB fix 226: RX_GamePaused / RX_GameVoting belong to the multiplayer of NB, no script sets them - in a single game they
+  // are 0. A save imported from the PC brought 1 in one of them: every monster in ZS_MM_Attack stood ("CONTINUE 2" of
+  // ZS_MM_Attack_Loop: the game is paused - do nothing), the wolves and the goblins did not attack the hero
+  for(const char* name:{"RX_GAMEPAUSED","RX_GAMEVOTING"}) {
+    auto* sym = vm.find_symbol_by_name(name);
+    if(sym!=nullptr && sym->type()==zenkit::DaedalusDataType::INT && sym->count()>0 && sym->get_int()!=0) {
+      nbCtx("multiplayer flag ",name," was ",sym->get_int()," - 0 in a single game");
+      sym->set_int(0);
+      }
+    }
   // NB fix 221: StartChangeWorldTime - the timer of the plugin (100 ms) takes the speed of the game down by an even step
   // to the factor in the first half of the steps and back to 1 in the second half
   if(st.slowSteps>0) {

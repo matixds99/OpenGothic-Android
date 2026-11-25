@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **226**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **227**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
-2. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
-3. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
-4. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
-5. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
+1. **226** – potwory znów atakują po imporcie zapisu z PC (`RX_GamePaused` z trybu wieloosobowego zerowane) – 🧪
+2. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
+3. **224** – golemy chodzą po schodach: za bohaterem i w pościgu na inne piętro po punktach drogi, nie prosto w ściany – 🧪
+4. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
+5. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
 
 ---
 
@@ -251,6 +251,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 226. Wilki, gobliny i szczury nie atakowały po imporcie zapisu z PC – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`
+- **Zgłoszenie (log):** „Wiesz dlaczego Wilk mnie nie atakował oraz goblin?” – „[idle] Wilk stands 8 s in ZS_MM_ATTACK - target hero at 626 cm, sees it 1, weapon 0”; trace „ZS_MM_Attack | CONTINUE 2” u każdego atakującego potwora (szczur, wilk). Gra wczytana z oryginalnego zapisu z PC („Original save … globals 15514”).
+- **Skrypty:** `ZS_MM_Attack_Loop` na początku: `if (RX_GamePaused || RX_GameVoting) return LOOP_CONTINUE` – przy pauzie gry wieloosobowej potwór nic nie robi (nie wyciąga „broni”, nie wydaje `AI_Attack`). Żaden skrypt ani UNION_ABI.DLL tych zmiennych nie ustawia – należą do trybu wieloosobowego. Zapis z PC przyniósł w jednej z nich 1, więc każdy potwór w walce stał.
+- **Poprawka:** w grze jednoosobowej obie zmienne są stale 0 (zmiana w logu: `multiplayer flag … was 1`).
+- **Do sprawdzenia:** wilki, gobliny i szczury atakują bohatera; w logu brak „CONTINUE 2”.
 
 ### 225. Status zadań w logu – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
