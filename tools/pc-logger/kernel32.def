@@ -1,0 +1,15 @@
+LIBRARY kernel32.dll
+EXPORTS
+CreateFileA@28
+WriteFile@20
+ReadFile@20
+CloseHandle@4
+GetFileSize@8
+GetTickCount@0
+GetModuleFileNameA@12
+VirtualAlloc@16
+VirtualProtect@16
+IsBadReadPtr@8
+CreateThread@24
+GetModuleHandleA@4
+Sleep@4
