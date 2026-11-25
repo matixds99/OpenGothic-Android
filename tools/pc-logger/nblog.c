@@ -136,6 +136,20 @@ static void evt(const char* name,u32 ecx){
   o=put(o,"["); o=putn(o,GetTickCount()); o=put(o,"] PLUGIN "); o=put(o,name); o=put(o," ecx="); hexs(o,ecx);
   *o++='\r'; *o++='\n'; write(line,(u32)(o-line));
   }
+static const u8 PRO_T[6]={0x55,0x8b,0xec,0x83,0xec,0x54};   // push ebp; mov ebp,esp; sub esp,0x54
+extern "C" void evtTeleport(u32 ecx){
+  if(!logf_) return;
+  char a[48]; a[0]=0; P npc=(P)ecx;
+  if(!IsBadReadPtr(npc,0x100)){
+    u8 str[32]; for(int i=0;i<32;i++) str[i]=0;
+    ((GetNameFn)NPC_GETNAME)(npc,str,0);
+    const char* p=*(const char**)(str+8);
+    if(p && !IsBadReadPtr(p,64)){ u32 n=0; while(n<40 && p[n]){ a[n]=p[n]; ++n; } a[n]=0; }
+    }
+  char line[160]; char* o=line;
+  o=put(o,"["); o=putn(o,GetTickCount()); o=put(o,"] PLUGIN TELEPORT self="); o=put(o,a);
+  *o++='\r'; *o++='\n'; write(line,(u32)(o-line));
+  }
 extern "C" void evtSpecial11(u32 ecx){ evt("special_attack_11 (0x1007b050)",ecx); }
 extern "C" void evtImarah(u32 ecx){ evt("imarah_special (0x1007f810)",ecx); }
 extern "C" void evtPlace(u32 ecx){ evt("teleport_choose_place (0x102536b0)",ecx); }
@@ -165,8 +179,8 @@ static u32 __attribute__((thiscall)) eligDetour(P npc){
 static const u8 PRO_A[5]={0x55,0x8b,0xec,0x6a,0xff};   // push ebp; mov ebp,esp; push -1
 static const u8 PRO_E[5]={0x55,0x8b,0xec,0x51,0x53};   // push ebp; mov ebp,esp; push ecx; push ebx
 
-static u8* hookAt(u8* target,const u8* pro,P fn,bool pre){
-  for(int i=0;i<5;i++) if(target[i]!=pro[i]) return 0;
+static u8* hookAt(u8* target,const u8* pro,P fn,bool pre,int len=5){
+  for(int i=0;i<len;i++) if(target[i]!=pro[i]) return 0;
   u8* tr=(u8*)VirtualAlloc(0,64,0x3000,0x40); if(!tr) return 0;
   u8* o=tr;
   if(pre){        // pushad; pushfd; push ecx; call fn; add esp,4; popfd; popad
@@ -174,12 +188,13 @@ static u8* hookAt(u8* target,const u8* pro,P fn,bool pre){
     *o++=0x83; *o++=0xC4; *o++=0x04; *o++=0x9D; *o++=0x61;
     }
   u8* stolen=o;
-  for(int i=0;i<5;i++) *o++=target[i];
-  *o++=0xE9; *(i32*)o=(i32)((u32)target+5-((u32)o+4));
-  u32 old; VirtualProtect(target,5,0x40,&old);
+  for(int i=0;i<len;i++) *o++=target[i];
+  *o++=0xE9; *(i32*)o=(i32)((u32)target+len-((u32)o+4));
+  u32 old; VirtualProtect(target,len,0x40,&old);
   target[0]=0xE9;
   *(i32*)(target+1)=(i32)((pre? (u32)tr : (u32)fn)-((u32)target+5));
-  VirtualProtect(target,5,old,&old);
+  for(int i=5;i<len;i++) target[i]=0x90;
+  VirtualProtect(target,len,old,&old);
   return pre? tr : stolen;
   }
 
@@ -189,12 +204,8 @@ static u32 WINAPI pluginThread(P){
     if(b){
       Sleep(3000);                      // let it finish loading
       u8* r;
-      r=hookAt(b+0x7b050,PRO_A,(P)evtSpecial11,true);
-      wlog(r?"nblog: hook special_attack_11 ok":"nblog: special_attack_11 - other plugin version, skipped");
-      r=hookAt(b+0x7f810,PRO_A,(P)evtImarah,true);
-      wlog(r?"nblog: hook imarah_special ok":"nblog: imarah_special - other plugin version, skipped");
-      r=hookAt(b+0x2536b0,PRO_A,(P)evtPlace,true);
-      wlog(r?"nblog: hook choose_place ok":"nblog: choose_place - other plugin version, skipped");
+      r=hookAt(b+0x2b1410,PRO_T,(P)evtTeleport,true,6);
+      wlog(r?"nblog: hook TELEPORT ok":"nblog: TELEPORT - other plugin version, skipped");
       r=hookAt(b+0x2b1890,PRO_E,(P)eligDetour,false);
       if(r){ origElig=(EligFn)r; wlog("nblog: hook eligible ok"); }
       else wlog("nblog: eligible - other plugin version, skipped");
