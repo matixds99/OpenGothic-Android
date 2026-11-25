@@ -7048,7 +7048,9 @@ void GameScript::wld_insertnpc(int npcInstance, std::string_view spawnpoint) {
     return;
     }
   fixNpcPosition(*npc,0,150);
-  if((npc->position()-pos0).length()>100.f)
+  // NB fix 233: the search starts 150 cm from the point (as in OpenGothic), so only a longer move is worth a line (a new
+  // chapter inserted 190 monsters, each "moved 150-175 cm")
+  if((npc->position()-pos0).length()>250.f)
     nbCtx("insert: ",npc->displayName()," at ",spawnpoint," moved ",int((npc->position()-pos0).length())," cm to a free place");
   }
 

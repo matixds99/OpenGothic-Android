@@ -1065,6 +1065,29 @@ void MoveAlgo::onMoveFailed(const Tempest::Vec3& dp, const DynamicWorld::Collisi
                             " jump ", int(jc.anim), " noClimb ", jc.noClimb, " height ", jc.height);
             }
           }
+        // NB fix 233: a way point that cannot be reached (on a ledge 3 m up: an orc of the orc camp at FP_ROAM_ORK_OC_107
+        // ran into the rock for the whole game, 117 lines "[blocked]"; a beetle with GoToPoint "STUCK") - after 12 s of
+        // walking into the same obstacle, out of a fight, the walk to it ends and the AI goes on (the next point of the roam)
+        if(npc.processPolicy()!=NpcProcessPolicy::Player && npc.go2.wp!=nullptr && npc.go2.npc==nullptr &&
+           npc.target()==nullptr && (npc.moveHint()==Npc::GT_Way || npc.moveHint()==Npc::GT_Point) && jc.noClimb) {
+          struct Stuck { const WayPoint* wp = nullptr; uint64_t first = 0, last = 0; };
+          static std::unordered_map<const Npc*,Stuck> stuck;
+          if(stuck.size()>4096)
+            stuck.clear();
+          const uint64_t now = npc.world().tickCount();
+          auto& e = stuck[&npc];
+          if(e.wp!=npc.go2.wp || now>e.last+1500) {
+            e.wp    = npc.go2.wp;
+            e.first = now;
+            }
+          e.last = now;
+          if(now>e.first+12000) {
+            Tempest::Log::i("[blocked] ",npc.displayName().data()," gives up the way to ",npc.go2.wp->name," after 12 s");
+            stuck.erase(&npc);
+            npc.clearGoTo();
+            break;
+            }
+          }
         if(jc.noClimb)
           npc.setDirection(npc.rotation()+stp); else
         if(!npc.startClimb(jc))

@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **233**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **234**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – 🧪
-2. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – ✅🧪
-3. **230** – poprawki loggera: flagi przyzwańców nie są już wyciszane, tekst stale na ekranie raz, przyzwańcy w całym świecie z odległością, `[hero] says` dla odmów głosem – ✅🧪
-4. **229** – logger bohatera: komunikaty skryptów z funkcją, która je pokazała (`[print]`), stan bohatera, przyzwańcy i animacje (`[hero]`), zmiany zmiennych skryptów (`[var]`) – ✅🧪
-5. **228** – flagi „sługa już przyzwany” (Hubaxis, Krayt, Jina, Tesvall, mroczny sługa…) zerowane, gdy sługi nie ma w świecie – ✅
+1. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
+2. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – ✅
+3. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – ✅🧪
+4. **230** – poprawki loggera: flagi przyzwańców nie są już wyciszane, tekst stale na ekranie raz, przyzwańcy w całym świecie z odległością, `[hero] says` dla odmów głosem – ✅🧪
+5. **229** – logger bohatera: komunikaty skryptów z funkcją, która je pokazała (`[print]`), stan bohatera, przyzwańcy i animacje (`[hero]`), zmiany zmiennych skryptów (`[var]`) – ✅🧪
 
 ---
 
@@ -252,7 +252,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 232. Logger: zmienne przyzwańców i liczniki; orkowie z bronią; cel po usuniętym przyzwańcu – 🧪 (25.11.2026)
+### 233. Stwory utknięte w drodze do nieosiągalnego punktu – 🧪 (25.11.2026)
+- **Pliki:** `common/game/movealgo.cpp`, `common/game/gamescript.cpp`
+- **Zgłoszenie (log 25.11, 19:36):** „[blocked] Ork wojownik (49004) … from FP_ROAM_ORK_OC_107 to FP_ROAM_ORK_OC_107 … land 1 … noClimb 1 height 753” – 117 razy przez całą grę: ork w obozie orków szedł do punktu wędrówki na skale 3 m wyżej i cały czas wchodził w ścianę. Tak samo chrząszcz (`STUCK 5 s … ai=[ GoToPoint] go2=1`).
+- **Poprawka:** gdy stwór poza walką przez 12 s idzie do tego samego punktu drogi i wchodzi w przeszkodę, na którą nie da się wspiąć, kończy tę drogę (`[blocked] … gives up the way to … after 12 s`) i AI idzie dalej – następny punkt wędrówki, dalsza część rutyny. Nie dotyczy pościgu, chodzenia za postacią (przyzwańcy za bohaterem) ani gracza.
+- **Do tego:** linia „insert: … moved … cm to a free place” tylko przy przesunięciu ponad 2,5 m – szukanie miejsca zaczyna się 150 cm od punktu (jak w OpenGothic), więc przy nowym rozdziale było 190 linii po 150–175 cm.
+- **Do sprawdzenia:** brak setek linii `[blocked]` jednego stwora; potwory w obozie orków chodzą normalnie.
+
+### 232. Logger: zmienne przyzwańców i liczniki; orkowie z bronią; cel po usuniętym przyzwańcu – ✅ (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`
 - **Zgłoszenie (log z 25.11, 19:05):**
   - `[var] RX_SUMMONCOUNT: changes all the time, left out` – po 9 przywołaniach i śmierciach golemów w 5 min logger przestał pokazywać licznik przyzwańców;
@@ -266,6 +273,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - przy usuwaniu przyzwańców (wczytanie, zmiana świata, śmierć bohatera) postacie, które miały któregoś za cel, tracą ten cel;
   - linia `STUCK 5 s` ma też `cast=…/castLevel`, `frozen`, `down`, `policy` – dwa razy golem stał 5 s zaraz po przywołaniu z kolejką `[SetWalkMode]` bez widocznej przyczyny.
 - **Do sprawdzenia:** `[var] RX_SUMMONCOUNT` przy każdym przywołaniu; brak serii „puts the weapon away” przy orkach; po wczytaniu potwory od razu zachowują się normalnie.
+- **Test (25.11, log 19:36):** `RX_SUMMONCOUNT` przy każdym przywołaniu (9 linii), liczniki wyciszone jako „a counter”, zero linii „puts the weapon away”, po wczytaniu żadnego celu setki metrów dalej.
 
 ### 231. Przyzwańcy i potwory stojący na granicy zasięgu – ✅🧪 (25.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`
