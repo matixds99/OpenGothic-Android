@@ -1196,6 +1196,20 @@ WayPath World::wayTo(const Npc &npc, const WayPoint &end) const {
     return true;
     });
 
+  // NB fix 223: no way point in the view cone of the character: one it sees behind it (free line of sight), then the
+  // closest one on its own floor. Before, the fallback was the closest point of all - a summoned golem on the first floor
+  // of the tower of Xardas took DT_E2_01 of the floor above, 9 m over its head, as the start of its way to the hero and
+  // went round and round under it
+  if(near==nullptr) {
+    near = wmatrix->findWayPoint(npcPos, [&npc](const WayPoint &wp) {
+      return npc.canRayHitPoint(wp.pos,true);
+      });
+    }
+  if(near==nullptr) {
+    near = wmatrix->findWayPoint(npcPos, [&npcPos](const WayPoint &wp) {
+      return std::abs(wp.pos.y-npcPos.y)<300.f;
+      });
+    }
   if(near==nullptr) {
     // fallback to any closest point
     near = wmatrix->findWayPoint(npcPos, [](const WayPoint &wp) { return true; });

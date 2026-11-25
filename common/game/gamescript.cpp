@@ -4669,6 +4669,54 @@ void GameScript::fixNpcPosition(Npc& npc, float angle0, float distBias) {
   // npc.setPosition(pos0);
   }
 
+/// NB fix 223: a character placed next to another one (the summons of the spells, the call PRZYWOŁAJ of the panel, the
+/// summons going with the hero through a teleport): on the floor of that one and not behind a wall from it. fixNpcPosition
+/// takes the ground under the given point as its level: 2.5 m behind the hero on the second floor of the tower of Xardas
+/// was the stairwell, the ground under it the first floor, 9 m lower - the golems stood there and could not come up.
+/// Here: the ground under the anchor is the level, a point is taken when it is on that level (60 cm, then 2 m for the
+/// stairs), it can be seen from the anchor at the height of the knees and the character fits there; else the first point
+/// of the level and the sight; else the anchor itself
+void GameScript::fixNpcPositionNear(Npc& npc, const Tempest::Vec3& anchor, float angle0, float distBias) {
+  auto& dyn     = *world().physic();
+  float groundA = anchor.y;
+  if(auto g = dyn.ray(anchor+Vec3(0,50,0), anchor+Vec3(0,-300,0)); g.hasCol)
+    groundA = g.v.y;
+  const Vec3 eye = Vec3(anchor.x,groundA+80.f,anchor.z);
+
+  bool hasAlt = false;
+  Vec3 alt    = Vec3(anchor.x,groundA,anchor.z);
+  for(float maxDy:{60.f,200.f}) {
+    for(int r = 0; r<=600; r+=20) {
+      for(int ang = 0; ang<360; ang+=30) {
+        const float a = float((float(ang)+angle0)*M_PI/180.0);
+        const float d = float(r)+distBias;
+        Vec3 p = Vec3(anchor.x+std::cos(a)*d, groundA, anchor.z+std::sin(a)*d);
+        auto ray = dyn.ray(p+Vec3(0,120,0), p+Vec3(0,-400,0));
+        if(!ray.hasCol || std::abs(ray.v.y-groundA)>maxDy)
+          continue;
+        p.y = ray.v.y;
+        if(dyn.ray(eye, p+Vec3(0,80,0)).hasCol)
+          continue;   // a wall, a railing or the edge of the floor between
+        if(isInsideSolid(dyn,p))
+          continue;
+        if(!hasAlt) {
+          hasAlt = true;
+          alt    = p;
+          }
+        npc.setPosition(p);
+        if(!npc.hasCollision()) {
+          npc.updateTransform();
+          return;
+          }
+        if(d==0)
+          break;
+        }
+      }
+    }
+  npc.setPosition(alt);
+  npc.updateTransform();
+  }
+
 void GameScript::eventPlayAni(Npc& npc, std::string_view ani) {
   if(dma!=nullptr)
     dma->eventPlayAni(npc,ani);
@@ -6641,7 +6689,7 @@ void GameScript::wld_spawnnpcrange(std::shared_ptr<zenkit::INpc> npcRef, int cls
   (void)lifeTime;
   for(int32_t i=0;i<count;++i) {
     auto* npc = world().addNpc(size_t(clsId),at->position());
-    fixNpcPosition(*npc,at->rotation() + 360.f*float(i)/float(count),100);
+    fixNpcPositionNear(*npc,at->position(),at->rotation() + 360.f*float(i)/float(count),100);   // NB fix 223
     }
   }
 
@@ -9983,8 +10031,7 @@ int32_t GameScript::nbSummonsCall() {
     const float a = hero->rotationRad()+float(M_PI)+(float(i)-float(with.size()-1)/2.f)*0.7f;   // behind the hero
     n.clearAiQueue();
     n.setTarget(nullptr);
-    n.setPosition(pos+Tempest::Vec3(std::cos(a)*250.f,0.f,std::sin(a)*250.f));
-    fixNpcPosition(n,0,0);
+    fixNpcPositionNear(n,pos,float(a*180.0/M_PI),250.f);   // NB fix 223: on the floor of the hero
     if(const auto start = n.handle().start_aistate; start!=0)
       n.aiPush(AiQueue::aiStartState(ScriptFn(size_t(start)),0,nullptr,nullptr,""));
     }
@@ -10320,8 +10367,7 @@ void GameScript::nbSummonsFollowTick() {
     auto&       n = *with[i];
     const float a = hero->rotationRad()+float(M_PI)+(float(i)-float(with.size()-1)/2.f)*0.7f;   // behind the hero
     n.clearAiQueue();
-    n.setPosition(pos+Tempest::Vec3(std::cos(a)*250.f,0.f,std::sin(a)*250.f));
-    fixNpcPosition(n,0,0);
+    fixNpcPositionNear(n,pos,float(a*180.0/M_PI),250.f);   // NB fix 223: on the floor of the hero
     }
   if(!with.empty())
     nbCtx("summons: ",with.size()," teleported with the hero (",int((pos-from).length()/100.f)," m)");

@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **223**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **224**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
-2. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
-3. **220** – worki NB (`OpenPocket`): ekwipunek tylko z przedmiotami kategorii worka – 🧪 (do sprawdzenia)
-4. **219** – ognik zbiera rośliny lokacji, liczy rośliny, tablice i nieokradzione postacie – ✅🧪
-5. **218** – skrzynie i drzwi po nazwie (`Mob_SetLockedByName`, `Mob_RemoveItem_AB`, `Wld_SetCondFunc`), `Wld_ChangePortal`, `AI_TurnToVob` – 🧪
+1. **223** – przywołane golemy stają obok bohatera na jego piętrze (nie piętro niżej); droga z niższego piętra zaczyna się od punktu na tym samym piętrze – 🧪
+2. **222** – przywołany golem nie zmienia celu przy każdym ugryzieniu (dwa zębacze); linia `STUCK` w logu tylko przy naprawdę stojącej kolejce – 🧪
+3. **221** – zwolnienie czasu po skręcie templariusza (`StartChangeWorldTime`), zaciemnienie ekranu (`Ext_DarkScreen`), `InitFullSnc`, `Cmd` – 🧪
+4. **220** – worki NB (`OpenPocket`): ekwipunek tylko z przedmiotami kategorii worka – 🧪 (do sprawdzenia)
+5. **219** – ognik zbiera rośliny lokacji, liczy rośliny, tablice i nieokradzione postacie – ✅🧪
 
 ---
 
@@ -251,6 +251,17 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 223. Przywołane golemy pojawiały się piętro niżej i krążyły pod bohaterem – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/world/world.cpp`
+- **Zgłoszenie:** „byłem na górze i atakowali szkielety, później przywołałem je a one na dole się pojawiły i mieli problem wejść na górę tylko się kręcili w koło”. Log: wieża Xardasa – bohater na 2. piętrze (y 2838), golemy na niższym (y ≈ 1950) „[blocked] … hint 1 from DT_E2_01 to DT_E2_01” i „stands 8 s … sees it 0”.
+- **Przyczyna:**
+  - przywołanie z panelu (PRZYWOŁAJ), przejście przez teleport z bohaterem i czar przywołania (`Wld_SpawnNpcRange`) stawiały postać 1–2,5 m od bohatera, a `fixNpcPosition` brał za poziom ziemię pod tym punktem. Za bohaterem była klatka schodowa – ziemią pod nią było niższe piętro, 9 m niżej (drugie przejście szukało też „jakiejkolwiek ziemi”);
+  - na dole golem szukał początku drogi do bohatera: punkt drogi tylko w stożku widzenia, a gdy żadnego nie było – najbliższy w ogóle, czyli `DT_E2_01` piętro wyżej, nad jego głową. Szedł do niego prosto i krążył pod nim.
+- **Poprawka:**
+  - `fixNpcPositionNear`: poziomem jest ziemia pod bohaterem; punkt musi być na tym poziomie (60 cm, potem 2 m – schody), widoczny od bohatera na wysokości kolan (bez ściany, barierki ani krawędzi między nimi) i postać musi się tam zmieścić; inaczej pierwszy taki punkt bez sprawdzania miejsca, w ostateczności przy bohaterze. Nigdy inne piętro;
+  - początek drogi (`World::wayTo`): gdy w stożku widzenia nie ma punktu – punkt widoczny za plecami, potem najbliższy na tym samym piętrze (3 m w pionie), dopiero na końcu jakikolwiek.
+- **Do sprawdzenia:** przywołanie golemów i PRZYWOŁAJ z panelu na piętrze (wieża, schody, mosty) – stają obok bohatera na jego poziomie; golem na dole znajduje schody do góry.
 
 ### 222. Przywołany golem między dwoma zębaczami zmieniał cel przy każdym ugryzieniu – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`
