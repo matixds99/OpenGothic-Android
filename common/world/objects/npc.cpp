@@ -4780,6 +4780,7 @@ void Npc::commitSpell() {
         }
 
     auto& b = owner.shootSpell(*active, *this, currentTarget);
+    ++nbShots;   // NB fix 236
     b.setDamage(dmg);
     b.setOrigin(this);
     b.setTarget(nullptr);
@@ -4892,7 +4893,7 @@ std::string Npc::nbFightLine(bool& keyChanged, std::string& key) const {
   out += " | "+std::string(ws<7 ? wsN[ws] : "?");
   if(ws==uint8_t(WeaponState::Mage))
     out += " spell "+std::to_string(invent.activeWeapon()!=nullptr && invent.activeWeapon()->isSpellOrRune() ? int(invent.activeWeapon()->spellId()) : -1)+
-           " cast "+std::to_string(int(castLevel));
+           " cast "+std::to_string(int(castLevel))+" (begun "+std::to_string(nbCastBegun)+", shot "+std::to_string(nbShots)+")";
   out += " | fight ai "+std::string(act<0 ? "none" : (act<16 ? actN[act] : "?"))+" x"+std::to_string(nbActCount);
   out += " | queue ["+aiQueue.describe(3)+"] taken "+std::to_string(nbAiPops);
   out += " | body "+std::to_string(int(bodyStateMasked()));
@@ -5781,6 +5782,7 @@ Npc::BeginCastResult Npc::beginCastSpell() {
   manaInvested     = 0;
 
   const SpellCode code = SpellCode(owner.script().invokeMana(*this,currentTarget,manaInvested));
+  ++nbCastBegun;   // NB fix 236
   switch(code) {
     case SPL_SENDSTOP:
     case SPL_DONTINVEST:

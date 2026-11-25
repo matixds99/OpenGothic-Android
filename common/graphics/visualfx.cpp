@@ -166,8 +166,14 @@ VisualFx::Trajectory VisualFx::loadTrajectory(std::string_view str) {
   uint8_t bits = 0;
   while(str.size()>0) {
     auto sp   = str.find(' ');
-    auto word = str.substr(0,sp);
-    if(word=="NONE") {
+    // NB fix 236: the flags are written in any case in the mods ("fixed" of New Balance was lost: the effect had no
+    // trajectory)
+    std::string word(str.substr(0,sp));
+    for(auto& c:word)
+      c = char(std::toupper(uint8_t(c)));
+    if(word.empty()) {
+      }
+    else if(word=="NONE") {
       bits |= 0; // no effect
       }
     else if(word=="TARGET") {

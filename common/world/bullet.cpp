@@ -45,6 +45,9 @@ Bullet::Bullet(World& owner, const Item& itm, const Vec3& pos)
   }
 
 Bullet::~Bullet() {
+  // NB fix 236: a projectile of a spell near the hero that hit nothing ([shot] in the log)
+  if(!nbOwnerName.empty() && !nbHitLogged)
+    Tempest::Log::i("[shot] ",nbOwnerName," spell ",spellId()," hits nothing (flew away or vanished)");
   vfx.setBullet(nullptr,*wrld);
   wrld->physic()->deleteObj(obj);
   }
@@ -93,6 +96,10 @@ int32_t Bullet::spellId() const {
 void Bullet::setOrigin(Npc *n) {
   ow = n;
   vfx.setOrigin(n);
+  // NB fix 236: the name for the log, while the owner surely lives
+  auto* pl = wrld->player();
+  if(n!=nullptr && pl!=nullptr && isSpell() && n->qDistTo(*pl)<=3000.f*3000.f)
+    nbOwnerName = n->isPlayer() ? std::string("hero") : std::string(n->displayName());
   }
 
 Npc *Bullet::origin() const {
@@ -170,6 +177,7 @@ void Bullet::onMove() {
 void Bullet::onCollide(zenkit::MaterialGroup matId) {
   if(isFinished())
     return;
+  nbLogShot("the world (a wall, the ground)");   // NB fix 236
   if(matId != zenkit::MaterialGroup::NONE) {
     if(material < ItemMaterial::MAT_COUNT) {
       auto s = wrld->addLandHitEffect(ItemMaterial(material),matId,obj->matrix());
@@ -182,13 +190,44 @@ void Bullet::onCollide(zenkit::MaterialGroup matId) {
   wrld->runEffect(std::move(vfx));
   }
 
+// NB fix 236: what a projectile of a spell hit, near the hero ([shot] in the log, at most 6 lines in 2 s)
+void Bullet::nbLogShot(const std::string& what) {
+  if(ow==nullptr || !isSpell())
+    return;
+  nbHitLogged = true;
+  auto* pl = wrld->player();
+  if(pl==nullptr || ow->qDistTo(*pl)>3000.f*3000.f)
+    return;
+  static uint64_t window = 0;
+  static int      lines  = 0;
+  const uint64_t  now    = wrld->tickCount();
+  if(now>window+2000) {
+    window = now;
+    lines  = 0;
+    }
+  if(++lines>6)
+    return;
+  Tempest::Log::i("[shot] ",ow->isPlayer() ? std::string("hero") : std::string(ow->displayName()),
+                  " spell ",spellId()," hits ",what);
+  }
+
 bool Bullet::onCollide(Npc& npc) {
   if(&npc==origin() || isFinished())
     return false;
 
   if(ow!=nullptr) {
-    // no damage between ally npc's, only emit pfx effect
-    const bool friendlyFire = wrld->script().isFriendlyFire(*ow, npc);
+    // NB fix 236: the projectiles of the hero fly through his summons and companions (aivar[91] RX_SUMMON_ID,
+    // AIV_PARTYMEMBER), the projectiles of a character through its friends: before, the golems in front of the hero
+    // took every rune of the hero (no damage - but the bolt was gone) and he could not hit Zeld behind them
+    bool pass = false;
+    if(ow->isPlayer())
+      pass = wrld->script().nbIsSummon(npc) || npc.handle().aivar[15]!=0;
+    else
+      pass = wrld->script().isFriendlyFire(*ow, npc);
+    if(pass)
+      return false;
+    nbLogShot(npc.isPlayer() ? std::string("hero") : std::string(npc.displayName()));
+    const bool friendlyFire = false;
     if(!friendlyFire) {
       if(isSpell())
         npc.takeDamage(*ow,this,vfx.handle(),spellId()); else

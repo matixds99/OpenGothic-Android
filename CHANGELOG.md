@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **236**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **237**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – 🧪
-2. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
-3. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
-4. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – ✅
-5. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – ✅🧪
+1. **236** – czary bohatera przelatują przez jego przyzwańców i towarzyszy; `[shot]` w logu: co trafił każdy pocisk czaru; liczniki rzuconych czarów w `[fight]`; flagi trajektorii efektów bez względu na wielkość liter – 🧪
+2. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – ✅
+3. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
+4. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
+5. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – ✅
 
 ---
 
@@ -252,7 +252,18 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 235. Śledzenie walki w logu (`[fight]`) – 🧪 (25.11.2026)
+### 236. Czary bohatera przez przyzwańców; dziennik pocisków (`[shot]`) – 🧪 (25.11.2026)
+- **Pliki:** `common/world/bullet.cpp`, `common/world/bullet.h`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/graphics/visualfx.cpp`
+- **Zgłoszenie (log 25.11, 22:12):** „nie mogę zadać obrażeń” – golemy stały przed Zeldem, a każda runa bohatera trafiała w golema (`DMG2: ranged attacker='' player=1 target='Przywołany kamienny golem' … value=0`) i znikała. Zeld rzucał Kulę śmierci (mana −60, `body 28`), ale żaden jego pocisk nikogo nie trafił.
+- **Przyczyna (pierwsza część):** pocisk bohatera zatrzymywał się na każdej postaci; „przyjacielski ogień” liczył się tylko dla pocisków NPC (i nawet wtedy pocisk znikał na sojuszniku, tylko bez obrażeń).
+- **Poprawka:**
+  - pocisk bohatera przelatuje przez jego przyzwańców (`aivar[91]` = `RX_SUMMON_ID`) i towarzyszy (`AIV_PARTYMEMBER`); pocisk NPC przelatuje przez jego sojuszników zamiast na nich znikać;
+  - `[shot] <kto> spell <nr> hits <kogo>` / `hits the world (a wall, the ground)` / `hits nothing (flew away or vanished)` – każdy pocisk czaru w 30 m od bohatera (trafienia najwyżej 6 linii na 2 s);
+  - w `[fight]` przy czarze: `begun` (ile razy zaczął rzucać) i `shot` (ile pocisków wystrzelił);
+  - flagi trajektorii efektów (`emTrjMode`) bez względu na wielkość liter – „unknown trajectory flag: "fixed"” z poprzednich logów: efekt NB tracił trajektorię.
+- **Do sprawdzenia:** runy bohatera trafiają Zelda zza golemów; log walki z Zeldem – linie `[shot] Zeld…` pokażą, gdzie podziewają się jego Kule śmierci (ściana / sojusznik / nic) i czy w ogóle są wystrzeliwane (`shot` w `[fight]`).
+
+### 235. Śledzenie walki w logu (`[fight]`) – ✅ (25.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/game/gamescript.cpp`
 - **Zgłoszenie:** Zeld, Mistrz Ciemności (zabójca Lothara, wieża Ituseld) nie atakował, a golemy biły go przez cały czas. W logu była o nim jedna linia (`[idle] … sees it 0 … ai [ (empty)]`) i ~150 linii obrażeń od golemów – nic o tym, co robił jego skrypt, AI walki ani czy w ogóle odczuł ciosy. Gracz: „potrzebny nam konkretny logger”.
 - **Skrypty (do porównania z logiem):** Zeld w `ZS_Attack` → `B_SelectSpell` → `RX_Tactics_Ituseld` (fazy: przy 45%/15% wzywa pomoc, przy 30% osłabia bohatera, potem `RX_AI_UseMagic` + `RX_ReadySpell(SPL_DEATHBALL)`), atak czarem przez AI walki.
@@ -265,6 +276,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - ciosy zadane/otrzymane;
   - percepcja obrażeń (`PERC_ASSESSDAMAGE`): ile razy uruchomiła skrypt, ile razy przepadła i dlaczego („the state is not started”, „out of the range”, „no function for it”).
 - **Do sprawdzenia:** walka z Zeldem jeszcze raz i log – z linii `[fight] Zeld…` będzie widać, na którym etapie staje (pętla nie działa / nic nie daje / AI walki bez instrukcji / nie widzi celu / ciosy golemów nie docierają do skryptu).
+- **Test (25.11, 22:12):** działa – 102 linie `[fight]`. Zeld: pętla `ZS_Attack` działa (daje `Attack`), AI walki daje `attack`/`strafe`/`wait`, widzi bohatera (`1/1`), Kula śmierci w ręku, wchodzi w rzucanie (`body 28`, mana −60 = czar rzucony), a mimo to ani jeden pocisk nikogo nie trafił (brak `DMG2` od Zelda). Brakowało informacji, co dzieje się z pociskiem – 236.
 
 ### 234. Reinar kupuje bronie; start poziomu w nazwanym obiekcie; zamknięcie ekwipunku – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/worldobjects.cpp`, `common/world/world.cpp`, `common/world/world.h`, `common/gothic.h`, `common/mainwindow.cpp`

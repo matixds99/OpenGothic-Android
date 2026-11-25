@@ -67,6 +67,9 @@ class Bullet final : public DynamicWorld::BulletCallback {
     void     onMove() override;
     void     onCollide(zenkit::MaterialGroup matId) override;
     bool     onCollide(Npc& other) override;
+    void     nbLogShot(const std::string& what);   // NB fix 236
+    std::string nbOwnerName;
+    bool        nbHitLogged = false;
 
   private:
     DynamicWorld::BulletBody* obj=nullptr;
