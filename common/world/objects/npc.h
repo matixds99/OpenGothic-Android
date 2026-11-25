@@ -394,6 +394,15 @@ class Npc final {
     float     nbAuraScale() const;
     const WayPoint* nbDetour() const { return nbDetourWp; }   // NB fix 224
     uint32_t  nbAiPops = 0;                      // NB fix 222: the actions taken from the AI queue (the log)
+    // NB fix 235: the fight trace of the log ([fight]) - counters of what the engine did with this character
+    uint32_t  nbLoopRuns   = 0;                  // the loop function of the state was called
+    int       nbLoopRet    = 0;                  // what it returned the last time
+    std::string nbLoopPushed = "-";              // the AI actions it queued the last time
+    uint32_t  nbDmgPercRun = 0, nbDmgPercDrop = 0; // PERC_ASSESSDAMAGE: ran a script / was dropped
+    std::string nbDmgPercWhy;                    // why the last one was dropped
+    uint8_t   nbLastAct    = 0;                  // the last move of the fight AI (FightAlgo::Action)
+    uint32_t  nbActCount   = 0;
+    std::string nbFightLine(bool& keyChanged, std::string& key) const;
     static inline int32_t nbSplashPct = 0;       // NB fix 106: the blow of the splash - the percent of its damage
     bool      nbIsWaiting() const;               // NB fix 101: RX_IsWaiting - AI_Wait goes on
     void      nbStopWait();                      // NB fix 101: RX_Stop_AI_Wait

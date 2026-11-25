@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **235**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **236**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
-2. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
-3. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – ✅
-4. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – ✅🧪
-5. **230** – poprawki loggera: flagi przyzwańców nie są już wyciszane, tekst stale na ekranie raz, przyzwańcy w całym świecie z odległością, `[hero] says` dla odmów głosem – ✅🧪
+1. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – 🧪
+2. **234** – Reinar kupuje rzadkie bronie (`RX_Form_Reinar_SellWeapon`: wybór dla każdej broni z ceną z pluginu); runa Vatrasa do wieży Ituseld stawia bohatera w punkcie startu poziomu; `RX_ClosePlayerInventory` – 🧪
+3. **233** – stwór, który 12 s wchodzi w tę samą przeszkodę w drodze do punktu (ork w obozie orków pod skałą), rezygnuje z tej drogi; mniej linii o wstawianiu potworów – 🧪
+4. **232** – zmienne przyzwańców nigdy nie są wyciszane w logu, liczniki (doświadczenie, zabicia) po 6 krokach; orkowie nie chowają broni w kółko; po wczytaniu potwory nie celują w usuniętego przyzwańca – ✅
+5. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – ✅🧪
 
 ---
 
@@ -251,6 +251,20 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 235. Śledzenie walki w logu (`[fight]`) – 🧪 (25.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `common/game/gamescript.cpp`
+- **Zgłoszenie:** Zeld, Mistrz Ciemności (zabójca Lothara, wieża Ituseld) nie atakował, a golemy biły go przez cały czas. W logu była o nim jedna linia (`[idle] … sees it 0 … ai [ (empty)]`) i ~150 linii obrażeń od golemów – nic o tym, co robił jego skrypt, AI walki ani czy w ogóle odczuł ciosy. Gracz: „potrzebny nam konkretny logger”.
+- **Skrypty (do porównania z logiem):** Zeld w `ZS_Attack` → `B_SelectSpell` → `RX_Tactics_Ituseld` (fazy: przy 45%/15% wzywa pomoc, przy 30% osłabia bohatera, potem `RX_AI_UseMagic` + `RX_ReadySpell(SPL_DEATHBALL)`), atak czarem przez AI walki.
+- **Poprawka:** co sekundę linia `[fight]` dla każdej postaci w 30 m od bohatera, która walczy z bohaterem lub jego przyzwańcami, jest przyzwańcem w walce albo jest celem bohatera/przyzwańców (nawet gdy sama nic nie robi – przypadek Zelda). Nowa linia, gdy coś się zmieni, inaczej co 5 s; najwyżej 8 linii na sekundę. W linii:
+  - stan AI i licznik wywołań jego pętli, co pętla zwróciła i jakie akcje dała do kolejki (`gave [...]`/`nothing`);
+  - cel, odległość, kąt do celu, widzi go `w polu widzenia/bez przeszkód`;
+  - życie, mana, broń w ręku, czar i etap rzucania;
+  - ostatnia decyzja AI walki (`attack`, `turn`, `wait`… albo `none` – brak instrukcji) i ich licznik;
+  - kolejka AI i ile akcji z niej zdjęto, stan ciała;
+  - ciosy zadane/otrzymane;
+  - percepcja obrażeń (`PERC_ASSESSDAMAGE`): ile razy uruchomiła skrypt, ile razy przepadła i dlaczego („the state is not started”, „out of the range”, „no function for it”).
+- **Do sprawdzenia:** walka z Zeldem jeszcze raz i log – z linii `[fight] Zeld…` będzie widać, na którym etapie staje (pętla nie działa / nic nie daje / AI walki bez instrukcji / nie widzi celu / ciosy golemów nie docierają do skryptu).
 
 ### 234. Reinar kupuje bronie; start poziomu w nazwanym obiekcie; zamknięcie ekwipunku – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/world/worldobjects.cpp`, `common/world/world.cpp`, `common/world/world.h`, `common/gothic.h`, `common/mainwindow.cpp`

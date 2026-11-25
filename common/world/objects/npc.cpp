@@ -2287,6 +2287,8 @@ bool Npc::implAttack(uint64_t dt) {
     }
 
   const auto act = fghAlgo.nextFromQueue(*this,*currentTarget,owner.script());
+  nbLastAct = uint8_t(act);   // NB fix 235
+  ++nbActCount;
 
   // NOTE: in original-game, this behaviour seem to be hardcoded
   // test case: wolf jump-back quite often when close, but programmed to jump only if attacked
@@ -4428,8 +4430,16 @@ void Npc::tickRoutine() {
         loop = sc.invokeState(this,currentOther,currentVictim,aiState.funcLoop);
         }
       else {
+        const size_t q0 = aiQueue.size();
         loop = sc.invokeState(this,currentOther,currentVictim,aiState.funcLoop);
+        // NB fix 235: what the loop of the state gave the character to do (the fight trace)
+        if(aiQueue.size()>q0)
+          nbLoopPushed = aiQueue.describe(8);
+        else if(aiQueue.size()==0)
+          nbLoopPushed = "nothing";
         }
+      ++nbLoopRuns;      // NB fix 235
+      nbLoopRet = loop;
       } else {
       // ZS_DEATH   have no loop-function, in G1, G2-classic
       // ZS_GETMEAT have no loop-function, in G2-notr
@@ -4837,6 +4847,60 @@ static bool nbEqualNoCase(std::string_view a, std::string_view b) {
 
 bool Npc::nbHasGotoVob() const {
   return aiQueue.has(AI_GoToNpc) || go2.flag==GoToHint::GT_Item;
+  }
+
+// NB fix 235: one line of the fight trace - what the engine knows about a character in a fight near the hero. The key
+// (without the counters and the life) says if something changed since the last line
+std::string Npc::nbFightLine(bool& keyChanged, std::string& key) const {
+  static const char* wsN[] = {"none","fist","1h","2h","bow","cbow","magic"};
+  static const char* actN[] = {"-","moveG","move","jumpBack","attack","attackL","attackR","strafeL","strafeR","block",
+                               "wait","waitLong","turn2hit","turn","turnG","strafeE"};
+  const Npc* tg = currentTarget;
+  std::string tgs = "-";
+  int dist = -1, ang = 0, seeCone = 0, seeFree = 0;
+  if(tg!=nullptr) {
+    tgs  = tg->isPlayer() ? std::string("hero") : std::string(tg->displayName());
+    if(tg->isDown())
+      tgs += "(down)";
+    dist = int(std::sqrt(qDistTo(*tg)));
+    const auto d  = tg->position()-position();
+    float a = angleDir(d.x,d.z)-rotation();
+    while(a>180.f)  a -= 360.f;
+    while(a<-180.f) a += 360.f;
+    ang     = int(a);
+    seeCone = int(canSeeNpc(*tg,false));
+    seeFree = int(canSeeNpc(*tg,true));
+    }
+  const auto ws   = uint8_t(weaponState());
+  const auto st   = nbStateName();
+  const int  act  = fghAlgo.hasInstructions() ? int(nbLastAct) : -1;
+  std::string k;
+  k += std::string(st)+"|"+tgs+"|"+std::to_string(int(ws))+"|"+std::to_string(int(currentSpellCast!=size_t(-1) ? int(currentSpellCast) : -1))+"|"+
+       std::to_string(int(castLevel))+"|"+std::to_string(seeCone)+std::to_string(seeFree)+"|"+std::to_string(act)+"|"+
+       aiQueue.describe(3)+"|"+std::to_string(int(bodyStateMasked()))+"|"+std::to_string(int(isDown()));
+  keyChanged = (k!=key);
+  key = k;
+  const NbBlowStat b = nbBlowStats()[this];
+  std::string out;
+  out += std::string(displayName())+": "+std::string(st.empty() ? std::string_view("-") : st);
+  out += " (loop "+std::to_string(nbLoopRuns)+" ret "+std::to_string(nbLoopRet)+" gave ["+nbLoopPushed+"])";
+  out += " target "+tgs;
+  if(tg!=nullptr)
+    out += " "+std::to_string(dist)+" cm angle "+std::to_string(ang)+" sees "+std::to_string(seeCone)+"/"+std::to_string(seeFree);
+  out += " | hp "+std::to_string(attribute(ATR_HITPOINTS))+"/"+std::to_string(attribute(ATR_HITPOINTSMAX));
+  out += " mana "+std::to_string(attribute(ATR_MANA));
+  out += " | "+std::string(ws<7 ? wsN[ws] : "?");
+  if(ws==uint8_t(WeaponState::Mage))
+    out += " spell "+std::to_string(invent.activeWeapon()!=nullptr && invent.activeWeapon()->isSpellOrRune() ? int(invent.activeWeapon()->spellId()) : -1)+
+           " cast "+std::to_string(int(castLevel));
+  out += " | fight ai "+std::string(act<0 ? "none" : (act<16 ? actN[act] : "?"))+" x"+std::to_string(nbActCount);
+  out += " | queue ["+aiQueue.describe(3)+"] taken "+std::to_string(nbAiPops);
+  out += " | body "+std::to_string(int(bodyStateMasked()));
+  out += " | blows given "+std::to_string(b.given)+" taken "+std::to_string(b.taken);
+  out += " | perc damage ran "+std::to_string(nbDmgPercRun)+" dropped "+std::to_string(nbDmgPercDrop);
+  if(nbDmgPercDrop>0)
+    out += " (last: "+nbDmgPercWhy+")";
+  return out;
   }
 
 // NB fix 229: the animations that play now (the watch of the hero in the log)
@@ -6146,16 +6210,32 @@ bool Npc::perceptionProcess(Npc &pl, Npc* victim, float quadDist, PercType perc)
     Log::i("NB ai: ",displayName().data()," DROPS ",(perc==PERC_ASSESSDAMAGE ? "PERC_ASSESSDAMAGE" : "PERC_ASSESSENEMY"),
            ": the state ",(st!=nullptr ? st->name().c_str() : "?")," is not started, queue=",int(aiQueue.size()));
     }
+  // NB fix 235: what happens to the perception of a blow ([fight] in the log)
+  auto* self = this;
+  const auto dmgDrop = [self,perc,&pl](const char* why) {
+    if(perc==PERC_ASSESSDAMAGE) {
+      ++self->nbDmgPercDrop;
+      self->nbDmgPercWhy = std::string(why)+" ("+std::string(pl.displayName())+")";
+      }
+    };
   if(!aiState.started && aiState.funcIni.isValid()) {
     // avoid ugly soft-lock (ZS_MM_Attack <-> B_MM_AssessWarn) for the orks near ramp
+    dmgDrop("the state is not started");
     return false;
     }
 
   float r = float(world().script().percRanges().at(perc, hnpc->senses_range));
   r = r*r;
 
-  if(quadDist>r)
+  if(quadDist>r) {
+    dmgDrop("out of the range of the perception");
     return false;
+    }
+
+  if(!hasPerc(perc))
+    dmgDrop("no function for it");
+  else if(perc==PERC_ASSESSDAMAGE)
+    ++nbDmgPercRun;
 
   if(hasPerc(perc)) {
     if(isPlayer()) {   // NB fix 134: a perception of the hero runs a script - in the log

@@ -382,6 +382,8 @@ struct NbState {
   std::vector<uint8_t>                        varUp;      // NB fix 232: the steps up one after another
   std::vector<uint8_t>                        varMute;
   const void*                                 aivOwner = nullptr;
+  uint64_t                                    fightNext = 0;   // NB fix 235
+  std::unordered_map<const Npc*,std::pair<std::string,uint64_t>> fightKey;
   std::vector<std::string>                    aivName;
   std::vector<int32_t>                        aivLast;
   std::vector<uint8_t>                        aivCnt;
@@ -10767,6 +10769,43 @@ void GameScript::nbHeroWatchTick() {
     if(key!=st.heroSummons) {
       Log::i("[hero] summons (",int(sum.size()),"): ",full);
       st.heroSummons = key;
+      }
+    }
+
+  // NB fix 235: the fight trace - every 1 s a line for every character in a fight near the hero (30 m) that fights the
+  // hero or his summons, or is one of the summons in a fight: a line when something changed, else every 5 s
+  if(now>=st.fightNext) {
+    st.fightNext = now+1000;
+    if(st.fightKey.size()>512)
+      st.fightKey.clear();
+    int lines = 0;
+    for(uint32_t i=0, cnt=world().npcCount(); i<cnt && lines<8; ++i) {
+      auto* n = world().npcById(i);
+      if(n==nullptr || n->isPlayer() || n->isDead() || n->qDistTo(*hero)>3000.f*3000.f)
+        continue;
+      auto* tg = n->target();
+      const bool summon   = nbIsSummon(*n);
+      const bool vsHero   = tg!=nullptr && (tg->isPlayer() || nbIsSummon(*tg));
+      const bool inFight  = summon && tg!=nullptr;
+      bool       attacked = false;
+      if(!vsHero && !inFight) {
+        // a character that the summons or the hero fight, that fights nobody (Zeld: the golems hit him, he did nothing)
+        for(uint32_t j=0; j<cnt && !attacked; ++j) {
+          auto* o = world().npcById(j);
+          if(o!=nullptr && o!=n && o->target()==n && (o->isPlayer() || nbIsSummon(*o)) && !o->isDead())
+            attacked = true;
+          }
+        }
+      if(!vsHero && !inFight && !attacked)
+        continue;
+      auto& e = st.fightKey[n];
+      bool changed = false;
+      std::string line = n->nbFightLine(changed,e.first);
+      if(changed || now>=e.second+5000) {
+        e.second = now;
+        Log::i("[fight] ",line);
+        ++lines;
+        }
       }
     }
 
