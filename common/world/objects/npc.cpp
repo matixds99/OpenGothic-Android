@@ -2544,6 +2544,15 @@ bool Npc::implAttack(uint64_t dt) {
     const float distance = qDistTo(*currentTarget);
     const float range    = float(handle().senses_range);
 
+    // NB fix 231: the way around an obstacle to the target goes on, also when it leads farther than the senses range for a
+    // while. It was dropped at the range and the creature ran straight at the target again, into the same rock, back
+    // within the range, onto the way again... - in the log of 25.11 Hubaxis stood for minutes exactly 28 m (his range)
+    // from a goblin and a field raider ("[AGGRO] ... out of range 2802 > 2800" hundreds of times) and did not attack.
+    // Too long out of the range, the creature loses the target (tickAggroLeash).
+    if(!prGRange && distance>=range*range && go2.flag==GT_Way && wayPath.last()!=nullptr &&
+       currentTarget->qDistTo(wayPath.last())<range*range)
+      return false;
+
     if(!prGRange && distance<range*range) {
       // if npc is reasonably far, we can switch to propper pathfinding
       const auto hit = owner.physic()->ray(this->collosionCenter(), currentTarget->collosionCenter());
@@ -4541,8 +4550,13 @@ void Npc::tickAggroLeash() {
   const uint64_t now = owner.tickCount();
   if(aggroLostSince==0) {
     aggroLostSince = now;
-    Log::i("[AGGRO] [",displayName().data(),"] [",tg->displayName().data(),"] is out of range ",int(std::sqrt(qDistTo(*tg)))," > ",int(range),
-           ", state ",(aiState.funcIni.isValid() ? aiState.hint : "none"),(tg==currentTarget ? ", fight" : ", walk to the enemy"));
+    // NB fix 231: once in 10 s for the same target (a creature at the edge of its range wrote it on every step)
+    if(tg!=aggroLogTarget || now>=aggroLogAt+10000) {
+      aggroLogTarget = tg;
+      aggroLogAt     = now;
+      Log::i("[AGGRO] [",displayName().data(),"] [",tg->displayName().data(),"] is out of range ",int(std::sqrt(qDistTo(*tg)))," > ",int(range),
+             ", state ",(aiState.funcIni.isValid() ? aiState.hint : "none"),(tg==currentTarget ? ", fight" : ", walk to the enemy"));
+      }
     return;
     }
   if(now-aggroLostSince<LOST_TIME_MS)

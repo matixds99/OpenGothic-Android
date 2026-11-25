@@ -377,11 +377,13 @@ struct NbState {
   std::vector<uint16_t>                       varElem;   // the element of an array
   std::vector<int32_t>                        varLast;
   std::vector<uint8_t>                        varCnt;
+  std::vector<uint8_t>                        varTotal;   // NB fix 230: the changes since the world was loaded
   std::vector<uint8_t>                        varMute;
   const void*                                 aivOwner = nullptr;
   std::vector<std::string>                    aivName;
   std::vector<int32_t>                        aivLast;
   std::vector<uint8_t>                        aivCnt;
+  std::vector<uint8_t>                        aivTotal;
   std::vector<uint8_t>                        aivMute;
   // NB fix 161: the companions go with the hero when he teleports (a jump of his position in the same world)
   const World*                                partyWorld    = nullptr;
@@ -8060,6 +8062,10 @@ void GameScript::ai_whirlaround(std::shared_ptr<zenkit::INpc> selfRef, std::shar
 void GameScript::ai_outputsvm(std::shared_ptr<zenkit::INpc> selfRef, std::shared_ptr<zenkit::INpc> targetRef, std::string_view name) {
   auto target = findNpc(targetRef);
   auto self   = findNpc(selfRef);
+  // NB fix 230: what the hero says himself is often a refusal of the scripts without a text ("$DOESNTWORK" of
+  // Spell_Logic_TeleportXardas in a fight) - in the log with the functions, as "[print]"
+  if(self!=nullptr && self->isPlayer())
+    nbPrintLog(vm,name,"[hero] says ");
 
   if(target==nullptr && owner.version().game==1)
     target = findNpc(vm.global_other());
@@ -8073,6 +8079,10 @@ void GameScript::ai_outputsvm(std::shared_ptr<zenkit::INpc> selfRef, std::shared
 void GameScript::ai_outputsvm_overlay(std::shared_ptr<zenkit::INpc> selfRef, std::shared_ptr<zenkit::INpc> targetRef, std::string_view name) {
   auto target = findNpc(targetRef);
   auto self   = findNpc(selfRef);
+  // NB fix 230: what the hero says himself is often a refusal of the scripts without a text ("$DOESNTWORK" of
+  // Spell_Logic_TeleportXardas in a fight) - in the log with the functions, as "[print]"
+  if(self!=nullptr && self->isPlayer())
+    nbPrintLog(vm,name,"[hero] says ");
 
   if(target==nullptr && owner.version().game==1)
     target = findNpc(vm.global_other());
@@ -10470,18 +10480,37 @@ static bool nbIsLocomotion(const std::string& n) {
   return any;
   }
 
-void GameScript::nbPrintLog(zenkit::DaedalusVm& vm, std::string_view text) {
+// NB fix 230: the lines that wait to be written - the messages of one function shown at once are one line ("a | b | c"),
+// e.g. the 12 lines of the stats of Hubaxis (PRINT_DEMONSTATS)
+static std::string nbPrintPendTag, nbPrintPendText, nbPrintPendChain;
+static uint64_t    nbPrintPendAt = 0;
+
+void GameScript::nbPrintFlush(bool force) {
+  if(nbPrintPendText.empty())
+    return;
+  if(!force && Application::tickCount()<nbPrintPendAt+150)
+    return;
+  if(nbPrintPendChain=="?" || nbPrintPendChain.empty())
+    Log::i(nbPrintPendTag,nbPrintPendText); else
+    Log::i(nbPrintPendTag,nbPrintPendText," (",nbPrintPendChain,")");
+  nbPrintPendText.clear();
+  }
+
+void GameScript::nbPrintLog(zenkit::DaedalusVm& vm, std::string_view text, const char* tag) {
   if(text.size()<=2)
     return;   // the glyphs of the icons of PrintStatusBars
   static std::unordered_map<std::string,uint64_t> seen;
   if(seen.size()>2000)
     seen.clear();
   const uint64_t now = Application::tickCount();
-  std::string key(text);
+  std::string key = std::string(tag)+std::string(text);
   auto it = seen.find(key);
-  if(it!=seen.end() && now<it->second+10000)
-    return;
+  // NB fix 230: the time of the last showing, also of a left out one - a text that stays on the screen (shown again on
+  // every frame, as the count of the arrows of PRINT_ARROW_COUNT) is in the log once, not every 10 s
+  const bool again = (it!=seen.end() && now<it->second+10000);
   seen[key] = now;
+  if(again)
+    return;
   // at most 20 lines in 10 s (a function of the scripts that shows a counter every second)
   static uint64_t window = 0;
   static int      lines  = 0, skipped = 0;
@@ -10492,21 +10521,30 @@ void GameScript::nbPrintLog(zenkit::DaedalusVm& vm, std::string_view text) {
     lines   = 0;
     skipped = 0;
     }
+  const std::string chain = vm.call_chain();
+  if(!nbPrintPendText.empty() && nbPrintPendTag==tag && nbPrintPendChain==chain && now<nbPrintPendAt+100) {
+    nbPrintPendText += " | ";
+    nbPrintPendText += text;
+    nbPrintPendAt    = now;
+    return;
+    }
+  nbPrintFlush(true);
   if(++lines>20) {
     ++skipped;
     return;
     }
-  const std::string chain = vm.call_chain();
-  if(chain=="?")
-    Log::i("[print] ",text); else
-    Log::i("[print] ",text," (",chain,")");
+  nbPrintPendTag   = tag;
+  nbPrintPendText  = std::string(text);
+  nbPrintPendChain = chain;
+  nbPrintPendAt    = now;
   }
 
 /// NB fix 229: the watch of the hero (the idea of the player: "a logger on the player"). Every 0.5 s: the guild, the
 /// weapon in the hands (the rune, the spell), the armor and the weapons at the belt, the transformation, the summoned
 /// creatures - a line when one of them changes. The animations of the actions (not the walk, the run, the stand), at most
 /// 20 lines in 10 s. Every 2 s: the variables of the scripts and the aivars of the hero that changed (the ones that change
-/// all the time - the timers, the counters - are left out: more than once in the first 20 s, more than 8 times in 5 min).
+/// all the time - the timers, the counters - are left out: 4 times in the first 20 s, more than 8 times in 5 min or more
+/// than 15 times in all - NB fix 230).
 void GameScript::nbHeroWatchTick() {
   auto nb = nbStates.find(this);
   auto* hero = world().player();
@@ -10514,6 +10552,7 @@ void GameScript::nbHeroWatchTick() {
     return;
   auto& st = nb->second;
   const uint64_t now = Application::tickCount();
+  nbPrintFlush(false);   // NB fix 230
 
   const auto instName = [this](const Item* it) -> std::string {
     if(it==nullptr)
@@ -10588,13 +10627,17 @@ void GameScript::nbHeroWatchTick() {
 
     // the summoned creatures: the names (the life only in the line of a change)
     std::vector<std::pair<std::string,std::string>> sum;
-    world().detectNpc(hero->position(),5000.f,[&](Npc& n) {
-      if(n.isDead() || n.isPlayer() || !nbIsSummon(n))
-        return;
-      auto* sym = vm.find_symbol_by_index(n.handle().symbol_index());
+    // NB fix 230: in the whole world, with the distance from the hero (a summon 50 m away is still summoned: in the log of
+    // 25.11 the list "flickered" and "Hubaxis jest już przyzwany..." looked like a mistake)
+    for(uint32_t i=0, cnt=world().npcCount(); i<cnt; ++i) {
+      auto* n = world().npcById(i);
+      if(n==nullptr || n->isDead() || n->isPlayer() || !nbIsSummon(*n))
+        continue;
+      auto* sym = vm.find_symbol_by_index(n->handle().symbol_index());
       std::string nm = sym!=nullptr ? sym->name() : std::string("?");
-      sum.emplace_back(nm,nm+" "+std::to_string(n.attribute(ATR_HITPOINTS))+"/"+std::to_string(n.attribute(ATR_HITPOINTSMAX)));
-      });
+      sum.emplace_back(nm,nm+" "+std::to_string(n->attribute(ATR_HITPOINTS))+"/"+std::to_string(n->attribute(ATR_HITPOINTSMAX))+
+                       " "+std::to_string(int(std::sqrt(n->qDistTo(*hero))/100.f))+" m");
+      }
     std::sort(sum.begin(),sum.end());
     std::string key, full;
     for(auto& i:sum) {
@@ -10634,6 +10677,7 @@ void GameScript::nbHeroWatchTick() {
       }
     st.varLast.assign(st.varIdx.size(),0);
     st.varCnt .assign(st.varIdx.size(),0);
+    st.varTotal.assign(st.varIdx.size(),0);
     st.varMute.assign(st.varIdx.size(),0);
     for(size_t k=0; k<st.varIdx.size(); ++k)
       st.varLast[k] = vm.find_symbol_by_index(st.varIdx[k])->get_int(st.varElem[k]);
@@ -10643,6 +10687,28 @@ void GameScript::nbHeroWatchTick() {
     return;
     }
 
+  if(st.varLearnUntil!=0 && now>=st.varLearnUntil) {
+    // the end of the first 20 s: the variables that changed 4 times or more (every 2-5 s) are the timers and the counters.
+    // NB fix 230: not 2 - a summon and its flag in these 20 s (RX_DEMONHUB_ACTIVE, RX_SUMMONCOUNT) were left out. Before the
+    // changes of this tick are written, so the timers do not get one line each first.
+    std::string muted;
+    int cnt = 0;
+    for(size_t k=0; k<st.varIdx.size(); ++k) {
+      if(st.varCnt[k]>=4 && !st.varMute[k]) {
+        st.varMute[k] = 1;
+        if(++cnt<=30) {
+          auto* sym = vm.find_symbol_by_index(st.varIdx[k]);
+          muted += (muted.empty() ? "" : ", ")+sym->name();
+          if(sym->count()>1)
+            muted += "["+std::to_string(st.varElem[k])+"]";
+          }
+        }
+      }
+    Log::i("[var] left out (change all the time): ",cnt>0 ? muted : std::string("-"),cnt>30 ? " ..." : "");
+    st.varLearnUntil = 0;
+    std::fill(st.varCnt.begin(),st.varCnt.end(),0);
+    st.varCntStart = now;
+    }
   const bool learn = now<st.varLearnUntil;
   if(now>st.varCntStart+300000) {
     st.varCntStart = now;
@@ -10671,7 +10737,10 @@ void GameScript::nbHeroWatchTick() {
       ++st.varCnt[k];
     if(learn)
       continue;
-    if(st.varCnt[k]>8) {
+    // NB fix 230: also the counters of every kill (RX_STATEXP, MONSTERKILLED, RANKPOINTS...): 15 lines in all, then left out
+    if(st.varTotal[k]<255)
+      ++st.varTotal[k];
+    if(st.varCnt[k]>8 || st.varTotal[k]>15) {
       st.varMute[k] = 1;
       Log::i("[var] ",varName(k),": changes all the time, left out");
       continue;
@@ -10685,21 +10754,6 @@ void GameScript::nbHeroWatchTick() {
     }
   if(more>0)
     Log::i("[var] ... and ",more," more");
-
-  if(!learn && st.varLearnUntil!=0) {
-    // the end of the first 20 s: the variables that changed more than once are the timers and the counters
-    std::string muted;
-    int cnt = 0;
-    for(size_t k=0; k<st.varIdx.size(); ++k) {
-      if(st.varCnt[k]>=2 && !st.varMute[k]) {
-        st.varMute[k] = 1;
-        if(++cnt<=30)
-          muted += (muted.empty() ? "" : ", ")+varName(k);
-        }
-      }
-    Log::i("[var] left out (change all the time): ",cnt>0 ? muted : std::string("-"),cnt>30 ? " ..." : "");
-    st.varLearnUntil = 0;
-    }
 
   // the variables of the hero himself (aivar), with the names of the constants AIV_* / AIVRX_*
   const auto& h = hero->handle();
@@ -10726,6 +10780,7 @@ void GameScript::nbHeroWatchTick() {
     st.aivOwner = &h;
     st.aivLast.assign(h.aivar,h.aivar+zenkit::INpc::aivar_count);
     st.aivCnt .assign(zenkit::INpc::aivar_count,0);
+    st.aivTotal.assign(zenkit::INpc::aivar_count,0);
     st.aivMute.assign(zenkit::INpc::aivar_count,0);
     return;
     }
@@ -10737,7 +10792,9 @@ void GameScript::nbHeroWatchTick() {
     st.aivLast[k] = v;
     if(st.aivMute[k])
       continue;
-    if(++st.aivCnt[k]>8) {
+    if(st.aivTotal[k]<255)
+      ++st.aivTotal[k];
+    if(++st.aivCnt[k]>8 || st.aivTotal[k]>15) {
       st.aivMute[k] = 1;
       Log::i("[hero] aivar[",int(k),"] ",st.aivName[k],": changes all the time, left out");
       continue;

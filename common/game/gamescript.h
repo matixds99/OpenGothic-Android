@@ -259,7 +259,8 @@ class GameScript final {
     /// NB fix 136: a window that may show the inventory of a body is open (the bodies are not removed then)
     static inline bool nbUiBusy = false;
     /// NB fix 229: "[print]" in the log - a message of the scripts on the screen and the functions that showed it
-    static void      nbPrintLog(zenkit::DaedalusVm& vm, std::string_view text);
+    static void      nbPrintLog(zenkit::DaedalusVm& vm, std::string_view text, const char* tag = "[print] ");
+    static void      nbPrintFlush(bool force);   // NB fix 230
     void             nbBossHit(Npc& target, Npc& attacker);    // NB fix 100: AI_OnHit_, AI_OnGetDamage_ of the bosses
     void             nbBossTick();                             // NB fix 100: AI_OnTick_, AI_OnBreak_ every second
     zenkit::DaedalusSymbol* nbInstanceFunc(std::string_view prefix, Npc& npc);

@@ -790,6 +790,8 @@ class Npc final {
     Npc*                           currentTarget  =nullptr;
     Npc*                           nearestEnemy   =nullptr;
     uint64_t                       aggroLostSince =0;  // since when the target of the monster is out of its senses range (0 = it is not)
+    const Npc*                     aggroLogTarget = nullptr;   // NB fix 231
+    uint64_t                       aggroLogAt     = 0;
     struct EffectHit {
       uint64_t at     = 0;
       Npc*     src    = nullptr;

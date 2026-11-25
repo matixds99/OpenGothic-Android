@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **230**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **232**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **229** – logger bohatera: komunikaty skryptów z funkcją, która je pokazała (`[print]`), stan bohatera, przyzwańcy i animacje (`[hero]`), zmiany zmiennych skryptów (`[var]`) – 🧪
-2. **228** – flagi „sługa już przyzwany” (Hubaxis, Krayt, Jina, Tesvall, mroczny sługa…) zerowane, gdy sługi nie ma w świecie – 🧪
-3. **227** – przyzwańcy nekromanty: leczenie (`RX_SummonHeal`), aury szybkości i spowolnienia (`RX_ApplyBuffToSummons`), przywołanie przy celu – 🧪
-4. **226** – potwory znów atakują po imporcie zapisu z PC (`RX_GamePaused` z trybu wieloosobowego zerowane) – ✅
-5. **225** – status zadań w logu (`journal status`), żeby sprawdzić zamykanie zadań NB – 🧪
+1. **231** – przyzwańcy i potwory nie „stoją” na granicy zasięgu: droga naokoło przeszkody do celu jest kontynuowana także poza zasięgiem zmysłów (Hubaxis stał minutami 28 m od goblina) – 🧪
+2. **230** – poprawki loggera: flagi przyzwańców nie są już wyciszane, tekst stale na ekranie raz, przyzwańcy w całym świecie z odległością, `[hero] says` dla odmów głosem – 🧪
+3. **229** – logger bohatera: komunikaty skryptów z funkcją, która je pokazała (`[print]`), stan bohatera, przyzwańcy i animacje (`[hero]`), zmiany zmiennych skryptów (`[var]`) – ✅🧪
+4. **228** – flagi „sługa już przyzwany” (Hubaxis, Krayt, Jina, Tesvall, mroczny sługa…) zerowane, gdy sługi nie ma w świecie – ✅
+5. **227** – przyzwańcy nekromanty: leczenie (`RX_SummonHeal`), aury szybkości i spowolnienia (`RX_ApplyBuffToSummons`), przywołanie przy celu – 🧪
 
 ---
 
@@ -252,7 +252,31 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 229. Logger bohatera: komunikaty, stan, przyzwańcy, zmienne skryptów – 🧪 (25.11.2026)
+### 231. Przyzwańcy i potwory stojący na granicy zasięgu – 🧪 (25.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp`, `common/world/objects/npc.h`
+- **Zgłoszenie (log z loggerem 229):** Hubaxis miał cel (polna bestia, czarny goblin, czarny wilk), ale przez długie minuty stał w miejscu, a nie atakował. Linia `[AGGRO] [Hubaxis] [Czarny goblin] is out of range 2802 > 2800` powtórzyła się około 280 razy, zawsze przy 2800–2807 cm, czyli dokładnie przy jego zasięgu zmysłów (`senses_range`). Atakował dopiero na rozkaz („summons: 1 attack …”).
+- **Przyczyna:** pościg w porcie przełączał się dokładnie na zasięgu. Bliżej niż zasięg cel za przeszkodą był osiągany po punktach drogi, a dalej – prosto na cel. Droga naokoło skały na chwilę wyprowadzała stwora poza zasięg, więc wracał do biegu prosto, w tę samą przeszkodę, znów w zasięg, znów na drogę… i tak w kółko na granicy.
+- **Poprawka:** droga do celu (punkt drogi przy celu) jest kontynuowana także wtedy, gdy na chwilę prowadzi dalej niż zasięg. Gdy stwór jest poza zasięgiem dłużej niż 6 s, i tak gubi cel (`tickAggroLeash`, jak dotąd). Linia `[AGGRO] … is out of range` raz na 10 s dla tego samego celu, a nie przy każdym kroku.
+- **Do sprawdzenia:** Hubaxis (i potwory) dochodzi do celu za skałą, ogrodzeniem, na zboczu, zamiast stać w miejscu.
+
+### 230. Poprawki loggera bohatera – 🧪 (25.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`
+- **Zgłoszenie (log z loggerem 229):**
+  - nauka zmiennych (pierwsze 20 s) wyciszyła akurat `RX_DEMONHUB_ACTIVE`, `RX_SUMMONCOUNT`, `RX_STATUSBAR_SUMMON` (gracz przywołał Hubaxisa w tych 20 s), a po wczytaniu przy rozmowie – flagi okien;
+  - `[print] Strzały: 1248` (stały licznik strzał na HUD) co 10 s – 70 linii;
+  - lista przyzwańców „migała” (0 ↔ 1), gdy Hubaxis był dalej niż 50 m, więc słuszna odmowa „już przyzwany” wyglądała na błąd;
+  - liczniki każdego zabicia (`RX_STATEXP`, `MONSTERKILLED`, `RANKPOINTS`, `RANEAT`, `RX_DEMONHUB_EXP`) – po 20 linii;
+  - teleport odmówił 4 razy (`[hero] spell refused: Runa Teleportacji`) bez żadnego `[print]`: `Spell_Logic_TeleportXardas` w walce mówi tylko głosem (`B_Say … "$DOESNTWORK"`).
+- **Poprawka:**
+  - nauka wycisza tylko zmienne zmienione co najmniej 4 razy w 20 s (zegary, co 2–5 s) i robi to przed zapisaniem zmian, bez paczki linii zegarów na koniec nauki;
+  - zmienna zmieniona więcej niż 15 razy od wczytania świata też zostaje pominięta (liczniki zabić); dotyczy też `aivar` bohatera;
+  - ten sam tekst na ekranie: czas liczony od ostatniego pokazania, więc tekst wyświetlany cały czas jest w logu raz;
+  - komunikaty jednej funkcji pokazane naraz – w jednej linii („a | b | c”, np. 12 linii statystyk Hubaxisa);
+  - przyzwańcy z całego świata, z odległością: `[hero] summons (1): SUMKHUBI 1080/1080 52 m`;
+  - `[hero] says $DOESNTWORK (SPELL_LOGIC_TELEPORTXARDAS <- SPELL_PROCESSMANA)` – co bohater mówi sam (`AI_OutputSVM`), bo to często odmowa skryptu bez tekstu.
+- **Do sprawdzenia:** w logu są `[var] RX_DEMONHUB_ACTIVE` przy przywołaniu i śmierci, `Strzały` raz, odmowa teleportu w walce z `[hero] says`.
+
+### 229. Logger bohatera: komunikaty, stan, przyzwańcy, zmienne skryptów – ✅🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/gamescript.h`, `common/gothic.cpp`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`, `patches/zenkit-opengothic.patch` (`DaedalusVm::call_chain` publiczne)
 - **Zgłoszenie:** propozycja gracza po błędzie z Hubaxisem (228) – „logger na graczu”: jakich ma przyzwańców, jakie zmienne się zmieniają, jakiej runy lub broni używa, jak zachowują się animacje. Błąd z Hubaxisem był widoczny tylko na ekranie (odmowa skryptu), w logu nie było nic.
 - **Poprawka:** log zapisuje tylko zmiany, żeby nie urósł:
@@ -264,13 +288,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - `[var] ZMIENNA: a -> b` – co 2 s zmiany wszystkich globalnych zmiennych liczbowych skryptów (około 12,7 tys. wartości, bez zmiennych lokalnych funkcji), np. flagi przyzwańców, etapy zadań, liczniki NB. Pierwsze 20 s po wczytaniu świata to nauka: zmienne, które zmieniły się więcej niż raz (zegary, liczniki pętli), są pomijane (lista w logu: `[var] left out`). Zmienna zmieniająca się więcej niż 8 razy w 5 min też zostaje pominięta (`changes all the time, left out`). Najwyżej 40 linii na raz.
   - `[hero] aivar[N] AIV_…: a -> b` – zmiany zmiennych samego bohatera (`aivar`) z nazwami stałych `AIV_*`/`AIVRX_*`, z tym samym pomijaniem.
 - **Do sprawdzenia:** log po kilku minutach gry: czy nie jest zbyt głośny (jakie zmienne zalewają `[var]`), czy przy przywołaniu i śmierci przyzwańca są linie `[hero] summons`, czy odmowa czaru ma `[print]` z nazwą funkcji.
+- **Test (25.11):** działa. Odmowa ma od razu funkcję: `[print] Hubaxis jest już przyzwany... (AI_PRINT <- SPELL_LOGIC_SUMKHUB <- SPELL_PROCESSMANA)` + `[hero] spell refused`. Widać przywołania, śmierci i zmiany broni oraz `RX_DEMONHUB_ACTIVE 0 -> 1` itd. Nauka zmiennych wyciszyła jednak właśnie flagi przyzwańca, licznik strzał z HUD szedł co 10 s, a lista przyzwańców migała przy słudze dalej niż 50 m – poprawki w 230.
 
-### 228. „Hubaxis jest już przyzwany…” choć Hubaxisa nie ma – 🧪 (25.11.2026)
+### 228. „Hubaxis jest już przyzwany…” choć Hubaxisa nie ma – ✅ (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`
 - **Zgłoszenie (zrzut ekranu, bez logu):** czar przywołania Hubaxisa odpowiada „Hubaxis jest już przyzwany...”, a Hubaxisa nigdzie nie ma.
 - **Skrypty i plugin:** `Spell_Logic_SumKhub` odmawia, gdy `RX_DemonHub_Active` = 1. Skrypty tylko ustawiają tę flagę (przy przywołaniu), a zeruje ją wyłącznie plugin (`0x10184eb0`), gdy przyzwaniec ginie albo znika ze świata. To samo dla innych zwierzaków i sług: `Crait` → `CraitIsUp`, `SumKhubi` → `RX_DemonHub_Active`, `DSnapper` → `DSnapperIsUp`, `DK_Pet` → `DarkPetIsUp`, `PET_JINA` → `JinaWolfIsUp`, `Summoned_SkeletonUniq` → `SkeletonUniqIsUp`, `Scavenger_Hero_Mount` → `RX_ScavSummoned`, `Summoned_Dragon` → `DragonStaffAlive`. W porcie nikt ich nie zerował – po pierwszej śmierci (albo zmianie świata) danego sługi czar odmawiał na zawsze.
 - **Poprawka:** co 2 s – flaga włączona, a w świecie nie ma żywej postaci tej instancji: flaga 0 (w logu `summon flag … off`). Działa też na istniejących zapisach.
 - **Do sprawdzenia:** Hubaxis znów daje się przywołać (najpóźniej 2 s po wczytaniu); po jego śmierci – od razu.
+- **Test (25.11, log z loggerem 229):** po każdej śmierci Hubaxisa i po wczytaniu flaga jest zerowana (`summon flag RX_DEMONHUB_ACTIVE off`) i przywołanie działa ponownie (4 razy w logu). Dwie odmowy „już przyzwany” były słuszne: Hubaxis żył, tylko był ponad 50 m dalej (zaraz potem `summons: 1 called to the hero`).
 
 ### 227. Przyzwańcy nekromanty: leczenie, aury, przywołanie przy celu – 🧪 (25.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`, `common/game/nbtexts.h`, `common/world/objects/npc.cpp`, `common/world/objects/npc.h`
