@@ -612,6 +612,58 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'A', "", "SSTATUSHEROIC_37", nullptr},
       {'A', "", "SSTATUSHEROIC_38", nullptr},
       {'A', "", "SSTATUSHEROIC_39", nullptr},
+      {'H', "Osi\xB9gni\xEA""cia og\xF3lne", nullptr, nullptr},
+      {'F', "", "NOSTALGIBONUS", "NAME_ADDON_NOSTALGIEBONUS"},
+      {'F', "", "GODBONUS", "NAME_ADDON_GODSBONUS"},
+      {'F', "", "WEAPONWIELDBONUS", "NAME_ADDON_WARRIORBONUS"},
+      {'F', "", "ALCHEMYBONUS", "NAME_ADDON_TALENTCOUNT_ALCHEMY"},
+      {'F', "", "RUNESBONUS", "NAME_ADDON_TALENTCOUNT_RUNE"},
+      {'F', "", "SMITHBONUS", "NAME_ADDON_TALENTCOUNT_SMITH"},
+      {'F', "", "INNOSBONUS", "NAME_ADDON_INNOSBONUS"},
+      {'F', "", "BELIARBONUS", "NAME_ADDON_BELIARBONUS"},
+      {'F', "", "CANBEATRODFISTDONE", "NAME_ADDON_STREETFIGHTERBONUS"},
+      {'F', "", "PICKPOCKETBONUS", "NAME_ADDON_PICKPOCKETBONUS"},
+      {'F', "", "PICKLOCKBONUS", "NAME_ADDON_PICKLOCKBONUS"},
+      {'F', "", "TPBONUS", "NAME_ADDON_TPBONUS"},
+      {'F', "", "SARGBONUS", "NAME_ADDON_SARGBONUS"},
+      {'F', "", "STUNTBONUS_ONCE", "NAME_ADDON_STUNTBONUS"},
+      {'F', "", "MEMORYBONUS", "NAME_ADDON_MEMORYBONUS"},
+      {'F', "", "BRAVEBONUS", "NAME_ADDON_BRAVEBONUS"},
+      {'F', "", "TRADEBONUS", "NAME_ADDON_TRADEBONUS"},
+      {'F', "", "OPENCHEST_BIGRUBY", "NAME_ADDON_THIEFBONUS"},
+      {'F', "", "KILLERBONUS", "NAME_ADDON_KILLERBONUS"},
+      {'F', "", "LOVEBONUS", "NAME_ADDON_LOVEBONUS"},
+      {'F', "", "DRUNKBONUS", "NAME_ADDON_DRINKBONUS"},
+      {'F', "", "HUNTBONUS", "NAME_ADDON_HUNTBONUS"},
+      {'F', "", "SCAREBONUS", "NAME_ADDON_SCAREBONUS"},
+      {'F', "", "LUTEBONUS", "NAME_ADDON_MUSICBONUS"},
+      {'F', "", "BRUSHBONUS", "NAME_ADDON_CLEARBONUS"},
+      {'F', "", "CONCERTBONUS", "NAME_ADDON_CONCERTBONUS"},
+      {'F', "", "CONCERTLOABONUS", "NAME_ADDON_CONCERTLOABONUS"},
+      {'F', "", "ABIGAILPLAYSONGDONE", "NAME_ADDON_CONCERTKEIRABONUS"},
+      {'F', "", "BROOMBONUS", "NAME_ADDON_BROOMBONUS"},
+      {'F', "", "RAKEBONUS", "NAME_ADDON_RAKEBONUS"},
+      {'F', "", "LOSTVALLEYBONUS", "NAME_ADDON_LOSTVALLEYBONUS"},
+      {'F', "", "RX_TREASUREBONUS", "NAME_ADDON_TREASUREBONUS"},
+      {'F', "", "WIZARDBONUS", "NAME_ADDON_WIZARDBONUS"},
+      {'F', "", "WEALTHBONUS", "NAME_ADDON_WEALTHBONUS"},
+      {'F', "", "RHETORIKBONUS", "NAME_ADDON_RHETORIKBONUS"},
+      {'F', "", "RX_ACHIEVE_RICHARMOR", "=Biedny arystokrata"},
+      {'F', "", "RX_ACHIEVE_BEATSILVIO", "=Zabi\xE6 Sylvio"},
+      {'F', "", "LOVEBONUSNADYA", "=Przelecie\xE6 Nadj\xEA"},
+      {'F', "", "RX_TREASURECAPITANFOUND", "=Sekret Kapitana Stra\xBFy"},
+      {'F', "", "RX_DUNGEONMASTERGOT", "NAME_ADDON_DUNGEONMASTER"},
+      {'F', "", "RX_RETURNMARVINSWORDARHIEVE", "RX_STR_ACHIEVEOLDMEMORIES"},
+      {'F', "", "RX_AL_DAREFIGHTWINACHIEVE", "RX_STR_ACHIEVEARENADAREFIGHTER"},
+      {'F', "", "RX_ARENACOMPLETED", "RX_STR_ACHIEVEARENA"},
+      {'F', "", "RX_ACHIEVE_FERNANDOFULL", "RX_STR_ACHIEVEFERNANDOFULL"},
+      {'F', "", "RX_VAMPIRE_NOTESECRETFOUND", "RX_STR_ACHIEVEVAMPMAGESECRET"},
+      {'F', "", "RX_POCKERARCHIEVEGOT", "RX_STR_ACHIEVEPOCKERGAME"},
+      {'F', "", "RX_AW_SECRETSTATUEARCH", "RX_STR_ACHIEVEAW_STATUE"},
+      {'F', "", "RX_AW_SECRETCRABS", "RX_STR_ACHIEVEAW_CRABS"},
+      {'F', "", "RX_AW_SECRETVIEW", "RX_STR_ACHIEVEAW_VIEWS"},
+      {'F', "", "RX_AW_BAMBOOSLICECOUNTER", "RX_STR_ACHIEVEAW_SLICER"},
+      {'F', "", "RX_LIGHTHOUSEACHIEVEGOT", "NAME_ADDON_LIGHTHOUSEBONUS"},
       }},
     };
   return tabs;
@@ -2868,6 +2920,26 @@ void GameMenu::setPlayer(const Npc &pl) {
           lines.push_back(std::move(l));
           continue;
           }
+        if(r.kind=='F') {
+          // NB fix 246: an achievement of the plugin: the flag of the scripts is set (RX_AW_BambooSliceCounter: -1)
+          // and the name comes from the text of the scripts ("Zdobyto osiagniecie: 'Name'" -> Name)
+          const int32_t fv = intVal(r.a);
+          const bool    on = std::string_view(r.a)=="RX_AW_BAMBOOSLICECOUNTER" ? fv==-1 : fv>0;
+          if(!on)
+            continue;
+          std::string v = r.b[0]=='=' ? std::string(r.b+1) : str(r.b);
+          const auto q1 = v.find('\''), q2 = v.rfind('\'');
+          if(q1!=std::string::npos && q2>q1)
+            v = v.substr(q1+1,q2-q1-1); else
+          if(q1!=std::string::npos)
+            v = v.substr(q1+1);
+          if(v.empty())
+            continue;
+          l.label = v;
+          lines.push_back(std::move(l));
+          any = true;
+          continue;
+          }
         if(r.kind=='A') {
           // an achievement: the scripts write "- Name" when it is done
           std::string v = str(r.a);
@@ -2899,7 +2971,7 @@ void GameMenu::setPlayer(const Npc &pl) {
         l.value = std::move(v);
         lines.push_back(std::move(l));
         }
-      if(!tab.rows.empty() && tab.rows.back().kind=='A' && !any) {
+      if(!tab.rows.empty() && (tab.rows.back().kind=='A' || tab.rows.back().kind=='F') && !any) {
         NbStatLine l;
         l.label = nbStatusPolish ? "Brak" : "None";
         lines.push_back(std::move(l));

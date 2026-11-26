@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **246**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **247**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 246. Statystyki – zakładka Osiągnięcia pokazuje też osiągnięcia ogólne (nie tylko bossów) – 🧪 (26.11.2026)
+- **Plik:** `common/ui/gamemenu.cpp`
+- **Zgłoszenie:** „osiągnięcia się nie dodają”.
+- **Przyczyna (UNION_ABI.DLL, funkcja okna 0x10335db0):** okno pluginu ma po 39 bossach drugą część: osiągnięcia z flag skryptów (`NostalgiBonus`, `GodBonus`, `WeaponWieldBonus`, … `RX_ArenaCompleted`, `RX_PockerArchieveGot`, `RX_AW_*`, `RX_LighthouseAchieveGot`). Port rysował tylko bossów, więc „Zdobyto osiągnięcie: …” pokazywało się na ekranie, ale na liście nie było nic.
+- **Poprawka:** nowy rodzaj wiersza `F` (flaga + tekst ze skryptów, bez „Zdobyto osiągnięcie:”) – 52 osiągnięcia (Addon: Wybraniec Bogów, Mistrz miecza, Arcymag, Bokser, Miliarder…; NB: Czempion Areny, Śmiały wojownik, Sherlock Holmes, Poszukiwacz tajemnic, Doświadczony gracz w kości, Miłośnik wysokości, Koszmar krabów, Miłośnik pięknych widoków, Ścinacz roślin, Biedny arystokrata, Zabić Sylvio, Przelecieć Nadję, Sekret Kapitana Straży…). `RX_AW_BambooSliceCounter` = -1 oznacza zdobyte.
+- **Jeszcze nie ma (robi je plugin, nie skrypty):** `RX_Achieve_KillJudge` (zabicie Sędziego przy aktywnych starych questach), `RX_Achieve_JailClean`, osiągnięcia karmy (`RX_Achieve_Karma_*`) – flagi ustawia DLL.
+- **Test (data):** czeka.
 
 ### 245. Dodatkowe obrażenia run (+65%) i efekty broni nie działały – SELF/OTHER w `RX_CallDamage` były zamienione – ✅ (26.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`nbCallDamage`)
