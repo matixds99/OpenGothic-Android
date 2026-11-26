@@ -11816,8 +11816,11 @@ int32_t GameScript::nbCallDamage(Npc& victim, Npc& hero, bool isSpell, int32_t s
     if(auto* s = var("RX_LASTSPELLID"))
       s->set_int(splId);
     }
-  ScopeVar sv(*vm.global_self(),  hero.handlePtr());
-  ScopeVar ov(*vm.global_other(), victim.handlePtr());
+  // NB fix 245: SELF is the victim and OTHER the hero (the log of the PC: RX_CALLDAMAGE self=<the dummy>);
+  // RX_MainDamageFunc(OTHER, SELF) returns at once when its first character is not the hero - with SELF = hero and
+  // OTHER = victim the runes, the effects of the weapons and the extra damage never worked
+  ScopeVar sv(*vm.global_self(),  victim.handlePtr());
+  ScopeVar ov(*vm.global_other(), hero.handlePtr());
   try {
     if(fn->has_return())
       (void)vm.call_function<int>(fn); else

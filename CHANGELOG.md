@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **245**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **246**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 245. Dodatkowe obrażenia run (+65%) i efekty broni nie działały – SELF/OTHER w `RX_CallDamage` były zamienione – 🧪 (26.11.2026)
+- **Pliki:** `common/game/gamescript.cpp` (`nbCallDamage`)
+- **Zgłoszenie:** na PC włócznia ciemności z szansą (25% + moc magiczna) zadaje dodatkowe 65% obrażeń (na ekranie jedna liczba = cios × 1,65: 501 → 826, 558 → 920); w OpenGothic nigdy.
+- **Przyczyna:** log z PC (`nblog_rune.cfg`): `RX_CALLDAMAGE self=<kukła>` → `RX_MAINDAMAGEFUNC` → `B_RUNEPROCCHECK` → `RX_HEROISNECROMAGE` → `B_MAGICHURTNPC` (w 4 z 11 trafień). W skryptach SELF to ofiara, OTHER to bohater, a `RX_MainDamageFunc` kończy się od razu, gdy pierwsza postać nie jest bohaterem. Port ustawiał odwrotnie, więc runy, efekty broni (ogień, trucizna) i `RX_GlobalAddDamage` nigdy nie ruszały (w logu tylko „RX_CallDamage {” i „}”).
+- **Poprawka:** SELF = ofiara, OTHER = bohater.
+- **Jeszcze nie ma:** `RX_NecromantProc_Control` (opętanie na 3 s: 20%, 10% przy obszarowych, działa na bossy) – funkcja wtyczki.
+- **Test (data):** czeka – kilka rzutów czaru 85 w kukłę (log z `nbcalls.cfg`: `B_MAGICHURTNPC` w ok. 45% trafień, liczba nad kukłą = cios × 1,65).
 
 ### 244. W walce z bossem ostatni cios zabija bohatera, nigdy nie zostaje 1 życia – 🧪 (26.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/npc.cpp`
