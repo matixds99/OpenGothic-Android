@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 247. Statystyki – nowe zakładki „Zużyte” i „Tabliczki” oraz zabici/reputacje w Postaci – 🧪 (26.11.2026)
+### 247. Statystyki – nowe zakładki „Zużyte” i „Tabliczki” oraz zabici/reputacje w Postaci – ✅ (26.11.2026, sprawdzone: panel działa)
 - **Plik:** `common/ui/gamemenu.cpp`
 - **Zgłoszenie:** panel statystyk portu pokazywał tylko część stron okna pluginu.
 - **Źródło:** nazwy zmiennych w kolejności okna pluginu (tablica nazw w UNION_ABI.DLL: `RX_Used_PoPerm_*`, `RX_UsedPlate*`, `RX_Stat_DruidPlate_*`, `RX_DemonTabletUsed[1..6]`, `InnosBonusCount`, `BeliarBonusCount`, `OrcRespect`, `Thief_Reputation`); nazwy przedmiotów z instancji w skryptach (`C_ITEM.NAME` funkcji `Use*`).
