@@ -252,7 +252,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 246. Statystyki – zakładka Osiągnięcia pokazuje też osiągnięcia ogólne (nie tylko bossów) – 🧪 (26.11.2026)
+### 246. Statystyki – zakładka Osiągnięcia pokazuje też osiągnięcia ogólne (nie tylko bossów) – ✅ (26.11.2026, sprawdzone: osiągnięcia działają)
 - **Plik:** `common/ui/gamemenu.cpp`
 - **Zgłoszenie:** „osiągnięcia się nie dodają”.
 - **Przyczyna (UNION_ABI.DLL, funkcja okna 0x10335db0):** okno pluginu ma po 39 bossach drugą część: osiągnięcia z flag skryptów (`NostalgiBonus`, `GodBonus`, `WeaponWieldBonus`, … `RX_ArenaCompleted`, `RX_PockerArchieveGot`, `RX_AW_*`, `RX_LighthouseAchieveGot`). Port rysował tylko bossów, więc „Zdobyto osiągnięcie: …” pokazywało się na ekranie, ale na liście nie było nic.
