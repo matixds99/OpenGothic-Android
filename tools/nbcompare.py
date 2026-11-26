@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compare the calls of script functions: PC (nblog.txt of tools/pc-logger) vs OpenGothic (nbcalls.txt).
 
+  python3 tools/nbcompare.py nblog.txt nbcalls.txt --missing     (what PC calls and the port never does)
   python3 tools/nbcompare.py nblog.txt nbcalls.txt [--anchor AI_ONGETDAMAGE_IMARAH] [--npc Im'Arah] [--min 3]
 
 Both files: lines "[ms] NAME self=A other=B". The time of each is counted from its first ANCHOR call (the start of the
@@ -43,7 +44,41 @@ def stats(ev):
         d.setdefault(fn, []).append(t)
     return d
 
+def missing(pc_path, port_path):
+    """What PC calls and the port never does (the PC is the base): per function the calls, the first self/other."""
+    def read(path):
+        d, plug = {}, []
+        for raw in open(path, "rb").read().decode("latin-1").splitlines():
+            m = LINE.match(raw.strip())
+            if not m:
+                if raw.strip(): plug.append(raw.strip())
+                continue
+            t, fn, a, b = int(m.group(1)), m.group(2), (m.group(3) or "").strip(), (m.group(4) or "").strip()
+            if fn == "PLUGIN":
+                plug.append(raw.strip()); continue
+            e = d.setdefault(fn, [0, t, a, b, set()])
+            e[0] += 1
+            if a: e[4].add(ascii_name(a))
+        return d, plug
+    pc, _ = read(pc_path); og, plug = read(port_path)
+    miss = sorted(((v[0], fn, v) for fn, v in pc.items() if fn not in og), reverse=True)
+    print(f"PC calls {len(pc)} different functions, OpenGothic {len(og)}. Missing in OpenGothic: {len(miss)}\n")
+    print(f"{'function':44} {'PC n':>6} {'1st [ms]':>9}  first self / other")
+    for n, fn, v in miss:
+        print(f"{fn[:44]:44} {n:6d} {v[1]:9d}  {v[2][:22]} / {v[3][:22]}")
+    less = sorted(((pc[f][0] / max(1, og[f][0]), f) for f in pc if f in og and pc[f][0] >= 5 and og[f][0] * 3 < pc[f][0]), reverse=True)
+    if less:
+        print("\nCalled in OpenGothic, but 3x less often than on PC (the runs differ - check by hand):")
+        for r, f in less[:40]:
+            print(f"  {f:44} PC {pc[f][0]:5d}  OG {og[f][0]:5d}")
+    if plug:
+        print("\nLines of the port about the plugin (not implemented externals etc.):")
+        for l in plug[:80]: print("  " + l[:160])
+
 def main():
+    if "--missing" in sys.argv:
+        args = [x for x in sys.argv[1:] if x != "--missing"]
+        return missing(args[0], args[1])
     ap = argparse.ArgumentParser()
     ap.add_argument("pc"); ap.add_argument("port")
     ap.add_argument("--anchor", default=None, help="the function that starts the fight (default: the first call)")

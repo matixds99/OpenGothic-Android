@@ -43,3 +43,10 @@ Scenariusze do porównania (każdy osobno, osobne pliki logu – zmień nazwę `
 | 7 | 5 minut zwykłej wędrówki po Khorinis (bez walki) | tło: `Rx_*Tick`, głód, pogoda – „szum” różniący obie wersje |
 
 Wynik każdego scenariusza wklej jako dwa pliki – z listy `<<` i `>>` robię poprawki. Pamiętaj: logger PC łapie tylko funkcje **skryptów**; funkcje samej wtyczki (zewnętrzne `RX_*`) są widoczne tylko w porcie jako `not implemented call [X]` i w podsumowaniu „functions of the plugin missing in the port”.
+
+### Tylko brakujące funkcje (PC = baza)
+
+```
+python3 tools/nbcompare.py nblog.txt nbcalls.txt --missing
+```
+Lista funkcji, które woła PC (`nblog.txt`), a OpenGothic (`nbcalls.txt`) ani razu – od najczęstszych, z czasem pierwszego wywołania i pierwszym SELF/OTHER (wskazówka, gdzie szukać). Pod spodem: funkcje wołane w porcie 3x rzadziej niż na PC oraz linie portu o niezaimplementowanych funkcjach wtyczki (`PLUGIN ... not implemented`). Logi nie muszą pochodzić z identycznej rozgrywki, ale im bliższy scenariusz, tym mniej fałszywych wyników.
