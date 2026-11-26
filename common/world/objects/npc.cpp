@@ -4413,7 +4413,17 @@ void Npc::tickRoutine() {
 
   const bool fastPath = (aiPolicy==NpcProcessPolicy::AiFar2 && routines.empty()); //HACK: don't process far away Npc
   if(aiState.loopNextTime<=owner.tickCount()) {
-    aiState.loopNextTime = owner.tickCount() + perceptionTimeClampt();
+    // NB fix 249: the loop of the attack state runs every frame on PC (the PC log of Im'Arah: B_SelectSpell every 22 ms in
+    // series of 30-137 calls; here every perception time, ~242 ms). The other states keep the perception time
+    {
+    static size_t symAttack = size_t(-2), symMmAttack = size_t(-2);
+    if(symAttack==size_t(-2)) {
+      symAttack   = owner.script().findSymbolIndex("ZS_ATTACK");
+      symMmAttack = owner.script().findSymbolIndex("ZS_MM_ATTACK");
+      }
+    const bool attackLoop = aiState.funcIni.isValid() && (aiState.funcIni.ptr==symAttack || aiState.funcIni.ptr==symMmAttack);
+    aiState.loopNextTime = owner.tickCount() + (attackLoop ? 0 : perceptionTimeClampt());
+    }
 
     // The character that warns the player about the weapon (ZS_AssessFighter) waits for the perception of the removed weapon. The perception
     // is lost when the player puts the weapon away before the state has started, and 5 seconds later the character attacks. Here the state asks

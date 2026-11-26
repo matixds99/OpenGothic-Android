@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **249**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **250**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 249. Pętla stanu ataku (ZS_Attack / ZS_MM_Attack) chodzi co klatkę, jak na PC – 🧪 (26.11.2026)
+- **Plik:** `common/world/objects/npc.cpp` (`Npc::tick`).
+- **Zgłoszenie / dowód:** drugi komplet logów Im'Arah: `B_SelectSpell` i `RX_ReadySpell` na PC co klatkę (mediana 22 ms, 901 razy w 101 s, serie 30–137), w porcie co ~242 ms (138 razy w 80 s) – pętla stanu szła co czas percepcji postaci.
+- **Poprawka:** dla postaci w stanie `ZS_ATTACK` lub `ZS_MM_ATTACK` pętla stanu woła się przy każdym ticku (interwał 0); pozostałe stany bez zmian (czas percepcji). Za zgodą użytkownika (26.11).
+- **Do sprawdzenia:** w `nbcalls.txt` (`nblog_fight.cfg`) `B_SelectSpell` mniej więcej co 20–50 ms w seriach podczas walki maga; brak spadku płynności w walce z wieloma przeciwnikami; zachowanie walki (ataki, uniki, przełączanie broni) bez regresji; czy `[thrash]` w logu się nie pojawia.
+- **Test (data):** czeka.
 
 ### 248. Logger porównawczy – port zapisuje zdarzenia teleportu magów jak logger PC + lista `nblog_fight.cfg` – 🧪 (26.11.2026)
 - **Pliki:** `common/utils/nbcalls.{h,cpp}`, `common/game/gamescript.cpp` (`nbMageBlinkTick`), `tools/pc-logger/nblog_fight.cfg`, `README.md`.
