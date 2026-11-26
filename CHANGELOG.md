@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **247**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **248**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 247. Statystyki – nowe zakładki „Zużyte” i „Tabliczki” oraz zabici/reputacje w Postaci – 🧪 (26.11.2026)
+- **Plik:** `common/ui/gamemenu.cpp`
+- **Zgłoszenie:** panel statystyk portu pokazywał tylko część stron okna pluginu.
+- **Źródło:** nazwy zmiennych w kolejności okna pluginu (tablica nazw w UNION_ABI.DLL: `RX_Used_PoPerm_*`, `RX_UsedPlate*`, `RX_Stat_DruidPlate_*`, `RX_DemonTabletUsed[1..6]`, `InnosBonusCount`, `BeliarBonusCount`, `OrcRespect`, `Thief_Reputation`); nazwy przedmiotów z instancji w skryptach (`C_ITEM.NAME` funkcji `Use*`).
+- **Poprawka:** nowe rodzaje wierszy `C` (licznik ze skryptów, ukryty gdy 0) i `I` (licznik zawsze widoczny); `intVal` obsługuje element tablicy (`NAZWA[n]`). Zakładka **Zużyte**: eliksiry stałe, mikstury, jedzenie i napoje, skręty. Zakładka **Tabliczki**: kamienne tablice (sztuki), tablice druida i demoniczne (teksty ze skryptów), bełty. W **Postaci**: zabici wrogowie Innosa, zwykli ludzie (Beliar), reputacja u orków i złodziei.
+- **Jeszcze nie ma:** „Nauczone za punkty nauki” i zbiorcze bonusy rzemiosła/złodziejstwa (OverallBonus*, Craft*Exp, pieniądze ze złodziejstwa) – brak w skryptach etykiet i wzoru liczenia; potrzebny zrzut z PC.
+- **Test (data):** czeka.
 
 ### 246. Statystyki – zakładka Osiągnięcia pokazuje też osiągnięcia ogólne (nie tylko bossów) – ✅ (26.11.2026, sprawdzone: osiągnięcia działają)
 - **Plik:** `common/ui/gamemenu.cpp`

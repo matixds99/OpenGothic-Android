@@ -442,6 +442,10 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'S', "Gildia kupc\xF3w", "STRADEGUILD", nullptr},
       {'S', "Zabite potwory", "SMONSTERKILLED", nullptr},
       {'S', "Zabici ludzie", "SPEOPLEKILLED", nullptr},
+      {'I', "@RX_STR_INNOSKILLED", "INNOSBONUSCOUNT", nullptr},
+      {'I', "@RX_STR_BELIARSKILLED", "BELIARBONUSCOUNT", nullptr},
+      {'I', "@RX_STR_STATORCREP", "ORCRESPECT", nullptr},
+      {'I', "@RX_STR_STATTHIEFREP", "THIEF_REPUTATION", nullptr},
       {'H', "Poziom trudno\x9C""ci", nullptr, nullptr},
       {'S', "Poziom trudno\x9C""ci", "SHARDLVL", nullptr},
       {'S', "Tryb SNC", "SHARDSNC", nullptr},
@@ -570,6 +574,100 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'S', "Trucizny", "SSTATUSPOISON", nullptr},
       {'S', "Zimno", "SSTATUSCOLD", nullptr},
       {'S', "\xAF""ar", "SSTATUSHEAT", nullptr},
+      }},
+    {"Zu\xBFyte", "Used", {
+      {'H', "Eliksiry sta\xB3""e", nullptr, nullptr},
+      {'C', "Eliksir \xBFycia", "RX_USED_POPERM_HEALTH", nullptr},
+      {'C', "Eliksir \xBFycia (kowal)", "RX_USED_POPERM_HEALTHCRAFT", nullptr},
+      {'C', "Eliksir si\xB3y", "RX_USED_POPERM_STR", nullptr},
+      {'C', "Eliksir zr\xEA""czno\x9C""ci", "RX_USED_POPERM_DEX", nullptr},
+      {'C', "Eliksir ducha", "RX_USED_POPERM_MANA", nullptr},
+      {'C', "Eliksir ducha (alchemik)", "RX_USED_POPERM_MANACRAFT", nullptr},
+      {'C', "Eliksir Umys\xB3u", "RX_USED_POPERM_INT", nullptr},
+      {'C', "Eliksir wytrzyma\xB3o\x9C""ci", "RX_USED_POPERM_STAMINA", nullptr},
+      {'C', "Eliksir czystej energii \xBFyciowej", "RX_USED_POPERM_HEALTHINST", nullptr},
+      {'C', "Eliksir czystej energii magicznej", "RX_USED_POPERM_MANAINST", nullptr},
+      {'C', "Eliksir czystej regeneracji", "RX_USED_POPERM_CLEARHEALTH", nullptr},
+      {'C', "Mikstura Trolla", "RX_USED_POPERM_TROLL", nullptr},
+      {'C', "Embarla Firgasto", "RX_USED_POPERM_EMGASTRO", nullptr},
+      {'C', "P\xB3omie\xF1 Eligora", "RX_USED_POPERM_ELIGOR", nullptr},
+      {'C', "Lodowa ochrona", "RX_USED_POPERM_ICE", nullptr},
+      {'C', "Eliksir pot\xEAgi", "RX_USED_POPERM_POWER", nullptr},
+      {'C', "Eliksir ochrony przed magi\xB9", "RX_USED_POPERM_MAGDEF", nullptr},
+      {'C', "Eliksir ochrony przed ogniem", "RX_USED_POPERM_FIREDEF", nullptr},
+      {'C', "Eliksir nie\x9Cmiertelno\x9C""ci", "RX_USE_ITPO_XMAGICDEF", nullptr},
+      {'C', "Wielki eliksir pot\xEAgi", "RX_USE_ITPO_MUD", nullptr},
+      {'H', "Mikstury", nullptr, nullptr},
+      {'C', "Esencja lecznicza", "RX_USEDHEALTH1", nullptr},
+      {'C', "Ekstrakt leczniczy", "RX_USEDHEALTH2", nullptr},
+      {'C', "Eliksir leczniczy", "RX_USEDHEALTH3", nullptr},
+      {'C', "Esencja many", "RX_USEDMANA1", nullptr},
+      {'C', "Ekstrakt many", "RX_USEDMANA2", nullptr},
+      {'C', "Eliksir many", "RX_USEDMANA3", nullptr},
+      {'C', "Mikstura wytrzyma\xB3o\x9C""ci", "RX_USEDUSUALSTAMINA", nullptr},
+      {'C', "Eliksir z \xBF\xB9""de\xB3 krwiopijcy", "RX_USED_STINGPOTIONHEALTH", nullptr},
+      {'C', "Mikstura Amun-Su", "RX_USEDAMUSSU", nullptr},
+      {'C', "Mikstura Baala Tyona", "RX_USEIDOLTION", nullptr},
+      {'C', "Orkowa Mikstura", "RX_USED_ORC", nullptr},
+      {'C', "Mikstura przywr\xF3""cenia umys\xB3u", "RX_USE_ITPO_ADDON_GEIST_02", nullptr},
+      {'C', "Rado\x9C\xE6 Nekromanty", "RX_USE_ITPO_NECROM_POTION_01", nullptr},
+      {'C', "Ciemna M\xB9""dro\x9C\xE6", "RX_USE_ITPO_DEMON_POTION", nullptr},
+      {'C', "Fa\xB3szywy koktajl", "RX_USE_ITPO_DEMON_POTION_BAD", nullptr},
+      {'C', "Oddech \x9Cmierci", "RX_USE_ITPO_BREATH_OF_DEATH", nullptr},
+      {'C', "Krew demona", "RX_USE_ITPO_DEMONBLOOD", nullptr},
+      {'C', "Mikstura 'Mroczna Dusza'", "RX_USE_ITPO_SOULPOTION", nullptr},
+      {'C', "Mikstura 'M\xB9""dro\x9C\xE6 Smoka'", "RX_USE_ITPO_DRAGONMIND_EPIC", nullptr},
+      {'C', "Eliksir boskiego umys\xB3u", "RX_USE_ITPO_ANCIENTPOTION", nullptr},
+      {'C', "Eliksir \x8Cni\xB9""cego", "RX_USE_ITPO_SLEEPER", nullptr},
+      {'C', "Czarna Mg\xB3""a", "RX_USE_ITPO_ELIXIRSHADOW", nullptr},
+      {'C', "Os\xB3ona \x9Cmierci", "RX_USE_ITPO_UNDEADSHIELD", nullptr},
+      {'C', "Woda Adanosa", "RX_USED_ADANOSWATER", nullptr},
+      {'H', "Jedzenie i napoje", nullptr, nullptr},
+      {'C', "Kompot z le\x9Cnych jag\xF3""d", "RX_USEDCOMPOTE0", nullptr},
+      {'C', "Kompot z polnych jag\xF3""d", "RX_USEDCOMPOTE1", nullptr},
+      {'C', "Szarlotka", "RX_USEDAPPLEPIE", nullptr},
+      {'C', "Ciasto z mi\xEAsem", "RX_USEDMEATPIE", nullptr},
+      {'C', "Ciasto rybne", "RX_USEDFISHPIE", nullptr},
+      {'C', "Ciasto grzybowe", "RX_USEDMUSHPIE", nullptr},
+      {'C', "Ciasto miodowe", "RX_USEDHONEYPIE", nullptr},
+      {'C', "Gulasz z mi\xEAsnych grzyb\xF3w", "RX_USEITFO_POTTAGE_MUSHROOM", nullptr},
+      {'C', "Gulasz z ciemnych grzyb\xF3w", "RX_USEITFO_POTTAGE_MUSHROOM_BLACK", nullptr},
+      {'C', "Gulasz Thekli", "RX_USEITFO_XPSTEW", nullptr},
+      {'C', "Wino 'Balsam opatrzno\x9C""ci'", "RX_USEITFO_EALBALZAM", nullptr},
+      {'C', "Wino Zapomnienia", "RX_USEITFO_EALBALZAMTWO", nullptr},
+      {'C', "Mikstura z orkowych pomyj", "RX_USED_ORCDRINK", nullptr},
+      {'H', "Bagienne ziele", nullptr, nullptr},
+      {'C', "Wypalone skr\xEAty", "RX_SMOKECOUNT", nullptr},
+      }},
+    {"Tabliczki", "Tablets", {
+      {'H', "Kamienne tablice (u\xBFyte)", nullptr, nullptr},
+      {'C', "Kamienna Tablica Uzdrowiciela", "RX_USEDPLATEHEALTH", nullptr},
+      {'C', "Kamienna Tablica Kap\xB3""ana", "RX_USEDPLATEMANA", nullptr},
+      {'C', "Kamienna Tablica Wojownika", "RX_USEDPLATESTR", nullptr},
+      {'C', "Kamienna Tablica \xA3owcy", "RX_USEDPLATEDEX", nullptr},
+      {'C', "Kamienna Tablica Pos\xB3""a\xF1""ca", "RX_USEDPLATESTAMINA", nullptr},
+      {'C', "Kamienna Tablica Wiedzy", "RX_USEDPLATEINT", nullptr},
+      {'C', "Kamienna Tablica Szermierza", "RX_USED_1H", nullptr},
+      {'C', "Kamienna Tablica W\xB3\xF3""cznika", "RX_USED_2H", nullptr},
+      {'C', "Kamienna Tablica \xA3ucznika", "RX_USED_BOW", nullptr},
+      {'C', "Kamienna Tablica Kusznika", "RX_USED_CB", nullptr},
+      {'H', "@RX_STR_STAT_DRUIDTABLETS", nullptr, nullptr},
+      {'F', "", "RX_STAT_DRUIDPLATE_01_USED", "RX_STR_STAT_DRUIDTABLETS_01"},
+      {'F', "", "RX_STAT_DRUIDPLATE_02_USED", "RX_STR_STAT_DRUIDTABLETS_02"},
+      {'F', "", "RX_STAT_DRUIDPLATE_03_USED", "RX_STR_STAT_DRUIDTABLETS_03"},
+      {'H', "@RX_STR_STAT_DEMONTABLETS", nullptr, nullptr},
+      {'C', "@RX_STR_STAT_DEMONTABLETS_01", "RX_DEMONTABLETUSED[1]", nullptr},
+      {'C', "@RX_STR_STAT_DEMONTABLETS_02", "RX_DEMONTABLETUSED[2]", nullptr},
+      {'C', "@RX_STR_STAT_DEMONTABLETS_03", "RX_DEMONTABLETUSED[3]", nullptr},
+      {'C', "@RX_STR_STAT_DEMONTABLETS_04", "RX_DEMONTABLETUSED[4]", nullptr},
+      {'C', "@RX_STR_STAT_DEMONTABLETS_05", "RX_DEMONTABLETUSED[5]", nullptr},
+      {'C', "@RX_STR_STAT_DEMONTABLETS_06", "RX_DEMONTABLETUSED[6]", nullptr},
+      {'H', "Be\xB3ty", nullptr, nullptr},
+      {'F', "", "KNOW_HOW_TO_MAKE_CRUSHING_BOLT", "=Mia\xBF""d\xBF\xB9""ce (be\xB3ty)"},
+      {'F', "", "KNOW_HOW_TO_MAKE_EXPLOSIVE_BOLT", "=Wybuchaj\xB9""ce (be\xB3ty)"},
+      {'F', "", "KNOW_HOW_TO_MAKE_EXPLOSIVE_ARROW", "=Wybuchaj\xB9""ce (strza\xB3y)"},
+      {'F', "", "KNOW_HOW_TO_MAKE_PIERCING_BOLT", "=Przebijaj\xB9""ce (be\xB3ty)"},
+      {'F', "", "KNOW_HOW_TO_MAKE_SHARP_BOLT", "=Ostre (be\xB3ty)"},
       }},
     {"Osi\xB9gni\xEA""cia", "Achievements", {
       {'H', "Pokonani przeciwnicy", nullptr, nullptr},
@@ -2876,8 +2974,14 @@ void GameMenu::setPlayer(const Npc &pl) {
       return v->get_string();
       };
     auto intVal = [&](std::string_view name) -> int32_t {
+      uint16_t idx = 0;
+      const auto br = name.find('[');
+      if(br!=std::string_view::npos) {
+        idx  = uint16_t(std::atoi(std::string(name.substr(br+1)).c_str()));   // NB fix 247: an element of an array
+        name = name.substr(0,br);
+        }
       auto* v = sc.findSymbol(name);
-      return (v!=nullptr && v->type()==zenkit::DaedalusDataType::INT) ? v->get_int() : 0;
+      return (v!=nullptr && v->type()==zenkit::DaedalusDataType::INT && idx<v->count()) ? v->get_int(idx) : 0;
       };
     auto engine = [&](std::string_view k) -> std::string {
       if(k=="guild")   return gilds->get_string(uint16_t(pl.guild()));
@@ -2917,7 +3021,28 @@ void GameMenu::setPlayer(const Npc &pl) {
         if(r.kind=='H') {
           l.header = true;
           l.label  = r.label;
+          if(l.label.size()>1 && l.label[0]=='@') {
+            l.label = str(l.label.c_str()+1);
+            while(!l.label.empty() && (l.label.back()==' ' || l.label.back()==':'))
+              l.label.pop_back();
+            }
           lines.push_back(std::move(l));
+          continue;
+          }
+        if(r.kind=='C' || r.kind=='I') {
+          // NB fix 247: a counter of the scripts (the used potions, tablets, kills); 'C' is hidden while it is 0
+          const int32_t cv = intVal(r.a);
+          if(r.kind=='C' && cv<=0)
+            continue;
+          l.label = r.label;
+          if(l.label.size()>1 && l.label[0]=='@')
+            l.label = str(l.label.c_str()+1);
+          while(!l.label.empty() && (l.label.back()==' ' || l.label.back()==':'))
+            l.label.pop_back();
+          l.value = std::to_string(cv);
+          lines.push_back(std::move(l));
+          if(r.kind=='C')
+            any = true;
           continue;
           }
         if(r.kind=='F') {
@@ -2971,7 +3096,7 @@ void GameMenu::setPlayer(const Npc &pl) {
         l.value = std::move(v);
         lines.push_back(std::move(l));
         }
-      if(!tab.rows.empty() && (tab.rows.back().kind=='A' || tab.rows.back().kind=='F') && !any) {
+      if(!tab.rows.empty() && (tab.rows.back().kind=='A' || tab.rows.back().kind=='F' || tab.rows.back().kind=='C') && !any) {
         NbStatLine l;
         l.label = nbStatusPolish ? "Brak" : "None";
         lines.push_back(std::move(l));
