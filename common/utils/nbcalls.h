@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 namespace zenkit { class DaedalusVm; }
 
@@ -7,4 +8,6 @@ namespace zenkit { class DaedalusVm; }
 // functions of the list, the same format as nblog.txt of the PC, to be compared by tools/nbcompare.py
 struct NbCalls {
   static void hook(zenkit::DaedalusVm& vm);
+  // NB fix 248: an event of the plugin (the PC logger writes "PLUGIN <what> self=<name>"): teleport_eligible, TELEPORT
+  static void event(const char* what, const std::string& self);
   };

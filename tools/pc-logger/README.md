@@ -50,3 +50,5 @@ Wynik każdego scenariusza wklej jako dwa pliki – z listy `<<` i `>>` robię p
 python3 tools/nbcompare.py nblog.txt nbcalls.txt --missing
 ```
 Lista funkcji, które woła PC (`nblog.txt`), a OpenGothic (`nbcalls.txt`) ani razu – od najczęstszych, z czasem pierwszego wywołania i pierwszym SELF/OTHER (wskazówka, gdzie szukać). Pod spodem: funkcje wołane w porcie 3x rzadziej niż na PC oraz linie portu o niezaimplementowanych funkcjach wtyczki (`PLUGIN ... not implemented`). Logi nie muszą pochodzić z identycznej rozgrywki, ale im bliższy scenariusz, tym mniej fałszywych wyników.
+
+**`nblog_fight.cfg`** – lista do porównania walki z bossem/magiem na obu stronach: łańcuch obrażeń i run (`RX_CallDamage`, `B_RuneProcCheck`, `B_MagicHurtNpc`…), `B_SelectSpell`, `RX_ReadySpell`, `AI_On*_IMARAH`, `SPELL_LOGIC_*`. **Na PC i w porcie ten sam plik** (w porcie jako `nbcalls.cfg`) – inaczej brakujące funkcje to tylko skutek innej listy. Port zapisuje też zdarzenia `PLUGIN teleport_eligible` i `PLUGIN TELEPORT` (jak logger PC), więc można porównać rytm teleportów magów.

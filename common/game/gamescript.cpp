@@ -257,6 +257,7 @@ struct NbState {
   uint64_t                                    trfOpenMs    = 0;      // NB fix 181: HeroTransOpen without a transformation, ms
   float                                       blessAcc[3]  = {};     // NB fix 184: RX_AST_Blessing - the fractions of hp, stamina, mana
   uint64_t                                    monsterStatsNext = 0;  // NB fix 185: RX_AST_UpdateMonsterStats every second
+  std::unordered_map<Npc*,uint64_t>           blinkLogged;           // NB fix 248: the last log of teleport_eligible
   uint64_t                                    blinkNext = 0;         // NB fix 189: the teleports of the mages, every 0.5 s
   std::unordered_map<const Npc*,std::pair<int32_t,int32_t>> blinkCount; //   seen / not seen counters
   // NB fix 190: the teleport goes on during an animation of the mage (the special attack 11 of the plugin)
@@ -9654,7 +9655,16 @@ void GameScript::nbMageBlinkTick() {
     if(!runs)
       continue;
     }
+    {
+    // NB fix 248: the events of the PC logger (nblog.c): "teleport_eligible" at most every 3 s per npc, "TELEPORT" at a jump
+    auto& lastLog = st.blinkLogged[npc];
+    if(tickCount()-lastLog>=3000) {
+      lastLog = tickCount();
+      NbCalls::event("teleport_eligible",std::string(npc->displayName()));
+      }
+    }
     if(nbMageBlink(*npc,*t,dist)) {
+      NbCalls::event("TELEPORT",std::string(npc->displayName()));
       c = {0,0};
       // the enemy far away without a bow or a spell: the next teleport later (the plugin: -(10..20) and -(5..10))
       if(dist>2000.f && t->weaponState()!=WeaponState::Bow && t->weaponState()!=WeaponState::CBow &&

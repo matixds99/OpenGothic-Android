@@ -86,3 +86,12 @@ void NbCalls::hook(zenkit::DaedalusVm& vm) {
     st.out.flush();
     };
   }
+
+void NbCalls::event(const char* what, const std::string& self) {
+  auto& s = state();
+  if(!s.loaded || !s.out.is_open())
+    return;
+  const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-s.t0).count();
+  s.out << '[' << now << "] PLUGIN " << what << " self=" << self << "\r\n";
+  s.out.flush();
+  }

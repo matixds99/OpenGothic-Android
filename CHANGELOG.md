@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **248**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **249**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 248. Logger porównawczy – port zapisuje zdarzenia teleportu magów jak logger PC + lista `nblog_fight.cfg` – 🧪 (26.11.2026)
+- **Pliki:** `common/utils/nbcalls.{h,cpp}`, `common/game/gamescript.cpp` (`nbMageBlinkTick`), `tools/pc-logger/nblog_fight.cfg`, `README.md`.
+- **Powód:** pierwszy komplet logów (Im'Arah) miał różne listy funkcji – PC z `nblog_rune.cfg`, port z pełnym `nblog.cfg` – więc `--missing` pokazał jako „brakujące” funkcje łańcucha run (`RX_CallDamage`, `RX_MainDamageFunc`, `B_RuneProcCheck`, `RX_HeroIsNecroMage`, `B_MagicHurtNpc`), których port po prostu nie miał na liście. To nie jest dowód braku.
+- **Zmiana:** `NbCalls::event` zapisuje `PLUGIN teleport_eligible` (co najwyżej co 3 s na postać, jak PC) i `PLUGIN TELEPORT` przy skoku maga. `nblog_fight.cfg` (łańcuch obrażeń + `B_SelectSpell`, `RX_ReadySpell`, `AI_On*_IMARAH`, `SPELL_LOGIC_*` z DARKBALL) ma być użyty na PC **i** w porcie.
+- **Wnioski z logów (PC):** teleport Im'Arah co ~5–12 s (7 skoków w ~110 s walki), `B_MagicHurtNpc` (proc runy) w 6 z 19 trafień (~32%, zgodne z 25%+moc).
+- **Test (data):** czeka – ten sam scenariusz na PC i w porcie z `nblog_fight.cfg`.
 
 ### 247. Statystyki – nowe zakładki „Zużyte” i „Tabliczki” oraz zabici/reputacje w Postaci – ✅ (26.11.2026, sprawdzone: panel działa)
 - **Plik:** `common/ui/gamemenu.cpp`
