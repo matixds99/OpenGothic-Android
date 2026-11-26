@@ -252,13 +252,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
 
-### 245. Dodatkowe obrażenia run (+65%) i efekty broni nie działały – SELF/OTHER w `RX_CallDamage` były zamienione – 🧪 (26.11.2026)
+### 245. Dodatkowe obrażenia run (+65%) i efekty broni nie działały – SELF/OTHER w `RX_CallDamage` były zamienione – ✅ (26.11.2026)
 - **Pliki:** `common/game/gamescript.cpp` (`nbCallDamage`)
 - **Zgłoszenie:** na PC włócznia ciemności z szansą (25% + moc magiczna) zadaje dodatkowe 65% obrażeń (na ekranie jedna liczba = cios × 1,65: 501 → 826, 558 → 920); w OpenGothic nigdy.
 - **Przyczyna:** log z PC (`nblog_rune.cfg`): `RX_CALLDAMAGE self=<kukła>` → `RX_MAINDAMAGEFUNC` → `B_RUNEPROCCHECK` → `RX_HEROISNECROMAGE` → `B_MAGICHURTNPC` (w 4 z 11 trafień). W skryptach SELF to ofiara, OTHER to bohater, a `RX_MainDamageFunc` kończy się od razu, gdy pierwsza postać nie jest bohaterem. Port ustawiał odwrotnie, więc runy, efekty broni (ogień, trucizna) i `RX_GlobalAddDamage` nigdy nie ruszały (w logu tylko „RX_CallDamage {” i „}”).
 - **Poprawka:** SELF = ofiara, OTHER = bohater.
 - **Jeszcze nie ma:** `RX_NecromantProc_Control` (opętanie na 3 s: 20%, 10% przy obszarowych, działa na bossy) – funkcja wtyczki.
-- **Test (data):** czeka – kilka rzutów czaru 85 w kukłę (log z `nbcalls.cfg`: `B_MAGICHURTNPC` w ok. 45% trafień, liczba nad kukłą = cios × 1,65).
+- **Test (data):** 26.11.2026 – działa (log z OpenGothic: `RX_NecromantProc_Control` wołane przy trafieniu z dodatkiem; różnica w liczbach względem PC wynika ze starego save'a PC z mniejszą inteligencją).
 
 ### 244. W walce z bossem ostatni cios zabija bohatera, nigdy nie zostaje 1 życia – 🧪 (26.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`, `common/world/objects/npc.cpp`
