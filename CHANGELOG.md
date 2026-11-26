@@ -257,7 +257,8 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Powód:** pierwszy komplet logów (Im'Arah) miał różne listy funkcji – PC z `nblog_rune.cfg`, port z pełnym `nblog.cfg` – więc `--missing` pokazał jako „brakujące” funkcje łańcucha run (`RX_CallDamage`, `RX_MainDamageFunc`, `B_RuneProcCheck`, `RX_HeroIsNecroMage`, `B_MagicHurtNpc`), których port po prostu nie miał na liście. To nie jest dowód braku.
 - **Zmiana:** `NbCalls::event` zapisuje `PLUGIN teleport_eligible` (co najwyżej co 3 s na postać, jak PC) i `PLUGIN TELEPORT` przy skoku maga. `nblog_fight.cfg` (łańcuch obrażeń + `B_SelectSpell`, `RX_ReadySpell`, `AI_On*_IMARAH`, `SPELL_LOGIC_*` z DARKBALL) ma być użyty na PC **i** w porcie.
 - **Wnioski z logów (PC):** teleport Im'Arah co ~5–12 s (7 skoków w ~110 s walki), `B_MagicHurtNpc` (proc runy) w 6 z 19 trafień (~32%, zgodne z 25%+moc).
-- **Test (data):** czeka – ten sam scenariusz na PC i w porcie z `nblog_fight.cfg`.
+- **Drugi komplet logów (ta sama lista, Im'Arah):** żadnej funkcji nie brakuje w porcie (`--missing`: 0). Różnice: (1) `B_SelectSpell`/`RX_ReadySpell` – PC woła co klatkę (mediana 22 ms, 901 razy w 101 s, seriami 30–137), port co ~242 ms (138 razy w 80 s): pętla stanu ataku na PC chodzi co klatkę, w porcie co czas percepcji; `RX_ReadySpell` jest idempotentny, więc wpływ to głównie szybkość reakcji – **nie zmieniane bez zgody**; (2) Im'Arah ginie na PC 3 razy w 102 s po 8/5/5 trafieniach bohatera, w porcie raz po ~20 trafieniach (97 s) – do wyjaśnienia (leczenie `IMARAHHEALS`, życie bossa/mnożnik trudności); do listy dodano `RX_RestoreHealth`; (3) `B_MagicHurtNpc` 6 z 17 (PC) i 6 z 20 (port) – zgodne.
+- **Test (data):** czeka – ten sam scenariusz na PC i w porcie z `nblog_fight.cfg` (+ `RX_RestoreHealth`).
 
 ### 247. Statystyki – nowe zakładki „Zużyte” i „Tabliczki” oraz zabici/reputacje w Postaci – ✅ (26.11.2026, sprawdzone: panel działa)
 - **Plik:** `common/ui/gamemenu.cpp`
