@@ -1019,8 +1019,11 @@ void GameMenu::paintNbStatus(Painter& p) {
 
   // the level in the badge
   {
-    auto fLvl = fontOf(true,nbFitPx(true,"31",int(56.f*g.k)),Gold);
+    // the size from "31" of the PC, a little smaller (the digits of 39 are wider than "1"), and never wider than the badge
     const std::string t = std::to_string(nbStatLevel);
+    auto fLvl = fontOf(true,nbFitPx(true,"31",int(56.f*g.k))*85/100,Gold);
+    if(fLvl.textSize(t).w>int(62.f*g.k))
+      fLvl = fontOf(true,fLvl.pixelSize()*int(62.f*g.k)/std::max(1,fLvl.textSize(t).w),Gold);
     fLvl.drawText(p,g.badge.x-fLvl.textSize(t).w/2,g.badge.y+fLvl.pixelSize()/3,t);
     }
   }
