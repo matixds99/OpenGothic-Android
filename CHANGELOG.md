@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **250**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **251**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -251,6 +251,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka:** pocisk czaru gracza z celem w fokusie co klatkę skręca w stronę środka celu (jak w Gothicu – pociski magii trafiają namierzony cel), aż do trafienia albo śmierci/upadku celu; bez celu leci prosto jak dotąd. Czary NPC bez zmian.
 - **Do sprawdzenia:** ognisty pocisk / lodowa strzała w biegnącego wilka, szczura, kretoszczura – trafia.
 - **Test (17.11):** działa – pocisk leci za celem, aż trafi. Na PC (Winlator) pocisk nie skręca, a w ruchome cele (krwiopijcy) i tak trafia – możliwe, że później złagodzimy skręt (np. ograniczony kąt na klatkę), żeby było bliżej oryginału.
+
+### 250. `RX_IsCastingSpell` – boss mag (Zeld, Im'Arah) reaguje na ciosy innego NPC (np. przywołanego golema) – 🧪 (27.11.2026)
+- **Plik:** `common/game/gamescript.cpp` (`RX_ISCASTINGSPELL`).
+- **Zgłoszenie (27.11, log z Zeldem):** boss nie zmienia celu – przez cały czas celuje w bohatera, choć bije go przywołany golem (trzy razy z rzędu `B_AssessDamage | RX_IsCastingSpell`).
+- **Przyczyna:** `B_AssessDamage` i `B_MM_AssessDamage` kończą się od razu, gdy `RX_IsCastingSpell(self)` jest prawdą (cios innego NPC, nie gracza). W DLL (0x10057710) to jest stan czaru w księdze magii 2 lub 4 (czar jest inwestowany lub rzucany). Port zwracał „tak” dla każdego maga z dobytym czarem (`WeaponState::Mage`), więc mag nigdy nie dochodził do reakcji na cios (licznik `AIVRX_HITBYOTHERNPCCOUNT`, `RX_SetReattackNpc`, zmiana celu).
+- **Poprawka:** `RX_IsCastingSpell` = `Npc::isCasting()` (inwestowanie lub rzut czaru). Używane tylko w `B_AssessDamage` i `B_MM_AssessDamage`.
+- **Do sprawdzenia:** Zeld / Im'Arah po 2 ciosach golema (poza chwilą rzutu) przełącza cel na golema (`[fight] Zeld … target Przywo…`), potem wraca do bohatera po jego zniszczeniu; w czasie rzutu czaru dalej się nie przełącza. Boss nie powinien tracić celu bez powodu.
+- **Test (data):** czeka.
 
 ### 249. Pętla stanu ataku (ZS_Attack / ZS_MM_Attack) chodzi co klatkę, jak na PC – ✅ (26.11.2026, log: mediana 22 ms jak na PC)
 - **Plik:** `common/world/objects/npc.cpp` (`Npc::tick`).

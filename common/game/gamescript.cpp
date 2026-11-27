@@ -1771,7 +1771,10 @@ void GameScript::initCommon() {
       });
     bindNb("RX_ISCASTINGSPELL", [this](std::shared_ptr<zenkit::INpc> ref) -> int32_t {
       auto* npc = findNpc(ref);
-      return npc!=nullptr && npc->weaponState()==WeaponState::Mage ? 1 : 0;
+      // NB fix 250: the DLL (0x10057710) asks the spell of the magic book for the state 2 or 4 = the spell is being invested
+      // or cast; the port answered "yes" for every mage with a drawn spell, so B_AssessDamage returned at once
+      // ("RX_IsCastingSpell") and a mage boss (Zeld, Im'Arah) never answered a blow of another npc (a summon)
+      return npc!=nullptr && npc->isCasting() ? 1 : 0;
       });
     // RX_GetEnemyRadius(self, 500): how many enemies are in the radius
     bindNb("RX_GETENEMYRADIUS", [this](std::shared_ptr<zenkit::INpc> ref, int32_t radius) -> int32_t {
