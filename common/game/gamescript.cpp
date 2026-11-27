@@ -1763,7 +1763,10 @@ void GameScript::initCommon() {
     bindNb("RX_ISENEMY", [this](std::shared_ptr<zenkit::INpc> aRef, std::shared_ptr<zenkit::INpc> bRef) -> int32_t {
       auto* a = findNpc(aRef);
       auto* b = findNpc(bRef);
-      return a!=nullptr && b!=nullptr && a!=b && a->isEnemy(*b) ? 1 : 0;
+      // NB fix 251: the DLL (0x101b7210) compares the current enemy of the first npc ([npc+0x498]) with the second one,
+      // so it means "other is the current target of self" - not hostility. B_AssessDamage switches the target of a hit
+      // npc only when !RX_IsEnemy(self,other); with hostility the answer was always 1 and a boss never turned to a summon
+      return a!=nullptr && b!=nullptr && a!=b && a->target()==b ? 1 : 0;
       });
     bindNb("RX_CLEARNPCFOCUS", [this](std::shared_ptr<zenkit::INpc> ref) {
       if(auto* npc = findNpc(ref))

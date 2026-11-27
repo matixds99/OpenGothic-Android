@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **251**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **252**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -258,6 +258,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna:** `B_AssessDamage` i `B_MM_AssessDamage` kończą się od razu, gdy `RX_IsCastingSpell(self)` jest prawdą (cios innego NPC, nie gracza). W DLL (0x10057710) to jest stan czaru w księdze magii 2 lub 4 (czar jest inwestowany lub rzucany). Port zwracał „tak” dla każdego maga z dobytym czarem (`WeaponState::Mage`), więc mag nigdy nie dochodził do reakcji na cios (licznik `AIVRX_HITBYOTHERNPCCOUNT`, `RX_SetReattackNpc`, zmiana celu).
 - **Poprawka:** `RX_IsCastingSpell` = `Npc::isCasting()` (inwestowanie lub rzut czaru). Używane tylko w `B_AssessDamage` i `B_MM_AssessDamage`.
 - **Do sprawdzenia:** Zeld / Im'Arah po 2 ciosach golema (poza chwilą rzutu) przełącza cel na golema (`[fight] Zeld … target Przywo…`), potem wraca do bohatera po jego zniszczeniu; w czasie rzutu czaru dalej się nie przełącza. Boss nie powinien tracić celu bez powodu.
+- **Test (data):** czeka.
+
+### 251. `RX_IsEnemy` = „czy other jest aktualnym celem self” – boss zmienia cel na przywołańca – 🧪 (27.11.2026)
+- **Plik:** `common/game/gamescript.cpp` (`RX_ISENEMY`).
+- **Zgłoszenie (27.11):** po poprawce 250 Zeld nadal atakuje tylko bohatera i nie zmienia agro na golema.
+- **Przyczyna:** w `B_AssessDamage` zmiana celu jest za warunkiem `!RX_IsEnemy(self, other)`. W DLL (0x101b7210) ta funkcja porównuje aktualnego wroga pierwszej postaci ([npc+0x498]) z drugą, czyli znaczy „other jest już celem self”. Port zwracał wrogość (`isEnemy`), więc dla golema zawsze 1 i gałąź zmiany celu nigdy się nie wykonywała. Ten sam warunek jest jeszcze w skrypcie bandytów (ofiara bandyty ≠ cel napastnika).
+- **Poprawka:** `RX_IsEnemy(a, b)` = `a->target() == b`.
+- **Do sprawdzenia:** Zeld / Im'Arah po 3–4 ciosach golema (poza rzutem czaru) przełącza cel na golema; po jego zniszczeniu wraca do bohatera.
 - **Test (data):** czeka.
 
 ### 249. Pętla stanu ataku (ZS_Attack / ZS_MM_Attack) chodzi co klatkę, jak na PC – ✅ (26.11.2026, log: mediana 22 ms jak na PC)
