@@ -7029,14 +7029,9 @@ void GameScript::wld_spawnnpcrange(std::shared_ptr<zenkit::INpc> npcRef, int cls
     return;
 
   (void)lifeTime;
-  // NB fix 254: the crawlers of the Crawler Queen (MINECRAWLER_QUEEN1/2, RX_Callback_MineCrawlerQueen_Spawn: range 400 cm
-  // around the hero) came out 1 m from the hero; now 3.5 m (inside the range of the script)
-  float bias = 100.f;
-  if(at->isPlayer() && lifeTime>=200.f) {
-    if(const auto* cls = vm.find_symbol_by_index(uint32_t(clsId)); cls!=nullptr && cls->name().size()>=17 &&
-       strncasecmp(cls->name().c_str(),"MINECRAWLER_QUEEN",17)==0)
-      bias = std::min(350.f,lifeTime*0.875f);
-    }
+  // NB fix 254: the port ignored the range of Wld_SpawnNpcRange and put everybody 1 m from the target; now 3.5 m by default
+  // (0.875 of the range of the script when it is smaller, e.g. 300 cm -> 2.6 m; no range or under 2 m - as before, 1 m)
+  const float bias = lifeTime>=200.f ? std::min(350.f,lifeTime*0.875f) : 100.f;
   for(int32_t i=0;i<count;++i) {
     auto* npc = world().addNpc(size_t(clsId),at->position());
     fixNpcPositionNear(*npc,at->position(),at->rotation() + 360.f*float(i)/float(count),bias);   // NB fix 223

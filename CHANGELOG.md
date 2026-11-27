@@ -285,12 +285,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
-### 254. Pełzacze Królowej Pełzaczy pojawiają się 3,5 m od bohatera (nie 1 m) – 🧪 (27.11.2026)
+### 254. `Wld_SpawnNpcRange`: postacie pojawiają się 3,5 m od celu (nie 1 m), m.in. pełzacze Królowej Pełzaczy – 🧪 (27.11.2026)
 - **Plik:** `common/game/gamescript.cpp` (`wld_spawnnpcrange`).
 - **Zgłoszenie (27.11):** po zbiciu życia Królowej pełzaczy (komunikat „Послышались какие-то звуки…” / „słychać jakieś dźwięki”) pełzacze pojawiają się tuż przy bohaterze.
 - **Skrypty:** `AI_OnTick_MineCrawlerQueen` – etap 1 przy 75% życia i etap 2 przy 50%: komunikat, po 3 s `RX_Callback_MineCrawlerQueen_Spawn` = `Wld_SpawnNpcRange(HERO, MINECRAWLER_QUEEN1, 1, 400)` i to samo dla `MINECRAWLER_QUEEN2` (zasięg 400 cm wokół bohatera), po 1 s `RX_Callback_MineCrawlerQueen_SpawnAttack` – oba zaczynają atakować bohatera. Etap 2 dodatkowo zeruje serię sieci. Atak siecią (`RX_Callback_MineCrawlerQueen`, 8–10 s po etapie): 5 trafień `SPELLFX_SPIDERWEB` co kolejny tik, każde 300 minus ochrona magiczna bohatera (min. 1), tylko gdy królowa widzi bohatera.
 - **Przyczyna:** port ignoruje zasięg w `Wld_SpawnNpcRange` i stawia postacie 1 m od celu (poprawka 223).
-- **Poprawka:** dla instancji `MINECRAWLER_QUEEN*` wołanych na bohaterze odległość startowa = 3,5 m (0,875 zasięgu ze skryptu, czyli w jego granicach); reszta bez zmian (szuka wolnego miejsca na tym samym poziomie, w polu widzenia).
+- **Poprawka (rozszerzona na wszystkie wywołania):** odległość startowa = 3,5 m, a gdy zasięg ze skryptu jest mniejszy – 0,875 zasięgu (np. 300 cm → 2,6 m); bez zasięgu lub poniżej 2 m jak dawniej (1 m). Dotyczy też dodatków bossów i innych spawnów skryptowych. Reszta bez zmian (szuka wolnego miejsca na tym samym poziomie, w polu widzenia).
 - **Do sprawdzenia:** po 75% i 50% życia królowej pełzacze wyskakują kilka metrów od bohatera i biegną do niego; w ciasnych jaskiniach nie pojawiają się za ścianą.
 - **Test (data):** czeka.
 
