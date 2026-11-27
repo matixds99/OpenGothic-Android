@@ -258,6 +258,7 @@ struct NbState {
   float                                       blessAcc[3]  = {};     // NB fix 184: RX_AST_Blessing - the fractions of hp, stamina, mana
   uint64_t                                    monsterStatsNext = 0;  // NB fix 185: RX_AST_UpdateMonsterStats every second
   std::unordered_map<Npc*,uint64_t>           blinkLogged;           // NB fix 248: the last log of teleport_eligible
+  std::unordered_map<Npc*,std::pair<uint64_t,int>> heroHits;         // NB fix 253: boss on a summon - the blows of the hero (since ms, count)
   uint64_t                                    blinkNext = 0;         // NB fix 189: the teleports of the mages, every 0.5 s
   std::unordered_map<const Npc*,std::pair<int32_t,int32_t>> blinkCount; //   seen / not seen counters
   // NB fix 190: the teleport goes on during an animation of the mage (the special attack 11 of the plugin)
@@ -11599,6 +11600,49 @@ bool GameScript::nbIsSummon(const Npc& npc) {
 
 void GameScript::nbOnDamage(Npc& target, Npc& attacker) {
   nbBossHit(target,attacker);   // NB fix 100
+  // NB fix 253 (an addition of the port, NOT in the scripts): a boss that fights a summon of the hero turns back to the hero
+  // after 3 blows of the hero within 8 s. B_AssessDamage needs 4 blows of the same attacker in a row, and the golems that hit
+  // the boss all the time reset the series of the hero - the boss never came back (on PC: 2 blows of the golems -> the boss
+  // goes to them, 3 shots of the hero -> back). To be replaced by the thresholds from the PC log (nblog_switch.cfg).
+  if(attacker.isPlayer() && !target.isPlayer() && !target.isDead() && !target.isUnconscious()) {
+    auto& st  = nbStates[this];
+    Npc*  cur = target.target();
+    if(cur==nullptr || cur==&attacker || !nbIsSummon(*cur)) {
+      st.heroHits.erase(&target);
+      } else {
+      auto* isBoss = vm.find_symbol_by_name("RX_ISBOSS");
+      bool  boss   = false;
+      if(isBoss!=nullptr && isBoss->type()==zenkit::DaedalusDataType::FUNCTION) {
+        try { boss = vm.call_function<int>(isBoss,target.handlePtr())!=0; }
+        catch(const std::exception&) {}
+        }
+      if(boss) {
+        const uint64_t now = tickCount();
+        auto&          e   = st.heroHits[&target];
+        if(e.second==0 || now>e.first+8000)
+          e = {now,0};
+        ++e.second;
+        // not in the middle of its own blow or cast (like RX_CanReattackNow): the next blow of the hero decides then
+        if(e.second>=3 && !target.isAttackAnim() && !target.isCasting()) {
+          const size_t sym = findSymbolIndex("ZS_ATTACK");
+          if(sym!=size_t(-1) && sym!=0) {
+            st.heroHits.erase(&target);
+            target.clearAiQueue();
+            target.setTarget(&attacker);
+            if(auto* clr = vm.find_symbol_by_name("B_CLEARPERCEPTIONS");
+               clr!=nullptr && clr->type()==zenkit::DaedalusDataType::FUNCTION) {
+              ScopeVar sv(*vm.global_self(), target.handlePtr());
+              try { vm.call_function<void>(clr); }
+              catch(const std::exception&) {}
+              }
+            auto& as = aiState(sym);
+            target.aiPush(AiQueue::aiStartState(as.funcIni,0,&attacker,nullptr,""));
+            nbCtx("boss returns to the hero: ",target.displayName()," (3 blows of the hero while it fought a summon)");
+            }
+          }
+        }
+      }
+    }
   // NB fix 242: the last call of RX_OnDamage (the plugin calls it at every damage): RX_OnDamageBossTactics(attacker, target) -
   // the reaction of the bosses to the blows: a heal, an explosion or a ball by the chance, the rage at 15-30% of life. The PC log
   // (Im'Arah, 9 calls in 33 s, right after AI_OnGetDamage) has it, the port never called it. It runs at every exit of this function

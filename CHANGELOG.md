@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **253**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **254**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -274,6 +274,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna:** `B_AssessDamage` zmienia cel przez `B_ClearPerceptions` + `AI_StartState(ZS_Attack)`. Na PC stan startuje od nowa, a `PERCEPTION_SET_MINIMAL` w init przywraca percepcje. W porcie `AI_StartState(…, 0)` na ten sam stan nic nie robił (noFinalize), więc percepcje zostawały wyłączone (`percDamage=0`, w logu „perc damage … dropped … no function for it”) i `B_AssessDamage` nigdy się nie wołał na ciosy bohatera.
 - **Poprawka:** dla `ZS_Attack` i `ZS_MM_Attack` ponowny start tego samego stanu zawsze uruchamia init od nowa. Inne stany bez zmian.
 - **Do sprawdzenia:** Zeld po przełączeniu na golema ma w logu `percDamage=1`; po kilku trafieniach bohatera z rzędu (bez ciosów golema między nimi) wraca na bohatera; walka z innymi potworami bez zmian.
+- **Test (data):** czeka.
+
+### 253. Boss walczący z przywołańcem wraca na bohatera po 3 jego trafieniach – 🧪 (27.11.2026) – DODATEK PORTU
+- **Plik:** `common/game/gamescript.cpp` (`nbOnDamage`).
+- **Zgłoszenie (27.11, log d685252d + opis z PC):** po poprawkach 250–252 Zeld przełącza się na golemy, ale nie wraca na gracza, który go bije. Na PC: po 2 uderzeniach golemów idzie na nie, po 3 strzałach gracza wraca, i tak w kółko.
+- **Przyczyna:** skrypt `B_AssessDamage` zmienia cel dopiero na 4. trafienie tego samego napastnika z rzędu, a golemy bijące bossa cały czas zerują serię gracza (w logu: 38 trafień golemów, 17 gracza, max 3 z rzędu). Dlaczego PC robi to szybciej – nieznane (potrzebny `nblog_switch.cfg` z PC).
+- **Poprawka (tymczasowa, nie ma jej w skryptach):** boss (`RX_IsBoss`), którego aktualny cel jest przywołańcem, po 3 trafieniach gracza w oknie 8 s (poza własnym ciosem/rzutem) czyści kolejkę, ustawia cel na gracza, woła `B_ClearPerceptions` i startuje `ZS_Attack` (jak skrypt). W logu linia `boss returns to the hero`.
+- **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
+- **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
 ### 249. Pętla stanu ataku (ZS_Attack / ZS_MM_Attack) chodzi co klatkę, jak na PC – ✅ (26.11.2026, log: mediana 22 ms jak na PC)
