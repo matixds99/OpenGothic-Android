@@ -575,6 +575,22 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'S', "Zimno", "SSTATUSCOLD", nullptr},
       {'S', "\xAF""ar", "SSTATUSHEAT", nullptr},
       }},
+    {"Rzemios\xB3o", "Crafting", {
+      // NB fix 256: the page of the PC: the experience of the crafts (RX_CRAFT_*EXP) and the bonuses of the attributes from the
+      // crafting (OVERALLBONUS*: the limit is 10 / 5 / 10 per chapter, 'L' = value/limit)
+      {'H', "Alchemia", nullptr, nullptr},
+      {'I', "Bonus do\x9Cw.", "RX_CRAFT_ALCHEXP", nullptr},
+      {'L', "Bonus INTa", "OVERALLBONUSALCHEMY", "10"},
+      {'H', "Kowalstwo", nullptr, nullptr},
+      {'I', "Bonus do\x9Cw.", "RX_CRAFT_SMITHEXP", nullptr},
+      {'L', "Bonus si\xB3y", "OVERALLBONUSSMITH", "5"},
+      {'H', "Tworzenie run", nullptr, nullptr},
+      {'I', "Bonus do\x9Cw.", "RX_CRAFT_RUNESEXP", nullptr},
+      {'L', "Bonus INTa", "OVERALLBONUSRUNES", "10"},
+      {'H', "Kradzie\xBF kieszonkowa", nullptr, nullptr},
+      {'I', "Bonus do\x9Cw.", "RX_CRAFT_THIEFEXP", nullptr},
+      {'I', "Skradzione z\xB3oto", "RX_MONEYGOTTHIEF", nullptr},
+      }},
     {"Zu\xBFyte", "Used", {
       {'H', "Eliksiry sta\xB3""e", nullptr, nullptr},
       {'C', "Eliksir \xBFycia", "RX_USED_POPERM_HEALTH", nullptr},
@@ -3026,6 +3042,13 @@ void GameMenu::setPlayer(const Npc &pl) {
             while(!l.label.empty() && (l.label.back()==' ' || l.label.back()==':'))
               l.label.pop_back();
             }
+          lines.push_back(std::move(l));
+          continue;
+          }
+        if(r.kind=='L') {
+          // NB fix 256: value / (multiplier * chapter)
+          l.label = r.label;
+          l.value = std::to_string(intVal(r.a))+"/"+std::to_string(std::atoi(r.b)*std::max<int32_t>(1,intVal("KAPITEL")));
           lines.push_back(std::move(l));
           continue;
           }
