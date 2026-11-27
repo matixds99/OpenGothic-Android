@@ -84,7 +84,7 @@ class MainWindow : public Tempest::Window {
     void paintFocus     (Tempest::Painter& p, Tempest::Rect rect);
 
     void drawBar(Tempest::Painter& p, const Tempest::Texture2d *bar, int x, int y, float v, Tempest::AlignFlag flg);
-    void drawBar(Tempest::Painter& p, const Tempest::Texture2d *bar, int x, int y, int width, float v, Tempest::AlignFlag flg);
+    void drawBar(Tempest::Painter& p, const Tempest::Texture2d *bar, int x, int y, int width, float v, Tempest::AlignFlag flg, int height = 0);
 #ifdef OPENGOTHIC_TOUCH_UI
     void drawTouchBars(Tempest::Painter& p, Npc& pl);
 #endif

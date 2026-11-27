@@ -1120,12 +1120,12 @@ void MainWindow::drawBar(Painter &p, const Tempest::Texture2d* bar, int x, int y
   drawBar(p,bar,x,y,int(200.f*scale*float(std::min(w(),800))/800.f),v,flg);
   }
 
-void MainWindow::drawBar(Painter &p, const Tempest::Texture2d* bar, int x, int y, int width, float v, AlignFlag flg) {
+void MainWindow::drawBar(Painter &p, const Tempest::Texture2d* bar, int x, int y, int width, float v, AlignFlag flg, int height) {
   if(barBack==nullptr || bar==nullptr)
     return;
   const float destW   = float(width);
   const float k       = float(destW)/float(std::max(barBack->w(),1));
-  const float destH   = float(barBack->h())*k;
+  const float destH   = height>0 ? float(height) : float(barBack->h())*k;   // height: a bar stretched only in width
   const float destHin = float(destH)*24.f/32.f;
   //const float destHin = 20;//float(destH)*24.f/32.f;
 
@@ -1211,16 +1211,18 @@ void MainWindow::drawTouchBars(Painter& p, Npc& pl) {
     int  x = 0, top = 0, width = 0, bottom = 0;
     };
   Drawn drawn[Mobile::HudBarCount];
-  auto drawHudBar = [&](int i, const Tempest::Texture2d* tex, float value) {
+  // minWidth (NB fix 259): a bar can be wider than its place, when its text needs it; it grows to both sides
+  auto drawHudBar = [&](int i, const Tempest::Texture2d* tex, float value, int minWidth = 0) {
     const auto place = placeOf(i);
     if(place.hidden && !editing)
       return;
     const auto r     = Mobile::hudBarRect(i,float(w()),float(h()),buttons,place);
-    const int  width = int(r.w);
-    const int  bh    = barHeight(width);
+    const int  width = std::max(int(r.w),minWidth);
+    const int  left  = int(r.x)-(width-int(r.w))/2;
+    const int  bh    = barHeight(int(r.w));
     const int  bot   = int(r.y+r.h/2)+bh/2;
-    drawBar(p,tex,int(r.x),bot,width,value,AlignLeft | AlignBottom);
-    drawn[i] = {true,int(r.x),bot-bh,width,bot};
+    drawBar(p,tex,left,bot,width,value,AlignLeft | AlignBottom,bh);
+    drawn[i] = {true,left,bot-bh,width,bot};
     };
 
   drawHudBar(0,barHp,hp);
@@ -1235,11 +1237,12 @@ void MainWindow::drawTouchBars(Painter& p, Npc& pl) {
     const int64_t prev = std::max<int64_t>(0,next-span);
     const int64_t have = std::clamp<int64_t>(int64_t(pl.experience())-prev,0,std::max<int64_t>(1,next-prev));
     const int64_t need = std::max<int64_t>(1,next-prev);
-    drawHudBar(3,barMisc,float(have)/float(need));
+    // NB fix 259: the points of learning live after the experience ("LP: 12"); the bar grows when the text does not fit
+    const auto  text = "Poz. "+std::to_string(lvl)+"   "+std::to_string(have)+"/"+std::to_string(need)+
+                       " ("+std::to_string(int(have*100/need))+"%)   LP: "+std::to_string(pl.learningPoints());
+    drawHudBar(3,barMisc,float(have)/float(need),hudFont.textSize(text).w+int(48.f*Gothic::interfaceScale(this)));
     if(drawn[3].visible) {
       const auto& d    = drawn[3];
-      const auto  text = "Poz. "+std::to_string(lvl)+"   "+std::to_string(have)+"/"+std::to_string(need)+
-                         " ("+std::to_string(int(have*100/need))+"%)";
       const int   tw   = hudFont.textSize(text).w;
       const int   th0  = hudFont.textSize(text).h;
       drawText(text,d.x+(d.width-tw)/2,(d.top+d.bottom)/2+th0/2-2);
