@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **259**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **258**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -285,21 +285,13 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
-### 258. Panel statystyk: strony i wygląd dokładnie jak na PC (5 stron ze zrzutów) – 🧪 (27.11.2026)
-- **Pliki:** `common/ui/gamemenu.cpp`; 🆕 `android/assets/touch-icons/nbstat_slate.png`, `nbstat_banner.png`; zmienione `nbstat_sh0..4_on/off.png` (prawdziwe tarcze ze zrzutów, w tym aktywne w pięciu kolorach).
-- **Zgłoszenie (27.11, 8 zrzutów z PC):** „na tej 3 jest tylko rozwijana, jest tam najwięcej”.
-- **Strony (jak na PC):** 1 (zwój): Informacje, Statystyki; 2 (miecze): Statystyki, Umiejętności walki; 3 (kowadło, przewijana): Poziom trudności, ranga i gildie, umiejętności rzemiosła, strzały i receptury bełtów, Trofea, bonusy z rzemiosła (Alchemia, Kowalstwo, Tworzenie run, Kradzież), zużyte mikstury i jedzenie, tabliczki; 4 (pancerz): Ochrona, Odporności; 5 (postać z wieńcem): HEROICZNI PRZECIWNICY, Zdobyte osiągnięcia (nazwy w apostrofach jak na PC).
-- **Wygląd:** łupek (tło) ze zrzutu PC, czarny pasek nagłówka ze strzałkami, nagłówki „- Nazwa -”, nazwy po prawej do dwukropka, wartości na środku kolumny, druga kolumna dla umiejętności („zielony”), „Czas w grze” z czasu gry, „Wykonane zadania” z dziennika (zadania ukończone w NB).
-- **Nie zrobione (dane):** „Liczba śmierci” (licznik jest w pluginie, port go nie ma) oraz zapis „Użyte/Stworzone/Wszystkie Bonusy” (x/y/z) – na razie liczniki użycia w jednej liczbie. Strony 1, 2, 4, 5 nie przewijają się (jak na PC).
-- **Do sprawdzenia:** czy treść każdej strony zgadza się z PC (kolejność, brakujące wiersze), czy tarcze reagują na dotyk, czy nic nie wchodzi pod smoki.
-- **Test (data):** czeka.
-
-### 257. Panel statystyk w wyglądzie z PC: ramka z cierniami i smokami, pięć tarcz zamiast zakładek z napisami – 🧪 (27.11.2026)
-- **Pliki:** `common/ui/gamemenu.cpp`; 🆕 `android/assets/touch-icons/nbstat_frame.png`, `nbstat_sh0..4_off.png`, `nbstat_sh0..4_on.png`.
-- **Zgłoszenie (27.11, zrzuty z PC):** szarobury panel z napisami zamiast ozdobnego panelu z PC.
-- **Zmiana:** tło to `MENU_INGAME.TGA` z paczki NB (łupek z cierniową ramką). Ramka z górną listwą, smokami i znacznikiem poziomu jest wycięta ze zrzutu z PC (tekstury interfejsu NB nie ma w paczce skryptów), a miejsca na tarcze i cyfry poziomu zostały wypełnione. Tarcze też pochodzą ze zrzutu; aktywne wersje czterech z nich i nieaktywną wersję „Rzemiosła” wygenerowałem z tego samego obrazka. Poziom bohatera rysuje kod.
-- **Układ:** pięć tarcz jak na PC; zakładki skryptów połączone: 1. Postać + Atrybuty, 2. Umiejętności, 3. Rzemiosło, 4. Ochrona, 5. Zużyte + Tabliczki + Osiągnięcia (nagłówek każdej części jest w środku strony, strona się przewija). Nagłówki „- Nazwa -” złote na środku, nazwy po lewej, wartości na środku kolumny, rozmiar tekstu liczony tak, że „Bonus dośw.” ma szerokość jak na PC.
-- **Do sprawdzenia:** wygląd na telefonie (rozmiar tekstu, położenie tarcz), dotyk tarczy zmienia stronę, przewijanie długich stron, poziom w znaczniku. Przypisanie zakładek do tarcz to moje przypuszczenie – na PC mogą być inne.
+### 257. Panel statystyk jak na PC: ozdobna ramka z cierniami i smokami, pięć tarcz, strony i treść ze zrzutów – 🧪 (27.11.2026)
+- **Pliki:** `common/ui/gamemenu.cpp`; 🆕 `android/assets/touch-icons/nbstat_frame.png`, `nbstat_slate.png`, `nbstat_banner.png`, `nbstat_sh0..4_on/off.png`.
+- **Zgłoszenie (27.11, zrzuty z PC wszystkich stron, 14 zrzutów długiej strony):** szarobury panel z zakładkami zamiast ozdobnego panelu z PC; „na tej 3 jest tylko rozwijana, jest tam najwięcej”.
+- **Wygląd:** ramka z cierniami, smokami i górną listwą, pięć tarcz (aktywna świeci), znacznik z poziomem bohatera, łupek w tle, czarny pasek nagłówka ze strzałkami i nagłówki „- Nazwa -”. Tekstur interfejsu NB (4 GB) nie da się wysłać, więc ramka, tarcze, pasek i łupek są wycięte ze zrzutów z PC (miejsca po tekście i smokach domalowane), a poziom rysuje kod. Rozmiar tekstu liczony tak, że „Bonus dośw.” ma szerokość jak na PC; nazwy po prawej stronie kolumny, wartości na środku, druga kolumna dla umiejętności („zielony”, „adept 47”). Za długie nazwy nie są skracane „…”, tylko ucinane krawędzią panelu jak na PC. Dotyk tarczy zmienia stronę, strony 1, 2, 4, 5 nie przewijają się, strona 3 przewija się przeciągnięciem.
+- **Strony:** 1 (zwój): Informacje, Statystyki (czas w grze, wykonane zadania z dziennika, karma). 2 (miecze): Statystyki, Umiejętności walki. 3 (kowadło): Poziom trudności; Osiągnięcia (punkty wyzwań, status); Umiejętności tworzenia, złodziejskie, Tworzenie broni i pancerzy, Tworzenie strzał i bełtów, Umiejętności specjalne, Specjalne dary bogów, magiczne, lingwistyczne, regeneracji; Trofea; Gotowanie; STATYSTYKI BOHATERA; bonusy Alchemia / Kowalstwo / Tworzenie run / Kradzież kieszonkowa; trzy tabele „Użyte/Stworzone/Wszystkie Bonusy” (x/y/z: użyte, stworzone, suma bonusu = użyte × bonus za jedno użycie ze skryptów, np. Szarlotka +10 zdrowia, eliksir ducha +4 many, gulasz z ciemnych grzybów +1 many); tabliczki „Użyte/Wszystkie Bonusy” (np. Uzdrowiciela 13/130); Tablice Druida i Demoniczne; UŻYTE PRZEDMIOTY. 4 (pancerz): Ochrona, Odporności. 5 (postać z wieńcem): HEROICZNI PRZECIWNICY, Zdobyte osiągnięcia (nazwy w apostrofach).
+- **Nie zrobione (brak danych w skryptach – liczy je plugin):** „Liczba śmierci”; „Doświadczenie za walki” (suma); „Statystyki obrażeń krwawienia” (szansa, obrażenia, ticki); sekcja „Nauczone za punkty nauki”; „Unik (%)” na stronie 4 pochodzi z `RX_DODGECHANGE` (przypuszczenie). Premie za jedno użycie niektórych przedmiotów (siła/zręczność/umysł elixir +2, ciasto miodowe +2, wina +12/+3) wyliczyłem ze zrzutu PC (bonus ÷ użyte), bo skrypt ich nie ma.
+- **Do sprawdzenia:** czy treść i kolejność każdej strony zgadza się z PC (zwłaszcza strona 3), czy wartości x/y/z się zgadzają, czy nic nie wchodzi pod smoki, rozmiar tekstu i tarcz na telefonie.
 - **Test (data):** czeka.
 
 ### 256. Panel statystyk: strona „Rzemiosło” (bonusy z alchemii, kowalstwa, run, kradzieży) – ✅ (27.11.2026)
