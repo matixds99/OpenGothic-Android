@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **258**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **259**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -283,6 +283,15 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka (tymczasowa, nie ma jej w skryptach):** boss (`RX_IsBoss`), którego aktualny cel jest przywołańcem, po 3 trafieniach gracza w oknie 8 s (poza własnym ciosem/rzutem) czyści kolejkę, ustawia cel na gracza, woła `B_ClearPerceptions` i startuje `ZS_Attack` (jak skrypt). W logu linia `boss returns to the hero`.
 - **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
+- **Test (data):** czeka.
+
+### 258. Panel statystyk: strony i wygląd dokładnie jak na PC (5 stron ze zrzutów) – 🧪 (27.11.2026)
+- **Pliki:** `common/ui/gamemenu.cpp`; 🆕 `android/assets/touch-icons/nbstat_slate.png`, `nbstat_banner.png`; zmienione `nbstat_sh0..4_on/off.png` (prawdziwe tarcze ze zrzutów, w tym aktywne w pięciu kolorach).
+- **Zgłoszenie (27.11, 8 zrzutów z PC):** „na tej 3 jest tylko rozwijana, jest tam najwięcej”.
+- **Strony (jak na PC):** 1 (zwój): Informacje, Statystyki; 2 (miecze): Statystyki, Umiejętności walki; 3 (kowadło, przewijana): Poziom trudności, ranga i gildie, umiejętności rzemiosła, strzały i receptury bełtów, Trofea, bonusy z rzemiosła (Alchemia, Kowalstwo, Tworzenie run, Kradzież), zużyte mikstury i jedzenie, tabliczki; 4 (pancerz): Ochrona, Odporności; 5 (postać z wieńcem): HEROICZNI PRZECIWNICY, Zdobyte osiągnięcia (nazwy w apostrofach jak na PC).
+- **Wygląd:** łupek (tło) ze zrzutu PC, czarny pasek nagłówka ze strzałkami, nagłówki „- Nazwa -”, nazwy po prawej do dwukropka, wartości na środku kolumny, druga kolumna dla umiejętności („zielony”), „Czas w grze” z czasu gry, „Wykonane zadania” z dziennika (zadania ukończone w NB).
+- **Nie zrobione (dane):** „Liczba śmierci” (licznik jest w pluginie, port go nie ma) oraz zapis „Użyte/Stworzone/Wszystkie Bonusy” (x/y/z) – na razie liczniki użycia w jednej liczbie. Strony 1, 2, 4, 5 nie przewijają się (jak na PC).
+- **Do sprawdzenia:** czy treść każdej strony zgadza się z PC (kolejność, brakujące wiersze), czy tarcze reagują na dotyk, czy nic nie wchodzi pod smoki.
 - **Test (data):** czeka.
 
 ### 257. Panel statystyk w wyglądzie z PC: ramka z cierniami i smokami, pięć tarcz zamiast zakładek z napisami – 🧪 (27.11.2026)

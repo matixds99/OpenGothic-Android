@@ -425,19 +425,64 @@ int32_t GameMenu::numQuests(const QuestLog* ql, QuestStat st) {
 struct NbStatRow { char kind; const char* label; const char* a; const char* b; };
 struct NbStatTab { const char* pl; const char* en; std::vector<NbStatRow> rows; };
 static const std::vector<NbStatTab>& nbStatTabs() {
+  // NB fix 258: the five pages of the PC panel (screenshots 27.11): the order of the sections and the texts like there
   static const std::vector<NbStatTab> tabs = {
     {"Posta\xE6", "Character", {
-      {'H', "Posta\xE6", nullptr, nullptr},
-      {'E', "Gildia", "guild", nullptr},
-      {'S', "Rozdzia\xB3", "SKAPITEL", nullptr},
-      {'E', "Poziom", "level", nullptr},
-      {'E', "Do\x9Cwiadczenie", "exp", nullptr},
-      {'E', "Nast\xEApny poziom", "next", nullptr},
-      {'E', "Punkty nauki", "lp", nullptr},
-      {'S', "Dzie\xF1", "SALLDAY", nullptr},
-      {'S', "Ranga", "SGRADE", nullptr},
-      {'S', "Punkty rangi", "SRANKPOINTS", nullptr},
-      {'H', "Bogowie i gildie", nullptr, nullptr},
+      {'H', "Informacje", nullptr, nullptr},
+      {'E', "Gildia:", "guild", nullptr},
+      {'E', "Do\x9Cwiadczenie:", "expnext", nullptr},
+      {'E', "Punkty nauki:", "lp", nullptr},
+      {'H', "Statystyki", nullptr, nullptr},
+      {'E', "Poziom bohatera:", "level", nullptr},
+      {'E', "Do\x9Cw. do nast. poziomu:", "tonext", nullptr},
+      {'S', "Rozdzia\xB3:", "SKAPITEL", nullptr},
+      {'S', "Ilo\x9C\xE6 dni:", "SALLDAY", nullptr},
+      {'E', "Czas w grze:", "playtime", nullptr},
+      {'B', "", nullptr, nullptr},
+      {'E', "Wykonane zadania:", "quests", nullptr},
+      {'S', "Karma Innosa:", "SINNOSKARMA", nullptr},
+      {'S', "Karma Beliara:", "SBELIARKARMA", nullptr},
+      }},
+    {"Umiej\xEAtno\x9C""ci", "Skills", {
+      {'H', "Statystyki", nullptr, nullptr},
+      {'D', "Si\xB3""a:", "str", "SREALSTR"},
+      {'D', "Zr\xEA""czno\x9C\xE6:", "dex", "SREALDEX"},
+      {'E', "Zdrowie:", "hp", nullptr},
+      {'E', "Wytrzyma\xB3o\x9C\xE6:", "stamina", nullptr},
+      {'E', "Mana:", "mana", "SREALMANA"},
+      {'S', "Inteligencja:", "SINTELLECT", nullptr},
+      {'S', "Magiczna moc:", "SSTATUSMAGICPOWER", nullptr},
+      {'H', "Umiej\xEAtno\x9C""ci walki", nullptr, nullptr},
+      {'T', "Bro\xF1 jednor\xEA""czna:", "t1", "SMASTERY1H"},
+      {'T', "Bro\xF1 dwur\xEA""czna:", "t2", "SMASTERY2H"},
+      {'T', "\xA3uk:", "t3", "SMASTERYBOW"},
+      {'T', "Kusza:", "t4", "SMASTERYCBOW"},
+      {'U', "Tarcza:", "SSHIELD", "SMASTERYSHLD"},
+      {'B', "", nullptr, nullptr},
+      {'S', "Dwie bronie:", "SDUALWEAPON", nullptr},
+      {'S', "Orkowe bronie:", "SORCWEAPON", nullptr},
+      }},
+    {"Rzemios\xB3o", "Crafting", {
+      {'H', "Poziom trudno\x9C""ci", nullptr, nullptr},
+      {'N', "", "SHARDLVL", nullptr},
+      {'B', "", nullptr, nullptr},
+      {'S', "Tryb zaawansowany:", "SHARDKSAIMODE", nullptr},
+      {'S', "Tryb SnC:", "SHARDSNC", nullptr},
+      {'S', "PN / Poziom:", "SSTATUSLP", nullptr},
+      {'S', "Zdrowie / poziom:", "SSTATUSHP", nullptr},
+      {'S', "Do\x9Cwiadczenie z walk:", "SSTATUSEXP", nullptr},
+      {'S', "Zdrowie przeciwnik\xF3w:", "SSTATUSMONSTER", nullptr},
+      {'S', "Si\xB3""a przeciwnik\xF3w:", "SSTATUSMONSTERPOWER", nullptr},
+      {'S', "Ochrona przeciwnik\xF3w:", "SSTATUSMONSTERPROT", nullptr},
+      {'B', "", nullptr, nullptr},
+      {'S', "Przywracanie z mikstur:", "SSTATUSPOTIONS", nullptr},
+      {'S', "Pu\xB3""apki:", "SSTATUSTRAPS", nullptr},
+      {'S', "Sen:", "SSTATUSSLEEP", nullptr},
+      {'S', "G\xB3\xF3""d/Pragnienie/Zm\xEA""czenie:", "SSTATUSHUNGER", nullptr},
+      {'S', "Z\xB3oto:", "SSTATUSMONEY", nullptr},
+      {'H', "Ranga i gildie", nullptr, nullptr},
+      {'S', "Ranga:", "SGRADE", nullptr},
+      {'S', "Punkty rangi:", "SRANKPOINTS", nullptr},
       {'S', "Karma Innosa", "SINNOSKARMA", nullptr},
       {'S', "Karma Beliara", "SBELIARKARMA", nullptr},
       {'S', "Gildia z\xB3odziei", "STHIEFGUILD", nullptr},
@@ -449,23 +494,6 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'I', "@RX_STR_BELIARSKILLED", "BELIARBONUSCOUNT", nullptr},
       {'I', "@RX_STR_STATORCREP", "ORCRESPECT", nullptr},
       {'I', "@RX_STR_STATTHIEFREP", "THIEF_REPUTATION", nullptr},
-      {'H', "Poziom trudno\x9C""ci", nullptr, nullptr},
-      {'S', "Poziom trudno\x9C""ci", "SHARDLVL", nullptr},
-      {'S', "Tryb SNC", "SHARDSNC", nullptr},
-      {'S', "Trudne AI", "SHARDKSAIMODE", nullptr},
-      {'S', "Punkty nauki na poziom", "SSTATUSLP", nullptr},
-      {'S', "\xAFycie na poziom", "SSTATUSHP", nullptr},
-      {'S', "Do\x9Cwiadczenie z walki", "SSTATUSEXP", nullptr},
-      {'S', "\xAFycie wrog\xF3w", "SSTATUSMONSTER", nullptr},
-      {'S', "Si\xB3""a wrog\xF3w", "SSTATUSMONSTERPOWER", nullptr},
-      {'S', "Ochrona wrog\xF3w", "SSTATUSMONSTERPROT", nullptr},
-      {'S', "Z\xB3oto", "SSTATUSMONEY", nullptr},
-      {'S', "Mikstury lecznicze", "SSTATUSPOTIONS", nullptr},
-      {'S', "Pu\xB3""apki", "SSTATUSTRAPS", nullptr},
-      {'S', "Sen", "SSTATUSSLEEP", nullptr},
-      {'S', "G\xB3\xF3""d / pragnienie / zm\xEA""czenie", "SSTATUSHUNGER", nullptr},
-      }},
-    {"Umiej\xEAtno\x9C""ci", "Skills", {
       {'H', "Rzemios\xB3o", nullptr, nullptr},
       {'S', "Kowalstwo", "SSTATUSSMTH", "SMASTERYSMTH"},
       {'S', "Alchemia", "SSTATUSALKH", "SMASTERYALKH"},
@@ -485,31 +513,6 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'S', "Wytapianie magicznej rudy", "SSTATUSMAGPLAVKA", nullptr},
       {'S', "Stal ork\xF3w", "SSTATUSORCPLAVKA", nullptr},
       {'S', "Wytapianie z\xB3ota", "SSTATUSGOLDSMTH", nullptr},
-      {'H', "Strza\xB3y i be\xB3ty", nullptr, nullptr},
-      {'S', "Strza\xB3y", "SSTATUSARROW", nullptr},
-      {'S', "Ogniste", "SSTATUSFIREARROW", nullptr},
-      {'S', "Magiczne", "SSTATUSMAGICARROW", nullptr},
-      {'S', "Po\x9Cwi\xEA""cone", "SSTATUSBLESSARROW", nullptr},
-      {'S', "Zatrute", "SSTATUSPOISONARROW", nullptr},
-      {'S', "Z rudy", "SSTATUSOREARROW", nullptr},
-      {'S', "Wybuchowe", "ZSTATUSEXPLOSIVEARROW", nullptr},
-      {'H', "My\x9Clistwo", nullptr, nullptr},
-      {'S', "Trofea zwierz\xB9t", "SSTATUSHUNT", nullptr},
-      {'S', "Rze\x9Fnictwo", "SSTATUSMEAT", nullptr},
-      {'S', "Sk\xF3rowanie", "SSTATUSHUNTSKIN", nullptr},
-      {'S', "Sk\xF3rowanie gad\xF3w", "SSTATUSHUNTREPSKIN", nullptr},
-      {'S', "K\xB3y", "SSTATUSHUNTTEETH", nullptr},
-      {'S', "Pazury", "SSTATUSHUNTCLAW", nullptr},
-      {'S', "Pancerze pe\xB3zaczy", "SSTATUSHUNTCRWL", nullptr},
-      {'S', "\xAFuwaczki", "SSTATUSHUNTMNDB", nullptr},
-      {'S', "Skrzyd\xB3""a", "SSTATUSHUNTWING", nullptr},
-      {'S', "\xAF\xB9""d\xB3""a", "SSTATUSHUNTSTING", nullptr},
-      {'S', "Serca", "SSTATUSHUNTHEART", nullptr},
-      {'S', "R\xF3g cieniostwora", "SSTATUSHUNTSHWHORN", nullptr},
-      {'S', "R\xF3g z\xEA""bacza", "SSTATUSHUNTSNAPHORN", nullptr},
-      {'S', "J\xEAzyki ogniste", "SSTATUSHUNTFIRELANG", nullptr},
-      {'S', "\xA3uski smok\xF3w", "SSTATUSHUNTDRAGSCALE", nullptr},
-      {'S', "Krew smok\xF3w", "SSTATUSHUNTDRAGBLOOD", nullptr},
       {'H', "Gotowanie", nullptr, nullptr},
       {'S', "Zupy", "SSTATUSHERDSOUP", nullptr},
       {'S', "Kompoty", "SSTATUSHERDCOMPOT", nullptr},
@@ -547,40 +550,35 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'S', "@RX_STR_STAT_GODGIFTMANA", "RX_STR_STAT_GODGIFTMANA_VAL", nullptr},
       {'S', "@RX_STR_STAT_GODGIFTSUMMON", "RX_STR_STAT_GODGIFTSUMMON_VAL", nullptr},
       {'S', "Celny strza\xB3", "SSTATUSTRUESHOT", nullptr},
-      }},
-    {"Atrybuty", "Attributes", {
-      {'H', "Atrybuty", nullptr, nullptr},
-      {'E', "Si\xB3""a", "str", "SREALSTR"},
-      {'E', "Zr\xEA""czno\x9C\xE6", "dex", "SREALDEX"},
-      {'E', "Mana", "mana", "SREALMANA"},
-      {'S', "Inteligencja", "SINTELLECT", nullptr},
-      {'E', "Punkty \xBFycia", "hp", nullptr},
-      {'E', "Wytrzyma\xB3o\x9C\xE6", "stamina", nullptr},
-      {'H', "W\xB3""adanie broni\xB9", nullptr, nullptr},
-      {'E', "Bro\xF1 jednor\xEA""czna", "t1", "SMASTERY1H"},
-      {'E', "Bro\xF1 dwur\xEA""czna", "t2", "SMASTERY2H"},
-      {'E', "\xA3uk", "t3", "SMASTERYBOW"},
-      {'E', "Kusza", "t4", "SMASTERYCBOW"},
-      {'S', "Tarcza", "SSHIELD", "SMASTERYSHLD"},
-      {'S', "Dwie bronie", "SDUALWEAPON", nullptr},
-      {'S', "Styl ork\xF3w", "SORCWEAPON", nullptr},
-      }},
-    {"Ochrona", "Protection", {
-      {'H', "Ochrona pancerza", nullptr, nullptr},
-      {'E', "Bro\xF1 sieczna", "pedge", nullptr},
-      {'E', "Bro\xF1 obuchowa", "pblunt", nullptr},
-      {'E', "Pociski", "ppoint", nullptr},
-      {'E', "Ogie\xF1", "pfire", nullptr},
-      {'E', "Magia", "pmagic", nullptr},
-      {'S', "Przewr\xF3""cenie", "SSTATUSFLY", nullptr},
-      {'H', "Odporno\x9C""ci", nullptr, nullptr},
-      {'S', "Trucizny", "SSTATUSPOISON", nullptr},
-      {'S', "Zimno", "SSTATUSCOLD", nullptr},
-      {'S', "\xAF""ar", "SSTATUSHEAT", nullptr},
-      }},
-    {"Rzemios\xB3o", "Crafting", {
-      // NB fix 256: the page of the PC: the experience of the crafts (RX_CRAFT_*EXP) and the bonuses of the attributes from the
-      // crafting (OVERALLBONUS*: the limit is 10 / 5 / 10 per chapter, 'L' = value/limit)
+      {'H', "Strza\xB3y i be\xB3ty", nullptr, nullptr},
+      {'S', "Strza\xB3y", "SSTATUSARROW", nullptr},
+      {'S', "Ogniste", "SSTATUSFIREARROW", nullptr},
+      {'S', "Magiczne", "SSTATUSMAGICARROW", nullptr},
+      {'S', "Po\x9Cwi\xEA""cone", "SSTATUSBLESSARROW", nullptr},
+      {'S', "Zatrute", "SSTATUSPOISONARROW", nullptr},
+      {'S', "Z rudy", "SSTATUSOREARROW", nullptr},
+      {'S', "Wybuchowe", "ZSTATUSEXPLOSIVEARROW", nullptr},
+      {'K', "Ostre (be\xB3ty):", "KNOW_HOW_TO_MAKE_SHARP_BOLT", nullptr},
+      {'K', "Mia\xBF""d\xBF\xB9""ce (be\xB3ty):", "KNOW_HOW_TO_MAKE_CRUSHING_BOLT", nullptr},
+      {'K', "Wybuchaj\xB9""ce (strza\xB3y):", "KNOW_HOW_TO_MAKE_EXPLOSIVE_ARROW", nullptr},
+      {'K', "Wybuchaj\xB9""ce (be\xB3ty):", "KNOW_HOW_TO_MAKE_EXPLOSIVE_BOLT", nullptr},
+      {'K', "Przebijaj\xB9""ce (be\xB3ty):", "KNOW_HOW_TO_MAKE_PIERCING_BOLT", nullptr},
+      {'H', "Trofea", nullptr, nullptr},
+      {'S', "Mi\xEAso:", "SSTATUSMEAT", nullptr},
+      {'S', "Sk\xF3rowanie:", "SSTATUSHUNTSKIN", nullptr},
+      {'S', "Sk\xF3rowanie gad\xF3w:", "SSTATUSHUNTREPSKIN", nullptr},
+      {'S', "K\xB3y:", "SSTATUSHUNTTEETH", nullptr},
+      {'S', "Pazury:", "SSTATUSHUNTCLAW", nullptr},
+      {'S', "P\xB3ytki pancerza pe\xB3zacza:", "SSTATUSHUNTCRWL", nullptr},
+      {'S', "\xAFuwaczki:", "SSTATUSHUNTMNDB", nullptr},
+      {'S', "Skrzyd\xB3""a:", "SSTATUSHUNTWING", nullptr},
+      {'S', "\xAF\xB9""d\xB3""a:", "SSTATUSHUNTSTING", nullptr},
+      {'S', "Serca:", "SSTATUSHUNTHEART", nullptr},
+      {'S', "Rogi cieniostwora:", "SSTATUSHUNTSHWHORN", nullptr},
+      {'S', "Rogi smoczego z\xEA""bacza:", "SSTATUSHUNTSNAPHORN", nullptr},
+      {'S', "J\xEAzyki ognistego jaszczura:", "SSTATUSHUNTFIRELANG", nullptr},
+      {'S', "Smocze \xB3uski:", "SSTATUSHUNTDRAGSCALE", nullptr},
+      {'S', "Smocza krew:", "SSTATUSHUNTDRAGBLOOD", nullptr},
       {'H', "Alchemia", nullptr, nullptr},
       {'I', "Bonus do\x9Cw.", "RX_CRAFT_ALCHEXP", nullptr},
       {'L', "Bonus INTa", "OVERALLBONUSALCHEMY", "10"},
@@ -593,8 +591,6 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'H', "Kradzie\xBF kieszonkowa", nullptr, nullptr},
       {'I', "Bonus do\x9Cw.", "RX_CRAFT_THIEFEXP", nullptr},
       {'I', "Skradzione z\xB3oto", "RX_MONEYGOTTHIEF", nullptr},
-      }},
-    {"Zu\xBFyte", "Used", {
       {'H', "Eliksiry sta\xB3""e", nullptr, nullptr},
       {'C', "Eliksir \xBFycia", "RX_USED_POPERM_HEALTH", nullptr},
       {'C', "Eliksir \xBFycia (kowal)", "RX_USED_POPERM_HEALTHCRAFT", nullptr},
@@ -657,8 +653,6 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'C', "Mikstura z orkowych pomyj", "RX_USED_ORCDRINK", nullptr},
       {'H', "Bagienne ziele", nullptr, nullptr},
       {'C', "Wypalone skr\xEAty", "RX_SMOKECOUNT", nullptr},
-      }},
-    {"Tabliczki", "Tablets", {
       {'H', "Kamienne tablice (u\xBFyte)", nullptr, nullptr},
       {'C', "Kamienna Tablica Uzdrowiciela", "RX_USEDPLATEHEALTH", nullptr},
       {'C', "Kamienna Tablica Kap\xB3""ana", "RX_USEDPLATEMANA", nullptr},
@@ -681,15 +675,24 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'C', "@RX_STR_STAT_DEMONTABLETS_04", "RX_DEMONTABLETUSED[4]", nullptr},
       {'C', "@RX_STR_STAT_DEMONTABLETS_05", "RX_DEMONTABLETUSED[5]", nullptr},
       {'C', "@RX_STR_STAT_DEMONTABLETS_06", "RX_DEMONTABLETUSED[6]", nullptr},
-      {'H', "Be\xB3ty", nullptr, nullptr},
-      {'F', "", "KNOW_HOW_TO_MAKE_CRUSHING_BOLT", "=Mia\xBF""d\xBF\xB9""ce (be\xB3ty)"},
-      {'F', "", "KNOW_HOW_TO_MAKE_EXPLOSIVE_BOLT", "=Wybuchaj\xB9""ce (be\xB3ty)"},
-      {'F', "", "KNOW_HOW_TO_MAKE_EXPLOSIVE_ARROW", "=Wybuchaj\xB9""ce (strza\xB3y)"},
-      {'F', "", "KNOW_HOW_TO_MAKE_PIERCING_BOLT", "=Przebijaj\xB9""ce (be\xB3ty)"},
-      {'F', "", "KNOW_HOW_TO_MAKE_SHARP_BOLT", "=Ostre (be\xB3ty)"},
+      }},
+    {"Ochrona", "Protection", {
+      {'H', "Ochrona", nullptr, nullptr},
+      {'E', "ostrza:", "pedge", nullptr},
+      {'E', "obuchowe:", "pblunt", nullptr},
+      {'E', "k\xB3uj\xB9""ce:", "ppoint", nullptr},
+      {'E', "ogie\xF1:", "pfire", nullptr},
+      {'E', "Magia:", "pmagic", nullptr},
+      {'W', "Unik (%):", "RX_DODGECHANGE", nullptr},
+      {'H', "Odporno\x9C""ci", nullptr, nullptr},
+      {'S', "Odporno\x9C\xE6 na gor\xB9""co:", "SSTATUSHEAT", nullptr},
+      {'S', "Odporno\x9C\xE6 na zimno:", "SSTATUSCOLD", nullptr},
+      {'S', "Odporno\x9C\xE6 na trucizn\xEA (poziom):", "SSTATUSPOISON", nullptr},
+      {'B', "", nullptr, nullptr},
+      {'S', "przed upadkiem:", "SSTATUSFLY", nullptr},
       }},
     {"Osi\xB9gni\xEA""cia", "Achievements", {
-      {'H', "Pokonani przeciwnicy", nullptr, nullptr},
+      {'H', "HEROICZNI PRZECIWNICY", nullptr, nullptr},
       {'A', "", "SSTATUSHEROIC_01", nullptr},
       {'A', "", "SSTATUSHEROIC_02", nullptr},
       {'A', "", "SSTATUSHEROIC_03", nullptr},
@@ -729,7 +732,9 @@ static const std::vector<NbStatTab>& nbStatTabs() {
       {'A', "", "SSTATUSHEROIC_37", nullptr},
       {'A', "", "SSTATUSHEROIC_38", nullptr},
       {'A', "", "SSTATUSHEROIC_39", nullptr},
-      {'H', "Osi\xB9gni\xEA""cia og\xF3lne", nullptr, nullptr},
+      {'B', "", nullptr, nullptr},
+      {'B', "", nullptr, nullptr},
+      {'H', "Zdobyte osi\xB9gni\xEA""cia", nullptr, nullptr},
       {'F', "", "NOSTALGIBONUS", "NAME_ADDON_NOSTALGIEBONUS"},
       {'F', "", "GODBONUS", "NAME_ADDON_GODSBONUS"},
       {'F', "", "WEAPONWIELDBONUS", "NAME_ADDON_WARRIORBONUS"},
@@ -787,7 +792,7 @@ static const std::vector<NbStatTab>& nbStatTabs() {
   }
 
 // what the screen shows: the lines of every tab, filled by setPlayer
-struct NbStatLine { std::string label, value; bool header = false; };
+struct NbStatLine { std::string label, value, extra; bool header = false; };
 static std::vector<std::vector<NbStatLine>> nbStatData;
 static int   nbStatTab    = 0;
 static float nbStatScroll = 0;
@@ -798,15 +803,15 @@ static float nbStatDragY  = 0, nbStatDragStart = 0;
 static std::vector<std::vector<NbStatLine>> nbStatGroups;
 static int nbStatLevel = 1;
 static const std::vector<std::vector<size_t>>& nbStatGroupTabs() {
-  // 0 Postac, 1 Umiejetnosci, 2 Atrybuty, 3 Ochrona, 4 Rzemioslo, 5 Zuzyte, 6 Tabliczki, 7 Osiagniecia
-  static const std::vector<std::vector<size_t>> g = {{0,2},{1},{4},{3},{5,6,7}};
+  // the five pages of the PC panel (nbStatTabs)
+  static const std::vector<std::vector<size_t>> g = {{0},{1},{2},{3},{4}};
   return g;
   }
 
 #ifdef OPENGOTHIC_TOUCH_UI
 // the art of the panel: the frame of the PC version (android/assets/touch-icons/nbstat_*.png), the shields in two states
 struct NbStatArt {
-  Tempest::Texture2d frame, shOff[5], shOn[5];
+  Tempest::Texture2d frame, slate, banner, shOff[5], shOn[5];
   bool ok = false;
   };
 static NbStatArt& nbStatArt() {
@@ -816,7 +821,9 @@ static NbStatArt& nbStatArt() {
     tried = true;
     try {
       auto& dev = Resources::device();
-      art->frame = dev.texture(TouchAsset::pixmap("nbstat_frame.png"));
+      art->frame  = dev.texture(TouchAsset::pixmap("nbstat_frame.png"));
+      art->slate  = dev.texture(TouchAsset::pixmap("nbstat_slate.png"));
+      art->banner = dev.texture(TouchAsset::pixmap("nbstat_banner.png"));
       for(int i=0; i<5; ++i) {
         art->shOff[i] = dev.texture(TouchAsset::pixmap(("nbstat_sh"+std::to_string(i)+"_off.png").c_str()));
         art->shOn [i] = dev.texture(TouchAsset::pixmap(("nbstat_sh"+std::to_string(i)+"_on.png").c_str()));
@@ -833,7 +840,7 @@ static NbStatArt& nbStatArt() {
 
 static constexpr float NbRingAspect = 1071.f/868.f;   // the frame of the PC version
 struct NbStatGeom {
-  Tempest::Rect ring, content, shield[5];
+  Tempest::Rect ring, cut, content, shield[5];
   Tempest::Point badge;
   int   badgeR = 1;
   int   pitch  = 1;                // a row of the text
@@ -855,6 +862,7 @@ static NbStatGeom nbStatGeom(int W, int H) {
                                  {0.5917f,0.1313f,0.1296f,0.1606f},{0.7563f,0.1313f,0.1317f,0.1606f}};
   for(int i=0; i<5; ++i)
     g.shield[i] = Tempest::Rect(fx(sh[i][0]),fy(sh[i][1]),int(sh[i][2]*float(rw)),int(sh[i][3]*float(rh)));
+  g.cut     = Tempest::Rect(fx(0.0784f),fy(0.2798f),int(0.8375f*float(rw)),int(0.6511f*float(rh)));
   g.content = Tempest::Rect(fx(0.0784f)+int(8.f*g.k),fy(0.2798f)+int(4.f*g.k),int(0.8375f*float(rw))-int(16.f*g.k),int(0.6511f*float(rh))-int(8.f*g.k));
   g.badge   = Tempest::Point(fx(0.9545f),fy(0.0492f));
   g.badgeR  = int(0.0434f*float(rw));
@@ -929,15 +937,9 @@ void GameMenu::paintNbStatus(Painter& p) {
     return;
     }
 
-  // the slate of the panel (MENU_INGAME of New Balance), the frame goes over it
-  if(back!=nullptr) {
-    p.setBrush(*back);
-    const int bw = int(back->w()), bh = int(back->h());
-    const int sx = bw*216/2048, sy = bh*216/2048, sw = bw*1620/2048, sh = bh*1620/2048;
-    p.drawRect(g.ring.x+g.ring.w*3/100,g.ring.y+g.ring.h*3/100,g.ring.w*94/100,g.ring.h*94/100,sx,sy,sw,sh);
-    } else {
-    bar(p,g.ring.x,g.ring.y,g.ring.w,g.ring.h,Color(0.07f,0.09f,0.09f,1.f));
-    }
+  // the slate of the panel (cut from the PC version), the frame goes over it
+  p.setBrush(Brush(art.slate));
+  p.drawRect(g.cut.x,g.cut.y,g.cut.w,g.cut.h,0,0,int(art.slate.w()),int(art.slate.h()));
 
   // the text of the page, cut by the field of the panel
   if(nbStatTab>=0 && size_t(nbStatTab)<nbStatGroups.size()) {
@@ -963,6 +965,13 @@ void GameMenu::paintNbStatus(Painter& p) {
       const int base = yy+g.pitch/2+fLabel.pixelSize()/3;   // the baseline of the row
       if(yy+lh>=g.content.y && yy<=g.content.y+g.content.h) {
         if(l.header) {
+          // the black bar with the arrows (the caps of 152 pixels of the PC screenshot, the middle is stretched)
+          const int bh = int(78.f*g.k), bw = int(834.f*g.k), cap = int(152.f*g.k);
+          const int bx = centerX-bw/2, by = yy+g.pitch/2-bh/2;
+          p.setBrush(Brush(art.banner));
+          p.drawRect(bx,by,cap,bh,0,0,152,78);
+          p.drawRect(bx+cap,by,bw-2*cap,bh,152,0,60,78);
+          p.drawRect(bx+bw-cap,by,cap,bh,212,0,152,78);
           // "- Name -" in the middle, like the headings of the PC
           const std::string t = fit(fHead,l.label,g.content.w-8*dash);
           const int tw = fHead.textSize(t).w;
@@ -980,6 +989,8 @@ void GameMenu::paintNbStatus(Painter& p) {
           fLabel.drawText(p,labelRight-fLabel.textSize(t).w,base,t);
           const std::string v = fit(fValue,l.value,int(2.f*float(g.content.x+g.content.w-valueCenter)));
           fValue.drawText(p,valueCenter-fValue.textSize(v).w/2,base,v);
+          if(!l.extra.empty())
+            fValue.drawText(p,valueCenter+int(78.f*g.k),base,fit(fValue,l.extra,int(200.f*g.k)));
           }
         }
       yy += lh;
@@ -3110,6 +3121,17 @@ void GameMenu::setPlayer(const Npc &pl) {
     auto engine = [&](std::string_view k) -> std::string {
       if(k=="guild")   return gilds->get_string(uint16_t(pl.guild()));
       if(k=="level")   return std::to_string(pl.level());
+      if(k=="expnext") return std::to_string(pl.experience())+"/"+std::to_string(pl.experienceNext());
+      if(k=="tonext")  return std::to_string(std::max<int64_t>(0,int64_t(pl.experienceNext())-int64_t(pl.experience())));
+      if(k=="playtime") {
+        uint64_t sec = 0;
+        if(auto* w = Gothic::inst().world())
+          sec = w->gameSession().playTime()/1000;
+        char buf[32];
+        std::snprintf(buf,sizeof(buf),"%llu:%02u:%02u",(unsigned long long)(sec/3600),unsigned((sec/60)%60),unsigned(sec%60));
+        return buf;
+        }
+      if(k=="quests")  return std::to_string(GameMenu::numQuests(Gothic::inst().questLog(),QuestStat::NbDone));
       if(k=="exp")     return std::to_string(pl.experience());
       if(k=="next")    return std::to_string(pl.experienceNext());
       if(k=="lp")      return std::to_string(pl.learningPoints());
@@ -3154,6 +3176,49 @@ void GameMenu::setPlayer(const Npc &pl) {
           lines.push_back(std::move(l));
           continue;
           }
+        if(r.kind=='B') {   // an empty row
+          lines.push_back(NbStatLine());
+          continue;
+          }
+        if(r.kind=='N') {   // a text of the scripts in the middle of the page
+          l.label = str(r.a);
+          lines.push_back(std::move(l));
+          continue;
+          }
+        if(r.kind=='W') {   // a number of the scripts, the label as it is
+          l.label = r.label;
+          l.value = std::to_string(intVal(r.a));
+          lines.push_back(std::move(l));
+          continue;
+          }
+        if(r.kind=='K') {   // a recipe: known or not
+          l.label = r.label;
+          l.value = intVal(r.a)>0 ? "uczony" : "-";
+          lines.push_back(std::move(l));
+          continue;
+          }
+        if(r.kind=='D') {   // a value of the engine / the base of the scripts
+          l.label = r.label;
+          l.value = engine(r.a);
+          const std::string b = str(r.b);
+          if(meaningful(b))
+            l.value += "/"+b;
+          if(l.value.empty())
+            l.value = "-";
+          lines.push_back(std::move(l));
+          continue;
+          }
+        if(r.kind=='T' || r.kind=='U') {   // two columns: the value and the word of the scripts (the colour of the circle)
+          l.label = r.label;
+          l.value = r.kind=='T' ? engine(r.a) : str(r.a);
+          if(!meaningful(l.value))
+            l.value = "-";
+          const std::string b = str(r.b);
+          if(meaningful(b))
+            l.extra = b;
+          lines.push_back(std::move(l));
+          continue;
+          }
         if(r.kind=='L') {
           // NB fix 256: value / (multiplier * chapter)
           l.label = r.label;
@@ -3185,11 +3250,14 @@ void GameMenu::setPlayer(const Npc &pl) {
           if(!on)
             continue;
           std::string v = r.b[0]=='=' ? std::string(r.b+1) : str(r.b);
+          // NB fix 258: the PC shows the name in quotes ('Name')
           const auto q1 = v.find('\''), q2 = v.rfind('\'');
           if(q1!=std::string::npos && q2>q1)
-            v = v.substr(q1+1,q2-q1-1); else
+            v = v.substr(q1,q2-q1+1); else
           if(q1!=std::string::npos)
-            v = v.substr(q1+1);
+            v = v.substr(q1)+"'"; else
+          if(!v.empty())
+            v = "'"+v+"'";
           if(v.empty())
             continue;
           l.label = v;
