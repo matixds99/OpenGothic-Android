@@ -285,7 +285,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
-### 258. Pasek doświadczenia: punkty nauki na żywo („LP: 12”) i pasek rozszerzany do tekstu – 🧪 (27.11.2026)
+### 258. Pasek doświadczenia: punkty nauki na żywo („LP: 12”) i pasek rozszerzany do tekstu – ✅ (27.11.2026)
 - **Pliki:** `common/mainwindow.cpp`, `common/mainwindow.h`.
 - **Zgłoszenie (27.11, zrzut z paska UNION_XP_BAR):** rozszerzyć pasek doświadczenia i wpisać w nim ilość punktów nauki, żeby śledzić je na żywo.
 - **Zmiana:** tekst paska to teraz „Poz. 39   10150/32000 (31%)   LP: N”, gdzie N to bieżące punkty nauki bohatera (zmienia się od razu po zdobyciu doświadczenia i po nauce). Gdy tekst nie mieści się w pasku, pasek rozszerza się na obie strony (tylko w szerokość, wysokość zostaje); miejsce paska z edytora HUD-u jest jego środkiem. Wygląd i źródło wartości (to samo co `Poz.`) bez zmian, rysowane tylko przy włączonej opcji paska doświadczenia NB (`bXpBar`).
