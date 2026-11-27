@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **257**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **258**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -285,12 +285,20 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
-### 256. Panel statystyk: strona „Rzemiosło” (bonusy z alchemii, kowalstwa, run, kradzieży) – 🧪 (27.11.2026)
+### 257. Panel statystyk w wyglądzie z PC: ramka z cierniami i smokami, pięć tarcz zamiast zakładek z napisami – 🧪 (27.11.2026)
+- **Pliki:** `common/ui/gamemenu.cpp`; 🆕 `android/assets/touch-icons/nbstat_frame.png`, `nbstat_sh0..4_off.png`, `nbstat_sh0..4_on.png`.
+- **Zgłoszenie (27.11, zrzuty z PC):** szarobury panel z napisami zamiast ozdobnego panelu z PC.
+- **Zmiana:** tło to `MENU_INGAME.TGA` z paczki NB (łupek z cierniową ramką). Ramka z górną listwą, smokami i znacznikiem poziomu jest wycięta ze zrzutu z PC (tekstury interfejsu NB nie ma w paczce skryptów), a miejsca na tarcze i cyfry poziomu zostały wypełnione. Tarcze też pochodzą ze zrzutu; aktywne wersje czterech z nich i nieaktywną wersję „Rzemiosła” wygenerowałem z tego samego obrazka. Poziom bohatera rysuje kod.
+- **Układ:** pięć tarcz jak na PC; zakładki skryptów połączone: 1. Postać + Atrybuty, 2. Umiejętności, 3. Rzemiosło, 4. Ochrona, 5. Zużyte + Tabliczki + Osiągnięcia (nagłówek każdej części jest w środku strony, strona się przewija). Nagłówki „- Nazwa -” złote na środku, nazwy po lewej, wartości na środku kolumny, rozmiar tekstu liczony tak, że „Bonus dośw.” ma szerokość jak na PC.
+- **Do sprawdzenia:** wygląd na telefonie (rozmiar tekstu, położenie tarcz), dotyk tarczy zmienia stronę, przewijanie długich stron, poziom w znaczniku. Przypisanie zakładek do tarcz to moje przypuszczenie – na PC mogą być inne.
+- **Test (data):** czeka.
+
+### 256. Panel statystyk: strona „Rzemiosło” (bonusy z alchemii, kowalstwa, run, kradzieży) – ✅ (27.11.2026)
 - **Plik:** `common/ui/gamemenu.cpp` (nowa zakładka „Rzemiosło”, nowy rodzaj wiersza `L` = wartość/limit).
 - **Zgłoszenie (27.11, zrzut z PC):** brak stron z bonusami z rzemiosła.
 - **Zmienne skryptów:** Alchemia: `RX_CRAFT_ALCHEXP` (bonus doświadczenia), `OVERALLBONUSALCHEMY` (bonus INT, limit 10 × rozdział); Kowalstwo: `RX_CRAFT_SMITHEXP`, `OVERALLBONUSSMITH` (bonus siły, limit 5 × rozdział); Tworzenie run: `RX_CRAFT_RUNESEXP`, `OVERALLBONUSRUNES` (bonus INT, limit 10 × rozdział); Kradzież kieszonkowa: `RX_CRAFT_THIEFEXP`, `RX_MONEYGOTTHIEF` (skradzione złoto). Limity z `RX_RaiseAlchemy`, `RX_RaiseSmith`, `B_RaiseIntRuneSkill` (`KAPITEL`).
 - **Do sprawdzenia:** wartości jak na zrzucie z PC (przy rozdziale 2: alchemia x/20, kowalstwo x/10, runy x/20).
-- **Test (data):** czeka.
+- **Test (27.11):** działa.
 
 ### 255. Piec / kuchenka: łopatka do pieca nie znika po upieczeniu ciasta – ✅ (27.11.2026)
 - **Pliki:** `common/world/objects/interactive.{h,cpp}`.

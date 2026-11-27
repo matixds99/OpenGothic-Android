@@ -28,6 +28,9 @@
 #include "gothic.h"
 #include "resources.h"
 #include "build.h"
+#ifdef OPENGOTHIC_TOUCH_UI
+#include "touchassets.h"
+#endif
 
 using namespace Tempest;
 
@@ -791,26 +794,89 @@ static float nbStatScroll = 0;
 static bool  nbStatDrag   = false;
 static float nbStatDragY  = 0, nbStatDragStart = 0;
 
-struct NbStatGeom { Tempest::Rect panel, tabs, content; int rowH = 1; };
-static NbStatGeom nbStatGeom(int W, int H) {
-  NbStatGeom g;
-  g.panel   = Tempest::Rect(int(float(W)*0.04f),int(float(H)*0.05f),int(float(W)*0.92f),int(float(H)*0.90f));
-  const int pad = int(float(g.panel.w)*0.03f);
-  // the pause button of the phone is in the upper left corner: the tabs start after it
-  const int tx  = std::max(g.panel.x+pad,int(float(W)*0.10f));
-  g.tabs    = Tempest::Rect(tx,g.panel.y+int(float(g.panel.h)*0.03f),g.panel.x+g.panel.w-pad-tx,int(float(g.panel.h)*0.11f));
-  const int cy  = g.tabs.y+g.tabs.h+int(float(g.panel.h)*0.03f);
-  // the back button of the phone is in the lower right corner: the values end before it
-  g.content = Tempest::Rect(g.panel.x+pad,cy,int(float(g.panel.w)*0.80f),g.panel.y+g.panel.h-pad-cy);
-  g.rowH    = std::max(1,int(float(H)*0.058f));
+// NB fix 257: the five shields of the original panel (the tabs of the scripts are joined in groups)
+static std::vector<std::vector<NbStatLine>> nbStatGroups;
+static int nbStatLevel = 1;
+static const std::vector<std::vector<size_t>>& nbStatGroupTabs() {
+  // 0 Postac, 1 Umiejetnosci, 2 Atrybuty, 3 Ochrona, 4 Rzemioslo, 5 Zuzyte, 6 Tabliczki, 7 Osiagniecia
+  static const std::vector<std::vector<size_t>> g = {{0,2},{1},{4},{3},{5,6,7}};
   return g;
   }
 
+#ifdef OPENGOTHIC_TOUCH_UI
+// the art of the panel: the frame of the PC version (android/assets/touch-icons/nbstat_*.png), the shields in two states
+struct NbStatArt {
+  Tempest::Texture2d frame, shOff[5], shOn[5];
+  bool ok = false;
+  };
+static NbStatArt& nbStatArt() {
+  static auto* art = new NbStatArt();   // lives until the end of the process: the device is gone before the statics
+  static bool  tried = false;
+  if(!tried) {
+    tried = true;
+    try {
+      auto& dev = Resources::device();
+      art->frame = dev.texture(TouchAsset::pixmap("nbstat_frame.png"));
+      for(int i=0; i<5; ++i) {
+        art->shOff[i] = dev.texture(TouchAsset::pixmap(("nbstat_sh"+std::to_string(i)+"_off.png").c_str()));
+        art->shOn [i] = dev.texture(TouchAsset::pixmap(("nbstat_sh"+std::to_string(i)+"_on.png").c_str()));
+        }
+      art->ok = true;
+      }
+    catch(const std::exception& e) {
+      Tempest::Log::e("NB panel: the art is missing: ",e.what());
+      }
+    }
+  return *art;
+  }
+#endif
+
+static constexpr float NbRingAspect = 1071.f/868.f;   // the frame of the PC version
+struct NbStatGeom {
+  Tempest::Rect ring, content, shield[5];
+  Tempest::Point badge;
+  int   badgeR = 1;
+  int   pitch  = 1;                // a row of the text
+  float k      = 1;                // the scale to the screen of the PC version (the frame is 1428x1158 there)
+  };
+static NbStatGeom nbStatGeom(int W, int H) {
+  NbStatGeom g;
+  int rh = int(float(H)*0.94f);
+  int rw = int(float(rh)*NbRingAspect);
+  if(rw>int(float(W)*0.96f)) {
+    rw = int(float(W)*0.96f);
+    rh = int(float(rw)/NbRingAspect);
+    }
+  g.ring = Tempest::Rect((W-rw)/2,(H-rh)/2,rw,rh);
+  g.k    = float(rh)/1158.f;
+  auto fx = [&](float f) { return g.ring.x+int(f*float(rw)); };
+  auto fy = [&](float f) { return g.ring.y+int(f*float(rh)); };
+  static const float sh[5][4] = {{0.1050f,0.1313f,0.1282f,0.1606f},{0.2675f,0.1313f,0.1296f,0.1606f},{0.4272f,0.1313f,0.1303f,0.1606f},
+                                 {0.5917f,0.1313f,0.1296f,0.1606f},{0.7563f,0.1313f,0.1317f,0.1606f}};
+  for(int i=0; i<5; ++i)
+    g.shield[i] = Tempest::Rect(fx(sh[i][0]),fy(sh[i][1]),int(sh[i][2]*float(rw)),int(sh[i][3]*float(rh)));
+  g.content = Tempest::Rect(fx(0.0784f)+int(8.f*g.k),fy(0.2798f)+int(4.f*g.k),int(0.8375f*float(rw))-int(16.f*g.k),int(0.6511f*float(rh))-int(8.f*g.k));
+  g.badge   = Tempest::Point(fx(0.9545f),fy(0.0492f));
+  g.badgeR  = int(0.0434f*float(rw));
+  g.pitch   = std::max(1,int(36.f*g.k));
+  return g;
+  }
+
+// the height of a line: a header takes two rows (and one more before it), a value one row
+static int nbStatLineH(const NbStatLine& l, int pitch, bool first) {
+  return l.header ? (first ? 2 : 3)*pitch : pitch;
+  }
+static int nbStatTotalH(const std::vector<NbStatLine>& lines, int pitch) {
+  int h = pitch*3/2;
+  for(size_t i=0; i<lines.size(); ++i)
+    h += nbStatLineH(lines[i],pitch,i==0);
+  return h+pitch;
+  }
+
 static float nbStatMaxScroll(const NbStatGeom& g) {
-  if(nbStatTab<0 || size_t(nbStatTab)>=nbStatData.size())
+  if(nbStatTab<0 || size_t(nbStatTab)>=nbStatGroups.size())
     return 0;
-  const float total = float(nbStatData[size_t(nbStatTab)].size())*float(g.rowH);
-  return std::max(0.f,total-float(g.content.h));
+  return std::max(0.f,float(nbStatTotalH(nbStatGroups[size_t(nbStatTab)],g.pitch)-g.content.h));
   }
 
 /// Polish in the code page of the game (windows-1250): the language setting is not always 2 for a Polish game
@@ -840,70 +906,111 @@ void GameMenu::initNbStatus() {
   nbStatScroll = 0;
   nbStatDrag   = false;
   nbStatData.clear();
+  nbStatGroups.clear();
   }
 
 #ifdef OPENGOTHIC_TOUCH_UI
+// the size of a font that gives the width to the sample text
+static int nbFitPx(bool big, const char* sample, int targetW) {
+  auto f = touchdraw::fontOf(big,100,touchdraw::White);
+  return std::max(8,100*targetW/std::max(1,f.textSize(sample).w));
+  }
+
 void GameMenu::paintNbStatus(Painter& p) {
   using namespace touchdraw;
   const int W = w();
   const int H = h();
   const auto g = nbStatGeom(W,H);
-  const bool pl = Gothic::settingsGetI("GAME","language")==2 || scanPolish() || nbStatusPolish;
+  auto& art = nbStatArt();
 
   bar(p,0,0,W,H,Dim);
-  frame(p,g.panel,1,PanelLine,PanelFill);
-
-  // the tabs
-  const auto& tabs = nbStatTabs();
-  const int   n    = int(tabs.size());
-  auto fTab   = fontOf(true,int(float(H)*0.040f),Cream);
-  auto fTabHi = fontOf(true,int(float(H)*0.040f),Gold);
-  for(int i=0; i<n; ++i) {
-    const int x0 = g.tabs.x+g.tabs.w*i/n;
-    const int x1 = g.tabs.x+g.tabs.w*(i+1)/n;
-    const bool active = i==nbStatTab;
-    if(active) {
-      bar(p,x0+2,g.tabs.y,x1-x0-4,g.tabs.h,RowSel);
-      bar(p,x0+2,g.tabs.y+g.tabs.h-std::max(2,int(float(H)*0.004f)),x1-x0-4,std::max(2,int(float(H)*0.004f)),Gold);
-      }
-    auto& f = active ? fTabHi : fTab;
-    const std::string label = fit(f,pl ? tabs[size_t(i)].pl : tabs[size_t(i)].en,x1-x0-8);
-    f.drawText(p,(x0+x1-f.textSize(label).w)/2,g.tabs.y+g.tabs.h/2+f.pixelSize()/2,label);
-    }
-  bar(p,g.panel.x+1,g.tabs.y+g.tabs.h+1,g.panel.w-2,1,Hairline);
-
-  if(nbStatTab<0 || size_t(nbStatTab)>=nbStatData.size())
+  if(!art.ok) {
+    bar(p,g.ring.x,g.ring.y,g.ring.w,g.ring.h,PanelFill);
     return;
-  const auto& lines = nbStatData[size_t(nbStatTab)];
-  nbStatScroll = std::clamp(nbStatScroll,0.f,nbStatMaxScroll(g));
-
-  auto fHead  = fontOf(false,int(float(H)*0.030f),Gold);
-  auto fLabel = fontOf(true, int(float(H)*0.036f),Cream);
-  auto fValue = fontOf(true, int(float(H)*0.036f),Gold);
-  p.setScissor(g.content.x,g.content.y,g.content.w,g.content.h);
-  int yy = g.content.y-int(nbStatScroll);
-  for(auto& l:lines) {
-    if(yy+g.rowH>=g.content.y && yy<=g.content.y+g.content.h) {
-      if(l.header) {
-        drawSpaced(p,fHead,g.content.x,yy+g.rowH/2+fHead.pixelSize()/2,l.label,std::max(1,int(float(H)*0.003f)));
-        bar(p,g.content.x,yy+g.rowH-2,g.content.w,1,Hairline);
-        } else {
-        const int vw = fValue.textSize(l.value).w;
-        fLabel.drawText(p,g.content.x,yy+g.rowH/2+fLabel.pixelSize()/2,fit(fLabel,l.label,g.content.w-vw-int(float(W)*0.02f)));
-        fValue.drawText(p,g.content.x+g.content.w-vw,yy+g.rowH/2+fValue.pixelSize()/2,l.value);
-        }
-      }
-    yy += g.rowH;
     }
-  p.setScissor(-x(),-y(),owner.w(),owner.h());
 
-  // the scroll bar
-  const float maxS = nbStatMaxScroll(g);
-  if(maxS>0) {
-    const int bw = std::max(3,int(float(W)*0.004f));
-    const int bh = std::max(bw*4,int(float(g.content.h)*float(g.content.h)/(float(g.content.h)+maxS)));
-    const int by = g.content.y+int(float(g.content.h-bh)*nbStatScroll/maxS);
-    bar(p,g.content.x+g.content.w+int(float(W)*0.015f),by,bw,bh,Gold);
+  // the slate of the panel (MENU_INGAME of New Balance), the frame goes over it
+  if(back!=nullptr) {
+    p.setBrush(*back);
+    const int bw = int(back->w()), bh = int(back->h());
+    const int sx = bw*216/2048, sy = bh*216/2048, sw = bw*1620/2048, sh = bh*1620/2048;
+    p.drawRect(g.ring.x+g.ring.w*3/100,g.ring.y+g.ring.h*3/100,g.ring.w*94/100,g.ring.h*94/100,sx,sy,sw,sh);
+    } else {
+    bar(p,g.ring.x,g.ring.y,g.ring.w,g.ring.h,Color(0.07f,0.09f,0.09f,1.f));
+    }
+
+  // the text of the page, cut by the field of the panel
+  if(nbStatTab>=0 && size_t(nbStatTab)<nbStatGroups.size()) {
+    const auto& lines = nbStatGroups[size_t(nbStatTab)];
+    nbStatScroll = std::clamp(nbStatScroll,0.f,nbStatMaxScroll(g));
+
+    // the size of the text like on the PC: "Bonus dosw." is 240 pixels of the frame of 1158
+    auto fLabel = fontOf(true,nbFitPx(true,"Bonus do\x9Cw.",int(240.f*g.k)),Cream);
+    auto fValue = fontOf(true,fLabel.pixelSize(),Cream);
+    auto fHead  = fontOf(true,fLabel.pixelSize(),Gold);
+    const int labelRight  = g.ring.x+int(0.450f*float(g.ring.w));
+    const int valueCenter = g.ring.x+int(0.618f*float(g.ring.w));
+    const int centerX     = g.content.x+g.content.w/2;
+    const int dash        = std::max(2,g.pitch/3);
+
+    p.setScissor(g.content.x,g.content.y,g.content.w,g.content.h);
+    int yy = g.content.y-int(nbStatScroll)+g.pitch*3/2;
+    for(size_t i=0; i<lines.size(); ++i) {
+      const auto& l = lines[i];
+      const int   lh = nbStatLineH(l,g.pitch,i==0);
+      if(l.header)
+        yy += i==0 ? 0 : g.pitch;
+      const int base = yy+g.pitch/2+fLabel.pixelSize()/3;   // the baseline of the row
+      if(yy+lh>=g.content.y && yy<=g.content.y+g.content.h) {
+        if(l.header) {
+          // "- Name -" in the middle, like the headings of the PC
+          const std::string t = fit(fHead,l.label,g.content.w-8*dash);
+          const int tw = fHead.textSize(t).w;
+          fHead.drawText(p,centerX-tw/2,base,t);
+          const int dw = fHead.textSize("-").w;
+          fHead.drawText(p,centerX-tw/2-dw-dash*2,base,"-");
+          fHead.drawText(p,centerX+tw/2+dash*2,base,"-");
+          } else
+        if(l.value.empty()) {
+          const std::string t = fit(fLabel,l.label,g.content.w-g.pitch);
+          fLabel.drawText(p,centerX-fLabel.textSize(t).w/2,base,t);
+          } else {
+          const int room = (labelRight-g.content.x)-g.pitch/2;
+          const std::string t = fit(fLabel,l.label,room);
+          fLabel.drawText(p,labelRight-fLabel.textSize(t).w,base,t);
+          const std::string v = fit(fValue,l.value,int(2.f*float(g.content.x+g.content.w-valueCenter)));
+          fValue.drawText(p,valueCenter-fValue.textSize(v).w/2,base,v);
+          }
+        }
+      yy += lh;
+      }
+    p.setScissor(-x(),-y(),owner.w(),owner.h());
+
+    const float maxS = nbStatMaxScroll(g);
+    if(maxS>0) {
+      const int bw = std::max(3,int(5.f*g.k));
+      const int bh = std::max(bw*4,int(float(g.content.h)*float(g.content.h)/(float(g.content.h)+maxS)));
+      const int by = g.content.y+int(float(g.content.h-bh)*nbStatScroll/maxS);
+      bar(p,g.content.x+g.content.w-bw-2,by,bw,bh,Gold);
+      }
+    }
+
+  // the frame with the dragons
+  p.setBrush(Brush(art.frame));
+  p.drawRect(g.ring.x,g.ring.y,g.ring.w,g.ring.h,0,0,int(art.frame.w()),int(art.frame.h()));
+
+  // the shields
+  for(int i=0; i<5; ++i) {
+    const auto& tex = i==nbStatTab ? art.shOn[i] : art.shOff[i];
+    p.setBrush(Brush(tex));
+    p.drawRect(g.shield[i].x,g.shield[i].y,g.shield[i].w,g.shield[i].h,0,0,int(tex.w()),int(tex.h()));
+    }
+
+  // the level in the badge
+  {
+    auto fLvl = fontOf(true,nbFitPx(true,"31",int(56.f*g.k)),Gold);
+    const std::string t = std::to_string(nbStatLevel);
+    fLvl.drawText(p,g.badge.x-fLvl.textSize(t).w/2,g.badge.y+fLvl.pixelSize()/3,t);
     }
   }
 #endif
@@ -1279,15 +1386,16 @@ void GameMenu::mobileScroll(float dy) {
 void GameMenu::mobileTap(float px, float py) {
   if(isNbStatus()) {
     const auto g = nbStatGeom(w(),h());
-    const int  n = int(nbStatTabs().size());
-    if(g.tabs.contains(int(px),int(py)) && n>0) {
-      const int t = std::clamp(int((px-float(g.tabs.x))*float(n)/float(std::max(1,g.tabs.w))),0,n-1);
+    for(int t=0; t<5; ++t) {
+      if(!g.shield[t].contains(int(px),int(py)))
+        continue;
       if(t!=nbStatTab) {
         nbStatTab    = t;
         nbStatScroll = 0;
         Gothic::inst().emitGlobalSound(Gothic::inst().loadSoundFx("MENU_BROWSE"));
         update();
         }
+      break;
       }
     return;
     }
@@ -3029,6 +3137,7 @@ void GameMenu::setPlayer(const Npc &pl) {
       nbStatusPolish = true;
 
     nbStatData.clear();
+    nbStatLevel = int(pl.level());
     for(auto& tab:nbStatTabs()) {
       std::vector<NbStatLine> lines;
       bool any = false;
@@ -3125,6 +3234,24 @@ void GameMenu::setPlayer(const Npc &pl) {
         lines.push_back(std::move(l));
         }
       nbStatData.push_back(std::move(lines));
+      }
+    // the tabs of the scripts joined in the five shields of the panel
+    nbStatGroups.clear();
+    for(auto& grp:nbStatGroupTabs()) {
+      std::vector<NbStatLine> out;
+      for(size_t t:grp) {
+        if(t>=nbStatData.size())
+          continue;
+        if(!nbStatData[t].empty() && !nbStatData[t].front().header) {
+          NbStatLine h;
+          h.header = true;
+          h.label  = nbStatusPolish ? nbStatTabs()[t].pl : nbStatTabs()[t].en;
+          out.push_back(std::move(h));
+          }
+        for(auto& l:nbStatData[t])
+          out.push_back(l);
+        }
+      nbStatGroups.push_back(std::move(out));
       }
     }
 
