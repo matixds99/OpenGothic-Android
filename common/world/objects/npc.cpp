@@ -4272,7 +4272,16 @@ bool Npc::startState(ScriptFn id, std::string_view wp, gtime endTime, bool noFin
     return false;
 
   if(aiState.funcIni==id) {
-    if(!noFinalize) {
+    // NB fix 252: B_AssessDamage / ZS_Attack_Loop turn the attacker to another target with B_ClearPerceptions + AI_StartState
+    // (ZS_Attack again): on PC the init runs anew and PERCEPTION_SET_MINIMAL gives the perceptions back. Here (state 0 =
+    // noFinalize) the same state was skipped, the perceptions stayed off and the boss no longer answered any blow
+    static size_t symAtt = size_t(-2), symMmAtt = size_t(-2);
+    if(symAtt==size_t(-2)) {
+      symAtt   = owner.script().findSymbolIndex("ZS_ATTACK");
+      symMmAtt = owner.script().findSymbolIndex("ZS_MM_ATTACK");
+      }
+    const bool attackState = id.ptr==symAtt || id.ptr==symMmAtt;
+    if(!noFinalize || attackState) {
       // NOTE: B_AssessQuietSound can cause soft-lock on npc without this
       aiState.started = false;
       }

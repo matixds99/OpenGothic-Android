@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **252**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **253**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -266,6 +266,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Przyczyna:** w `B_AssessDamage` zmiana celu jest za warunkiem `!RX_IsEnemy(self, other)`. W DLL (0x101b7210) ta funkcja porównuje aktualnego wroga pierwszej postaci ([npc+0x498]) z drugą, czyli znaczy „other jest już celem self”. Port zwracał wrogość (`isEnemy`), więc dla golema zawsze 1 i gałąź zmiany celu nigdy się nie wykonywała. Ten sam warunek jest jeszcze w skrypcie bandytów (ofiara bandyty ≠ cel napastnika).
 - **Poprawka:** `RX_IsEnemy(a, b)` = `a->target() == b`.
 - **Do sprawdzenia:** Zeld / Im'Arah po 3–4 ciosach golema (poza rzutem czaru) przełącza cel na golema; po jego zniszczeniu wraca do bohatera.
+- **Test (data):** czeka.
+
+### 252. Powtórny start ZS_Attack (zmiana celu) znów włącza percepcje – boss wraca na bohatera – 🧪 (27.11.2026)
+- **Plik:** `common/world/objects/npc.cpp` (`Npc::startState`, gałąź „ten sam stan”).
+- **Zgłoszenie (27.11, log 7708c2b8):** po poprawce 251 Zeld przełącza się na golema, ale potem do końca walki bije tylko golema, mimo ~30 trafień bohatera.
+- **Przyczyna:** `B_AssessDamage` zmienia cel przez `B_ClearPerceptions` + `AI_StartState(ZS_Attack)`. Na PC stan startuje od nowa, a `PERCEPTION_SET_MINIMAL` w init przywraca percepcje. W porcie `AI_StartState(…, 0)` na ten sam stan nic nie robił (noFinalize), więc percepcje zostawały wyłączone (`percDamage=0`, w logu „perc damage … dropped … no function for it”) i `B_AssessDamage` nigdy się nie wołał na ciosy bohatera.
+- **Poprawka:** dla `ZS_Attack` i `ZS_MM_Attack` ponowny start tego samego stanu zawsze uruchamia init od nowa. Inne stany bez zmian.
+- **Do sprawdzenia:** Zeld po przełączeniu na golema ma w logu `percDamage=1`; po kilku trafieniach bohatera z rzędu (bez ciosów golema między nimi) wraca na bohatera; walka z innymi potworami bez zmian.
 - **Test (data):** czeka.
 
 ### 249. Pętla stanu ataku (ZS_Attack / ZS_MM_Attack) chodzi co klatkę, jak na PC – ✅ (26.11.2026, log: mediana 22 ms jak na PC)
