@@ -325,6 +325,7 @@ void Interactive::onKeyInput(KeyCodec::Action act) {
   if(act==KeyCodec::ActionGeneric) {
     npc.setInteraction(nullptr);
     npc.stopAnim("");
+    restoreUseItem(*p,npc);
     p->user = nullptr;
     return;
     }
@@ -374,6 +375,7 @@ void Interactive::implTick(Pos& p) {
 
   if(p.started==Quit) {
     npc.quitInteraction();
+    restoreUseItem(p,npc);
     loopState = false;
     p.user    = nullptr;
     p.started = NotStarted;
@@ -434,6 +436,19 @@ void Interactive::implTick(Pos& p) {
     setState(std::min(stateNum,state+1)); else
     setState(std::max(0,state-1));
   loopState = (prev==state);
+  }
+
+void Interactive::restoreUseItem(Pos& p, Npc& npc) {
+  // NB fix 255: the animation of the mob (T_BAKE_S0_2_S1 / T_BAKE_S1_2_S0: DEF_CREATE_ITEM, DEF_EXCHANGE_ITEM, DEF_DESTROY_ITEM)
+  // makes and destroys the tool in the hand of the hero; when a part of the events does not come, the exchange destroys the
+  // tool from the inventory (the baking shovel). The tool of useWithItem is not used up by the mob: the same count at the end
+  if(p.useCls==0 || !npc.isPlayer())
+    return;
+  const size_t now = npc.itemCount(p.useCls);
+  if(now<p.useCount)
+    npc.addItem(p.useCls,p.useCount-now);
+  p.useCls   = 0;
+  p.useCount = 0;
   }
 
 void Interactive::implQuitInteract(Interactive::Pos &p) {
@@ -883,6 +898,15 @@ bool Interactive::attach(Npc& npc, Interactive::Pos& to) {
   to.user       = &npc;
   to.started    = NotStarted;
   to.attachMode = true;
+  to.useCls     = 0;
+  to.useCount   = 0;
+  if(npc.isPlayer() && !useWithItem.empty()) {
+    const size_t it = world.script().findSymbolIndex(useWithItem);
+    if(it!=size_t(-1)) {
+      to.useCls   = it;
+      to.useCount = npc.itemCount(it);
+      }
+    }
   return true;
   }
 
@@ -915,6 +939,7 @@ bool Interactive::detach(Npc &npc, bool quick) {
           if(sq==nullptr)
             return false;
           }
+        restoreUseItem(i,npc);
         i.user       = nullptr;
         i.started    = (canQuitAtState(npc,state) || !quick) ? NotStarted : Quit;
         i.attachMode = false;

@@ -116,6 +116,8 @@ class Interactive : public Vob {
       Phase               started    = NotStarted;
       bool                attachMode = false;
       size_t              nodeId     = 0;
+      size_t              useCls     = 0;   // NB fix 255: the item of useWithItem and how many the user had at the start
+      size_t              useCount   = 0;
 
       Tempest::Matrix4x4  pos;
 
@@ -124,6 +126,7 @@ class Interactive : public Vob {
       bool                isDistPos() const;
       };
 
+    void                restoreUseItem(Pos& p, Npc& npc);
     Tempest::Vec3       nodePosition(const Npc* npc, const Pos &to) const;
     Tempest::Matrix4x4  nodeTranform(const Npc* npc, const Pos &to) const;
     Tempest::Matrix4x4  mapBone(std::string_view nodeName) const;
