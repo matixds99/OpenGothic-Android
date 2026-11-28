@@ -291,8 +291,10 @@ public final class LauncherActivity extends Activity {
             showFolderPicker(game);
         }
         // the game is over: the files of a mod from Spine leave the folder of the game
-        if (!SpineActivity.gameRunning(this))
+        if (!SpineActivity.gameRunning(this)) {
             SpineActivation.restore(new File(external, "spine"));
+            SefarisReport.afterRun(this);   // the engine log of a Sefaris mod that was played goes to the report of that mod
+        }
         checkGameExit();
     }
 
@@ -431,6 +433,18 @@ public final class LauncherActivity extends Activity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
+    /** The two databases of mods of Gothic behind one tile of the header. */
+    private void chooseOnlineMods() {
+        final String[] items = {
+            "Spine\n" + Texts.t("the database of Clockwork Origins: mods in English, German, Polish, Russian", "baza Clockwork Origins: mody po angielsku, niemiecku, polsku, rosyjsku"),
+            "Sefaris\n" + Texts.t("sefaris.eu: Polish mods and translations", "sefaris.eu: polskie mody i spolszczenia")};
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(Texts.t("Mods of Gothic", "Mody do Gothica"))
+                .setItems(items, (d, which) -> startActivity(new Intent(this, which == 0 ? SpineActivity.class : SefarisActivity.class)))
+                .setNegativeButton(Texts.t("Cancel", "Anuluj"), null)
+                .show();
+    }
+
     private View buildUi() {
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
@@ -446,10 +460,10 @@ public final class LauncherActivity extends Activity {
         LinearLayout names = new LinearLayout(this);
         names.setOrientation(LinearLayout.VERTICAL);
         header.addView(names, new LinearLayout.LayoutParams(-2, -2));
-        TextView title = text("OpenGothic", 32, CREAM);
+        TextView title = text("OpenGothic", 28, CREAM);
         title.setTypeface(Typeface.create("serif", Typeface.NORMAL));
         names.addView(title);
-        names.addView(text(Texts.t("Your library", "Twoja biblioteka"), 14, GREY));
+        names.addView(text(Texts.t("Your library", "Twoja biblioteka"), 13, GREY));
 
         // the game of the author: a small banner between the name and the buttons
         LinearLayout.LayoutParams promoParams = new LinearLayout.LayoutParams(0, dp(76), 1.f);
@@ -464,17 +478,17 @@ public final class LauncherActivity extends Activity {
         updateButton.setOnClickListener(v -> showUpdate());
         header.addView(updateButton);
 
-        // the mods of Gothic from Spine
-        TextView spine = chip("Spine");
-        spine.setOnClickListener(v -> startActivity(new Intent(this, SpineActivity.class)));
+        // the mods of Gothic from the two databases, Spine and Sefaris: one tile, the choice comes after it (the header is narrow)
+        TextView online = chip("Spine/Sefaris");
+        online.setOnClickListener(v -> chooseOnlineMods());
         LinearLayout.LayoutParams sp0 = new LinearLayout.LayoutParams(-2, -2);
-        sp0.setMargins(dp(10), 0, 0, 0);
-        header.addView(spine, sp0);
+        sp0.setMargins(dp(6), 0, 0, 0);
+        header.addView(online, sp0);
 
         TextView mods = chip(Texts.t("Mods", "Mody"));
         mods.setOnClickListener(v -> startActivity(new Intent(this, ModsActivity.class)));
         LinearLayout.LayoutParams mp0 = new LinearLayout.LayoutParams(-2, -2);
-        mp0.setMargins(dp(10), 0, 0, 0);
+        mp0.setMargins(dp(6), 0, 0, 0);
         header.addView(mods, mp0);
 
         // Keep save tools in one compact panel so the promotional game banner keeps
@@ -482,13 +496,15 @@ public final class LauncherActivity extends Activity {
         TextView saves = chip(Texts.t("Saves", "Zapisy"));
         saves.setOnClickListener(v -> showSavePanel());
         LinearLayout.LayoutParams savesParams = new LinearLayout.LayoutParams(-2, -2);
-        savesParams.setMargins(dp(10), 0, 0, 0);
+        savesParams.setMargins(dp(6), 0, 0, 0);
         header.addView(saves, savesParams);
 
         accountButton = chip("");
+        accountButton.setMaxWidth(dp(120));
+        accountButton.setEllipsize(android.text.TextUtils.TruncateAt.END);
         accountButton.setOnClickListener(v -> accountMenu());
         LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-2, -2);
-        ap.setMargins(dp(10), 0, 0, 0);
+        ap.setMargins(dp(6), 0, 0, 0);
         header.addView(accountButton, ap);
 
         // the games
@@ -544,7 +560,10 @@ public final class LauncherActivity extends Activity {
         Bitmap mark = loadCover("promo/summerhideout-logo.webp");
         if (mark != null)
             logo.setImageBitmap(mark);
-        row.addView(logo, new LinearLayout.LayoutParams(dp(56), -1));
+        row.addView(logo, new LinearLayout.LayoutParams(dp(44), -1));
+        // a banner that is too narrow for its text gives the room of the logo to it
+        box.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
+                logo.setVisibility(right - left < dp(300) ? View.GONE : View.VISIBLE));
 
         LinearLayout texts = new LinearLayout(this);
         texts.setOrientation(LinearLayout.VERTICAL);
@@ -578,9 +597,10 @@ public final class LauncherActivity extends Activity {
             about.setAutoSizeTextTypeUniformWithConfiguration(8, 11, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
         texts.addView(about, new LinearLayout.LayoutParams(-1, 0, 1.f));
 
-        TextView discord = text("Discord \u203a", 12, GOLD);
+        TextView discord = text("Discord \u203a", 11, GOLD);
         discord.setGravity(Gravity.CENTER);
-        discord.setPadding(dp(10), dp(5), dp(10), dp(5));
+        discord.setSingleLine(true);
+        discord.setPadding(dp(8), dp(5), dp(8), dp(5));
         discord.setBackground(round(0x33c9a24a, GOLD, dp(1), dp(18)));
         discord.setOnClickListener(v -> openDiscord());
         row.addView(discord);
@@ -697,9 +717,11 @@ public final class LauncherActivity extends Activity {
     }
 
     private TextView chip(String s) {
-        TextView v = text(s, 14, 0xffe0e7e9);
+        // small padding: the header is shared with the banner of the game, which needs the room for its text
+        TextView v = text(s, 13, 0xffe0e7e9);
         v.setGravity(Gravity.CENTER);
-        v.setPadding(dp(16), dp(8), dp(16), dp(8));
+        v.setSingleLine(true);
+        v.setPadding(dp(10), dp(7), dp(10), dp(7));
         v.setBackground(round(0x33172530, 0xff33495a, dp(1), dp(20)));
         return v;
     }
@@ -839,30 +861,111 @@ public final class LauncherActivity extends Activity {
             return;
         }
         if (isInstallation(rootOf(game))) {
-            play(game);
+            if (GAMES[game].appId == 39510)
+                chooseEditionToPlay(game);
+            else
+                play(game, GAMES[game].ini);
             return;
         }
         if (canDownload(game))
-            chooseLanguage(game);
+            chooseEdition(game);
         else
             chooseSource(game);
     }
 
-    private void play(int game) {
+    /** The app of Steam of Gothic II brings Night of the Raven and the mod Classic, Gothic II without the addon. The player keeps one or both. */
+    private void chooseEdition(final int game) {
+        if (GAMES[game].appId != 39510) {
+            chooseLanguage(game, true);
+            return;
+        }
+        // 0: with the addon only, 1: the original (without the addon), 2: both, the choice is made when the game starts
+        final String[] names = {
+                Texts.t("Gothic II + Night of the Raven (with the addon)", "Gothic II + Noc Kruka (z dodatkiem)"),
+                Texts.t("Gothic II (the original, without the addon)", "Gothic II (oryginał, bez dodatku)"),
+                Texts.t("Both versions (choose when the game starts)", "Obie wersje (wybór przy uruchomieniu)"),
+        };
+        final int[] chosen = {2};
+        new AlertDialog.Builder(this)
+                .setTitle(Texts.t("Version of Gothic II", "Wersja Gothic II"))
+                .setSingleChoiceItems(names, 2, (d, which) -> chosen[0] = which)
+                .setPositiveButton(Texts.t("Next", "Dalej"), (d, w) -> {
+                    prefs.edit().putInt("g2edition", chosen[0]).apply();
+                    chooseLanguage(game, chosen[0] != 0);
+                })
+                .setNegativeButton(Texts.t("Cancel", "Anuluj"), null)
+                .show();
+    }
+
+    /** The ini of the mod Classic of Gothic II (Steam: System/g2_classic.ini), null when the installation has no such version. */
+    private static String classicIni(File root) {
+        File[] files = new File(root, "System").listFiles();
+        if (files == null)
+            return null;
+        String found = null;
+        for (File f : files) {
+            String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (f.isFile() && n.startsWith("g2_classic") && n.endsWith(".ini") && (found == null || n.equals("g2_classic.ini")))
+                found = f.getName();
+        }
+        return found;
+    }
+
+    /**
+     * Gothic II has two versions in the folder: with the addon (Night of the Raven) and the original, without it (the mod Classic of Steam).
+     * The player chooses when the game starts; the last choice is the first one. A folder without Classic (it was downloaded before, or
+     * only the version with the addon was chosen) has nothing to choose from: the game starts, or the dialog tells how to get the original.
+     */
+    private void chooseEditionToPlay(final int game) {
+        final String classic = classicIni(rootOf(game));
+        final int bought = prefs.getInt("g2edition", -1);   // what the player took when he downloaded the game: 0 addon, 1 original, 2 both
+        if (classic == null && bought == 0) {
+            play(game, GAMES[game].ini);
+            return;
+        }
+        final String[] names = {
+                Texts.t("Gothic II + Night of the Raven (with the addon)", "Gothic II + Noc Kruka (z dodatkiem)"),
+                Texts.t("Gothic II (the original, without the addon)", "Gothic II (oryginał, bez dodatku)") + (classic == null ? "  —  " + Texts.t("not downloaded", "niepobrana") : ""),
+        };
+        final int last = prefs.getInt("g2played", 0);
+        final int[] chosen = {last == 1 ? 1 : 0};
+        new AlertDialog.Builder(this)
+                .setTitle(Texts.t("Which version?", "Którą wersję uruchomić?"))
+                .setSingleChoiceItems(names, chosen[0], (d, which) -> chosen[0] = which)
+                .setPositiveButton("▶  " + Texts.t("Play", "Graj"), (d, w) -> {
+                    if (chosen[0] == 1 && classic == null) {
+                        new AlertDialog.Builder(this)
+                                .setMessage(Texts.t("The original Gothic II (without the addon) is not in the folder of the game: the Steam download of this "
+                                        + "installation did not bring it. Remove the game and download it again, choosing \"Gothic II (the original)\" "
+                                        + "or \"Both versions\". If it is still missing, the app of Steam does not have it for your account.",
+                                        "Oryginalnego Gothica II (bez dodatku) nie ma w folderze gry: pobranie tej instalacji ze Steama go nie przyniosło. "
+                                        + "Usuń grę i pobierz ją jeszcze raz, wybierając „Gothic II (oryginał)” albo „Obie wersje”. Jeśli nadal go brakuje, "
+                                        + "to aplikacja Steam na twoim koncie go nie ma."))
+                                .setPositiveButton("OK", null).show();
+                        return;
+                    }
+                    prefs.edit().putInt("g2played", chosen[0]).apply();
+                    play(game, chosen[0] == 1 ? classic : GAMES[game].ini);
+                })
+                .setNegativeButton(Texts.t("Cancel", "Anuluj"), null)
+                .show();
+    }
+
+    private void play(int game, String ini) {
         lastPlayed = game;
         // a mod from Spine that is still in the folder of the game would be loaded with the game
         SpineActivation.restore(new File(external, "spine"));
         prefs.edit().putInt("game", game).putLong("started", System.currentTimeMillis()).apply();
         // the engine reads which of the installations it is and which mod (the ini of it): it has no command line
         try (OutputStream out = new FileOutputStream(new File(external, "game.txt"))) {
-            out.write((GameRoots.gameTxt(this, GAMES[game].folder) + "\n" + GAMES[game].ini + "\n").getBytes(StandardCharsets.UTF_8));
+            out.write((GameRoots.gameTxt(this, GAMES[game].folder) + "\n" + ini + "\n").getBytes(StandardCharsets.UTF_8));
         } catch (IOException ignored) {
             // the engine takes Gothic II then
         }
         startActivity(new Intent(this, GameActivity.class));
     }
 
-    private void chooseLanguage(final int game) {
+    private void chooseLanguage(final int game, final boolean classic) {
         int selected = 1;
         String phone = Texts.steamLanguage();
         final String[] names = new String[LANGUAGES.length];
@@ -875,12 +978,12 @@ public final class LauncherActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(Texts.t("Language of the game", "Język gry"))
                 .setSingleChoiceItems(names, selected, (d, which) -> chosen[0] = which)
-                .setPositiveButton(Texts.t("Download", "Pobierz"), (d, w) -> startDownload(game, LANGUAGES[chosen[0]][0]))
+                .setPositiveButton(Texts.t("Download", "Pobierz"), (d, w) -> startDownload(game, LANGUAGES[chosen[0]][0], classic))
                 .setNegativeButton(Texts.t("Cancel", "Anuluj"), null)
                 .show();
     }
 
-    private void startDownload(int game, String language) {
+    private void startDownload(int game, String language, boolean classic) {
         if (external.getUsableSpace() < 1500L * 1024 * 1024) {
             new AlertDialog.Builder(this)
                     .setMessage(Texts.t("There is not enough free space on the phone.", "Brakuje wolnego miejsca w telefonie."))
@@ -891,7 +994,7 @@ public final class LauncherActivity extends Activity {
             requestPermissions(new String[] {"android.permission.POST_NOTIFICATIONS"}, 1);
         Downloads.state = null;
         Intent download = SteamBridge.downloadIntent(this, GAMES[game].appId, GAMES[game].folder, GAMES[game].title,
-                language);
+                language, classic);
         // startForegroundService exists since Android 8, the minimum of the app is lower
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             startForegroundService(download);

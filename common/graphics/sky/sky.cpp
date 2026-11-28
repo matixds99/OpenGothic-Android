@@ -53,6 +53,16 @@ Sky::Sky(std::string_view wname) {
     clouds[1].lay[i] = skyTexture(name,false,i);
     }
 
+  // the clouds of the rain of the original game
+  {
+    auto* t = Resources::loadTextureWorld("SKYRAINCLOUDS.TGA");
+    if(t!=nullptr && t!=&Resources::fallbackTexture() && t!=&Resources::fallbackBlack()) {
+      rainClouds         = t;
+      stormNight         = clouds[1];
+      stormNight.lay[1]  = t;
+      }
+  }
+
   GSunIntensity  = DirectSunLux;
   GMoonIntensity = DirectMoonLux;
 
@@ -120,8 +130,8 @@ void Sky::updateLight(const gtime gameTime) {
     //sun.setDir(0, 1, 0); //debug
   }
 
-  const float sunMul = 1.f - 0.6f*overcast;
-  const float ambMul = 1.f - 0.2f*overcast;
+  const float sunMul = 1.f - 0.85f*overcast;  // the storm: the sun is behind the clouds
+  const float ambMul = 1.f - 0.40f*overcast;
   // static auto  groundAlbedo = Vec3(0.34f, 0.42f, 0.26f); // Foliage(MacBeth)
   // static auto  groundAlbedo = Vec3(0.39f, 0.40f, 0.33f);
   static auto  groundAlbedo = Vec3(0.3f); // aligned to sky-shading

@@ -1,5 +1,7 @@
 #include "particlefx.h"
 
+#include <cctype>
+
 #include "utils/parser.h"
 #include "gothic.h"
 #include "resources.h"
@@ -55,7 +57,9 @@ ParticleFx::ParticleFx(const zenkit::IParticleEffect& src, std::string_view name
   shpDim              = Parser::loadVec3(src.shp_dim_s);
   shpMesh_S           = src.shp_mesh_s;
   shpMesh             = Resources::loadEmiterMesh(src.shp_mesh_s);
-  shpMeshRender       = src.shp_mesh_render_b!=0;
+  // The shape of MFX_ICELANCE_INIT is "20" (a number in place of a type), though it has the mesh of the lance and shpMeshRender: the original does not
+  // draw the lance in the hand of the hero with it, only the stars. The mesh of the shape is drawn when the type of the shape is a real one.
+  shpMeshRender       = src.shp_mesh_render_b!=0 && (src.shp_type_s.empty() || isEmitType(src.shp_type_s));
   shpScaleKeys        = loadArr(src.shp_scale_keys_s);
   shpScaleIsLooping   = src.shp_scale_is_looping!=0;
   shpScaleIsSmooth    = src.shp_scale_is_smooth!=0;
@@ -89,6 +93,15 @@ ParticleFx::ParticleFx(const zenkit::IParticleEffect& src, std::string_view name
   visSizeEndScale     = src.vis_size_end_scale;
   visAlphaStart       = src.vis_alpha_start/255.f;
   visAlphaEnd         = src.vis_alpha_end/255.f;
+
+  // The original game draws the particles without the light of the scene. Here the alpha-blended ones are lit (the smoke, the dust, the fog must not glow
+  // at night), and the clouds of the spells became dark and grey: the ice block of the ice golem looked like a black magic. The spells (MFX_*) keep
+  // their own colours.
+  visUnlit            = visMaterial.alpha==Material::Transparent && name.size()>4 &&
+                        std::toupper(static_cast<unsigned char>(name[0]))=='M' &&
+                        std::toupper(static_cast<unsigned char>(name[1]))=='F' &&
+                        std::toupper(static_cast<unsigned char>(name[2]))=='X' &&
+                        name[3]=='_';
 
   trlFadeSpeed       = src.trl_fade_speed;
   trlTexture         = loadTexture(src.trl_texture_s);
@@ -231,6 +244,13 @@ ParticleFx::KeyList ParticleFx::loadArr(std::string_view vsrc) {
     }
   }
 
+bool ParticleFx::isEmitType(std::string_view src) {
+  std::string s(src);
+  for(auto& c:s)
+    c = char(std::toupper(static_cast<unsigned char>(c)));
+  return s=="POINT" || s=="LINE" || s=="BOX" || s=="CIRCLE" || s=="SPHERE" || s=="MESH";
+  }
+
 ParticleFx::EmitterType ParticleFx::loadEmitType(std::string_view src) {
   if(src=="POINT")
     return EmitterType::Point;
@@ -286,6 +306,8 @@ ParticleFx::Orientation ParticleFx::loadOrientation(std::string_view src) {
     return Orientation::Velocity;
   if(src=="VELO3D")
     return Orientation::Velocity3d;
+  if(src=="VELO3D_FIXED")
+    return Orientation::Velocity3dFixed;
   return Orientation::None;
   }
 

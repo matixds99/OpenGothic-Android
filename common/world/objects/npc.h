@@ -200,6 +200,10 @@ class Npc final {
     float      qDistTo(const Interactive& p) const;
     float      qDistTo(const Item& p) const;
     auto       fightDistanceTo(const Npc& npc) const -> Tempest::Vec3;
+    auto       fightPoint() const -> Tempest::Vec3;
+    // DIAGNOSTICS of the range of the fight: the distance from the fight point to the box of the collision of the other character (the plane XZ, 0 inside it)
+    float      fightDistanceToBox(const Npc& npc) const;
+    std::string fightBodyInfo() const;
 
     void       updateAnimation(uint64_t dt, bool force = false);
     void       updateTransform();
@@ -360,6 +364,8 @@ class Npc final {
 
     bool      isEnemy(const Npc& other) const;
     bool      isDead() const;
+    // parked at the point TOT of the world (the scripts send there the characters that leave the story): it is in the rock and not in the game
+    bool      isAtDeadPoint() const;
     bool      isLie() const;
     bool      isUnconscious() const;
     bool      isDown() const;
@@ -388,6 +394,7 @@ class Npc final {
     void      setDetectedMob(Interactive* id);
 
     bool      isInState  (ScriptFn stateFn) const;
+    std::string_view stateName() const { return aiState.funcIni.isValid() ? std::string_view(aiState.hint) : std::string_view("none"); }
     bool      isInRoutine(ScriptFn stateFn) const;
     bool      wasInState (ScriptFn stateFn) const;
     uint64_t  stateTime() const;
@@ -410,7 +417,10 @@ class Npc final {
     void      startDive();
     void      transformBack();
     /// A transformation spell (a beetle, ...) is on: the key Enter turns the character back
-    bool      isTransformed() const { return transformSpl!=nullptr; }
+    bool      isTransformed() const;
+    // The control of the player (the spell Control): the state of the script is put aside, as the player moves only an npc without a state
+    void      suspendState();
+    void      finishSuspendedState();
 
     auto      dialogChoices(Npc &player, const std::vector<uint32_t> &except, bool includeImp) -> std::vector<GameScript::DlgChoice>;
 
@@ -581,6 +591,7 @@ class Npc final {
     void      tickRegen(int32_t& v,const int32_t max,const int32_t chg, const uint64_t dt);
     void      setViewPosition(const Tempest::Vec3& pos);
     bool      tickCast(uint64_t dt);
+    float     spellAnimSpeed(const Item& spell) const;
 
     int       aiOutputOrderId() const;
     bool      performOutput(const AiQueue::AiAction &ai);
@@ -710,6 +721,7 @@ class Npc final {
     size_t                         currentSpellCast = size_t(-1);
     uint64_t                       castNextTime     = 0;
     int32_t                        spellInfo        = 0;
+    ScriptFn                       suspendedEnd;
 
     // transform-backshape
     struct TransformBack;

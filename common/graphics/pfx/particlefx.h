@@ -10,6 +10,7 @@
 #include "graphics/material.h"
 
 class PfxEmitterMesh;
+class RainCover;
 
 class ParticleFx final {
   public:
@@ -49,6 +50,7 @@ class ParticleFx final {
       None,
       Velocity,
       Velocity3d,
+      Velocity3dFixed, // as Velocity3d, but the width does not shrink when the particle flies at the camera or away from it (the rain seen from below)
       };
 
     using KeyList = std::vector<float>;
@@ -108,6 +110,8 @@ class ParticleFx final {
     float         visAlphaEnd          = 0.f;
     bool          visYawAlign          = false;
     bool          visZBias             = false;
+    /// The particle of a spell (MFX_*) with the alpha blending: not lit by the sun and the sky, as in the original game, where the particles are not lit at all
+    bool          visUnlit             = false;
 
     const Tempest::Texture2d* trlTexture = nullptr;
     float         trlFadeSpeed         = 0.f;
@@ -121,6 +125,9 @@ class ParticleFx final {
     float         flockStrength = 0;
 
     bool          useEmittersFOR = true;
+
+    /// The rain: a particle that falls to a roof (the highest surface over its place) is gone there (only for the absolute particles)
+    const RainCover* cover = nullptr;
 
     std::string   timeStartEnd_S;
     bool          m_bIsAmbientPFX=false;
@@ -142,6 +149,7 @@ class ParticleFx final {
 
     static auto          loadTexture(std::string_view src) -> const Tempest::Texture2d*;
     static KeyList       loadArr(std::string_view src);
+    static bool          isEmitType(std::string_view src);
     static EmitterType   loadEmitType(std::string_view src);
     static Frame         loadFrameType(std::string_view src);
     static Distribution  loadDistribType(std::string_view src);

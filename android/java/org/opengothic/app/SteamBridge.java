@@ -45,12 +45,13 @@ final class SteamBridge {
         return new Intent().setClassName(c, "org.opengothic.app.SteamLoginActivity");
     }
 
-    static Intent downloadIntent(Context c, int appId, String folder, String title, String language) {
+    static Intent downloadIntent(Context c, int appId, String folder, String title, String language, boolean classic) {
         return new Intent().setClassName(c, "org.opengothic.app.SteamDownloadService")
                 .putExtra("app", appId)
                 .putExtra("folder", folder)
                 .putExtra("title", title)
-                .putExtra("language", language);
+                .putExtra("language", language)
+                .putExtra("classic", classic);
     }
 
     static Intent stopIntent(Context c) {

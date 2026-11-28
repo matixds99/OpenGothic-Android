@@ -263,7 +263,8 @@ void WorldObjects::tick(uint64_t dt, uint64_t dtPlayer) {
       dist = std::min(dist,(i->position()-r->position()).quadLength());
     if(dist<nearDist){
       npcNear.push_back(i.get());
-      if(i.get()!=pl)
+      // not the cached player: the control of a spell hands the player over in the middle of the tick of the npcs
+      if(!i->isPlayer())
         i->setProcessPolicy(NpcProcessPolicy::AiNormal);
       } else
     if(dist<farDist) {
@@ -284,6 +285,15 @@ void WorldObjects::tick(uint64_t dt, uint64_t dtPlayer) {
     Npc& i = *ptr;
     if(i.isPlayer() || i.isDead() || i.isPuppet())
       continue;
+    // Pedro after his treason waits at TOT, in the rock of the caves of the ritual forest: he noticed the hero through the stone and talked from it
+    if(i.isAtDeadPoint()) {
+      static uint64_t lastLog = 0;
+      if(owner.tickCount()>=lastLog+10000) {
+        lastLog = owner.tickCount();
+        Log::d("[",i.displayName().data(),"] is parked at the dead point, the player is not noticed");
+        }
+      continue;
+      }
 
     const uint64_t percNextTime = i.percNextTime();
     if(percNextTime<=owner.tickCount()) {

@@ -586,6 +586,12 @@ float Npc::angleDir(float x, float z) {
   return a;
   }
 
+bool Npc::isAtDeadPoint() const {
+  if(isPlayer() || isDead())
+    return false;
+  return (position()-owner.deadPoint().position()).quadLength()<300.f*300.f;
+  }
+
 void Npc::leaveDeadPoint(std::string_view wpName) {
   if(isPlayer() || isDead() || wpName.empty() || wpName.compare(0,3,"TOT")==0 || !owner.script().hasDma())
     return;
@@ -911,7 +917,8 @@ float Npc::qDistTo(const Item& p) const {
   return qDistTo(pos);
   }
 
-Tempest::Vec3 Npc::fightDistanceTo(const Npc& tg) const {
+/// The point of the character that the distance of the fight is measured from (see fightDistanceTo)
+Tempest::Vec3 Npc::fightPoint() const {
   //NOTE: game script decribe comabt distance as distance between BIP01
   // however, in practice, it's easier and more relieble to use rootTr
   //NOTE2: the root of the swamp shark is at the tip of its tail, 3.6 meters behind the origin of the model, and 2 meters
@@ -920,29 +927,56 @@ Tempest::Vec3 Npc::fightDistanceTo(const Npc& tg) const {
   // that is far outside of the body. The rotation and the scale of every character are its own.
   static const float rootFarOutside = 150;
 
-  auto fightPoint = [](const Npc& n) {
-    Vec3 pos = n.position();
-    auto sk  = n.visual.visualSkeleton();
-    if(sk==nullptr)
-      return pos;
+  Vec3 pos = position();
+  auto sk  = visual.visualSkeleton();
+  if(sk==nullptr)
+    return pos;
 
-    Vec3 root = sk->rootTr;
-    const auto& bMin = sk->bboxCol[0];
-    const auto& bMax = sk->bboxCol[1];
-    const float dx   = std::max(std::max(bMin.x-root.x, root.x-bMax.x), 0.f);
-    const float dz   = std::max(std::max(bMin.z-root.z, root.z-bMax.z), 0.f);
-    if(dx*dx+dz*dz>rootFarOutside*rootFarOutside) {
-      root.x = (bMin.x+bMax.x)*0.5f;
-      root.z = (bMin.z+bMax.z)*0.5f;
-      }
+  Vec3 root = sk->rootTr;
+  const auto& bMin = sk->bboxCol[0];
+  const auto& bMax = sk->bboxCol[1];
+  const float dx   = std::max(std::max(bMin.x-root.x, root.x-bMax.x), 0.f);
+  const float dz   = std::max(std::max(bMin.z-root.z, root.z-bMax.z), 0.f);
+  if(dx*dx+dz*dz>rootFarOutside*rootFarOutside) {
+    root.x = (bMin.x+bMax.x)*0.5f;
+    root.z = (bMin.z+bMax.z)*0.5f;
+    }
 
-    // the matrix of the model has the position too, and it can be one frame late: only the rotation and the scale are taken
-    Vec3 zero = {};
-    n.transform().project(zero);
-    n.transform().project(root);
-    return pos + (root-zero);
-    };
-  return fightPoint(*this) - fightPoint(tg);
+  // the matrix of the model has the position too, and it can be one frame late: only the rotation and the scale are taken
+  Vec3 zero = {};
+  transform().project(zero);
+  transform().project(root);
+  return pos + (root-zero);
+  }
+
+Tempest::Vec3 Npc::fightDistanceTo(const Npc& tg) const {
+  return fightPoint() - tg.fightPoint();
+  }
+
+float Npc::fightDistanceToBox(const Npc& tg) const {
+  auto sk = tg.visual.visualSkeleton();
+  if(sk==nullptr)
+    return -1.f;
+  Matrix4x4 inv = tg.transform();
+  inv.inverse();
+  Vec3 p = fightPoint();
+  inv.project(p);
+  const auto& bMin = sk->bboxCol[0];
+  const auto& bMax = sk->bboxCol[1];
+  const float dx   = std::max(std::max(bMin.x-p.x, p.x-bMax.x), 0.f);
+  const float dz   = std::max(std::max(bMin.z-p.z, p.z-bMax.z), 0.f);
+  return std::sqrt(dx*dx+dz*dz);
+  }
+
+std::string Npc::fightBodyInfo() const {
+  auto sk = visual.visualSkeleton();
+  if(sk==nullptr)
+    return "no skeleton";
+  const auto& bMin = sk->bboxCol[0];
+  const auto& bMax = sk->bboxCol[1];
+  const Vec3  c    = (bMin+bMax)*0.5f;
+  return "the box "+std::to_string(int(bMax.x-bMin.x))+" x "+std::to_string(int(bMax.z-bMin.z))+" x "+std::to_string(int(bMax.y-bMin.y))+
+         " cm, the root is "+std::to_string(int(sk->rootTr.x-c.x))+" (x) and "+std::to_string(int(sk->rootTr.z-c.z))+" (z) cm from the center of it";
   }
 
 uint8_t Npc::calcAniComb() const {
@@ -2376,11 +2410,35 @@ bool Npc::setGoToLadder() {
   }
 
 void Npc::commitDamage() {
-  if(currentTarget==nullptr)
+  const bool heroInvolved = isPlayer() || (currentTarget!=nullptr && currentTarget->isPlayer());
+  if(currentTarget==nullptr) {
+    if(isPlayer())
+      Log::d("[fight] the blow of the hero has no target: nothing is in the focus");
     return;
-  if(!fghAlgo.isInAttackRange(*this,*currentTarget,owner.script()))
+    }
+  const bool inRange = fghAlgo.isInAttackRange(*this,*currentTarget,owner.script());
+  const bool inAngle = fghAlgo.isInFocusAngle(*this,*currentTarget);
+  if(heroInvolved) {
+    // the distance of the fight is between the roots of both models (see fightDistanceTo): the height is the difference of the root heights
+    const auto  d     = fightDistanceTo(*currentTarget);
+    const float reach = fghAlgo.prefferedAttackDistance(*this,*currentTarget,owner.script());
+    Log::d("[fight] ",displayName()," (",instanceSymbol(),") strikes ",currentTarget->displayName(),": distance ",int(d.length()),
+           " (height ",int(d.y),"), reach ",int(reach),inRange ? "" : " OUT OF REACH",", angle ",inAngle ? "ok" : "OUT OF THE FOCUS ANGLE",
+           ", weapon state ",int(weaponState()),", to the box of the target ",int(fightDistanceToBox(*currentTarget)),
+           ", the range of the weapon in the hand ",inventory().activeWeapon()!=nullptr ? int(inventory().activeWeapon()->swordLength()) : -1);
+    // the bodies: once for every kind of the characters (the root of the model against its box tells how the distance of the fight is measured)
+    static std::vector<size_t> seen;
+    for(const Npc* n:{this,currentTarget}) {
+      const size_t id = n->instanceSymbol();
+      if(std::find(seen.begin(),seen.end(),id)!=seen.end())
+        continue;
+      seen.push_back(id);
+      Log::d("[fight-body] ",n->displayName()," (",id,"): ",n->fightBodyInfo());
+      }
+    }
+  if(!inRange)
     return;
-  if(!fghAlgo.isInFocusAngle(*this,*currentTarget))
+  if(!inAngle)
     return;
   currentTarget->takeDamage(*this,nullptr);
   }
@@ -3635,15 +3693,21 @@ void Npc::nextAiAction(AiQueue& queue, uint64_t dt) {
       }
     case AI_SetNpcsToState:{
       const int32_t r = act.i0*act.i0;
-      owner.detectNpc(position(),float(hnpc->senses_range),[&act,this,r](Npc& other) {
+      // The caster is 'other' of the new state, as in the original engine: B_StopMagicFlee makes the character run away from 'other' after
+      // the animation of the fear. The old 'other' of the character is not the caster: the mage Talamon (and the others) did not run away.
+      int count = 0;
+      owner.detectNpc(position(),float(hnpc->senses_range),[&act,this,r,&count](Npc& other) {
         if(&other==this)
           return;
         if(other.isDead())
           return;
         if(qDistTo(other)>float(r))
           return;
-        other.aiPush(AiQueue::aiStartState(act.func,1,other.currentOther,other.currentVictim,other.hnpc->wp));
+        other.aiPush(AiQueue::aiStartState(act.func,1,this,other.currentVictim,other.hnpc->wp));
+        ++count;
         });
+      const auto* sym = owner.script().findSymbol(act.func.ptr);
+      Log::d("[fear] ",displayName()," sets ",count," characters to the state ",sym!=nullptr ? std::string_view(sym->name()) : std::string_view("?"));
       break;
       }
     case AI_SetWalkMode:{
@@ -3760,6 +3824,8 @@ bool Npc::startState(ScriptFn id, std::string_view wp, gtime endTime, bool noFin
     }
 
   auto& st = owner.script().aiState(id);
+  if(owner.isControlled(*this))
+    Log::d("[control] ",displayName()," (",instanceSymbol(),") is asked for the state ",st.name(),isPlayerEnabledState(st) ? ", allowed" : ", refused");
   if(isPlayer() && !isPlayerEnabledState(st)) {
     // disable for now, as it causes infinite lock in freeze state
     // https://github.com/Try/OpenGothic/issues/906
@@ -4127,6 +4193,13 @@ bool Npc::isTargetableBySpell(TargetType t) const {
   return false;
   }
 
+static bool spellTagIs(GameScript& script, int32_t splId, std::string_view name) {
+  std::string tag(script.spellTag(splId));
+  for(auto& c:tag)
+    c = char(std::toupper(static_cast<unsigned char>(c)));
+  return tag==name;
+  }
+
 void Npc::commitSpell() {
   auto active = invent.getItem(currentSpellCast);
   if(active==nullptr || !active->isSpellOrRune())
@@ -4182,12 +4255,20 @@ void Npc::commitSpell() {
           }
         }
       if(spl==nullptr) {
-        if(spellInfo==0)
+        // the transformation keeps the magic mode, the control (the info is only a flag of it) does not
+        if(spellInfo==0 || (owner.version().game==1 && spellTagIs(owner.script(),splId,"CONTROL")))
           aiPush(AiQueue::aiRemoveWeapon());
         } else {
         drawSpell(spl->spellId());
         }
       }
+    }
+
+  // Gothic 1: Spell_Logic_Control passes 1 as the info, it is not an instance of a transformation (it was INTTOSTRING)
+  if(spellInfo!=0 && owner.version().game==1 && spellTagIs(owner.script(),splId,"CONTROL")) {
+    spellInfo = 0;
+    if(currentTarget!=nullptr)
+      owner.startControl(*this,*currentTarget);
     }
 
   if(spellInfo!=0 && transformSpl==nullptr) {
@@ -4981,6 +5062,13 @@ bool Npc::blockSword() {
   // return setAnimAngGet(Anim::AttackBlock,calcAniComb())!=nullptr;
   }
 
+// The cast animation of the ice lance in the original is shorter than the one that is played
+static constexpr float IceLanceAnimSpeed = 1.5f;
+
+float Npc::spellAnimSpeed(const Item& spell) const {
+  return spellTagIs(owner.script(),spell.spellId(),"ICELANCE") ? IceLanceAnimSpeed : 1.f;
+  }
+
 Npc::BeginCastResult Npc::beginCastSpell() {
   if(castLevel!=CS_NoCast)
     return BeginCastResult::BC_No;
@@ -5020,7 +5108,7 @@ Npc::BeginCastResult Npc::beginCastSpell() {
     case SPL_NEXTLEVEL: {
       ++manaInvested;
       auto ani = owner.script().spellCastAnim(*this,*active);
-      if(!visual.startAnimSpell(*this,ani,true))
+      if(!visual.startAnimSpell(*this,ani,true,spellAnimSpeed(*active)))
         Log::d("Couldn't start animation for spell '",currentSpellCast,"'");
       castLevel = CS_Invest_0;
       return BeginCastResult::BC_Invest;
@@ -5064,7 +5152,7 @@ bool Npc::tickCast(uint64_t dt) {
       auto ani = owner.script().spellCastAnim(*this,*active);
       bool g2  = owner.version().game==2;
       if(g2 || visual.hasAnim(string_frm("T_MAGRUN_2_",ani,"CAST")))
-        if(!visual.startAnimSpell(*this,ani,false))
+        if(!visual.startAnimSpell(*this,ani,false,spellAnimSpeed(*active)))
           return true;
       }
     castLevel    = CastState(int(castLevel) + int(CS_Emit_0) - int(CS_Cast_0));
@@ -5293,10 +5381,12 @@ void Npc::setPerceptionDisable(PercType t) {
   }
 
 void Npc::startDialog(Npc& pl) {
-  if(pl.isDown() || pl.isInAir() || isPlayer())
+  // the talks are of the hero: the scripts do not expect the character that is played by the spell of control
+  if(pl.isDown() || pl.isInAir() || isPlayer() || owner.isControlled(pl) || isAtDeadPoint())
     return;
   if(puppet)
     puppetInteract = true;
+  Log::d("[talk] the hero starts the talk with ",displayName()," (",instanceSymbol(),")");
   if(perceptionProcess(pl,nullptr,0,PERC_ASSESSTALK))
     setOther(&pl);
   }
@@ -5669,7 +5759,31 @@ void Npc::startDive() {
   mvAlgo.startDive();
   }
 
+void Npc::suspendState() {
+  suspendedEnd = aiState.funcEnd;
+  clearState(true);
+  }
+
+void Npc::finishSuspendedState() {
+  const ScriptFn end = suspendedEnd;
+  suspendedEnd = ScriptFn();
+  if(!end.isValid())
+    return;
+  const bool prev = stateEnding;
+  stateEnding = true;
+  owner.script().invokeState(this,currentOther,currentVictim,end);  // ZS_CONTROLLED_END
+  stateEnding = prev;
+  }
+
+bool Npc::isTransformed() const {
+  return transformSpl!=nullptr || owner.isControlled(*this);
+  }
+
 void Npc::transformBack() {
+  if(owner.isControlled(*this)) {
+    owner.stopControl();
+    return;
+    }
   if(transformSpl==nullptr)
     return;
   transformSpl->undo(*this);
@@ -5976,6 +6090,10 @@ bool Npc::canSeeItem(const Item& it, bool freeLos) const {
       return false;
     }
 
+  // An item that is pressed into the surface it lies on (the stone plate in the treasure of the ice dragon is half in the pile of gold) is hit
+  // by the ray in the surface right at the item: that is not something that stands between the eyes and the item.
+  const float embedded = 30.f;
+
   if(auto bbox = it.bBox()) {
     // npc eyesight height
     auto  at     = it.midPosition();
@@ -5984,11 +6102,14 @@ bool Npc::canSeeItem(const Item& it, bool freeLos) const {
     float tHit   = DynamicWorld::rayBox(cen, dir, tMax, it.transform(), bbox[0], bbox[1]);
 
     const auto r = owner.physic()->ray(cen, cen+dir*tHit);
-    if(r.hasCol)
-      return false;
+    if(r.hasCol) {
+      const float reach = (bbox[1]-bbox[0]).length()*0.5f + embedded;
+      if((r.v-at).length()>reach)
+        return false;
+      }
     } else {
     const auto r = owner.physic()->ray(cen, itMid);
-    if(r.hasCol)
+    if(r.hasCol && (r.v-itMid).length()>embedded)
       return false;
     }
 

@@ -7,6 +7,7 @@
 #include "pfxobjects.h"
 #include "particlefx.h"
 #include "world/objects/npc.h"
+#include "world/raincover.h"
 
 using namespace Tempest;
 
@@ -264,9 +265,11 @@ void PfxBucket::init(PfxBucket::Block& block, ImplEmitter& emitter, size_t parti
       auto pose = (emitter.mesh!=nullptr) ? emitter.pose : nullptr;
       if(mesh!=nullptr) {
         auto pos = mesh->randCoord(randf(),pose);
-        // the mesh of an item (a weapon, an arrow) is in the space of the object: it is turned by the matrix of the emitter, which is the
-        // matrix of the item; the position of the emitter is added below. The meshes of the models are in the space of the world.
-        if(emitter.mesh!=nullptr && mesh->isStatic())
+        // the mesh of an item (a weapon, an arrow) or the mesh of the shape of the effect itself (the ice lance, ICELANCE.3DS, with FOR OBJECT) is in
+        // the space of the object: it is turned by the matrix of the emitter, which is the matrix of the item; the position of the emitter is added
+        // below. Without it the particles of the lance appear at the origin of the world. The meshes of the models are in the space of the world.
+        const bool objectSpace = mesh->isStatic() && (emitter.mesh!=nullptr || decl.shpFOR!=ParticleFx::Frame::World);
+        if(objectSpace)
           p.pos = emitter.direction[0]*pos.x +
                   emitter.direction[1]*pos.y +
                   emitter.direction[2]*pos.z;
@@ -402,6 +405,14 @@ void PfxBucket::tick(Block& sys, ImplEmitter& emitter, size_t particle, uint64_t
   ps.life  = uint16_t(ps.life-dt);
   ps.pos  += ps.dir*dtF;
   ps.dir  += decl.flyGravity*dtF;
+
+  // the rain does not fall under a roof: the drop ends on the highest surface over its place (60 cm: the half of the streak)
+  if(decl.cover!=nullptr && !decl.useEmittersFOR && ps.pos.y < decl.cover->topAt(ps.pos.x,ps.pos.z)+60.f) {
+    ps.life = 0;
+    sys.count--;
+    finalize(particle+sys.offset);
+    return;
+    }
 
   if(maxTrlTime!=0)
     tickTrail(ps,emitter,dt);
@@ -639,6 +650,7 @@ void PfxBucket::buildBilboard(PfxState& v, const Block& p, const ParState& ps, c
   v.bits0 |= uint32_t(decl.visYawAlign ? 1 : 0) << 2;
   v.bits0 |= uint32_t(0) << 3; // TODO: trails
   v.bits0 |= uint32_t(decl.visOrientation) << 4;
+  v.bits0 |= uint32_t(decl.visUnlit ? 1 : 0) << 6;
   v.dir   = ps.dir;
   }
 
