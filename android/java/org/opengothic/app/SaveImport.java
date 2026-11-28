@@ -54,7 +54,7 @@ final class SaveImport {
                         throw new IOException(Texts.t("The archive has too many files.",
                                 "Archiwum zawiera zbyt wiele plików."));
                     }
-                    File original = target(entry, internal, external, gameId);
+                    File original = target(context, entry, internal, external, gameId);
                     if (original == null) {
                         zip.closeEntry();
                         continue;
@@ -83,14 +83,25 @@ final class SaveImport {
     }
 
     /** The file that an entry is restored to, null for an entry that is not a save of this game or is not safe. */
-    private static File target(ZipEntry entry, File internal, File external, String gameId) throws IOException {
+    private static File target(Context context, ZipEntry entry, File internal, File external, String gameId) throws IOException {
         if (entry.isDirectory())
             return null;
 
         String name = entry.getName().replace('\\', '/');
         File root;
         String relative;
-        if (name.startsWith(INTERNAL)) {
+        if (name.startsWith(SaveExport.FOLDER)) {
+            // NB fix 180: a save of the folder of a game ("saves/folder/Gothic2/archolos_save_slot_1.sav")
+            String rest = name.substring(SaveExport.FOLDER.length());
+            int slash = rest.indexOf('/');
+            if (slash <= 0 || external == null)
+                return null;
+            String folder = rest.substring(0, slash);
+            if (!isGameFolder(folder))
+                return null;
+            root = GameRoots.of(context, external, folder).getCanonicalFile();
+            relative = rest.substring(slash + 1);
+        } else if (name.startsWith(INTERNAL)) {
             root = internal;
             relative = name.substring(INTERNAL.length());
         } else if (name.startsWith(EXTERNAL)) {
@@ -102,6 +113,17 @@ final class SaveImport {
             return null;
         }
 
+        // NB fix 180: the saves of a folder of a game in the files of the application ("saves/external/Gothic2/...", an export of
+        // the launcher of borsuczyna) go to the folder of that game that the player has chosen - the engine works there
+        int slash = relative.indexOf('/');
+        if (slash > 0 && external != null && isGameFolder(relative.substring(0, slash))) {
+            File linked = GameRoots.linked(context, relative.substring(0, slash));
+            if (linked != null) {
+                root = linked.getCanonicalFile();
+                relative = relative.substring(slash + 1);
+            }
+        }
+
         String fileName = new File(relative).getName();
         if (!SaveExport.isSave(fileName) || !SaveExport.belongsToGame(fileName, gameId) || !safeRelative(relative))
             return null;
@@ -110,6 +132,15 @@ final class SaveImport {
         if (!original.getPath().startsWith(root.getPath() + File.separator))
             return null;
         return original;
+    }
+
+    /** NB fix 180: the name of a folder of a game (Gothic1, Gothic2). */
+    private static boolean isGameFolder(String folder) {
+        for (String f : SpineActions.GAME_FOLDERS) {
+            if (f.equals(folder))
+                return true;
+        }
+        return false;
     }
 
     /** The first slot next to the file that nothing uses yet, so the saves that are there stay untouched. */

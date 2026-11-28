@@ -45,6 +45,11 @@ final class SteamBridge {
         return new Intent().setClassName(c, "org.opengothic.app.SteamLoginActivity");
     }
 
+    /** The launcher of New Balance does not choose the edition: the service gets the default (classic = true, as before). */
+    static Intent downloadIntent(Context c, int appId, String folder, String title, String language) {
+        return downloadIntent(c, appId, folder, title, language, true);
+    }
+
     static Intent downloadIntent(Context c, int appId, String folder, String title, String language, boolean classic) {
         return new Intent().setClassName(c, "org.opengothic.app.SteamDownloadService")
                 .putExtra("app", appId)

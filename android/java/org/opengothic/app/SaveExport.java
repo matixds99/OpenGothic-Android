@@ -46,6 +46,14 @@ final class SaveExport {
                 if (external != null && external.isDirectory())
                     addTree(external, external, "saves/external", 0, zip, entries, count, gameId);
 
+                // NB fix 180: the engine works in the folder of the game that the player has chosen (GameRoots), the saves are
+                // there, next to the files of the game - only that folder itself, not the folders of the game in it
+                for (String folder : SpineActions.GAME_FOLDERS) {
+                    File linked = GameRoots.linked(context, folder);
+                    if (linked != null)
+                        addTree(linked, linked, FOLDER + folder, MAX_DEPTH, zip, entries, count, gameId);
+                }
+
                 zip.finish();
             }
         }
@@ -172,6 +180,9 @@ final class SaveExport {
         return ret.toString();
     }
 
+    /** NB fix 180: the start of the entries of the saves of a folder of a game that the player has chosen ("saves/folder/Gothic2/"). */
+    static final String FOLDER = "saves/folder/";
+
     /** The names of all the save files of the application, in the folders that the export reads. */
     static List<String> listSaveNames(Context context) {
         List<String> ret = new ArrayList<>();
@@ -179,6 +190,9 @@ final class SaveExport {
         File external = context.getExternalFilesDir(null);
         if (external != null)
             collectNames(external, 0, ret);
+        // NB fix 180: the chosen folders of the games (only the folder itself, the saves are next to the files of the game)
+        for (String folder : SpineActions.GAME_FOLDERS)
+            collectNames(GameRoots.linked(context, folder), MAX_DEPTH, ret);
         return ret;
     }
 
