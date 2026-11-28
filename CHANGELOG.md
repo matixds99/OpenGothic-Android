@@ -16,9 +16,9 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
 1. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – 🧪
-2. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – 🧪
-3. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – 🧪
-4. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – 🧪
+2. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – ✅
+3. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – ✅
+4. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – ✅
 5. **260** – ślad zamachu bronią (cienka wstęga przy czubku miecza) i ślad lecącej strzały/bełtu, jak na PC – ✅
 
 ---
@@ -295,25 +295,25 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** po rozmowie z Krukiem (finał lochu) Kruk rusza do walki i przechodzi przez fazy (przyzwanie duchów, teleporty); jeśli dalej stoi, wyślij log z tej chwili (`Log::e` „NB: callback …”).
 - **Test (data):** czeka.
 
-### 263. Złote berło Adanosa nie dawało się założyć (brak slotu artefaktu) – 🧪 (28.11.2026)
+### 263. Złote berło Adanosa nie dawało się założyć (brak slotu artefaktu) – ✅ (28.11.2026)
 - **Pliki:** `common/game/inventory.cpp/.h`.
 - **Zgłoszenie (28.11):** berła Adanosa nie da się użyć; objaw: brak reakcji (nic się nie dzieje).
 - **Skrypty NB:** `USE_GOLDSKIPETR` (złote berło bez magii, `ItRi_GoldSkipetr_NoMagic`, używane z ekwipunku na Płaskowyżu Starożytnych razem z Łzą Adanosa) przywołuje tytana-strażnika fragmentu tabliczki i daje `ItRi_AdanosGoldSkipetr` (28885). To drugie berło ma `ITEM_KAT_MAGIC`, `ON_EQUIP`/`ON_UNEQUIP` i **żadnej** z flag pierścienia/amuletu/pasa/trofeum, więc silnik portu nie miał dla niego slotu: `Inventory::use` szło ogólną ścieżką (brak schematu i `on_state`) i nic nie robiło. `ON_EQUIP` (`SCIPISUP = TRUE`, `HERODRAGONLOOK`, efekty) nigdy się nie wywoływał, a dalsze wątki go wymagają: most Adanosa (`PC_ADANOSBRIDGE_BRIDGE_INFO`: założone berło **i** Korona Lodu) oraz otwarcie drzwi Kruka przy `AV_SCIPPLACE` (`PC_ADANOSSCIP_RAVEN`: berło w ekwipunku, zużywane przy otwarciu).
 - **Poprawka:** nowy slot `artifact` w ekwipunku (jak slot trofeum z 207): przedmiot z `ITEM_KAT_MAGIC`, z `ON_EQUIP` i bez `ON_STATE`, bez flag pierścienia/amuletu/pasa/trofeum (`Inventory::isArtifact`). „Załóż” zakłada go i woła `ON_EQUIP`, „Zdejmij” woła `ON_UNEQUIP`; slot odtwarzany po wczytaniu zapisu z założonych przedmiotów, sprawdzany jak inne sloty (`invalidateCond`), zdejmowany przy zabraniu/usunięciu przedmiotu (drzwi Kruka usuwają berło).
 - **Do sprawdzenia:** (1) złote berło + Łza Adanosa na Płaskowyżu → tytan i nowe berło w ekwipunku; (2) „Załóż” na berle Adanosa – efekt świetlny, w ekwipunku oznaczone jako założone, „Zdejmij” działa; (3) zapis/wczytanie – berło nadal założone; (4) przy `AV_SCIPPLACE` z berłem w ekwipunku (założonym lub nie) – wybór „Kruk” otwiera drzwi, berło znika; (5) most Adanosa: berło + Korona Lodu założone.
-- **Test (data):** czeka.
+- **Test (28.11):** ✅ potwierdzone przez użytkownika.
 
-### 262. Build na PC (MSVC): `/bigobj` dla `gamescript.cpp` – 🧪 (28.11.2026)
+### 262. Build na PC (MSVC): `/bigobj` dla `gamescript.cpp` – ✅ (28.11.2026)
 - **Pliki:** `CMakeLists.txt`.
 - **Zgłoszenie (28.11):** po poprawce 261 build na PC przeszedł dalej i stanął na `gamescript.cpp`: `C1128 liczba sekcji przekroczyła limit formatu pliku obiektowego: skompiluj z parametrem /bigobj`.
 - **Zmiana:** w bloku `if(MSVC)` dodana flaga `/bigobj` do `CMAKE_CXX_FLAGS`. Dotyczy tylko MSVC (Android/Linux bez zmian).
-- **Test (data):** czeka (build na PC; po zmianie `CMakeLists.txt` CMake przekonfiguruje się sam).
+- **Test (28.11):** ✅ potwierdzone przez użytkownika.
 
-### 261. Build na PC: `rainfx.cpp` nie używa `AndroidInput` poza dotykowym UI – 🧪 (28.11.2026)
+### 261. Build na PC: `rainfx.cpp` nie używa `AndroidInput` poza dotykowym UI – ✅ (28.11.2026)
 - **Pliki:** `common/world/rainfx.cpp`.
 - **Zgłoszenie (28.11):** build na PC się psuł na linii 153 (`AndroidInput::preferences().rain`) – `utils/androidinput.h` jest widoczny tylko przy `OPENGOTHIC_TOUCH_UI`.
 - **Zmiana:** `#include` i odczyt ustawienia deszczu otoczone `#ifdef OPENGOTHIC_TOUCH_UI … #endif` (bez `#else`). Na PC `level` zostaje domyślnym 0, czyli deszczu nie ma (ustawienie „Siła deszczu” jest tylko w dotykowym UI). Sprawdzone kompilacją pliku z włączonym i wyłączonym `OPENGOTHIC_TOUCH_UI`.
-- **Test (data):** czeka (build na PC).
+- **Test (28.11):** ✅ potwierdzone przez użytkownika.
 
 ### 260. Ślad zamachu bronią i ślad lecącej strzały (jak na PC) – ✅ (28.11.2026)
 - **Pliki:** 🆕 `common/graphics/pfx/nbtrail.h/.cpp`; `common/graphics/pfx/particlefx.h` (konstruktor domyślny), `common/graphics/mdlvisual.cpp/.h` (`nbSwing`), `common/world/bullet.cpp/.h`, `common/world/objects/npc.cpp` (`tick`).
