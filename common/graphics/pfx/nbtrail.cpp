@@ -33,7 +33,8 @@ static const Tempest::Texture2d* softSprite() {
   return tex;
   }
 
-static std::unique_ptr<ParticleFx> make(const char* name, float pps, float life, float size, float endScale, float alpha) {
+static std::unique_ptr<ParticleFx> make(const char* name, float pps, float life, float size, float endScale, float alphaStart,
+                                        float alphaEnd, Material::AlphaFunc func) {
   auto fx = std::make_unique<ParticleFx>();
   fx->dbgName          = name;
   fx->ppsValue         = pps;
@@ -48,15 +49,15 @@ static std::unique_ptr<ParticleFx> make(const char* name, float pps, float life,
   fx->lspPartAvg       = life;                          // ms
   fx->lspPartVar       = 0.f;
   fx->visMaterial.tex   = softSprite();
-  fx->visMaterial.alpha = Material::AdditiveLight;
+  fx->visMaterial.alpha = func;
   fx->visOrientation   = ParticleFx::Orientation::None;
   fx->visTexIsQuadPoly = true;
   fx->visTexColorStart = Vec3(255,255,255);
   fx->visTexColorEnd   = Vec3(255,255,255);
   fx->visSizeStart     = Vec2(size,size);
   fx->visSizeEndScale  = endScale;
-  fx->visAlphaStart    = alpha;
-  fx->visAlphaEnd      = 0.f;
+  fx->visAlphaStart    = alphaStart;
+  fx->visAlphaEnd      = alphaEnd;
   fx->useEmittersFOR   = false;                     // the position is the world one: the particles stay behind
   fx->prefferedTime    = uint64_t(life);
   return fx;
@@ -65,14 +66,17 @@ static std::unique_ptr<ParticleFx> make(const char* name, float pps, float life,
 const ParticleFx* NbTrail::arrow() {
   static std::unique_ptr<ParticleFx> fx;
   if(fx==nullptr)
-    fx = make("NB_TRAIL_ARROW",260.f,170.f,7.f,0.4f,0.9f);
+    fx = make("NB_TRAIL_ARROW",260.f,170.f,7.f,0.4f,0.9f,0.f,Material::AdditiveLight);
   return fx.get();
   }
 
 const ParticleFx* NbTrail::sword() {
   static std::unique_ptr<ParticleFx> fx;
   if(fx==nullptr) {
-    fx = make("NB_TRAIL_SWORD",420.f,230.f,26.f,0.7f,0.28f);
+    // the head is invisible and the smear rises behind the blade: the particles are born under the blade, so a
+    // visible start made the whole blade shine; the alpha grows with the age and the size shrinks, so the brightest
+    // part is a short way behind the blade and then it fades out. A plain blend (not additive): no glow
+    fx = make("NB_TRAIL_SWORD",760.f,240.f,11.f,0.25f,0.f,0.5f,Material::Transparent);
     fx->shpType   = ParticleFx::EmitterType::Mesh;     // from the mesh of the blade (set by the emitter)
     }
   return fx.get();
