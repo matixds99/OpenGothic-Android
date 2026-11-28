@@ -289,7 +289,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Pliki:** `common/game/playercontrol.h`.
 - **Zgłoszenie (28.11):** tempo QUICK dla szpad (rapierów) za szybkie; próby ×2,3, ×1,8 i ×1,5 wciąż za szybkie, ostatecznie ×1,3 (potwierdzone przez użytkownika jako ostateczne).
 - **Zmiana:** `QuickSpeedRapier` = 1,3 (było ×3,45, poprawka 115). Szabla (×1,15) i pozostałe bronie (×2,3) bez zmian.
-- **Test (data):** czeka.
+- **Test (data):** 28.11.2026 – wartość ×1,3 ustalona przez użytkownika jako ostateczna.
 
 ### 265. Ostatnia faza walki z Krukiem: „Duch Baldara” nie ginie, walka stoi – 🧪 (28.11.2026)
 - **Pliki:** `common/game/gamescript.cpp/.h`.
