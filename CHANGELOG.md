@@ -287,10 +287,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 
 ### 260. Ślad zamachu bronią i ślad lecącej strzały (jak na PC) – 🧪 (28.11.2026)
 - **Pliki:** 🆕 `common/graphics/pfx/nbtrail.h/.cpp`; `common/graphics/pfx/particlefx.h` (konstruktor domyślny), `common/graphics/mdlvisual.cpp/.h` (`nbSwing`), `common/world/bullet.cpp/.h`, `common/world/objects/npc.cpp` (`tick`).
-- **Zgłoszenie (28.11, dwa nagrania z PC):** miecz przy ciosie zostawia bladą półprzezroczystą smugę w kształcie łuku (ok. 0,2–0,3 s), a lecąca strzała jasną kreskę z cienkim ogonem. Port nie rysował żadnego z tych śladów.
-- **Zmiana:** oba ślady to cząsteczki robione w kodzie (miękki biały sprite generowany w pamięci, mieszanie addytywne, pozycje w świecie, więc zostają za bronią i gasną). Miecz: gdy człowiek ma w ręku broń jedno- lub dwuręczną i trwa animacja ciosu, cząsteczki wychodzą z siatki ostrza (760/s, życie 0,24 s, rozmiar 11, zwykłe mieszanie, początek niewidoczny i narasta – żeby sam miecz się nie świecił, smuga pojawia się kawałek za ostrzem; pierwsza wersja świeciła całym ostrzem jak miecz świetlny). Strzała i bełt bez własnego efektu: emiter w pocisku (260/s, życie 0,17 s, rozmiar 7, przezroczystość 0,9) i wyłączany, gdy pocisk się zatrzyma. Pociski z efektem (ogniste, magiczne) bez zmian. Dotyczy bohatera i innych postaci.
-- **Uwaga:** to przybliżenie: kolor, szerokość, długość i jasność dobrane ze zrzutów, bo danych efektu PC nie mam. Do strojenia po teście.
-- **Do sprawdzenia:** czy ślad miecza jest widoczny i nie za mocny (cięcie z góry, w bok, dwuręczne), czy znika po ciosie, czy strzała ma jasny ogon i czy nie świeci po wbiciu się w cel/ścianę, spadek FPS przy walce wielu postaci.
+- **Zgłoszenie (28.11, nagrania z PC i z portu):** na PC miecz zostawia bladą półprzezroczystą wstęgę (ok. 0,2–0,3 s), a strzała jasną kreskę z ogonem. Pierwsza wersja portu: strzała dawała ślad z oddzielnych kropek, a miecz świecił cały jak miecz świetlny, ślad ruchu był niewidoczny.
+- **Zmiana:** oba ślady to teraz wstęgi silnika cząsteczek (te same co ślady cząsteczek w grze): emiter stoi w punkcie, jego droga zostawia ciągłą wstęgę, która gaśnie z wiekiem. Tekstura wstęgi (miękkie brzegi, jasny środek) jest tworzona w pamięci, cząsteczki są niewidoczne – widać tylko wstęgi, więc nic się nie świeci.
+  - Strzała i bełt bez własnego efektu: jedna wstęga szerokości 7, 0,3 s, mieszanie addytywne; wyłączana, gdy pocisk się zatrzyma. Pociski z efektem (ogniste, magiczne) bez zmian.
+  - Miecz: 6 punktów rozłożonych wzdłuż ostrza (najdłuższy bok siatki broni), każdy z wstęgą szerokości 24, 0,24 s; razem tworzą pas za ostrzem. Tylko gdy człowiek ma w ręku broń jedno- lub dwuręczną i trwa animacja ciosu; dotyczy też innych postaci, nie potworów.
+- **Uwaga:** kolor, szerokość, jasność i czas dobrane na oko ze zrzutów (danych efektu PC nie mam), do strojenia po teście.
+- **Do sprawdzenia:** czy ślad strzały jest ciągły, czy ślad miecza jest widoczny w cięciach z góry i w bok (jedno- i dwuręczny), czy znika po ciosie, czy nic nie świeci po wbiciu strzały i spadek FPS przy walce wielu postaci.
 - **Test (data):** czeka.
 
 ### 259. Towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (dokończenie 152) – ✅ (28.11.2026)

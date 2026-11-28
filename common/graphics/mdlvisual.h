@@ -190,7 +190,9 @@ class MdlVisual final {
 
     std::vector<PfxSlot>           effects;
     PfxSlot                        pfx;
-    PfxEmitter                     nbSwordTrail;   // NB fix 260: the smear after a swing of the blade
+    static constexpr int           NbTrailPts = 6;
+    PfxEmitter                     nbSwordTrail[NbTrailPts];   // NB fix 260: ribbons after points of the blade in a swing
+    Tempest::Vec3                  nbSwordPts[NbTrailPts];     // the points in the space of the mesh of the blade
     Effect                         itemFx[3];   // NB fix 150: sword, bow, shield
     bool                           nbHiddenNow = false;   // NB fix 146
 

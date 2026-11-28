@@ -178,7 +178,8 @@ void MdlVisual::setSlotAttachment(MeshObjects::Mesh&& itm, std::string_view bone
   }
 
 void MdlVisual::setSword(MeshObjects::Mesh &&s) {
-  nbSwordTrail = PfxEmitter();   // NB fix 260: made again for the new blade
+  for(auto& e:nbSwordTrail)
+    e = PfxEmitter();   // NB fix 260: made again for the new blade
   itemFx[0] = Effect();   // NB fix 150: the effect of the new weapon is set by the inventory after the mesh
   bind(sword,std::move(s),"ZS_RIGHTHAND");
   }
@@ -267,23 +268,45 @@ void MdlVisual::setItemFx(uint8_t slot, std::string_view effect, World& owner) {
   }
 
 void MdlVisual::nbSwing(World& owner, bool on) {
-  // NB fix 260: the pale smear after the blade in a swing (the PC draws it): the particles come out of the mesh of the blade
-  // while the blow lasts, stay where they were emitted and fade in a quarter of a second
+  // NB fix 260: the trace of the blade in a swing (the PC draws a pale band): ribbons of the engine after points spread
+  // along the blade, they follow the way of every point and fade in a quarter of a second; they are made while the blow lasts
   if(!on) {
-    if(!nbSwordTrail.isEmpty() && nbSwordTrail.isActive())
-      nbSwordTrail.setActive(false);
+    if(!nbSwordTrail[0].isEmpty() && nbSwordTrail[0].isActive())
+      for(auto& e:nbSwordTrail)
+        e.setActive(false);
     return;
     }
   if(sword.view.isEmpty() || nbHiddenNow)
     return;
-  if(nbSwordTrail.isEmpty()) {
-    nbSwordTrail = PfxEmitter(owner,NbTrail::sword());
-    nbSwordTrail.setLooped(true);
-    nbSwordTrail.setMesh(&sword.view,nullptr);
+  if(nbSwordTrail[0].isEmpty()) {
+    const auto* proto = sword.view.protoMesh();
+    if(proto==nullptr)
+      return;
+    const auto* bb  = proto->bbox();
+    const auto  mn  = bb[0], mx = bb[1];
+    const auto  ext = mx-mn;
+    // the blade is the longest side of the box of the weapon
+    int axis = 0;
+    if(ext.y>ext.x && ext.y>=ext.z)
+      axis = 1;
+    else if(ext.z>ext.x && ext.z>ext.y)
+      axis = 2;
+    const auto mid = (mn+mx)*0.5f;
+    for(int i=0; i<NbTrailPts; ++i) {
+      const float k = 0.05f+0.9f*float(i)/float(NbTrailPts-1);
+      auto pt = mid;
+      if(axis==0) pt.x = mn.x+ext.x*k; else
+      if(axis==1) pt.y = mn.y+ext.y*k; else
+                  pt.z = mn.z+ext.z*k;
+      nbSwordPts[i]   = pt;
+      nbSwordTrail[i] = PfxEmitter(owner,NbTrail::sword());
+      nbSwordTrail[i].setLooped(true);
+      }
     syncAttaches(sword);
     }
-  if(!nbSwordTrail.isActive())
-    nbSwordTrail.setActive(true);
+  if(!nbSwordTrail[0].isActive())
+    for(auto& e:nbSwordTrail)
+      e.setActive(true);
   }
 
 void MdlVisual::setAmmoItem(MeshObjects::Mesh&& a, std::string_view bone) {
@@ -1147,8 +1170,12 @@ void MdlVisual::syncAttaches(Attach<View>& att) {
   if constexpr(std::is_same_v<View,MeshObjects::Mesh>) {
     if(&att==&sword) {
       itemFx[0].setObjMatrix(p);
-      if(!nbSwordTrail.isEmpty())
-        nbSwordTrail.setObjMatrix(p);
+      for(int i=0; i<NbTrailPts; ++i)
+        if(!nbSwordTrail[i].isEmpty()) {
+          float x = nbSwordPts[i].x, y = nbSwordPts[i].y, z = nbSwordPts[i].z;
+          p.project(x,y,z);
+          nbSwordTrail[i].setPosition(x,y,z);
+          }
       }
     else if(&att==&bow)
       itemFx[1].setObjMatrix(p);
