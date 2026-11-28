@@ -285,7 +285,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
-### 260. Ślad zamachu bronią i ślad lecącej strzały (jak na PC) – 🧪 (28.11.2026)
+### 260. Ślad zamachu bronią i ślad lecącej strzały (jak na PC) – ✅ (28.11.2026)
 - **Pliki:** 🆕 `common/graphics/pfx/nbtrail.h/.cpp`; `common/graphics/pfx/particlefx.h` (konstruktor domyślny), `common/graphics/mdlvisual.cpp/.h` (`nbSwing`), `common/world/bullet.cpp/.h`, `common/world/objects/npc.cpp` (`tick`).
 - **Zgłoszenie (28.11, nagrania z PC i z portu):** na PC miecz zostawia bladą półprzezroczystą wstęgę (ok. 0,2–0,3 s), a strzała jasną kreskę z ogonem. Pierwsza wersja portu: strzała dawała ślad z oddzielnych kropek, a miecz świecił cały jak miecz świetlny, ślad ruchu był niewidoczny.
 - **Zmiana:** oba ślady to teraz wstęgi silnika cząsteczek (te same co ślady cząsteczek w grze): emiter stoi w punkcie, jego droga zostawia ciągłą wstęgę, która gaśnie z wiekiem. Tekstura wstęgi (miękkie brzegi, jasny środek) jest tworzona w pamięci, cząsteczki są niewidoczne – widać tylko wstęgi, więc nic się nie świeci.
@@ -295,7 +295,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
   - Kolejne nagranie: ślad nadal „wielki płat” (6 punktów na całej długości ostrza = szeroka powierzchnia), a ślad strzały za gruby. Teraz: punkty tylko przy czubku miecza (78–98% długości ostrza), szerokość wstęgi 4 zamiast 22 (jasność 0,16, bo mniej nakładania); wstęga strzały/bełtu szerokość 4 zamiast 7. Tylko gdy człowiek ma w ręku broń jedno- lub dwuręczną i trwa animacja ciosu; dotyczy też innych postaci, nie potworów.
 - **Uwaga:** kolor, szerokość, jasność i czas dobrane na oko ze zrzutów (danych efektu PC nie mam), do strojenia po teście.
 - **Do sprawdzenia:** czy ślad strzały jest ciągły, czy ślad miecza jest widoczny w cięciach z góry i w bok (jedno- i dwuręczny), czy znika po ciosie, czy nic nie świeci po wbiciu strzały i spadek FPS przy walce wielu postaci.
-- **Test (data):** czeka.
+- **Test (28.11):** ✅ po kilku rundach strojenia (jasność, kolor, szerokość, miecz tylko przy czubku) ślady miecza i strzały wyglądają dobrze.
 
 ### 259. Towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (dokończenie 152) – ✅ (28.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h` (`nbKeepsTarget`, `takeDamage`, `hurtBy`).
