@@ -70,9 +70,12 @@ const ParticleFx* NbTrail::arrow() {
   return fx.get();
   }
 
+// The additive-light material of the engine is lifted (inverse tonemapping, x3) so the color must be dark and the peak low:
+// white 255 at the alpha 0.09 was a solid white sheet. The particles of an emitter share one point and their ribbons add up,
+// so only ~2-3 are alive at once (10 pps, 240 ms).
 const ParticleFx* NbTrail::sword() {
   static std::unique_ptr<ParticleFx> fx;
   if(fx==nullptr)
-    fx = makeRibbon("NB_TRAIL_SWORD",40.f,240.f,0.22f,20.f,0.09f,Material::AdditiveLight,215,228,255);
+    fx = makeRibbon("NB_TRAIL_SWORD",10.f,240.f,0.22f,22.f,0.10f,Material::AdditiveLight,150,160,175);
   return fx.get();
   }
