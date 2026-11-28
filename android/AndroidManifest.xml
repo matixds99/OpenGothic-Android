@@ -7,8 +7,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- The update of the application from its release on GitHub (AppUpdate.java); the system still asks the player to confirm it -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- The update of the application from its release on GitHub (AppUpdate.java): the system downloads the APK and installs it when the player
+         touches it in the list of the downloads, so the application has no permission to install packages (Google Play Protect blocks
+         the applications that install packages by themselves) -->
     <!-- A game folder of the phone is played from as it is (the launcher, "Use a folder on the phone"): Android 11 and newer ask for the
          access to all the files in the settings, older ones for the storage permission -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
