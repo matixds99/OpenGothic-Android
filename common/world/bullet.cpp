@@ -5,6 +5,7 @@
 #include <Tempest/Log>
 
 #include "graphics/visualfx.h"
+#include "graphics/pfx/nbtrail.h"
 #include "world/objects/item.h"
 #include "world/objects/npc.h"
 #include "world.h"
@@ -38,6 +39,11 @@ Bullet::Bullet(World& owner, const Item& itm, const Vec3& pos)
         e.setObjectMesh(&view);
         setView(std::move(e));
         }
+      } else {
+      // NB fix 260: a plain arrow or bolt flies with a bright streak, as on the PC
+      nbTrail = PfxEmitter(owner,NbTrail::arrow());
+      nbTrail.setLooped(true);
+      nbTrail.setActive(true);
       }
     }
 
@@ -251,6 +257,10 @@ void Bullet::updateMatrix() {
     return;
   auto mat = obj->matrix();
   view.setObjMatrix(mat);
+  if(!nbTrail.isEmpty()) {
+    nbTrail.setObjMatrix(mat);
+    nbTrail.setActive((flg&Stopped)==0 && !isFinished());   // an arrow that sticks in a wall does not shine on
+    }
   if(!isSpell()) {
     // the effect of the ammunition sits on its mesh: the same matrix
     vfx.setObjMatrix(mat);

@@ -3510,6 +3510,12 @@ void Npc::tick(uint64_t dt) {
 
   assert(go2.flag!=GoToHint::GT_Enemy && go2.flag!=GoToHint::GT_EnemyG);
 
+  // NB fix 260: the smear after a blade in a blow (a human with a melee weapon in the hand)
+  {
+  const auto ws = weaponState();
+  visual.nbSwing(owner,isAttackAnim() && (ws==WeaponState::W1H || ws==WeaponState::W2H) && !isMonster());
+  }
+
   tickAnimationTags();
 
   if(!visual.pose().hasAnim())

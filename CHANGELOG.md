@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **260**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **261**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -283,6 +283,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka (tymczasowa, nie ma jej w skryptach):** boss (`RX_IsBoss`), którego aktualny cel jest przywołańcem, po 3 trafieniach gracza w oknie 8 s (poza własnym ciosem/rzutem) czyści kolejkę, ustawia cel na gracza, woła `B_ClearPerceptions` i startuje `ZS_Attack` (jak skrypt). W logu linia `boss returns to the hero`.
 - **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
+- **Test (data):** czeka.
+
+### 260. Ślad zamachu bronią i ślad lecącej strzały (jak na PC) – 🧪 (28.11.2026)
+- **Pliki:** 🆕 `common/graphics/pfx/nbtrail.h/.cpp`; `common/graphics/pfx/particlefx.h` (konstruktor domyślny), `common/graphics/mdlvisual.cpp/.h` (`nbSwing`), `common/world/bullet.cpp/.h`, `common/world/objects/npc.cpp` (`tick`).
+- **Zgłoszenie (28.11, dwa nagrania z PC):** miecz przy ciosie zostawia bladą półprzezroczystą smugę w kształcie łuku (ok. 0,2–0,3 s), a lecąca strzała jasną kreskę z cienkim ogonem. Port nie rysował żadnego z tych śladów.
+- **Zmiana:** oba ślady to cząsteczki robione w kodzie (miękki biały sprite generowany w pamięci, mieszanie addytywne, pozycje w świecie, więc zostają za bronią i gasną). Miecz: gdy człowiek ma w ręku broń jedno- lub dwuręczną i trwa animacja ciosu, cząsteczki wychodzą z siatki ostrza (420/s, życie 0,23 s, rozmiar 26, przezroczystość 0,28). Strzała i bełt bez własnego efektu: emiter w pocisku (260/s, życie 0,17 s, rozmiar 7, przezroczystość 0,9) i wyłączany, gdy pocisk się zatrzyma. Pociski z efektem (ogniste, magiczne) bez zmian. Dotyczy bohatera i innych postaci.
+- **Uwaga:** to przybliżenie: kolor, szerokość, długość i jasność dobrane ze zrzutów, bo danych efektu PC nie mam. Do strojenia po teście.
+- **Do sprawdzenia:** czy ślad miecza jest widoczny i nie za mocny (cięcie z góry, w bok, dwuręczne), czy znika po ciosie, czy strzała ma jasny ogon i czy nie świeci po wbiciu się w cel/ścianę, spadek FPS przy walce wielu postaci.
 - **Test (data):** czeka.
 
 ### 259. Towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (dokończenie 152) – ✅ (28.11.2026)

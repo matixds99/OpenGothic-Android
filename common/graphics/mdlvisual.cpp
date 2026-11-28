@@ -1,4 +1,5 @@
 #include "mdlvisual.h"
+#include "graphics/pfx/nbtrail.h"
 
 #include <Tempest/Log>
 
@@ -177,6 +178,7 @@ void MdlVisual::setSlotAttachment(MeshObjects::Mesh&& itm, std::string_view bone
   }
 
 void MdlVisual::setSword(MeshObjects::Mesh &&s) {
+  nbSwordTrail = PfxEmitter();   // NB fix 260: made again for the new blade
   itemFx[0] = Effect();   // NB fix 150: the effect of the new weapon is set by the inventory after the mesh
   bind(sword,std::move(s),"ZS_RIGHTHAND");
   }
@@ -262,6 +264,26 @@ void MdlVisual::setItemFx(uint8_t slot, std::string_view effect, World& owner) {
   fx.setItemMesh(&att[slot]->view);
   itemFx[slot] = std::move(fx);
   syncAttaches(*att[slot]);
+  }
+
+void MdlVisual::nbSwing(World& owner, bool on) {
+  // NB fix 260: the pale smear after the blade in a swing (the PC draws it): the particles come out of the mesh of the blade
+  // while the blow lasts, stay where they were emitted and fade in a quarter of a second
+  if(!on) {
+    if(!nbSwordTrail.isEmpty() && nbSwordTrail.isActive())
+      nbSwordTrail.setActive(false);
+    return;
+    }
+  if(sword.view.isEmpty() || nbHiddenNow)
+    return;
+  if(nbSwordTrail.isEmpty()) {
+    nbSwordTrail = PfxEmitter(owner,NbTrail::sword());
+    nbSwordTrail.setLooped(true);
+    nbSwordTrail.setMesh(&sword.view,nullptr);
+    syncAttaches(sword);
+    }
+  if(!nbSwordTrail.isActive())
+    nbSwordTrail.setActive(true);
   }
 
 void MdlVisual::setAmmoItem(MeshObjects::Mesh&& a, std::string_view bone) {
@@ -1123,8 +1145,11 @@ void MdlVisual::syncAttaches(Attach<View>& att) {
   att.view.setObjMatrix(p);
   // NB fix 150: the effect of the item goes with its weapon
   if constexpr(std::is_same_v<View,MeshObjects::Mesh>) {
-    if(&att==&sword)
+    if(&att==&sword) {
       itemFx[0].setObjMatrix(p);
+      if(!nbSwordTrail.isEmpty())
+        nbSwordTrail.setObjMatrix(p);
+      }
     else if(&att==&bow)
       itemFx[1].setObjMatrix(p);
     else if(&att==&shield)

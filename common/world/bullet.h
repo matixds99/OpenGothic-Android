@@ -7,6 +7,7 @@
 #include "game/damagecalculator.h"
 #include "graphics/meshobjects.h"
 #include "graphics/effect.h"
+#include "world/objects/pfxemitter.h"
 
 class World;
 class Item;
@@ -84,6 +85,7 @@ class Bullet final : public DynamicWorld::BulletCallback {
 
     MeshObjects::Mesh         view;
     Effect                    vfx;
+    PfxEmitter                nbTrail;   // NB fix 260: the bright streak after an arrow and a bolt
 
     uint8_t                   material=0;
     Flg                       flg=NoFlags;
