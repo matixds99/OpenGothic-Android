@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **265**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **266**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – 🧪
-2. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – ✅
-3. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – ✅
-4. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – ✅
-5. **260** – ślad zamachu bronią (cienka wstęga przy czubku miecza) i ślad lecącej strzały/bełtu, jak na PC – ✅
+1. **265** – ostatnia faza walki z Krukiem w lochu: „Duch Baldara” nie dochodził do Kruka i walka stała; po 12 s bez zbliżania się jest stawiany obok Kruka i ginie – 🧪
+2. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – ✅
+3. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – ✅
+4. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – ✅
+5. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – ✅
 
 ---
 
@@ -285,7 +285,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
-### 264. Kruk w lochu Kruka po rozmowie nie atakował (stał i patrzył) – 🧪 (28.11.2026)
+### 265. Ostatnia faza walki z Krukiem: „Duch Baldara” nie ginie, walka stoi – 🧪 (28.11.2026)
+- **Pliki:** `common/game/gamescript.cpp/.h`.
+- **Zgłoszenie (28.11):** w ostatniej fazie walki w lochu Kruka kilka duchów ginie, a „Duch Baldara” zostaje żywy i walka nie rusza dalej.
+- **Skrypty NB:** `AI_OnTick_BDT_50011_Addon_Raven` w ostatniej fazie wstawia 8 duchów (`AD_OldGhostRiddle1..8AD_Last`). Każdy ma dojść do Kruka w `ZS_MM_Attack` (`AI_GotoNpc`); `AI_GotoRaven` zabija ducha w odległości do 3 m i zabiera Krukowi 10000 HP. Gdy wszystkie 8 nie żyje, Kruk wraca do walki (`RX_SetActive`).
+- **Log (`nbcalls.txt`):** 7 duchów (gildia DMT) ginie przez `AI_GotoRaven`. Duch Baldara (gildia SKELETON) od 113 s do końca logu (ok. 33 s) co ok. 280 ms powtarza `ZS_MM_AllScheduler → B_ClearPerceptions → ZS_MM_Attack → ZS_MM_Attack_End` i nie rusza się do Kruka, więc `RX_AD_BOSS7_LAST_1` nigdy nie jest ustawiane. Dokładnej linii skryptu, która kończy jego pętlę przed gałęzią `RX_IsRavenLastNpc`, nie ustaliłem.
+- **Poprawka (zabezpieczenie w porcie):** `nbRavenGhostsTick` (co 1 s razem z `nbBossTick`) działa w ostatniej fazie (`RX_AD_BOSS7_LASTSTAGE`, Kruk żyje). Duch, który przez 12 s nie zbliżył się do Kruka o więcej niż 1 m, jest stawiany 2 m od Kruka. Przy najbliższym ticku skrypt sam go zabija (`AI_GotoRaven`) i ustawia `RX_AD_BOSS7_LAST_n`. Duchy, które idą normalnie, nie są ruszane.
+- **Do sprawdzenia:** ostatnia faza: wszystkie 8 duchów ginie (Baldar najpóźniej ok. 12 s po wstawieniu), potem Kruk wraca do walki. Jeśli dalej stoi, wyślij log.
+- **Test (data):** czeka.
+
+### 264. Kruk w lochu Kruka po rozmowie nie atakował (stał i patrzył) – ✅ (28.11.2026)
 - **Pliki:** `common/game/gamescript.cpp`.
 - **Zgłoszenie (28.11):** w lochu Kruka (finałowa walka, Kruk na tronie, w tle Dramtar 75000 HP) po rozmowie Kruk zamiast walczyć stoi i patrzy.
 - **Skrypty NB:** `PC_PSIONICQUEST_TEMPLATEDIALOG_353_INFO` (rozmowa z Krukiem) kończy się `RX_CallbackDialog(self, 0, RX_Callback_RavenDungeon_Final)`. Ta funkcja (po zamknięciu dialogu) zdejmuje nieśmiertelność, zmienia rutynę na „AOE” i robi `B_Attack(self, other, AR_KILL, 1)`. `AI_OnTick_BDT_50011_Addon_Raven` zaczyna fazy walki dopiero po `PC_PsionicQuest_TemplateDialog_353_VAR` (to ustawia ta sama rozmowa).

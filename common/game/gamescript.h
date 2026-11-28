@@ -220,6 +220,7 @@ class GameScript final {
     /// rune of the unlocking drawn); 3: with lock picks (no weapon, the talent and 100 of dexterity)
     int32_t          nbLockMode(const Npc& pl);
     bool             nbIsSummon(const Npc& npc);
+    void             nbRavenGhostsTick();   // NB fix 265
     bool             nbBossFightOn();   // NB fix 244: the music of a boss plays (RX_MusicBoss)
     bool             nbIsTrainingDummy(const Npc& npc);   // NB fix 127
     uint64_t         nbDamageCalcRunes();   // NB fix 126

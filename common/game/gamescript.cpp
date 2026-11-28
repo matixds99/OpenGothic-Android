@@ -311,6 +311,9 @@ struct NbState {
   std::vector<std::weak_ptr<zenkit::INpc>>    bossFight;
   uint64_t                                    nextBossTick  = 0;
   bool                                        bossFightLoaded = false;
+  // NB fix 265: the ghosts of the last phase of Raven that do not come to him
+  struct RavenGhost { uint64_t since = 0; float best = 0; };
+  std::unordered_map<const Npc*,RavenGhost>   ravenGhosts;
   // NB fix 106: the damage over time of the plugin (RX_ApplyDotDamage): the burning, the poison, the magic
   struct Dot {
     std::weak_ptr<zenkit::INpc> target, attacker;
@@ -11859,6 +11862,59 @@ void GameScript::nbBossTick() {
     timer = timer>=300 ? 1 : timer+1;
     int32_t arg = timer;
     nbCallInstanceFunc(fn,*npc,nullptr,&arg);
+    }
+
+  nbRavenGhostsTick();   // NB fix 265
+  }
+
+/// NB fix 265: the last phase of Raven in his dungeon. AI_OnTick_BDT_50011_Addon_Raven lets 8 ghosts (AD_OldGhostRiddle1..8AD_Last)
+/// run to him (ZS_MM_Attack: AI_GotoNpc(Raven)); AI_GotoRaven kills a ghost that is within 3 m and takes 10000 from Raven. The phase
+/// goes on when all 8 are dead. The ghost of Baldar (a skeleton, not DMT like the others) never got close (the log of 28.11.:
+/// ZS_MM_Attack / ZS_MM_Attack_End every 280 ms for minutes, the 7 others died), so the fight stood. A ghost that does not come
+/// closer for 12 s is put next to Raven, the script then does the rest at the next tick.
+void GameScript::nbRavenGhostsTick() {
+  auto nb = nbStates.find(this);
+  if(nb==nbStates.end())
+    return;
+  auto& st   = nb->second;
+  auto* last = vm.find_symbol_by_name("RX_AD_BOSS7_LASTSTAGE");
+  auto* rvSy = vm.find_symbol_by_name("BDT_50011_ADDON_RAVEN");
+  if(last==nullptr || rvSy==nullptr || last->type()!=zenkit::DaedalusDataType::INT || last->is_member() || last->get_int()==0) {
+    st.ravenGhosts.clear();
+    return;
+    }
+  Npc* raven = world().findNpcByInstance(size_t(rvSy->index()));
+  if(raven==nullptr || raven->isDead()) {
+    st.ravenGhosts.clear();
+    return;
+    }
+  const uint64_t now = tickCount();
+  for(int i=1; i<=8; ++i) {
+    auto* gs = vm.find_symbol_by_name("AD_OLDGHOSTRIDDLE"+std::to_string(i)+"AD_LAST");
+    if(gs==nullptr)
+      continue;
+    Npc* g = world().findNpcByInstance(size_t(gs->index()));
+    if(g==nullptr || g->isDead())
+      continue;
+    auto  diff = g->position()-raven->position();
+    const float d = diff.length();
+    if(d<=300.f) {
+      st.ravenGhosts.erase(g);
+      continue;
+      }
+    auto& e = st.ravenGhosts[g];
+    if(e.since==0 || d<e.best-100.f) {
+      e.since = now;
+      e.best  = d;
+      continue;   // it comes closer
+      }
+    if(now-e.since<12000)
+      continue;
+    // the same distance on the other side of Raven as the ghost is, 2 m from him
+    auto dir = d>1.f ? diff/d : Tempest::Vec3{1,0,0};
+    g->setPosition(raven->position()+dir*200.f);
+    st.ravenGhosts.erase(g);
+    nbCtx("raven last phase: ",g->displayName()," did not come for 12 s (",int(d)," cm), put next to Raven");
     }
   }
 
