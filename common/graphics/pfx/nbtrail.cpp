@@ -12,7 +12,7 @@ using namespace Tempest;
 
 // a ribbon texture: u goes across the ribbon (a soft edge, bright in the middle), v along it (the engine fades the ribbon
 // with its age by the color of the vertices); kept to the end of the program (the device dies before the statics)
-static const Tempest::Texture2d* ribbonTex(float peak) {
+static const Tempest::Texture2d* ribbonTex(float peak, uint8_t r=255, uint8_t g=255, uint8_t b=255) {
   constexpr int W = 32, H = 4;
   Pixmap pm(W,H,TextureFormat::RGBA8);
   auto*  p = reinterpret_cast<uint8_t*>(pm.data());
@@ -22,7 +22,7 @@ static const Tempest::Texture2d* ribbonTex(float peak) {
       const float s = std::sin(u*3.14159265f);
       const float a = s*s*peak;
       uint8_t*    px = p+(y*W+x)*4;
-      px[0] = px[1] = px[2] = 255;
+      px[0] = r; px[1] = g; px[2] = b;
       px[3] = uint8_t(std::min(1.f,a)*255.f);
       }
   return new Tempest::Texture2d(Resources::loadTexturePm(pm));
@@ -31,7 +31,7 @@ static const Tempest::Texture2d* ribbonTex(float peak) {
 /// A ribbon after a point: the particles stay on the emitter (useEmittersFOR), so the ribbon of each follows the way
 /// of the emitter. The particles themselves are invisible: only the ribbons are seen.
 static std::unique_ptr<ParticleFx> makeRibbon(const char* name, float pps, float life, float fadeSec, float width, float peak,
-                                              Material::AlphaFunc func) {
+                                              Material::AlphaFunc func, uint8_t cr=255, uint8_t cg=255, uint8_t cb=255) {
   auto fx = std::make_unique<ParticleFx>();
   fx->dbgName          = name;
   fx->ppsValue         = pps;
@@ -44,7 +44,7 @@ static std::unique_ptr<ParticleFx> makeRibbon(const char* name, float pps, float
   fx->velVar           = 0.f;
   fx->lspPartAvg       = life;                          // ms
   fx->lspPartVar       = 0.f;
-  const auto* tex      = ribbonTex(peak);
+  const auto* tex      = ribbonTex(peak,cr,cg,cb);
   fx->visMaterial.tex   = tex;
   fx->visMaterial.alpha = func;
   fx->visOrientation   = ParticleFx::Orientation::None;
@@ -73,6 +73,6 @@ const ParticleFx* NbTrail::arrow() {
 const ParticleFx* NbTrail::sword() {
   static std::unique_ptr<ParticleFx> fx;
   if(fx==nullptr)
-    fx = makeRibbon("NB_TRAIL_SWORD",40.f,260.f,0.24f,24.f,0.40f,Material::AdditiveLight);
+    fx = makeRibbon("NB_TRAIL_SWORD",40.f,240.f,0.22f,20.f,0.09f,Material::AdditiveLight,215,228,255);
   return fx.get();
   }
