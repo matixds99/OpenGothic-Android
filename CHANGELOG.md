@@ -342,6 +342,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Zmiana:** towarzysz bohatera (`AIV_PARTYMEMBER`), który ma żywy cel w odległości do 12 m, nie przekazuje ciosów innych napastników do oceny obrażeń ze skryptów (`B_AssessDamage` zmienia cel i restartuje atak). Kończy pierwszy cel, a po jego śmierci (albo gdy ucieknie poza 12 m) następny cios znów idzie do skryptów i wybiera nowego. Pierwszy cios, gdy towarzysz nie ma celu, i ciosy własnego celu działają jak dotąd; reszta postaci, przyzwańcy (`nbIsSummon`) i bohater bez zmian. Razem z 152 (uniki najwyżej raz na 1,5 s i tylko od ciosów własnego celu).
 - **Uwaga:** skrypty NB same przełączają cel po 2–3 ciosach od innego NPC (`AIVRX_HITBYOTHERNPCCOUNT`); dla towarzysza to teraz wyłączone na życzenie – inaczej niż na PC.
 - **Do sprawdzenia:** Blizna i inni towarzysze przeciw 2–3 zębaczom/wilkom i grupie bandytów – walczą z jednym, nie krążą; po śmierci celu biorą następnego; towarzysz bez celu nadal reaguje na pierwszy cios.
+- **Dodatek (28.11):** z `gamescript.cpp` usunięty `#include <strings.h>` (nagłówek POSIX, na MSVC nie istnieje; nic z niego nie było używane).
 - **Test (data):** czeka.
 
 ### 258. Pasek doświadczenia: punkty nauki na żywo („LP: 12”) i pasek rozszerzany do tekstu – ✅ (27.11.2026)

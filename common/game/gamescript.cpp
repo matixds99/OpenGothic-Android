@@ -1,5 +1,4 @@
 #include "gamescript.h"
-#include <strings.h>
 #include "utils/fileext.h"
 #include "utils/nbcalls.h"
 
