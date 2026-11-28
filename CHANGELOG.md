@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **259**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **260**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -283,6 +283,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka (tymczasowa, nie ma jej w skryptach):** boss (`RX_IsBoss`), którego aktualny cel jest przywołańcem, po 3 trafieniach gracza w oknie 8 s (poza własnym ciosem/rzutem) czyści kolejkę, ustawia cel na gracza, woła `B_ClearPerceptions` i startuje `ZS_Attack` (jak skrypt). W logu linia `boss returns to the hero`.
 - **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
+- **Test (data):** czeka.
+
+### 259. Towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (dokończenie 152) – 🧪 (28.11.2026)
+- **Pliki:** `common/world/objects/npc.cpp/.h` (`nbKeepsTarget`, `takeDamage`, `hurtBy`).
+- **Zgłoszenie (28.11):** postać atakowana przez kilku przeciwników naraz „głupieje” (krąży, nie atakuje) – np. Blizna przeciw dwóm zębaczom na farmie Oswalda, obóz bandytów (Brago). Ma wybrać jeden cel i walczyć z nim, nie zmieniając agro.
+- **Zmiana:** towarzysz bohatera (`AIV_PARTYMEMBER`), który ma żywy cel w odległości do 12 m, nie przekazuje ciosów innych napastników do oceny obrażeń ze skryptów (`B_AssessDamage` zmienia cel i restartuje atak). Kończy pierwszy cel, a po jego śmierci (albo gdy ucieknie poza 12 m) następny cios znów idzie do skryptów i wybiera nowego. Pierwszy cios, gdy towarzysz nie ma celu, i ciosy własnego celu działają jak dotąd; reszta postaci i bohater bez zmian. Razem z 152 (uniki najwyżej raz na 1,5 s i tylko od ciosów własnego celu).
+- **Uwaga:** skrypty NB same przełączają cel po 2–3 ciosach od innego NPC (`AIVRX_HITBYOTHERNPCCOUNT`); dla towarzysza to teraz wyłączone na życzenie – inaczej niż na PC.
+- **Do sprawdzenia:** Blizna i inni towarzysze przeciw 2–3 zębaczom/wilkom i grupie bandytów – walczą z jednym, nie krążą; po śmierci celu biorą następnego; towarzysz bez celu nadal reaguje na pierwszy cios.
 - **Test (data):** czeka.
 
 ### 258. Pasek doświadczenia: punkty nauki na żywo („LP: 12”) i pasek rozszerzany do tekstu – ✅ (27.11.2026)

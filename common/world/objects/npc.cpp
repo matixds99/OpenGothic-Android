@@ -2789,6 +2789,20 @@ void Npc::commitDamage() {
   currentTarget->takeDamage(*this,nullptr);
   }
 
+bool Npc::nbKeepsTarget(const Npc& other) const {
+  // NB fix 259: a companion of the hero (AIV_PARTYMEMBER) that fights one target keeps it: the blows of the others do not
+  // go to the assessment of the damage of the scripts (it changes the target and restarts the attack), so against two
+  // snappers or three bandits he finishes the first one and takes the next after it. The target must be alive and near,
+  // a stale target of a fight that is over does not count
+  constexpr size_t AIV_PARTYMEMBER = 15;
+  if(isPlayer() || hnpc->aivar[AIV_PARTYMEMBER]==0)
+    return false;
+  if(currentTarget==nullptr || currentTarget==&other || currentTarget->isDown())
+    return false;
+  const float dx = currentTarget->x-x, dz = currentTarget->z-z;
+  return dx*dx+dz*dz<=1200.f*1200.f;
+  }
+
 bool Npc::nbReactToHit(const Npc& other) {
   // NB fix 152: see takeDamage. The player decides by himself; a character without a target reacts as before
   if(isPlayer())
@@ -2887,7 +2901,8 @@ void Npc::takeDamage(Npc& other, const Bullet* b, const CollideMask bMask, int32
     }
 
   if(!isSpell || splCat==SpellCategory::SPELL_BAD) {
-    perceptionProcess(other,this,0,PERC_ASSESSDAMAGE);
+    if(!nbKeepsTarget(other))   // NB fix 259
+      perceptionProcess(other,this,0,PERC_ASSESSDAMAGE);
     // NB fix 152: the reaction of the fight AI to a hit (the plan is dropped, the next move from MY_W_STRAFE - a step
     // aside, a parade) came at every blow. Two or three monsters bite in turns, so a character (a companion against
     // two snappers) only stepped aside and turned between them and never hit back. The reaction is for the blow of
@@ -3316,7 +3331,8 @@ void Npc::hurtBy(Npc& other, int32_t dmg) {
   if(!isPlayer())
     setOther(&other);
   owner.sendPassivePerc(*this,other,*this,PERC_ASSESSFIGHTSOUND);
-  perceptionProcess(other,this,0,PERC_ASSESSDAMAGE);
+  if(!nbKeepsTarget(other))   // NB fix 259
+    perceptionProcess(other,this,0,PERC_ASSESSDAMAGE);
   if(nbReactToHit(other)) {   // NB fix 152
     fghAlgo.onTakeHit();
     implFaiWait(0);
