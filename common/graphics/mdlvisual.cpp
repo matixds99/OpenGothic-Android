@@ -293,7 +293,7 @@ void MdlVisual::nbSwing(World& owner, bool on) {
       axis = 2;
     const auto mid = (mn+mx)*0.5f;
     for(int i=0; i<NbTrailPts; ++i) {
-      const float k = 0.05f+0.9f*float(i)/float(NbTrailPts-1);
+      const float k = 0.78f+0.20f*float(i)/float(NbTrailPts-1);   // only the tip: a thin band, not a sheet of the whole blade
       auto pt = mid;
       if(axis==0) pt.x = mn.x+ext.x*k; else
       if(axis==1) pt.y = mn.y+ext.y*k; else

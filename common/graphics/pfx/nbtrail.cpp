@@ -66,7 +66,7 @@ static std::unique_ptr<ParticleFx> makeRibbon(const char* name, float pps, float
 const ParticleFx* NbTrail::arrow() {
   static std::unique_ptr<ParticleFx> fx;
   if(fx==nullptr)
-    fx = makeRibbon("NB_TRAIL_ARROW",30.f,300.f,0.30f,7.f,0.55f,Material::AdditiveLight);
+    fx = makeRibbon("NB_TRAIL_ARROW",30.f,300.f,0.30f,4.f,0.55f,Material::AdditiveLight);
   return fx.get();
   }
 
@@ -76,6 +76,6 @@ const ParticleFx* NbTrail::arrow() {
 const ParticleFx* NbTrail::sword() {
   static std::unique_ptr<ParticleFx> fx;
   if(fx==nullptr)
-    fx = makeRibbon("NB_TRAIL_SWORD",10.f,240.f,0.22f,22.f,0.10f,Material::AdditiveLight,150,160,175);
+    fx = makeRibbon("NB_TRAIL_SWORD",10.f,240.f,0.22f,4.f,0.16f,Material::AdditiveLight,150,160,175);
   return fx.get();
   }
