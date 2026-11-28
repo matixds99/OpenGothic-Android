@@ -9,7 +9,9 @@
 #include <string>
 
 #include "graphics/pfx/particlefx.h"
+#ifdef OPENGOTHIC_TOUCH_UI
 #include "utils/androidinput.h"
+#endif
 #include "world/world.h"
 #include "camera.h"
 #include "gothic.h"
@@ -150,7 +152,9 @@ void RainFx::tick(uint64_t dt) {
   settingsTimer += dt;
   if(settingsTimer>=1000) {
     settingsTimer = 0;
+#ifdef OPENGOTHIC_TOUCH_UI
     level   = std::clamp(AndroidInput::preferences().rain,0,3);
+#endif   // PC: the setting is only in the touch UI, the level stays 0 (no rain)
     outdoor = isOutdoorWorld(owner.name());
     if(level!=loggedLevel || outdoor!=loggedOutdoor) {
       loggedLevel   = level;

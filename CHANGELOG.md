@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **261**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **262**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -284,6 +284,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
+
+### 261. Build na PC: `rainfx.cpp` nie używa `AndroidInput` poza dotykowym UI – 🧪 (28.11.2026)
+- **Pliki:** `common/world/rainfx.cpp`.
+- **Zgłoszenie (28.11):** build na PC się psuł na linii 153 (`AndroidInput::preferences().rain`) – `utils/androidinput.h` jest widoczny tylko przy `OPENGOTHIC_TOUCH_UI`.
+- **Zmiana:** `#include` i odczyt ustawienia deszczu otoczone `#ifdef OPENGOTHIC_TOUCH_UI … #endif` (bez `#else`). Na PC `level` zostaje domyślnym 0, czyli deszczu nie ma (ustawienie „Siła deszczu” jest tylko w dotykowym UI). Sprawdzone kompilacją pliku z włączonym i wyłączonym `OPENGOTHIC_TOUCH_UI`.
+- **Test (data):** czeka (build na PC).
 
 ### 260. Ślad zamachu bronią i ślad lecącej strzały (jak na PC) – ✅ (28.11.2026)
 - **Pliki:** 🆕 `common/graphics/pfx/nbtrail.h/.cpp`; `common/graphics/pfx/particlefx.h` (konstruktor domyślny), `common/graphics/mdlvisual.cpp/.h` (`nbSwing`), `common/world/bullet.cpp/.h`, `common/world/objects/npc.cpp` (`tick`).
