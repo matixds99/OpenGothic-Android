@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **239** – Zeld i inni magowie teleportują się krótko do wroga: wybór teleportujących się zgodnie z pluginem (gildia DMT z `AIV_MAGICUSER`=MAGIC_ALWAYS, szkieletowi magowie…) zamiast listy nazw; wycofane naprowadzanie z 238 (Gothic go nie ma) – 🧪
-2. **238** – pociski czarów postaci podążają za celem (do 120°/s), a nie lecą w miejsce, gdzie bohater stał (56 z 63 Kul śmierci Zelda w ścianę) – ⏸ wycofane przez 239
-3. **237** – bossy NB (`bodystate_interruptable_override`) nie są odrzucane ciosami (golemy przewracały Zelda co cios, nie mógł czarować) – ✅
-4. **236** – czary bohatera przelatują przez jego przyzwańców i towarzyszy; `[shot]` w logu: co trafił każdy pocisk czaru; liczniki rzuconych czarów w `[fight]`; flagi trajektorii efektów bez względu na wielkość liter – ✅
-5. **235** – śledzenie walki w logu (`[fight]`): co sekundę stan, cel, widoczność, czar, decyzja AI walki, kolejka, ciosy i reakcja na obrażenia każdej postaci walczącej z bohaterem lub przyzwańcami – ✅
+1. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – 🧪
+2. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – 🧪
+3. **260** – ślad zamachu bronią (cienka wstęga przy czubku miecza) i ślad lecącej strzały/bełtu, jak na PC – ✅
+4. **259** – towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (z wyłączeniem przyzwańców), dokończenie 152 – ✅
+5. **258** – pasek doświadczenia z punktami nauki na żywo („LP: 12”), rozszerzany do tekstu – ✅
 
 ---
 
