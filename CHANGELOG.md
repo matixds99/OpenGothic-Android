@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **267**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **268**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **266** – szybki atak (QUICK) szpadą/rapierem: tempo ×1,3 zamiast ×3,45 – ✅
-2. **265** – ostatnia faza walki z Krukiem w lochu: „Duch Baldara” nie dochodził do Kruka i walka stała; po 12 s bez zbliżania się jest stawiany obok Kruka i ginie – 🧪
-3. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – ✅
-4. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – ✅
-5. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – ✅
+1. **267** – szybki atak (QUICK) halabardą: tempo ×1,3 (była ×2,3 jak broń orków) – 🧪
+2. **266** – szybki atak (QUICK) szpadą/rapierem: tempo ×1,3 zamiast ×3,45 – ✅
+3. **265** – ostatnia faza walki z Krukiem w lochu: „Duch Baldara” nie dochodził do Kruka i walka stała; po 12 s bez zbliżania się jest stawiany obok Kruka i ginie – 🧪
+4. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – ✅
+5. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – ✅
 
 ---
 
@@ -283,6 +283,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka (tymczasowa, nie ma jej w skryptach):** boss (`RX_IsBoss`), którego aktualny cel jest przywołańcem, po 3 trafieniach gracza w oknie 8 s (poza własnym ciosem/rzutem) czyści kolejkę, ustawia cel na gracza, woła `B_ClearPerceptions` i startuje `ZS_Attack` (jak skrypt). W logu linia `boss returns to the hero`.
 - **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
+- **Test (data):** czeka.
+
+### 267. Szybki atak halabardą wolniejszy: ×1,3 zamiast ×2,3 – 🧪 (28.11.2026)
+- **Pliki:** `common/game/playercontrol.h/.cpp`.
+- **Zgłoszenie (28.11):** broń orków przy ×2,3 jest dobra, halabarda za szybka; ma być ×1,3.
+- **Przyczyna/sposób:** halabarda dostaje te same nakładki animacji co broń orków (`HUMANS_AXEST2`) i włócznia (`Humans_SPST1/2`), więc po nazwie nakładki nie da się jej odróżnić. Port odczytuje flagę skryptu `AIV_HALLBERD` (ustawia ją `EQUIP_2H_*_HALLEBERDE`, zdejmuje `RX_UnequipWeapon`).
+- **Zmiana:** `QuickSpeedHalberd` = 1,3 (`quickMeleeSpeed`). Pozostałe bronie bez zmian (szabla ×1,15, szpada ×1,3, reszta ×2,3).
+- **Do sprawdzenia:** szybki atak halabardą ma tempo ×1,3, po zmianie broni na orkową wraca ×2,3.
 - **Test (data):** czeka.
 
 ### 266. Szybki atak szpadą/rapierem wolniejszy: ×1,3 zamiast ×3,45 – ✅ (28.11.2026)

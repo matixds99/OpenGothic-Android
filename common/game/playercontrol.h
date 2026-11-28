@@ -50,6 +50,9 @@ class PlayerControl final {
     // the other styles keep QuickSpeed
     static constexpr float    QuickSpeedSaber  = QuickSpeed*0.5f;   // 1.15
     static constexpr float    QuickSpeedRapier = 1.3f;              // NB fix 266 (was 3.45)
+    // NB fix 267: the halberd shares the overlay (HUMANS_AXEST2 / Humans_SPST*) with the orcish weapon and the spear, so it is
+    // told by the script flag AIV_HALLBERD (set by EQUIP_2H_*_HALLEBERDE, cleared by RX_UnequipWeapon)
+    static constexpr float    QuickSpeedHalberd = 1.3f;
     float          quickSpeedNow = QuickSpeed;
     static float   quickMeleeSpeed(const Npc& pl);
 

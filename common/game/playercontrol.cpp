@@ -385,6 +385,8 @@ void PlayerControl::tickFocus() {
 // NB fix 115: the tempo of QUICK by the overlay of the fighting style that New Balance put on the hero
 // (RX_ApplyAnim_Weapons): the sabre - HUMANS_1HDEXST1..3, the rapier - HUMANS_RAPIER_ST1..3
 float PlayerControl::quickMeleeSpeed(const Npc& pl) {
+  if(auto* w = Gothic::inst().world(); w!=nullptr && w->script().nbIntVar("AIV_HALLBERD")>0)
+    return QuickSpeedHalberd;   // NB fix 267
   for(auto& n:pl.overlayNames()) {
     std::string s = n;
     for(auto& c:s)
