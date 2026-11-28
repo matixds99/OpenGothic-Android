@@ -2795,7 +2795,7 @@ bool Npc::nbKeepsTarget(const Npc& other) const {
   // snappers or three bandits he finishes the first one and takes the next after it. The target must be alive and near,
   // a stale target of a fight that is over does not count
   constexpr size_t AIV_PARTYMEMBER = 15;
-  if(isPlayer() || hnpc->aivar[AIV_PARTYMEMBER]==0)
+  if(isPlayer() || hnpc->aivar[AIV_PARTYMEMBER]==0 || owner.script().nbIsSummon(*this))   // the summons keep their own AI (fix 81, 253)
     return false;
   if(currentTarget==nullptr || currentTarget==&other || currentTarget->isDown())
     return false;
