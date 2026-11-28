@@ -861,30 +861,111 @@ public final class LauncherActivity extends Activity {
             return;
         }
         if (isInstallation(rootOf(game))) {
-            play(game);
+            if (GAMES[game].appId == 39510)
+                chooseEditionToPlay(game);
+            else
+                play(game, GAMES[game].ini);
             return;
         }
         if (canDownload(game))
-            chooseLanguage(game);
+            chooseEdition(game);
         else
             chooseSource(game);
     }
 
-    private void play(int game) {
+    /** The app of Steam of Gothic II brings Night of the Raven and the mod Classic, Gothic II without the addon. The player keeps one or both. */
+    private void chooseEdition(final int game) {
+        if (GAMES[game].appId != 39510) {
+            chooseLanguage(game, true);
+            return;
+        }
+        // 0: with the addon only, 1: the original (without the addon), 2: both, the choice is made when the game starts
+        final String[] names = {
+                Texts.t("Gothic II + Night of the Raven (with the addon)", "Gothic II + Noc Kruka (z dodatkiem)"),
+                Texts.t("Gothic II (the original, without the addon)", "Gothic II (oryginał, bez dodatku)"),
+                Texts.t("Both versions (choose when the game starts)", "Obie wersje (wybór przy uruchomieniu)"),
+        };
+        final int[] chosen = {2};
+        new AlertDialog.Builder(this)
+                .setTitle(Texts.t("Version of Gothic II", "Wersja Gothic II"))
+                .setSingleChoiceItems(names, 2, (d, which) -> chosen[0] = which)
+                .setPositiveButton(Texts.t("Next", "Dalej"), (d, w) -> {
+                    prefs.edit().putInt("g2edition", chosen[0]).apply();
+                    chooseLanguage(game, chosen[0] != 0);
+                })
+                .setNegativeButton(Texts.t("Cancel", "Anuluj"), null)
+                .show();
+    }
+
+    /** The ini of the mod Classic of Gothic II (Steam: System/g2_classic.ini), null when the installation has no such version. */
+    private static String classicIni(File root) {
+        File[] files = new File(root, "System").listFiles();
+        if (files == null)
+            return null;
+        String found = null;
+        for (File f : files) {
+            String n = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (f.isFile() && n.startsWith("g2_classic") && n.endsWith(".ini") && (found == null || n.equals("g2_classic.ini")))
+                found = f.getName();
+        }
+        return found;
+    }
+
+    /**
+     * Gothic II has two versions in the folder: with the addon (Night of the Raven) and the original, without it (the mod Classic of Steam).
+     * The player chooses when the game starts; the last choice is the first one. A folder without Classic (it was downloaded before, or
+     * only the version with the addon was chosen) has nothing to choose from: the game starts, or the dialog tells how to get the original.
+     */
+    private void chooseEditionToPlay(final int game) {
+        final String classic = classicIni(rootOf(game));
+        final int bought = prefs.getInt("g2edition", -1);   // what the player took when he downloaded the game: 0 addon, 1 original, 2 both
+        if (classic == null && bought == 0) {
+            play(game, GAMES[game].ini);
+            return;
+        }
+        final String[] names = {
+                Texts.t("Gothic II + Night of the Raven (with the addon)", "Gothic II + Noc Kruka (z dodatkiem)"),
+                Texts.t("Gothic II (the original, without the addon)", "Gothic II (oryginał, bez dodatku)") + (classic == null ? "  —  " + Texts.t("not downloaded", "niepobrana") : ""),
+        };
+        final int last = prefs.getInt("g2played", 0);
+        final int[] chosen = {last == 1 ? 1 : 0};
+        new AlertDialog.Builder(this)
+                .setTitle(Texts.t("Which version?", "Którą wersję uruchomić?"))
+                .setSingleChoiceItems(names, chosen[0], (d, which) -> chosen[0] = which)
+                .setPositiveButton("▶  " + Texts.t("Play", "Graj"), (d, w) -> {
+                    if (chosen[0] == 1 && classic == null) {
+                        new AlertDialog.Builder(this)
+                                .setMessage(Texts.t("The original Gothic II (without the addon) is not in the folder of the game: the Steam download of this "
+                                        + "installation did not bring it. Remove the game and download it again, choosing \"Gothic II (the original)\" "
+                                        + "or \"Both versions\". If it is still missing, the app of Steam does not have it for your account.",
+                                        "Oryginalnego Gothica II (bez dodatku) nie ma w folderze gry: pobranie tej instalacji ze Steama go nie przyniosło. "
+                                        + "Usuń grę i pobierz ją jeszcze raz, wybierając „Gothic II (oryginał)” albo „Obie wersje”. Jeśli nadal go brakuje, "
+                                        + "to aplikacja Steam na twoim koncie go nie ma."))
+                                .setPositiveButton("OK", null).show();
+                        return;
+                    }
+                    prefs.edit().putInt("g2played", chosen[0]).apply();
+                    play(game, chosen[0] == 1 ? classic : GAMES[game].ini);
+                })
+                .setNegativeButton(Texts.t("Cancel", "Anuluj"), null)
+                .show();
+    }
+
+    private void play(int game, String ini) {
         lastPlayed = game;
         // a mod from Spine that is still in the folder of the game would be loaded with the game
         SpineActivation.restore(new File(external, "spine"));
         prefs.edit().putInt("game", game).putLong("started", System.currentTimeMillis()).apply();
         // the engine reads which of the installations it is and which mod (the ini of it): it has no command line
         try (OutputStream out = new FileOutputStream(new File(external, "game.txt"))) {
-            out.write((GameRoots.gameTxt(this, GAMES[game].folder) + "\n" + GAMES[game].ini + "\n").getBytes(StandardCharsets.UTF_8));
+            out.write((GameRoots.gameTxt(this, GAMES[game].folder) + "\n" + ini + "\n").getBytes(StandardCharsets.UTF_8));
         } catch (IOException ignored) {
             // the engine takes Gothic II then
         }
         startActivity(new Intent(this, GameActivity.class));
     }
 
-    private void chooseLanguage(final int game) {
+    private void chooseLanguage(final int game, final boolean classic) {
         int selected = 1;
         String phone = Texts.steamLanguage();
         final String[] names = new String[LANGUAGES.length];
@@ -897,12 +978,12 @@ public final class LauncherActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(Texts.t("Language of the game", "Język gry"))
                 .setSingleChoiceItems(names, selected, (d, which) -> chosen[0] = which)
-                .setPositiveButton(Texts.t("Download", "Pobierz"), (d, w) -> startDownload(game, LANGUAGES[chosen[0]][0]))
+                .setPositiveButton(Texts.t("Download", "Pobierz"), (d, w) -> startDownload(game, LANGUAGES[chosen[0]][0], classic))
                 .setNegativeButton(Texts.t("Cancel", "Anuluj"), null)
                 .show();
     }
 
-    private void startDownload(int game, String language) {
+    private void startDownload(int game, String language, boolean classic) {
         if (external.getUsableSpace() < 1500L * 1024 * 1024) {
             new AlertDialog.Builder(this)
                     .setMessage(Texts.t("There is not enough free space on the phone.", "Brakuje wolnego miejsca w telefonie."))
@@ -913,7 +994,7 @@ public final class LauncherActivity extends Activity {
             requestPermissions(new String[] {"android.permission.POST_NOTIFICATIONS"}, 1);
         Downloads.state = null;
         Intent download = SteamBridge.downloadIntent(this, GAMES[game].appId, GAMES[game].folder, GAMES[game].title,
-                language);
+                language, classic);
         // startForegroundService exists since Android 8, the minimum of the app is lower
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             startForegroundService(download);

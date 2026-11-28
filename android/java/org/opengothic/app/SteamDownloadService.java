@@ -29,6 +29,8 @@ public final class SteamDownloadService extends Service {
     static final String EXTRA_FOLDER = "folder";
     static final String EXTRA_TITLE = "title";
     static final String EXTRA_LANGUAGE = "language";
+    /** Gothic II only: keep Gothic II without the addon (the mod Classic of Steam) next to Night of the Raven. */
+    static final String EXTRA_CLASSIC = "classic";
 
     private static final String CHANNEL = "steam-download";
     private static final int NOTIFICATION = 7;
@@ -103,6 +105,7 @@ public final class SteamDownloadService extends Service {
         final String folder = intent.getStringExtra(EXTRA_FOLDER);
         final String title = intent.getStringExtra(EXTRA_TITLE) != null ? intent.getStringExtra(EXTRA_TITLE) : "game";
         final String language = intent.getStringExtra(EXTRA_LANGUAGE) != null ? intent.getStringExtra(EXTRA_LANGUAGE) : "english";
+        final boolean classic = intent.getBooleanExtra(EXTRA_CLASSIC, true);
         if (appId == 0 || folder == null) {
             stopSelf();
             return START_NOT_STICKY;
@@ -119,11 +122,11 @@ public final class SteamDownloadService extends Service {
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "opengothic:steam");
             wake.acquire(6L * 60 * 60 * 1000);
         }
-        new Thread(() -> run(s, folder, language), "steam-download").start();
+        new Thread(() -> run(s, folder, language, classic), "steam-download").start();
         return START_NOT_STICKY;
     }
 
-    private void run(final Downloads.State s, String folder, String language) {
+    private void run(final Downloads.State s, String folder, String language, boolean classic) {
         SteamSession steam = null;
         try {
             File external = getExternalFilesDir(null);
@@ -163,6 +166,8 @@ public final class SteamDownloadService extends Service {
             if (game == null)
                 throw new SteamSession.Failure("The files of the game are not what was expected (no Data, _work and System).", false);
             remove(new File(game, ".DepotDownloader"));
+            if (!classic)
+                removeClassic(game);
             File target = new File(external, folder);
             if (target.exists())
                 throw new SteamSession.Failure("The game is already installed.", false);
@@ -256,6 +261,22 @@ public final class SteamDownloadService extends Service {
     // ---- the files
 
     /** The game is in the folder, or in the only folder in it. */
+    /**
+     * Gothic II of Steam brings Gothic II without the addon as a mod (Data/ModVDF/g2_classic*.mod and System/g2_classic.*): it is the
+     * choice of the player to keep it. The files of Night of the Raven are the base of both and stay.
+     */
+    static void removeClassic(File game) {
+        File[][] places = {new File(game, "Data/ModVDF").listFiles(), new File(game, "System").listFiles()};
+        for (File[] files : places) {
+            if (files == null)
+                continue;
+            for (File g : files) {
+                if (g.isFile() && g.getName().toLowerCase(java.util.Locale.ROOT).startsWith("g2_classic"))
+                    g.delete();
+            }
+        }
+    }
+
     static File installationIn(File dir) {
         if (isInstallation(dir))
             return dir;
