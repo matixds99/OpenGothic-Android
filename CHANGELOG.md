@@ -285,7 +285,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
-### 259. Towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (dokończenie 152) – 🧪 (28.11.2026)
+### 259. Towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (dokończenie 152) – ✅ (28.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h` (`nbKeepsTarget`, `takeDamage`, `hurtBy`).
 - **Zgłoszenie (28.11):** postać atakowana przez kilku przeciwników naraz „głupieje” (krąży, nie atakuje) – np. Blizna przeciw dwóm zębaczom na farmie Oswalda, obóz bandytów (Brago). Ma wybrać jeden cel i walczyć z nim, nie zmieniając agro.
 - **Zmiana:** towarzysz bohatera (`AIV_PARTYMEMBER`), który ma żywy cel w odległości do 12 m, nie przekazuje ciosów innych napastników do oceny obrażeń ze skryptów (`B_AssessDamage` zmienia cel i restartuje atak). Kończy pierwszy cel, a po jego śmierci (albo gdy ucieknie poza 12 m) następny cios znów idzie do skryptów i wybiera nowego. Pierwszy cios, gdy towarzysz nie ma celu, i ciosy własnego celu działają jak dotąd; reszta postaci, przyzwańcy (`nbIsSummon`) i bohater bez zmian. Razem z 152 (uniki najwyżej raz na 1,5 s i tylko od ciosów własnego celu).
@@ -1318,7 +1318,7 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** czerwony dym przelatuje w obu miejscach, po kilkunastu sekundach znika; brak `unable to load mesh "SMOKE_SOUL_FOG.pfx"` w logu.
 - **Test (21.11, nagranie):** czerwony dym przelatuje przez las razem z wpisem do dziennika.
 
-### 152. Walka z kilkoma przeciwnikami naraz – 🧪 (21.11.2026)
+### 152. Walka z kilkoma przeciwnikami naraz – ✅ (21.11.2026)
 - **Pliki:** `common/world/objects/npc.cpp/.h` (`nbReactToHit`)
 - **Zgłoszenie:** towarzysz (Blizna) na farmie Oswalda zaatakowany przez dwa zębacze nie walczył – krążył i obracał się, bez pomocy bohatera by zginął. To samo przy kilku bandytach na jedną postać (obóz bandytów, Brago).
 - **Przyczyna:** po każdym trafieniu postać (nie bohater) porzucała plan walki: kolejka ruchów była czyszczona, a następny ruch brany z `MY_W_STRAFE` (krok w bok, parada). Dwa zębacze gryzą na zmianę mniej więcej co pół sekundy, więc postać przez cały czas tylko reagowała na trafienia, obracała się między nimi i nie zdążyła zaatakować.
