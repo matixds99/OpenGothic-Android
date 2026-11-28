@@ -49,7 +49,7 @@ class PlayerControl final {
     // tempo: the sabre (HUMANS_1HDEXST*) is fast by itself, the rapier (HUMANS_RAPIER_ST*) slow; the orcish weapons and
     // the other styles keep QuickSpeed
     static constexpr float    QuickSpeedSaber  = QuickSpeed*0.5f;   // 1.15
-    static constexpr float    QuickSpeedRapier = QuickSpeed;        // 2.3 (NB fix 266; was 3.45)
+    static constexpr float    QuickSpeedRapier = 1.8f;              // NB fix 266 (was 3.45)
     float          quickSpeedNow = QuickSpeed;
     static float   quickMeleeSpeed(const Npc& pl);
 

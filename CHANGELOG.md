@@ -15,7 +15,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **266** – szybki atak (QUICK) szpadą/rapierem: tempo ×2,3 zamiast ×3,45 (jak zwykłe bronie) – 🧪
+1. **266** – szybki atak (QUICK) szpadą/rapierem: tempo ×1,8 zamiast ×3,45 – 🧪
 2. **265** – ostatnia faza walki z Krukiem w lochu: „Duch Baldara” nie dochodził do Kruka i walka stała; po 12 s bez zbliżania się jest stawiany obok Kruka i ginie – 🧪
 3. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – ✅
 4. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – ✅
@@ -285,10 +285,10 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
 - **Test (data):** czeka.
 
-### 266. Szybki atak szpadą/rapierem wolniejszy: ×2,3 zamiast ×3,45 – 🧪 (28.11.2026)
+### 266. Szybki atak szpadą/rapierem wolniejszy: ×1,8 zamiast ×3,45 – 🧪 (28.11.2026)
 - **Pliki:** `common/game/playercontrol.h`.
-- **Zgłoszenie (28.11):** tempo QUICK dla szpad (rapierów) ma być ×2,3.
-- **Zmiana:** `QuickSpeedRapier` = `QuickSpeed` (×2,3; było ×3,45, poprawka 115). Szabla (×1,15) i pozostałe bronie (×2,3) bez zmian.
+- **Zgłoszenie (28.11):** tempo QUICK dla szpad (rapierów) za szybkie; najpierw ×2,3 (wciąż za szybko), ostatecznie ×1,8.
+- **Zmiana:** `QuickSpeedRapier` = 1,8 (było ×3,45, poprawka 115). Szabla (×1,15) i pozostałe bronie (×2,3) bez zmian.
 - **Test (data):** czeka.
 
 ### 265. Ostatnia faza walki z Krukiem: „Duch Baldara” nie ginie, walka stoi – 🧪 (28.11.2026)
