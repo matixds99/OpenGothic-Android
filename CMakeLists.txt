@@ -26,6 +26,8 @@ if(MSVC)
   add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
   add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4800")
+  # NB: gamescript.cpp (with the port's additions) is over the section limit of an object file (C1128)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 endif()
 
 if(NOT MSVC)
