@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **266**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **267**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **265** – ostatnia faza walki z Krukiem w lochu: „Duch Baldara” nie dochodził do Kruka i walka stała; po 12 s bez zbliżania się jest stawiany obok Kruka i ginie – 🧪
-2. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – ✅
-3. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – ✅
-4. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – ✅
-5. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – ✅
+1. **266** – szybki atak (QUICK) szpadą/rapierem: tempo ×2,3 zamiast ×3,45 (jak zwykłe bronie) – 🧪
+2. **265** – ostatnia faza walki z Krukiem w lochu: „Duch Baldara” nie dochodził do Kruka i walka stała; po 12 s bez zbliżania się jest stawiany obok Kruka i ginie – 🧪
+3. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – ✅
+4. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – ✅
+5. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – ✅
 
 ---
 
@@ -283,6 +283,12 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka (tymczasowa, nie ma jej w skryptach):** boss (`RX_IsBoss`), którego aktualny cel jest przywołańcem, po 3 trafieniach gracza w oknie 8 s (poza własnym ciosem/rzutem) czyści kolejkę, ustawia cel na gracza, woła `B_ClearPerceptions` i startuje `ZS_Attack` (jak skrypt). W logu linia `boss returns to the hero`.
 - **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
+- **Test (data):** czeka.
+
+### 266. Szybki atak szpadą/rapierem wolniejszy: ×2,3 zamiast ×3,45 – 🧪 (28.11.2026)
+- **Pliki:** `common/game/playercontrol.h`.
+- **Zgłoszenie (28.11):** tempo QUICK dla szpad (rapierów) ma być ×2,3.
+- **Zmiana:** `QuickSpeedRapier` = `QuickSpeed` (×2,3; było ×3,45, poprawka 115). Szabla (×1,15) i pozostałe bronie (×2,3) bez zmian.
 - **Test (data):** czeka.
 
 ### 265. Ostatnia faza walki z Krukiem: „Duch Baldara” nie ginie, walka stoi – 🧪 (28.11.2026)
