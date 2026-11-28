@@ -176,6 +176,8 @@ class Inventory final {
     Item*                              ringL      = nullptr;
     Item*                              ringR      = nullptr;
     Item*                              trophy     = nullptr; // NB fix 207: not in the save - restored from the equipped items
+    Item*                              artifact   = nullptr; // NB fix 263: the scepter of Adanos - not in the save, restored from the equipped items
+    static bool                        isArtifact(const Item& it);
 
     Item**                             active     = nullptr;
     Item*                              melee      = nullptr;

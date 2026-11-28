@@ -160,6 +160,7 @@ void Inventory::implLoad(Npc* owner, World& world, Serialize &s) {
     drop(armor);
     drop(belt);
     drop(amulet);
+    drop(artifact);
     drop(ringL);
     drop(ringR);
     drop(melee);
@@ -192,6 +193,10 @@ void Inventory::implLoad(Npc* owner, World& world, Serialize &s) {
   for(auto& i:items)
     if(i->isEquipped() && (ItmFlags(i->handle().flags) & ITM_TROPHY)!=0 && trophy==nullptr)
       trophy = i.get();
+  artifact = nullptr;   // NB fix 263
+  for(auto& i:items)
+    if(i->isEquipped() && isArtifact(*i) && artifact==nullptr)
+      artifact = i.get();
   for(auto& i:items) {
     if(!i->isEquipped() || (ItmFlags(i->handle().main_flag) & ITM_CAT_ARMOR)==0)
       continue;
@@ -457,6 +462,10 @@ void Inventory::unequip(Item *it, Npc &owner) {
     setSlot(trophy,nullptr,owner,false);   // NB fix 207
     return;
     }
+  if(artifact==it) {
+    setSlot(artifact,nullptr,owner,false); // NB fix 263
+    return;
+    }
   if(melee==it) {
     setSlot(melee,nullptr,owner,false);
     return;
@@ -582,6 +591,12 @@ void Inventory::updateArmorView(Npc& owner) {
   auto  flag   = ItmFlags(itData.main_flag);
   if(flag & ITM_CAT_ARMOR)
     owner.updateArmor();
+  }
+
+bool Inventory::isArtifact(const Item& it) {
+  auto& d = it.handle();
+  const auto slotFlags = ITM_RING | ITM_AMULET | ITM_BELT | ITM_TROPHY;
+  return (ItmFlags(d.main_flag) & ITM_CAT_MAGIC)!=0 && (ItmFlags(d.flags) & slotFlags)==0 && d.on_equip!=0 && d.on_state[0]==0;
   }
 
 bool Inventory::isHelmet(const Item& it) {
@@ -1029,6 +1044,11 @@ bool Inventory::use(size_t cls, Npc &owner, uint8_t slotHint, bool force) {
   if(flag & ITM_TROPHY)
     return setSlot(trophy,it,owner,force);
 
+  // NB fix 263: the scepter of Adanos (ITRI_AdanosGoldSkipetr: ITEM_KAT_MAGIC, ON_EQUIP and none of the flags of a ring or an
+  // amulet) had no slot - "Equip" did nothing, ON_EQUIP (SCIPISUP, the bridge of Adanos) was never called
+  if(isArtifact(*it))
+    return setSlot(artifact,it,owner,force);
+
   if(flag & ITM_BELT)
     return setSlot(belt,it,owner,force);
 
@@ -1087,6 +1107,7 @@ void Inventory::invalidateCond(Npc &owner) {
   invalidateCond(ringL ,owner);
   invalidateCond(ringR ,owner);
   invalidateCond(trophy,owner);   // NB fix 207
+  invalidateCond(artifact,owner); // NB fix 263
   invalidateCond(melee ,owner);
   invalidateCond(range ,owner);
   invalidateCond(shield,owner);

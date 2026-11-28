@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **263**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **264**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – 🧪
-2. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – 🧪
-3. **260** – ślad zamachu bronią (cienka wstęga przy czubku miecza) i ślad lecącej strzały/bełtu, jak na PC – ✅
-4. **259** – towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (z wyłączeniem przyzwańców), dokończenie 152 – ✅
-5. **258** – pasek doświadczenia z punktami nauki na żywo („LP: 12”), rozszerzany do tekstu – ✅
+1. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – 🧪
+2. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – 🧪
+3. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – 🧪
+4. **260** – ślad zamachu bronią (cienka wstęga przy czubku miecza) i ślad lecącej strzały/bełtu, jak na PC – ✅
+5. **259** – towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (z wyłączeniem przyzwańców), dokończenie 152 – ✅
 
 ---
 
@@ -283,6 +283,14 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka (tymczasowa, nie ma jej w skryptach):** boss (`RX_IsBoss`), którego aktualny cel jest przywołańcem, po 3 trafieniach gracza w oknie 8 s (poza własnym ciosem/rzutem) czyści kolejkę, ustawia cel na gracza, woła `B_ClearPerceptions` i startuje `ZS_Attack` (jak skrypt). W logu linia `boss returns to the hero`.
 - **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
+- **Test (data):** czeka.
+
+### 263. Złote berło Adanosa nie dawało się założyć (brak slotu artefaktu) – 🧪 (28.11.2026)
+- **Pliki:** `common/game/inventory.cpp/.h`.
+- **Zgłoszenie (28.11):** berła Adanosa nie da się użyć; objaw: brak reakcji (nic się nie dzieje).
+- **Skrypty NB:** `USE_GOLDSKIPETR` (złote berło bez magii, `ItRi_GoldSkipetr_NoMagic`, używane z ekwipunku na Płaskowyżu Starożytnych razem z Łzą Adanosa) przywołuje tytana-strażnika fragmentu tabliczki i daje `ItRi_AdanosGoldSkipetr` (28885). To drugie berło ma `ITEM_KAT_MAGIC`, `ON_EQUIP`/`ON_UNEQUIP` i **żadnej** z flag pierścienia/amuletu/pasa/trofeum, więc silnik portu nie miał dla niego slotu: `Inventory::use` szło ogólną ścieżką (brak schematu i `on_state`) i nic nie robiło. `ON_EQUIP` (`SCIPISUP = TRUE`, `HERODRAGONLOOK`, efekty) nigdy się nie wywoływał, a dalsze wątki go wymagają: most Adanosa (`PC_ADANOSBRIDGE_BRIDGE_INFO`: założone berło **i** Korona Lodu) oraz otwarcie drzwi Kruka przy `AV_SCIPPLACE` (`PC_ADANOSSCIP_RAVEN`: berło w ekwipunku, zużywane przy otwarciu).
+- **Poprawka:** nowy slot `artifact` w ekwipunku (jak slot trofeum z 207): przedmiot z `ITEM_KAT_MAGIC`, z `ON_EQUIP` i bez `ON_STATE`, bez flag pierścienia/amuletu/pasa/trofeum (`Inventory::isArtifact`). „Załóż” zakłada go i woła `ON_EQUIP`, „Zdejmij” woła `ON_UNEQUIP`; slot odtwarzany po wczytaniu zapisu z założonych przedmiotów, sprawdzany jak inne sloty (`invalidateCond`), zdejmowany przy zabraniu/usunięciu przedmiotu (drzwi Kruka usuwają berło).
+- **Do sprawdzenia:** (1) złote berło + Łza Adanosa na Płaskowyżu → tytan i nowe berło w ekwipunku; (2) „Załóż” na berle Adanosa – efekt świetlny, w ekwipunku oznaczone jako założone, „Zdejmij” działa; (3) zapis/wczytanie – berło nadal założone; (4) przy `AV_SCIPPLACE` z berłem w ekwipunku (założonym lub nie) – wybór „Kruk” otwiera drzwi, berło znika; (5) most Adanosa: berło + Korona Lodu założone.
 - **Test (data):** czeka.
 
 ### 262. Build na PC (MSVC): `/bigobj` dla `gamescript.cpp` – 🧪 (28.11.2026)
