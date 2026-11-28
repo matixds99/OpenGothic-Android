@@ -132,6 +132,9 @@ struct NbCallback {
   uint32_t                      func       = 0;
   std::shared_ptr<zenkit::INpc> npc;
   bool                          waitDialog = false;
+  // NB fix 264: OTHER of the dialog (the hero) at the time of the call; the function (RX_Callback_RavenDungeon_Final: B_Attack(self,other))
+  // works with it. Without it OTHER was a leftover and the boss did not attack
+  std::shared_ptr<zenkit::DaedalusInstance> other;
   };
 
 /// NB fix 138: 0 iron, 1 gold, 2 magic ore, -1 not a vein (the function of the state of the mob)
@@ -1727,7 +1730,7 @@ void GameScript::initCommon() {
       });
 
     // the delayed functions: run in tick(), RX_CALLBACKDIALOG waits for the end of the dialog
-    const auto addCallback = [this](std::shared_ptr<zenkit::INpc> npc, float sec, int32_t func, bool waitDialog) {
+    const auto addCallback = [this](std::shared_ptr<zenkit::INpc> npc, float sec, int32_t func, bool waitDialog, bool keepOther = false) {
       auto* fn = vm.find_symbol_by_index(uint32_t(func));
       if(fn==nullptr || fn->type()!=zenkit::DaedalusDataType::FUNCTION)
         return;
@@ -1736,6 +1739,8 @@ void GameScript::initCommon() {
       c.func       = uint32_t(func);
       c.npc        = std::move(npc);
       c.waitDialog = waitDialog;
+      if(keepOther)
+        c.other = vm.global_other()->get_instance();
       nbStates[this].callbacks.push_back(std::move(c));
       };
     bindNb("RX_CALLBACK", [addCallback](float sec, int32_t func) {
@@ -1746,10 +1751,10 @@ void GameScript::initCommon() {
         addCallback(npc,sec,func,false);
       });
     bindNb("RX_CALLBACKINDIALOG", [addCallback](std::shared_ptr<zenkit::INpc> npc, float sec, int32_t func) {
-      addCallback(npc,sec,func,false);
+      addCallback(npc,sec,func,false,true);
       });
     bindNb("RX_CALLBACKDIALOG", [addCallback](std::shared_ptr<zenkit::INpc> npc, float sec, int32_t func) {
-      addCallback(npc,sec,func,true);
+      addCallback(npc,sec,func,true,true);
       });
 
     // dialogs: the text of a choice that the condition function writes, and the choices of NB
@@ -5851,6 +5856,8 @@ void GameScript::tick(uint64_t dt) {
       auto prevItem  = vm.global_item() ->get_instance();
       if(c.npc!=nullptr)
         vm.global_self()->set_instance(c.npc);
+      if(c.other!=nullptr)
+        vm.global_other()->set_instance(c.other);   // NB fix 264
       try {
         if(fn->has_return())
           (void)vm.call_function<int>(fn); else

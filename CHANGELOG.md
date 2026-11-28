@@ -5,7 +5,7 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 **Status:** ✅ sprawdzone w grze · 🧪 czeka na test · ⏸ wycofane / odłożone
 
-**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **264**; numery 61, 63–67 są w opisie ognika – poprawka 11).
+**Numery:** każda poprawka ma swój numer, a komentarze w kodzie (`NB fix N`) i tabela plików odwołują się do tych numerów. Poprawki o tym samym temacie są tu połączone w jeden wpis – wtedy w nagłówku stoi kilka numerów (np. „36–38”). Nowe poprawki dostają kolejny wolny numer (następny: **265**; numery 61, 63–67 są w opisie ognika – poprawka 11).
 
 **🆕** oznacza plik, którego nie ma w projekcie borsuczyny i który trzeba dodać.
 
@@ -15,11 +15,11 @@ Lista plików (co podmienić, co dodać) jest w [docs/NEW_BALANCE.md](docs/NEW_B
 
 Pięć ostatnich zmian, od najnowszej. Szczegóły w pełnych wpisach niżej.
 
-1. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – 🧪
-2. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – 🧪
-3. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – 🧪
-4. **260** – ślad zamachu bronią (cienka wstęga przy czubku miecza) i ślad lecącej strzały/bełtu, jak na PC – ✅
-5. **259** – towarzysz walczący z kilkoma przeciwnikami zostaje przy jednym celu (z wyłączeniem przyzwańców), dokończenie 152 – ✅
+1. **264** – Kruk w lochu Kruka po rozmowie atakuje bohatera (odroczona funkcja po dialogu dostaje `OTHER`) – 🧪
+2. **263** – złote berło Adanosa da się założyć (slot artefaktu w ekwipunku): „Załóż” nic nie robiło, więc `SCIPISUP` (most Adanosa) nigdy się nie włączał – 🧪
+3. **262** – build na PC (MSVC): flaga `/bigobj` dla `gamescript.cpp` (błąd C1128 – za dużo sekcji w pliku obiektowym) – 🧪
+4. **261** – build na PC: `rainfx.cpp` używa `AndroidInput` tylko przy `OPENGOTHIC_TOUCH_UI` (na PC deszcz wyłączony) – 🧪
+5. **260** – ślad zamachu bronią (cienka wstęga przy czubku miecza) i ślad lecącej strzały/bełtu, jak na PC – ✅
 
 ---
 
@@ -283,6 +283,16 @@ Funkcje zewnętrzne z UNION_ABI.DLL wybrane według liczby wywołań w GOTHIC.DA
 - **Poprawka (tymczasowa, nie ma jej w skryptach):** boss (`RX_IsBoss`), którego aktualny cel jest przywołańcem, po 3 trafieniach gracza w oknie 8 s (poza własnym ciosem/rzutem) czyści kolejkę, ustawia cel na gracza, woła `B_ClearPerceptions` i startuje `ZS_Attack` (jak skrypt). W logu linia `boss returns to the hero`.
 - **Do zastąpienia** progami z logu PC (`tools/pc-logger/nblog_switch.cfg`). Próg 2 trafień golemów na zmianę na golema nie zmieniony (port: 4).
 - **Do sprawdzenia:** Zeld po 3 Twoich czarach wraca na Ciebie, potem znów na golemy; walka bez golemów bez zmian.
+- **Test (data):** czeka.
+
+### 264. Kruk w lochu Kruka po rozmowie nie atakował (stał i patrzył) – 🧪 (28.11.2026)
+- **Pliki:** `common/game/gamescript.cpp`.
+- **Zgłoszenie (28.11):** w lochu Kruka (finałowa walka, Kruk na tronie, w tle Dramtar 75000 HP) po rozmowie Kruk zamiast walczyć stoi i patrzy.
+- **Skrypty NB:** `PC_PSIONICQUEST_TEMPLATEDIALOG_353_INFO` (rozmowa z Krukiem) kończy się `RX_CallbackDialog(self, 0, RX_Callback_RavenDungeon_Final)`. Ta funkcja (po zamknięciu dialogu) zdejmuje nieśmiertelność, zmienia rutynę na „AOE” i robi `B_Attack(self, other, AR_KILL, 1)`. `AI_OnTick_BDT_50011_Addon_Raven` zaczyna fazy walki dopiero po `PC_PsionicQuest_TemplateDialog_353_VAR` (to ustawia ta sama rozmowa).
+- **Przyczyna:** port przy uruchamianiu odroczonej funkcji (`RX_CALLBACK*`) ustawiał tylko `SELF`; `OTHER` zostawał tym, co akurat było w maszynie (po dialogu zwykle puste/nieaktualne), więc `B_Attack(self, other…)` nie miało kogo zaatakować: Kruk zmieniał rutynę, ale nie dostawał celu.
+- **Poprawka:** `RX_CALLBACKDIALOG` i `RX_CALLBACKINDIALOG` zapamiętują `OTHER` z chwili wywołania (bohater w dialogu) i przywracają go na czas uruchomienia funkcji. Pozostałe `RX_CALLBACK*` bez zmian.
+- **Skutek uboczny (na plus):** każda inna odroczona funkcja po dialogu, która używa `OTHER`, dostaje teraz poprawnego rozmówcę.
+- **Do sprawdzenia:** po rozmowie z Krukiem (finał lochu) Kruk rusza do walki i przechodzi przez fazy (przyzwanie duchów, teleporty); jeśli dalej stoi, wyślij log z tej chwili (`Log::e` „NB: callback …”).
 - **Test (data):** czeka.
 
 ### 263. Złote berło Adanosa nie dawało się założyć (brak slotu artefaktu) – 🧪 (28.11.2026)
